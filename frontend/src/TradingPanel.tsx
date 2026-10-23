@@ -1,12 +1,14 @@
 import { useState } from 'react'
+import { commissionConfigError, perSideCommissionUsd, type CommissionConfig } from './commissions'
 import { accountRiskError, plannedRisk, riskBudget, sizeFromRisk, validRiskPercent, type AccountRisk, type EntrySizing } from './risk'
-import { combinedRisk, entryRequestError, canRequestOrder, formatTradingNumber as number, grossPnl, markPosition, tradingTime, validLots, validStopPrice, stopModificationError, type PendingEntry, type Position, type Direction, type TradingPermission, type TradingState } from './trading'
+import { combinedRisk, entryRequestError, canRequestOrder, formatTradingNumber as number, grossPnl, markPosition, realizedSummary, stopLossEstimates, tradingTime, validLots, validStopPrice, stopModificationError, type PendingEntry, type Position, type Direction, type TradingPermission, type TradingState } from './trading'
 
 interface Props {
   state: TradingState
   permission: TradingPermission
   onEntry: (direction: Direction, sizing: EntrySizing, stopPrice: number) => void
   onConfigure: (account: AccountRisk) => void
+  onConfigureCommission: (commission: CommissionConfig) => void
   onCancel: (id: string) => void
   onClose: (id: string) => void
   onModifyStop: (id: string, price: number) => void
@@ -42,7 +44,9 @@ function StopEditor({ state, position, permission, onModify }: { state: TradingS
   </div>
 }
 
-export function TradingPanel({ state, permission, onEntry, onConfigure, onCancel, onClose, onModifyStop }: Props) {
+export function TradingPanel({ state, permission, onEntry, onConfigure, onConfigureCommission, onCancel, onClose, onModifyStop }: Props) {
+  const [commissionError, setCommissionError] = useState<string | null>(null)
+  const summary = realizedSummary(state.closed)
   const [mode, setMode] = useState<'risk' | 'manual'>('risk')
   const [risk, setRisk] = useState('1')
   const [volume, setVolume] = useState('0.01')
@@ -67,18 +71,28 @@ export function TradingPanel({ state, permission, onEntry, onConfigure, onCancel
 
   return <section className="trading-panel" aria-label="Simulated trading">
     <h2>Simulated trading</h2>
-    <fieldset className="account-risk"><legend>Account risk · USD</legend>
+    <fieldset className="account-risk"><legend>Account settings · USD</legend>
       <label>Reference balance (USD)<input aria-label="Reference balance (USD)" type="number" min="0" step="any"
         value={state.account.referenceBalance || ''} disabled={permission.active} aria-invalid={!!accountError}
         onChange={(event) => onConfigure({ ...state.account, referenceBalance: Number(event.target.value) })} /></label>
-      <label>Maximum combined risk (%)<input aria-label="Maximum combined risk (%)" type="number" min="0" max="100" step="any"
+      <label>Maximum combined gross planned risk (%)<input aria-label="Maximum combined gross planned risk (%)" type="number" min="0" max="100" step="any"
         value={state.account.maxRiskPercent || ''} disabled={permission.active} aria-invalid={!!accountError}
         onChange={(event) => onConfigure({ ...state.account, maxRiskPercent: Number(event.target.value) })} /></label>
+      <label>Round-trip commission (USD per standard lot)<input aria-label="Round-trip commission (USD per standard lot)" type="number" min="0" step="any"
+        value={state.commission.roundTripUsdPerLot} disabled={permission.active} aria-invalid={!!commissionError} aria-describedby="commission-help"
+        onChange={(event) => {
+          const config = { roundTripUsdPerLot: event.target.value === '' ? NaN : Number(event.target.value) }
+          const error = commissionConfigError(config)
+          setCommissionError(error)
+          if (!error) onConfigureCommission(config)
+        }} /></label>
+      {commissionError && <p className="form-error" role="alert">{commissionError} Previous valid rate retained.</p>}
       <p className="risk-totals" aria-label="Combined risk" aria-live="polite">
         Maximum ${number(exposure.maximumUsd, 2)} USD · Current planned ${number(exposure.openUsd, 2)} USD ({number(exposure.openUsd / state.account.referenceBalance * 100 || 0, 2)}%)<br />
         Reserved ${number(exposure.reservedUsd, 2)} USD · Remaining ${number(exposure.remainingUsd, 2)} USD
       </p>
-      <span>Fixed sizing reference, not account equity. Settings lock during replay.</span>
+      <span>Fixed sizing reference, not account equity. Settings lock during replay. The gross planned risk cap excludes commissions and does not resize lots for fees.</span>
+      <span id="commission-help">User-entered USD rate, half charged at entry and half at exit. Zero is allowed. No account-currency conversion.</span>
     </fieldset>
     {accountError && <p className="form-error" role="alert">{accountError}</p>}
     <div className="trading-controls">
@@ -107,6 +121,9 @@ export function TradingPanel({ state, permission, onEntry, onConfigure, onCancel
       })}
       <span>Estimates use observed closing quotes. Actual risk-based size is determined from the future execution opening. Manual lots are never resized.</span>
     </div>
+    <p className="realized-summary" aria-label="Realized summary" aria-live="polite">
+      {summary.count} closed positions · Gross realized ${number(summary.grossPnlUsd, 2)} USD · Realized commissions ${number(summary.totalCommissionUsd, 2)} USD · Net realized ${number(summary.netPnlUsd, 2)} USD
+    </p>
     <div className="trade-records">
       <section aria-label="Pending orders"><h3>Pending orders ({state.pending.length})</h3>
         {!state.pending.length ? <p>No pending entries.</p> : <ul>{state.pending.map((order) => <li key={order.id} data-order-id={order.id}>
@@ -124,6 +141,8 @@ export function TradingPanel({ state, permission, onEntry, onConfigure, onCancel
       <section aria-label="Open positions"><h3>Open positions ({state.positions.length})</h3>
         {!state.positions.length ? <p>No open positions.</p> : <ul>{state.positions.map((position) => {
           const mark = markPosition(position, state.quote)
+          const stopLoss = stopLossEstimates(position)
+          const estimatedExitCommission = perSideCommissionUsd(position.lots, position.commission)
           const pendingClose = position.closeRequestedAt !== null
           return <li key={position.id} data-position-id={position.id}>
             <strong>{pendingClose ? 'Pending close' : 'Open position'} · {position.direction === 'buy' ? 'Buy' : 'Sell'} · {position.lots} lots</strong>
@@ -131,6 +150,9 @@ export function TradingPanel({ state, permission, onEntry, onConfigure, onCancel
             <span>Entry {tradingTime(position.entryTime)} @ {number(position.entryPrice, 5)}</span>
             <span>Original planned risk ${number(position.initialRiskUsd, 2)} USD ({number(position.initialRiskPercent, 2)}%) · Current planned risk ${number(plannedRisk(position), 2)} USD</span>
             <span>Current {mark ? number(mark.price, 5) : 'unavailable'} · Unrealized {mark ? `${number(mark.pips, 1)} pips · $${number(mark.usd, 2)} gross` : 'PnL unavailable'}</span>
+            <span>Entry commission (incurred) ${number(position.entryCommissionUsd, 2)} USD · Estimated exit commission ${number(estimatedExitCommission, 2)} USD</span>
+            <span>Estimated net PnL (mark-to-close): {mark ? `$${number(mark.estimatedNetPnlUsd, 2)} USD` : 'unavailable'}</span>
+            <span>Estimated total loss at initial SL ${number(stopLoss.initialLossUsd, 2)} USD · Estimated total downside at current SL ${number(stopLoss.currentLossUsd, 2)} USD</span>
             {pendingClose && <span>Close requested {tradingTime(position.closeRequestedAt!)}</span>}
             {!permission.hasFuture && <span>Open at end of available history{pendingClose ? '; close unfilled' : ''}.</span>}
             <button type="button" aria-label={`Close position ${position.id}`} disabled={!canOrder || pendingClose} onClick={() => onClose(position.id)}>Close</button>
@@ -150,11 +172,13 @@ export function TradingPanel({ state, permission, onEntry, onConfigure, onCancel
             <span>{trade.exitReason === 'stop_loss' ? `Stop loss · ${trade.stopFillType === 'gap_open' ? 'gap-through opening fill' : 'level fill'}` : 'Manual exit'} · Triggering M1 candle timestamp; intraminute time unknown.</span>
             <span>Original planned risk ${number(trade.initialRiskUsd, 2)} USD ({number(trade.initialRiskPercent, 2)}%)</span>
             <StopRecords position={trade} />
-            <span>Realized {number(pnl.pips, 1)} pips · ${number(pnl.usd, 2)} gross</span>
+            <span>Realized {number(pnl.pips, 1)} pips · ${number(trade.grossPnlUsd, 2)} gross</span>
+            <span>Entry commission ${number(trade.entryCommissionUsd, 2)} USD · Exit commission ${number(trade.exitCommissionUsd, 2)} USD · Total commission ${number(trade.totalCommissionUsd, 2)} USD</span>
+            <strong>Net realized PnL ${number(trade.netPnlUsd, 2)} USD</strong>
           </li>
         })}</ul>}
       </section>
     </div>
-    <p className="trading-note">EURUSD · 1 lot = 100,000 EUR · Planned SL exposure is not a guaranteed maximum loss. Gaps and slippage may increase losses. Sizing excludes commissions, swaps, financing, and margin requirements. PnL is gross USD.</p>
+    <p className="trading-note">EURUSD · 1 lot = 100,000 EUR · Planned SL exposure is not a guaranteed maximum loss. SL estimates include entry and expected exit commissions and assume a normal fill at the SL level. Gaps may increase losses; slippage is not modeled. Sizing and the gross risk cap exclude fees. Historical bid/ask fills already include spread; only commission is subtracted from gross PnL. Swaps and financing are not modeled.</p>
   </section>
 }
