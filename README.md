@@ -63,7 +63,29 @@ During replay, chart data is built only from the revealed M1 prefix. Each M1 can
 
 Chart instances remain alive while replay advances or timeframes change. The current series candle is updated and new buckets are appended. The synchronized view follows the latest revealed data when viewing the replay edge. Scrolling back preserves an older view while playback continues; navigating back to the edge resumes following. Zooming, scrolling, and crosshairs have access only to revealed prices. Different candle spacing and minimum zoom limits can still produce slightly different views on coarse timeframes, especially early in replay when only one bucket exists.
 
-Replay inherits the historical-data limitations below: EURUSD bid charts only, provider gaps and availability, completed UTC days, and at most seven days per request. It does not include tick replay, orders, positions, SL/TP execution, indicators, performance statistics, journaling, or replay persistence.
+Replay inherits the historical-data limitations below: EURUSD bid charts only, provider gaps and availability, completed UTC days, and at most seven days per request. It does not include tick replay, orders, positions, SL/TP execution, performance statistics, journaling, or replay persistence.
+
+## Technical indicators
+
+Open **Indicators** in a chart's toolbar, check an indicator, and edit its numeric fields. Valid changes apply immediately. All indicators start disabled. Each chart has independent settings, retained when switching between one, two, and three charts during the current session. Settings also survive date reloads, but are not saved across page refreshes. Uncheck an indicator to remove its lines, pane, and drawing resources.
+
+| Indicator | Initial parameters | Display |
+| --- | --- | --- |
+| Bollinger Bands | Close length 20; standard deviation multiplier 2 | Upper, middle SMA, and lower lines over price |
+| Slow Stochastic | %K length 14; %K SMA smoothing 3; %D SMA smoothing 3 | Separate resizable pane below price, 0–100 scale, reference levels 20 and 80 |
+| Ichimoku | Tenkan 9; Kijun 26; Span B 52; displacement 26 | Five lines over price with translucent bullish/bearish cloud |
+
+Periods, smoothing, and displacement accept whole numbers from 1 to 10000. Bollinger's multiplier accepts positive decimals up to 100. Invalid edits show an error and leave the last valid setting applied. The indicator appearance is provisional pending the project lead's TradingView references. Temporary line and cloud colors are centralized in `frontend/src/indicatorSeries.ts` and `frontend/src/ichimokuCloud.ts`.
+
+Calculations use `technicalindicators` 3.1.0 independently of chart rendering. Bollinger Bands use the population standard deviation. Slow Stochastic first calculates raw %K from rolling highs/lows, smooths it with an SMA, then smooths slow %K with another SMA for %D. A flat high/low window makes raw %K undefined; it is omitted and smoothing restarts. The package's Ichimoku helper delays all components until its longest lookback, so the application uses its rolling Highest/Lowest calculations to calculate each component as soon as its own window is available.
+
+There are no filled or invented warm-up values. Default Bollinger Bands need 20 available chart candles. Stochastic %K first appears at candle 16 and %D at candle 18. Ichimoku Tenkan needs 9 candles, Kijun and Span A need 26, and Span B and the paired cloud need 52. Chikou plots known closes 26 candle positions earlier, skipping positions before the loaded history. Missing minutes and closures remain missing.
+
+Ichimoku Span A is the average of Tenkan and Kijun; Span B is the midpoint of the 52-period high/low. They plot 26 candle positions ahead. Within known history, displacement follows actual candle positions across gaps. Beyond the revealed edge, timestamps extend by the selected timeframe interval, using whitespace time slots without OHLC data. As a gap becomes known, projected timestamps are realigned to the newly revealed candle positions. Cloud fill is split at interpolated Span A/B intersections so its color changes at the crossover. The chart reserves room for the projected horizon at the current edge; synchronized crosshairs still require a real price candle.
+
+During replay, all indicators use only the revealed M1 prefix aggregated to the selected timeframe. The current incomplete higher-timeframe candle recalculates as M1 candles arrive. Forward Ichimoku positions contain calculations from known candles only, and Chikou uses already known closing prices. Restart clears prior indicator observations and recalculates from the first revealed candle. Timeframe changes recalculate from the available prefix; loading dates returns to the full-history viewer. Indicators do not request additional history.
+
+The seven-day backend limit remains in place. Short ranges and coarse timeframes may never provide enough candles for default settings, especially around market closures. In particular, seven calendar days contain at most 42 H4 positions, so default H4 Span B/cloud cannot warm up in one request. Reduce periods to inspect shorter histories; the application does not pad them or fetch extra data.
 
 ## Development commands
 
@@ -105,4 +127,4 @@ To run a live integration check, start the backend and run the `curl` command ab
 
 ## Current status
 
-The React/Vite frontend displays one to three synchronized historical EURUSD bid candlestick charts using TradingView Lightweight Charts. The Node.js backend exposes `GET /api/health` and `GET /api/history`. Charts preserve market gaps. The full-history viewer remains available until replay starts; manual replay then progressively reveals M1 data with synchronized partial higher-timeframe candles. Indicators, trading, SL/TP execution, statistics, and journaling are not implemented yet. The approved future stack includes `technicalindicators`; that package is deferred until indicators are built.
+The React/Vite frontend displays one to three synchronized historical EURUSD bid candlestick charts using TradingView Lightweight Charts. The Node.js backend exposes `GET /api/health` and `GET /api/history`. Charts preserve market gaps. The full-history viewer remains available until replay starts; manual replay then progressively reveals M1 data with synchronized partial higher-timeframe candles. Bollinger Bands, slow Stochastic, and Ichimoku Cloud are available independently on each chart, including during replay. Trading, SL/TP execution, statistics, and journaling are not implemented yet.

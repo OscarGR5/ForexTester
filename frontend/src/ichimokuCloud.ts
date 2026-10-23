@@ -1,0 +1,60 @@
+import type { IChartApi, IPrimitivePaneRenderer, IPrimitivePaneView, ISeriesApi, ISeriesPrimitive, SeriesAttachedParameter } from 'lightweight-charts'
+import type { CloudPoint } from './indicators'
+
+export const CLOUD_COLORS = { bullish: 'rgba(74, 169, 154, 0.22)', bearish: 'rgba(210, 125, 130, 0.22)' }
+export interface CloudVertex { x: number; a: number; b: number }
+export interface CloudPolygon { bullish: boolean; vertices: { x: number; y: number }[] }
+// Split each strip at the exact linear intersection, avoiding crossed polygons
+// and incorrect color on the other side of an A/B crossover.
+export function cloudPolygons(left: CloudVertex, right: CloudVertex): CloudPolygon[] {
+  const polygon = (l: CloudVertex, r: CloudVertex, bullish: boolean): CloudPolygon => ({ bullish, vertices: [
+    { x: l.x, y: l.a }, { x: r.x, y: r.a }, { x: r.x, y: r.b }, { x: l.x, y: l.b },
+  ] })
+  const dl = left.a - left.b, dr = right.a - right.b
+  if (dl * dr < 0) {
+    const t = dl / (dl - dr)
+    const cross = { x: left.x + t * (right.x - left.x), a: left.a + t * (right.a - left.a), b: left.b + t * (right.b - left.b) }
+    return [polygon(left, cross, dl <= 0), polygon(cross, right, dr <= 0)]
+  }
+  // Vertices contain screen y coordinates: a higher price has a smaller y.
+  return [polygon(left, right, dl === 0 ? dr <= 0 : dl <= 0)]
+}
+
+export class IchimokuCloudPrimitive implements ISeriesPrimitive {
+  private chart: IChartApi | null = null
+  private series: ISeriesApi<'Line'> | null = null
+  private requestUpdate: (() => void) | null = null
+  private points: CloudPoint[] = []
+  private readonly renderer: IPrimitivePaneRenderer = {
+    draw: (target) => target.useMediaCoordinateSpace(({ context, mediaSize }) => {
+      if (!this.chart || !this.series) return
+      const scale = this.chart.timeScale()
+      context.save()
+      context.beginPath(); context.rect(0, 0, mediaSize.width, mediaSize.height); context.clip()
+      let previous: CloudVertex | null = null
+      for (const point of this.points) {
+        const x = scale.timeToCoordinate(point.time)
+        const a = this.series.priceToCoordinate(point.a), b = this.series.priceToCoordinate(point.b)
+        if (x === null || a === null || b === null) { previous = null; continue }
+        const current = { x, a, b }
+        if (previous && current.x >= 0 && previous.x <= mediaSize.width) {
+          for (const polygon of cloudPolygons(previous, current)) {
+            context.fillStyle = polygon.bullish ? CLOUD_COLORS.bullish : CLOUD_COLORS.bearish
+            context.beginPath()
+            polygon.vertices.forEach((vertex, index) => index === 0 ? context.moveTo(vertex.x, vertex.y) : context.lineTo(vertex.x, vertex.y))
+            context.closePath(); context.fill()
+          }
+        }
+        previous = current
+      }
+      context.restore()
+    }),
+  }
+  private readonly views: IPrimitivePaneView[] = [{ zOrder: () => 'bottom', renderer: () => this.renderer }]
+  attached({ chart, series, requestUpdate }: SeriesAttachedParameter): void {
+    this.chart = chart; this.series = series as ISeriesApi<'Line'>; this.requestUpdate = requestUpdate
+  }
+  detached(): void { this.chart = null; this.series = null; this.requestUpdate = null; this.points = [] }
+  setData(points: CloudPoint[]): void { this.points = points; this.requestUpdate?.() }
+  paneViews(): IPrimitivePaneView[] { return this.views }
+}

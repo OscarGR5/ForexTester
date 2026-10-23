@@ -248,3 +248,21 @@ describe('synchronization during replay updates', () => {
     expect(h4.getRange()).toBeDefined()
   })
 })
+
+describe('Ichimoku projection synchronization', () => {
+  it('reserves forward plot positions without adding prices or changing another chart horizon', () => {
+    const sync = new ChartSynchronizer({ from: 0, to: 240 })
+    const projected = fakeChart(), plain = fakeChart()
+    register(sync, 0, projected, [0, 60, 120, 180, 240], 'M1')
+    register(sync, 1, plain, [0, 60, 120, 180, 240], 'M1')
+    sync.update(0, candles([0, 60, 120, 180, 240]), 'M1', () => 2)
+    sync.update(1, candles([0, 60, 120, 180, 240]), 'M1', () => 0)
+    expect(projected.getRange()).toEqual({ from: 0, to: 6 })
+    expect(plain.getRange()).toEqual({ from: 0, to: 4 })
+    projected.emitCrosshair(300)
+    expect(plain.clearCrosshairPosition).toHaveBeenCalled()
+    expect(plain.setCrosshairPosition).not.toHaveBeenCalled()
+    sync.update(0, candles([0, 60, 120, 180, 240]), 'M1', () => 0)
+    expect(projected.getRange()).toEqual({ from: 0, to: 4 })
+  })
+})

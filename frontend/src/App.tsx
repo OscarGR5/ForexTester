@@ -2,6 +2,9 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent }
 import { CandlestickSeries, ColorType, createChart, type CandlestickData, type IChartApi, type ISeriesApi, type Time, type UTCTimestamp } from 'lightweight-charts'
 import { ChartSynchronizer } from './chartSync'
 import { useReplay } from './useReplay'
+import { IndicatorControls } from './IndicatorControls'
+import { IndicatorSeries } from './indicatorSeries'
+import { defaultIndicatorSettings, type IndicatorSettings } from './indicators'
 import { fetchHistory, TIMEFRAMES, toBidChartCandles, validateDateRange, type DateRange, type HistoryResponse, type Timeframe } from './history'
 
 const DEFAULT_RANGE: DateRange = { from: '2024-01-09', to: '2024-01-10' }
@@ -12,13 +15,17 @@ interface ChartPaneProps {
   timeframe: Timeframe
   candles: CandlestickData<UTCTimestamp>[]
   synchronizer: ChartSynchronizer
+  settings: IndicatorSettings
+  onSettingsChange: (id: number, settings: IndicatorSettings) => void
   onTimeframeChange: (id: number, timeframe: Timeframe) => void
 }
 
-function ChartPane({ id, timeframe, candles, synchronizer, onTimeframeChange }: ChartPaneProps) {
+function ChartPane({ id, timeframe, candles, synchronizer, onTimeframeChange, settings, onSettingsChange }: ChartPaneProps) {
   const container = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
+  const indicatorsRef = useRef<IndicatorSeries | null>(null)
+  const previousSettings = useRef<IndicatorSettings | null>(null)
   const unregisterRef = useRef<(() => void) | null>(null)
   const previous = useRef<{ candles: typeof candles; timeframe: Timeframe; synchronizer: ChartSynchronizer } | null>(null)
 
@@ -51,9 +58,13 @@ function ChartPane({ id, timeframe, candles, synchronizer, onTimeframeChange }: 
     })
     chartRef.current = chart
     seriesRef.current = series
+    indicatorsRef.current = new IndicatorSeries(chart)
     return () => {
       unregisterRef.current?.()
       unregisterRef.current = null
+      indicatorsRef.current?.dispose()
+      indicatorsRef.current = null
+      previousSettings.current = null
       chart.remove()
       chartRef.current = null
       seriesRef.current = null
@@ -95,9 +106,11 @@ function ChartPane({ id, timeframe, candles, synchronizer, onTimeframeChange }: 
         // Revisit the old tail: it may be a newly completed higher-timeframe bucket.
         for (let index = last.candles.length - 1; index < candles.length; index++) series.update(candles[index])
       }
+      return indicatorsRef.current!.update(candles, settings, timeframe, replace || previousSettings.current !== settings)
     })
+    previousSettings.current = settings
     previous.current = { candles, timeframe, synchronizer }
-  }, [id, candles, synchronizer, timeframe])
+  }, [id, candles, synchronizer, timeframe, settings])
 
   return (
     <section className="chart-pane" aria-label={`Chart ${id + 1}: EURUSD ${timeframe} bid`}
@@ -110,6 +123,7 @@ function ChartPane({ id, timeframe, candles, synchronizer, onTimeframeChange }: 
           onChange={(event) => onTimeframeChange(id, event.target.value as Timeframe)}>
           {TIMEFRAMES.map((option) => <option key={option} value={option}>{option}</option>)}
         </select></label>
+        <IndicatorControls id={id} settings={settings} onChange={(next) => onSettingsChange(id, next)} />
       </div>
       <div ref={container} className="chart-canvas" aria-hidden="true" />
     </section>
@@ -126,6 +140,7 @@ export function App() {
   const [formError, setFormError] = useState<string | null>(null)
   const [chartCount, setChartCount] = useState(1)
   const [timeframes, setTimeframes] = useState<Timeframe[]>(DEFAULT_TIMEFRAMES)
+  const [indicatorSettings, setIndicatorSettings] = useState<IndicatorSettings[]>(() => DEFAULT_TIMEFRAMES.map(defaultIndicatorSettings))
   const replay = useReplay(history?.bid ?? null)
   const bounds = useMemo(() => replay.visible.length ? {
     from: replay.visible[0].timestamp / 1000,
@@ -205,9 +220,13 @@ export function App() {
       </form>
       {formError && <p className="form-error" role="alert">{formError}</p>}
       <div className="chart-workspace" aria-label="EURUSD bid chart workspace">
-        <div className="chart-stack" style={{ gridTemplateRows: `repeat(${chartCount}, minmax(300px, 1fr))` }}>
+        <div className="chart-stack" style={{ gridTemplateRows: `repeat(${chartCount}, minmax(auto, 1fr))` }}>
           {timeframes.slice(0, chartCount).map((timeframe, id) => <ChartPane key={id} id={id} timeframe={timeframe}
-            candles={candles[timeframe]} synchronizer={synchronizer} onTimeframeChange={changeTimeframe} />)}
+            candles={candles[timeframe]} synchronizer={synchronizer} onTimeframeChange={changeTimeframe}
+            settings={indicatorSettings[id]} onSettingsChange={(chartId, next) => {
+              synchronizer.deactivate()
+              setIndicatorSettings((current) => current.map((value, index) => index === chartId ? next : value))
+            }} />)}
         </div>
         {status === 'loading' && <div className="chart-message" role="status">Loading EURUSD M1 bid candles…</div>}
         {status === 'error' && <div className="chart-message" role="alert"><p>{error}</p><button type="button" onClick={() => setRequestedRange({ ...requestedRange })}>Retry</button></div>}
