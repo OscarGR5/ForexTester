@@ -1,5 +1,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { CandlestickSeries, ColorType, LineStyle, createChart, type IChartApi, type IPriceLine, type ISeriesApi, type Time } from 'lightweight-charts'
+import { SessionControls } from './SessionControls'
+import { useSessionPersistence } from './useSessionPersistence'
+import { equitySummary, type Hydration, type SessionSnapshot, type WorkspaceSettings } from './sessionTypes'
+import type { AnalyticsScope } from './analytics'
 import { ChartSynchronizer } from './chartSync'
 import { useReplay } from './useReplay'
 import { accountRiskError } from './risk'
@@ -184,21 +188,56 @@ export function App() {
   const [loader] = useState(() => new HistoryLoader())
   const [loadProgress, setLoadProgress] = useState<LoadProgress>({ completed: 0, total: 0 })
   const [replayStart, setReplayStart] = useState('')
+  const [hydration, setHydration] = useState<Hydration | null>(null)
+  const [statisticsScope, setStatisticsScope] = useState<AnalyticsScope>('setups')
+  const [journalScope, setJournalScope] = useState<AnalyticsScope>('setups')
+  const skipHistoryLoad = useRef(false)
   const tradingFrom = history?.tradingFrom ?? requestedRange.from
   const startMs = Date.parse(`${replayStart || `${tradingFrom}T00:00`}:00Z`)
   const startIndex = useMemo(() => replayStartIndex(history?.bid ?? [], startMs), [history, startMs])
-  const replay = useReplay(history?.bid ?? null, startIndex)
-  const trading = useTrading(history, replay)
+  const replay = useReplay(history?.bid ?? null, startIndex, hydration ? { replay: hydration.checkpoint.replay, epoch: hydration.checkpoint.trading.session } : null)
+  const trading = useTrading(history, replay, hydration)
   const bounds = useMemo(() => history?.bid.length && replay.count ? {
     from: history.bid[0].timestamp / 1000,
     to: history.bid[replay.count - 1].timestamp / 1000,
   } : undefined, [history, replay.count])
   const warmup = useMemo(() => ichimokuWarmup(history?.bid ?? [], startMs), [history, startMs])
   // A new session resets the viewport and subscriptions, while panes retain their chart instances.
-  const synchronizer = useMemo(() => new ChartSynchronizer(bounds), [history, replay.epoch])
+  const synchronizer = useMemo(() => {
+    const sync = new ChartSynchronizer(bounds)
+    if (hydration && replay.epoch === hydration.checkpoint.trading.session) sync.restore(hydration.checkpoint.workspace.viewport)
+    return sync
+  }, [history, replay.epoch])
   useLayoutEffect(() => { synchronizer.advance(bounds) }, [synchronizer, bounds])
 
+  const workspace = useMemo<WorkspaceSettings>(() => ({ chartCount, timeframes, indicators: indicatorSettings, statisticsScope, journalScope, viewport: null }),
+    [chartCount, timeframes, indicatorSettings, statisticsScope, journalScope])
+  const snapshot = useMemo<SessionSnapshot | null>(() => history ? ({ ledger: trading.equity, checkpoint: {
+    replay: { started: replay.active, index: replay.active ? replay.count - 1 : null, timestamp: replay.timestamp,
+      startIndex: replay.active ? replay.startIndex : startIndex, startTimestamp: startMs, speed: replay.speed, complete: replay.complete, playing: replay.playing },
+    trading: trading.state, executionCursor: trading.executionCursor, equity: equitySummary(trading.equity), workspace,
+  } }) : null, [history, trading.state, trading.equity, trading.executionCursor, replay.active, replay.count, replay.timestamp, replay.startIndex, replay.speed, replay.complete, replay.playing, startIndex, startMs, workspace])
+  const sessions = useSessionPersistence({ history, snapshot, actionVersion: trading.actionVersion, pause: replay.pause,
+    captureViewport: () => synchronizer.snapshot(),
+    download: (range) => new HistoryLoader().load(range, new AbortController().signal, setLoadProgress),
+    restore: (saved, source) => {
+      skipHistoryLoad.current = true
+      setHydration(saved); setHistory(source); setRequestedRange(saved.record.range)
+      setFrom(saved.record.range.from); setTo(saved.record.range.to)
+      setReplayStart(new Date(saved.checkpoint.replay.startTimestamp).toISOString().slice(0, 16))
+      const settings = saved.checkpoint.workspace
+      setChartCount(settings.chartCount); setTimeframes(settings.timeframes); setIndicatorSettings(settings.indicators)
+      setStatisticsScope(settings.statisticsScope); setJournalScope(settings.journalScope)
+      setStatus('ready'); setError(null); setFormError(null)
+    },
+    fresh: (range) => {
+      setHydration(null); setHistory(null); setRequestedRange({ ...range }); setFrom(range.from); setTo(range.to)
+      setStatisticsScope('setups'); setJournalScope('setups')
+    },
+  })
+
   useEffect(() => {
+    if (skipHistoryLoad.current) { skipHistoryLoad.current = false; return }
     const controller = new AbortController()
     let active = true
     setHistory(null)
@@ -228,7 +267,14 @@ export function App() {
     const range = { from, to }
     const validationError = validateDateRange(range)
     setFormError(validationError)
-    if (!validationError) setRequestedRange(range)
+    if (!validationError) void sessions.fresh(range)
+  }
+
+  function restart() {
+    const valuable = trading.state.setups.length > 0 || trading.state.closed.length > 0 || trading.state.positions.length > 0 || trading.state.pending.length > 0
+    if (valuable && !window.confirm('Restart this session? Trading records, journal notes and replay progress will be cleared and overwritten in autosaves. Cancel and choose New session to keep this backtest separately.')) return
+    setHydration(null)
+    replay.restart()
   }
 
   function changeTimeframe(id: number, timeframe: Timeframe) {
@@ -244,6 +290,8 @@ export function App() {
   return (
     <main className="app-shell">
       <header className="app-header"><h1>ForexTester</h1></header>
+      <SessionControls sessions={sessions} range={{ from: tradingFrom, to: history?.to ?? requestedRange.to }} timestamp={replay.timestamp} />
+      <fieldset className="workspace-controls" disabled={!sessions.initialized || sessions.busy || sessions.conflict || sessions.awaitingChoice} hidden={sessions.awaitingChoice}>
       <form className="chart-toolbar" onSubmit={loadData}>
         <fieldset className="layout-controls"><legend>Charts</legend>
           {[1, 2, 3].map((count) => <label key={count}><input type="radio" name="chart-count" value={count}
@@ -259,7 +307,7 @@ export function App() {
           <button type="button" disabled={!replay.canPlay} onClick={replay.play}>Play</button>
           <button type="button" disabled={!replay.canPause} onClick={replay.pause}>Pause</button>
           <button type="button" disabled={!replay.canNext} onClick={replay.next}>Next Candle</button>
-          <button type="button" disabled={!replay.canRestart} onClick={replay.restart}>Restart</button>
+          <button type="button" disabled={!replay.canRestart} onClick={restart}>Restart</button>
           <label>Replay speed <select aria-label="Replay speed" value={replay.speed} onChange={(event) => replay.setSpeed(Number(event.target.value) as 1 | 10 | 100)}>
             {[1, 10, 100].map((speed) => <option key={speed} value={speed}>{speed}×</option>)}
           </select></label>
@@ -291,8 +339,9 @@ export function App() {
         {status === 'ready' && history && startIndex >= history.bid.length && <div className="chart-message" role="status">No bid candles are available at or after the chosen replay start within this trading period.</div>}
       </div>
       <TradingPanel onConfigureCommission={trading.configureCommission} onConfigure={trading.configure} state={trading.state} permission={trading.permission} onEntry={trading.enter} onCancel={trading.cancel} onClose={trading.close} onModifyStop={trading.modifyStop} />
-      <TradingJournal key={trading.state.session} state={trading.state} onUpdateSetup={trading.updateSetup} />
+      <TradingJournal key={`${sessions.activeId}-${trading.state.session}`} state={trading.state} onUpdateSetup={trading.updateSetup} scope={statisticsScope} view={journalScope} onScopeChange={setStatisticsScope} onViewChange={setJournalScope} />
       <EquityChart ledger={trading.equity} referenceBalance={trading.state.account.referenceBalance} />
+      </fieldset>
       <p className="chart-note">UTC dates · Start inclusive · End exclusive · Up to 90 completed days</p>
     </main>
   )

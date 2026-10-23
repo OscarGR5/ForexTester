@@ -1,4 +1,7 @@
 // @vitest-environment jsdom
+import { IDBFactory, IDBKeyRange } from 'fake-indexeddb'
+import { webcrypto } from 'node:crypto'
+import { setTimeout as delay } from 'node:timers/promises'
 import { StrictMode, act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -57,6 +60,10 @@ let defaultStops = true
 let legacyManualWorkflow = true
 
 beforeEach(() => {
+  vi.stubGlobal('indexedDB', new IDBFactory())
+  vi.stubGlobal('IDBKeyRange', IDBKeyRange)
+  vi.stubGlobal('crypto', webcrypto)
+  vi.spyOn(window, 'confirm').mockReturnValue(true)
   defaultStops = true
   legacyManualWorkflow = true
   vi.clearAllMocks()
@@ -87,16 +94,28 @@ afterEach(async () => {
   if (rootMounted) await act(async () => root.unmount())
   host.remove()
   vi.useRealTimers()
+  vi.restoreAllMocks()
   vi.unstubAllGlobals()
 })
 
 async function click(input: HTMLInputElement | HTMLButtonElement) {
+  // Startup checks IndexedDB before enabling workspace actions.
+  for (let i = 0; input.closest<HTMLFieldSetElement>('.workspace-controls')?.disabled && i < 100; i++) {
+    await act(async () => { await delay(2) })
+  }
   if (legacyManualWorkflow && input.textContent === 'Start Replay') {
     await selectMode('manual')
     await setInput('Maximum combined gross planned risk (%)', '100')
   }
   if (defaultStops && ['Buy', 'Sell'].includes(input.textContent ?? '')) await setInput('SL price', input.textContent === 'Buy' ? '0.5' : '2')
   await act(async () => input.click())
+  if (input.textContent === 'Load Data') await settleStorage()
+}
+async function settleStorage() {
+  for (let i = 0; i < 100; i++) {
+    await act(async () => { await delay(2) })
+    if (!host.querySelector('.session-status')?.textContent?.includes('Recovering session')) return
+  }
 }
 
 async function selectTimeframe(index: number, value: string) {
@@ -169,6 +188,7 @@ describe('chart layout controls', () => {
       end.dispatchEvent(new Event('input', { bubbles: true }))
     })
     await act(async () => host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
+    await settleStorage()
     expect(request).toHaveBeenCalledTimes(2)
     expect(request.mock.calls[1][0]).toContain('from=2024-01-10&to=2024-01-11')
     expect(host.querySelectorAll('.chart-pane')).toHaveLength(3)
@@ -232,7 +252,7 @@ describe('shared market replay', () => {
     await click(button('Play'))
     expect(replayStatus()).toBe('Playing')
     expect(button('Next Candle').disabled).toBe(true)
-    expect(vi.getTimerCount()).toBe(1)
+    expect(vi.getTimerCount()).toBe(2)
     await act(async () => vi.advanceTimersByTime(249))
     expect(progress()).toBe('1 / 5 candles')
     await act(async () => vi.advanceTimersByTime(1))
@@ -292,7 +312,7 @@ describe('shared market replay', () => {
     await selectTimeframe(1, 'H1')
     expect(progress()).toBe('3 / 5 candles')
     expect(replayStatus()).toBe('Playing')
-    expect(vi.getTimerCount()).toBe(1)
+    expect(vi.getTimerCount()).toBe(2)
     await click(host.querySelector<HTMLInputElement>('input[value="3"]')!)
     await selectTimeframe(0, 'M15')
     await selectTimeframe(2, 'H4')
@@ -312,7 +332,7 @@ describe('shared market replay', () => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
     await click(button('Start Replay'))
     await click(button('Play'))
-    expect(vi.getTimerCount()).toBe(1)
+    expect(vi.getTimerCount()).toBe(2)
     await act(async () => root.unmount())
     rootMounted = false
     expect(vi.getTimerCount()).toBe(0)
@@ -645,7 +665,7 @@ describe('trading journal and performance integration', () => {
     await act(async () => root.render(<App />))
     expect(kpi('Completed setups')).toBe('0')
     expect(kpi('Win rate')).toBe('Unavailable')
-    expect(journal().textContent).toContain('Not permanently saved')
+    expect(journal().textContent).toContain('included in session checkpoints')
     expect(journal().textContent).toContain('No setups yet')
     expect(button('Export Journal CSV').disabled).toBe(true)
     await selectJournal('Journal view', 'positions')
@@ -1377,5 +1397,96 @@ describe('warm-up context and selected replay start', () => {
     await click(button('Restart'))
     expect(records('Open positions').textContent).not.toContain('2024-01-09 03:00 UTC')
     expect(host.querySelector('time')!.textContent).toBe('2024-01-09 02:00 UTC')
+  })
+})
+
+// These exercise the real IndexedDB adapter alongside the existing chart fake.
+describe('session lifecycle and workspace hydration', () => {
+  beforeEach(() => { request.mockImplementation(async (path: string) => {
+    const params = new URL(path, 'http://test.local').searchParams
+    const from = params.get('from')!, to = params.get('to')!, shift = Date.parse(from) - Date.parse(history.from)
+    const fixture = tradingHistory()
+    return new Response(JSON.stringify({ ...fixture, from, to, bid: fixture.bid.map((b) => ({ ...b, timestamp: b.timestamp + shift })), ask: fixture.ask.map((b) => ({ ...b, timestamp: b.timestamp + shift })) }))
+  }) })
+  async function until(check: () => boolean) {
+    for (let i = 0; i < 200; i++) { await act(async () => { await delay(2) }); if (check()) return }
+    throw new Error(`Session operation did not settle: ${host.querySelector('.session-controls')?.textContent}`)
+  }
+  async function saveNow() {
+    await click(button('Save now'))
+    await until(() => host.querySelector('.session-status strong')?.textContent === 'Saved')
+  }
+  async function refreshAndResume() {
+    await act(async () => root.unmount())
+    root = createRoot(host)
+    await act(async () => root.render(<StrictMode><App /></StrictMode>))
+    await until(() => !!button('Resume session'))
+    expect(host.querySelector('fieldset.workspace-controls')?.hasAttribute('hidden')).toBe(true)
+    await click(button('Resume session'))
+    await until(() => !host.querySelector('fieldset.workspace-controls')?.hasAttribute('hidden') && !host.querySelector('.session-status')?.textContent?.includes('Recovering'))
+  }
+  it('restores trades, SL, notes, account settings, chart configurations and scopes together after refresh', async () => {
+    await act(async () => root.render(<StrictMode><App /></StrictMode>))
+    await until(() => !host.querySelector<HTMLInputElement>('[aria-label="Current session name"]')!.disabled)
+    await setInput('Current session name', 'London recovery')
+    await setInput('Reference balance (USD)', '10000')
+    await setInput('Round-trip commission (USD per standard lot)', '7')
+    await click(button('Start Replay')); await click(button('Buy'))
+    const setupId = records('Pending orders').querySelector<HTMLElement>('li')!.textContent!.match(/Setup ([\w-]+)/)![1]
+    const assignment = host.querySelector<HTMLSelectElement>('[aria-label="Setup assignment"]')!
+    await act(async () => { assignment.value = setupId; assignment.dispatchEvent(new Event('change', { bubbles: true })) })
+    await volume('0.02'); await click(button('Buy')); await click(button('Next Candle'))
+    const id = records('Open positions').querySelector<HTMLElement>('li')!.dataset.positionId!
+    await setInput(`Replacement SL ${id}`, '0.95')
+    await click(host.querySelector<HTMLButtonElement>(`[aria-label="Update SL ${id}"]`)!)
+    await click(host.querySelector<HTMLButtonElement>(`[aria-label="Details for setup ${setupId}"]`)!)
+    await setInput(`Setup label ${setupId}`, 'Keep this setup')
+    const notes = host.querySelector<HTMLTextAreaElement>(`[aria-label="Setup notes ${setupId}"]`)!
+    await act(async () => { Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(notes, 'Preserved note'); notes.dispatchEvent(new Event('input', { bubbles: true })) })
+    await click(host.querySelector<HTMLInputElement>('input[value="3"]')!)
+    await selectTimeframe(0, 'M15'); await setInput('Chart 1 BB #1 Length', '7')
+    for (const label of ['Statistics scope', 'Journal view']) {
+      const select = host.querySelector<HTMLSelectElement>(`[aria-label="${label}"]`)!
+      await act(async () => { select.value = 'positions'; select.dispatchEvent(new Event('change', { bubbles: true })) })
+    }
+    await click(host.querySelector<HTMLButtonElement>(`[aria-label="Close position ${id}"]`)!); await click(button('Next Candle'))
+    const before = records('Open positions').textContent, closed = records('Closed trades').textContent, clock = host.querySelector('time')!.textContent
+    await saveNow(); await refreshAndResume()
+    expect(replayStatus()).toBe('Paused'); expect(host.querySelector('time')!.textContent).toBe(clock)
+    expect(records('Open positions').textContent).toBe(before); expect(records('Closed trades').textContent).toBe(closed)
+    expect(host.querySelector<HTMLInputElement>('[aria-label="Current session name"]')!.value).toBe('London recovery')
+    expect(host.querySelector<HTMLInputElement>('[aria-label="Reference balance (USD)"]')!.value).toBe('10000')
+    expect(host.querySelector<HTMLInputElement>('[aria-label="Round-trip commission (USD per standard lot)"]')!.value).toBe('7')
+    expect(host.querySelectorAll('.chart-pane')).toHaveLength(3)
+    expect(host.querySelector<HTMLInputElement>('[aria-label="Chart 1 BB #1 Length"]')!.value).toBe('7')
+    expect(host.querySelector<HTMLSelectElement>('[aria-label="Statistics scope"]')!.value).toBe('positions')
+    expect(host.querySelector<HTMLSelectElement>('[aria-label="Journal view"]')!.value).toBe('positions')
+    expect(button('Export Journal CSV').disabled).toBe(false)
+    const survivor = records('Open positions').querySelector<HTMLElement>('li')!.dataset.positionId!
+    await click(host.querySelector<HTMLButtonElement>(`[aria-label="Close position ${survivor}"]`)!); await click(button('Next Candle'))
+    expect(recordCount('Closed trades')).toBe(2)
+    const details = host.querySelector<HTMLButtonElement>(`[aria-label="Details for position ${survivor}"]`)!
+    await click(details)
+    expect(host.querySelector<HTMLTextAreaElement>(`[aria-label="Setup notes ${setupId}"]`)!.value).toBe('Preserved note')
+  })
+  it('requires restart confirmation, retains records on cancel, and replaces only the active checkpoint on approval', async () => {
+    await act(async () => root.render(<App />))
+    await click(button('Start Replay')); await click(button('Buy')); await click(button('Next Candle')); await saveNow()
+    vi.mocked(window.confirm).mockReturnValueOnce(false)
+    await click(button('Restart')); expect(recordCount('Open positions')).toBe(1)
+    expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('New session'))
+    await click(button('Restart')); expect(recordCount('Open positions')).toBe(0)
+    await saveNow(); await refreshAndResume(); expect(recordCount('Open positions')).toBe(0); expect(progress()).toBe('1 / 5 candles')
+  })
+  it('keeps a date-changed session separate and makes both sessions available after refresh', async () => {
+    await act(async () => root.render(<App />))
+    await click(button('Start Replay')); await click(button('Buy')); await click(button('Next Candle')); await saveNow()
+    await changeDates(); await saveNow()
+    await act(async () => root.unmount()); root = createRoot(host)
+    await act(async () => root.render(<App />))
+    await until(() => host.querySelectorAll('.saved-session').length === 2)
+    const original = [...host.querySelectorAll('.saved-session')].find((row) => row.textContent?.includes('2024-01-09 → 2024-01-10'))!
+    await click(original.querySelector('button')!); await until(() => replayStatus() === 'Paused' && recordCount('Open positions') === 1)
+    expect(host.querySelector('time')!.textContent).toContain('2024-01-09 01:00')
   })
 })

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Candle } from './history'
+import type { ReplayCheckpoint } from './sessionTypes'
 
 export const REPLAY_INTERVAL_MS = 250
 
@@ -9,13 +10,14 @@ interface Session {
   playing: boolean
   epoch: number
   startIndex: number
+  speed: 1 | 10 | 100
 }
 
 // One clock for the loaded M1 dataset, independent of panes and timeframes.
-export function useReplay(source: readonly Candle[] | null, initialIndex = 0) {
-  const [session, setSession] = useState<Session>({ source, index: null, playing: false, epoch: 0, startIndex: initialIndex })
+export function useReplay(source: readonly Candle[] | null, initialIndex = 0, restored?: { replay: ReplayCheckpoint; epoch: number } | null) {
+  const [session, setSession] = useState<Session>(() => ({ source, index: restored?.replay.index ?? null, playing: false, epoch: restored?.epoch ?? 0, startIndex: restored?.replay.startIndex ?? initialIndex, speed: restored?.replay.speed ?? 1 }))
   const current = session.source === source ? session
-    : { source, index: null, playing: false, epoch: session.epoch + 1, startIndex: initialIndex }
+    : { source, index: restored?.replay.index ?? null, playing: false, epoch: restored?.epoch ?? session.epoch + 1, startIndex: restored?.replay.startIndex ?? initialIndex, speed: restored?.replay.speed ?? session.speed }
   // Reset before children render a new dataset, rather than after a paint.
   if (current !== session) setSession(current)
 
@@ -23,7 +25,8 @@ export function useReplay(source: readonly Candle[] | null, initialIndex = 0) {
   const active = current.index !== null
   const complete = active && current.index === total - 1
   const canAdvance = active && !complete
-  const [speed, setSpeed] = useState<1 | 10 | 100>(1)
+  const speed = current.speed
+  const setSpeed = (speed: 1 | 10 | 100) => setSession((previous) => ({ ...previous, speed }))
   const count = active ? current.index! + 1 : total
 
   useEffect(() => {
@@ -41,7 +44,7 @@ export function useReplay(source: readonly Candle[] | null, initialIndex = 0) {
   function restart() {
     const startIndex = active ? current.startIndex : initialIndex
     if (!total || startIndex >= total) return
-    setSession((previous) => ({ source, index: startIndex, startIndex, playing: false, epoch: previous.epoch + 1 }))
+    setSession((previous) => ({ source, index: startIndex, startIndex, playing: false, epoch: previous.epoch + 1, speed: previous.speed }))
   }
 
   return {
