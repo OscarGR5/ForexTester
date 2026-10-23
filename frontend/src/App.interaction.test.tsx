@@ -471,6 +471,8 @@ describe('per-chart indicators', () => {
   it('preserves independent settings across one-, two-, and three-chart layouts', async () => {
     await act(async () => root.render(<App />))
     await click(host.querySelector<HTMLInputElement>('input[value="3"]')!)
+    // Use M1 on each pane to exercise manual settings independently of presets.
+    await selectTimeframe(1, 'M1'); await selectTimeframe(2, 'M1')
     await shortPeriods(1); await shortPeriods(2); await shortPeriods(3)
     await parameter(1, 'BB #1 Length', '3')
     await enableIndicator(1, 'BB #1')
@@ -552,7 +554,10 @@ describe('per-chart indicators', () => {
     await act(async () => root.render(<App />))
     await selectTimeframe(0, timeframe)
     await shortPeriods()
-    for (const name of ['BB #1', 'BB #2', 'Stochastic', 'Ichimoku']) await enableIndicator(1, name)
+    for (const name of ['BB #1', 'BB #2', 'Stochastic', 'Ichimoku']) {
+      const input = host.querySelector<HTMLInputElement>(`input[aria-label="Chart 1 ${name}"]`)!
+      if (!input.checked) await click(input)
+    }
     await click(button('Start Replay'))
     const { calculateIndicators, defaultIndicatorSettings } = await import('./indicators')
     const { toBidChartCandles } = await import('./history')
@@ -574,5 +579,254 @@ describe('per-chart indicators', () => {
     expect(k.update).toHaveBeenCalled()
     expect(createChart).toHaveBeenCalledTimes(1)
     expect(request).toHaveBeenCalledTimes(1)
+  })
+})
+
+function checked(chart: number, indicator: string) {
+  return host.querySelector<HTMLInputElement>(`[aria-label="Chart ${chart} ${indicator}"]`)!.checked
+}
+function records(name: string) { return host.querySelector<HTMLElement>(`[aria-label="${name}"]`)! }
+function recordCount(name: string) { return records(name).querySelectorAll('li').length }
+async function volume(value: string) {
+  const input = host.querySelector<HTMLInputElement>('.trading-controls input')!
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value)
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  return input
+}
+function tradingHistory() {
+  return { ...history,
+    bid: history.bid.map((bar, index) => ({ ...bar, open: 1.1 + index * 0.001, close: 1.1005 + index * 0.001 })),
+    ask: history.bid.map((bar, index) => ({ ...bar, open: 1.1002 + index * 0.001, close: 1.1007 + index * 0.001 })),
+  }
+}
+
+describe('timeframe indicator presets', () => {
+  it.each(TIMEFRAMES)('initializes %s with its default parameters and line visibility', async (timeframe) => {
+    await act(async () => root.render(<App />))
+    await selectTimeframe(0, timeframe)
+    const bands = timeframe === 'M5' || timeframe === 'M15'
+    expect(checked(1, 'BB #1')).toBe(bands)
+    expect(checked(1, 'BB #2')).toBe(bands)
+    expect(checked(1, 'Stochastic')).toBe(bands)
+    expect(checked(1, 'Ichimoku')).toBe(timeframe === 'H1' || timeframe === 'H4')
+    expect(checked(1, 'BB #1 Basis')).toBe(true)
+    expect(checked(1, 'BB #2 Basis')).toBe(false)
+    const values: Record<string, string> = {
+      'BB #1 Length': '20', 'BB #1 Std. deviation': '2', 'BB #2 Length': '20', 'BB #2 Std. deviation': '1',
+      '%K length': '30', '%K smoothing': '10', '%D smoothing': '10', Tenkan: '9', Kijun: '26', 'Span B': '52', Displacement: '26',
+    }
+    for (const [name, value] of Object.entries(values)) {
+      expect(host.querySelector<HTMLInputElement>(`[aria-label="Chart 1 ${name}"]`)!.value).toBe(value)
+    }
+    expect(createChart).toHaveBeenCalledTimes(1)
+    expect(request).toHaveBeenCalledTimes(1)
+  })
+
+  it('restores each chart/timeframe override across layout changes, replay, and date loads', async () => {
+    await act(async () => root.render(<App />))
+    await selectTimeframe(0, 'M5')
+    await parameter(1, 'BB #1 Length', '7')
+    await enableIndicator(1, 'BB #2') // Explicitly disable a preset indicator.
+    await enableIndicator(1, 'Ichimoku') // Other indicators remain available.
+    await selectTimeframe(0, 'H1')
+    await parameter(1, 'Tenkan', '4')
+    await click(host.querySelector<HTMLInputElement>('input[value="3"]')!)
+    expect(checked(2, 'BB #1')).toBe(true)
+    expect(checked(2, 'BB #2')).toBe(true)
+    expect(checked(2, 'Ichimoku')).toBe(false)
+    expect(checked(3, 'Ichimoku')).toBe(true)
+    await selectTimeframe(1, 'M5')
+    expect(host.querySelector<HTMLInputElement>('[aria-label="Chart 2 BB #1 Length"]')!.value).toBe('20')
+    await click(button('Start Replay'))
+    await click(button('Next Candle'))
+    await selectTimeframe(0, 'M5')
+    expect(host.querySelector<HTMLInputElement>('[aria-label="Chart 1 BB #1 Length"]')!.value).toBe('7')
+    expect(checked(1, 'BB #2')).toBe(false)
+    expect(checked(1, 'Ichimoku')).toBe(true)
+    expect(progress()).toBe('2 / 5 candles')
+    expect(replayStatus()).toBe('Paused')
+    await click(host.querySelector<HTMLInputElement>('input[value="1"]')!)
+    await click(host.querySelector<HTMLInputElement>('input[value="3"]')!)
+    await selectTimeframe(0, 'H1')
+    expect(host.querySelector<HTMLInputElement>('[aria-label="Chart 1 Tenkan"]')!.value).toBe('4')
+    expect(request).toHaveBeenCalledTimes(1)
+    await changeDates()
+    await selectTimeframe(0, 'M5')
+    expect(host.querySelector<HTMLInputElement>('[aria-label="Chart 1 BB #1 Length"]')!.value).toBe('7')
+    expect(checked(1, 'BB #2')).toBe(false)
+  })
+})
+
+describe('simulated trading with the shared replay clock', () => {
+  it('validates lots and disables trading in full-history mode and while playing', async () => {
+    request.mockResolvedValueOnce(new Response(JSON.stringify(tradingHistory())))
+    await act(async () => root.render(<App />))
+    expect(button('Buy').disabled).toBe(true)
+    expect(button('Sell').disabled).toBe(true)
+    await click(button('Start Replay'))
+    expect(host.querySelector<HTMLInputElement>('.trading-controls input')!.value).toBe('0.01')
+    for (const value of ['', '0', '-1']) {
+      expect((await volume(value)).getAttribute('aria-invalid')).toBe('true')
+      expect(button('Buy').disabled).toBe(true)
+      await click(button('Buy'))
+      expect(recordCount('Pending orders')).toBe(0)
+    }
+    await volume('0.025')
+    expect(button('Buy').disabled).toBe(false)
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0))
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    await click(button('Play'))
+    expect(button('Buy').disabled).toBe(true)
+    expect(button('Sell').disabled).toBe(true)
+    await click(button('Pause'))
+    expect(button('Buy').disabled).toBe(false)
+  })
+
+  it('fills two independent positions at the first eligible bar during batched StrictMode playback', async () => {
+    request.mockImplementation(async () => new Response(JSON.stringify(tradingHistory())))
+    await act(async () => root.render(<StrictMode><App /></StrictMode>))
+    await click(button('Start Replay'))
+    await click(button('Buy'))
+    await volume('0.03')
+    await click(button('Sell'))
+    const ids = [...records('Pending orders').querySelectorAll('li')].map((item) => item.dataset.orderId)
+    expect(new Set(ids).size).toBe(2)
+    expect(recordCount('Pending orders')).toBe(2)
+    expect(recordCount('Open positions')).toBe(0)
+    expect(button('Buy').disabled).toBe(true)
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0))
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    await click(button('Play'))
+    await act(async () => vi.advanceTimersByTime(500))
+    await click(button('Pause'))
+    expect(progress()).toBe('3 / 5 candles')
+    expect(recordCount('Pending orders')).toBe(0)
+    const positions = [...records('Open positions').querySelectorAll('li')]
+    expect(positions.map((item) => item.dataset.positionId)).toEqual(ids)
+    expect(positions[0].textContent).toContain('Buy · 0.01 lots')
+    expect(positions[0].textContent).toContain('Entry 2024-01-09 01:00 UTC @ 1.10120')
+    expect(positions[0].textContent).toContain('Current 1.10250 · Unrealized 13.0 pips · $1.30 gross')
+    expect(positions[1].textContent).toContain('Sell · 0.03 lots')
+    expect(positions[1].textContent).toContain('Entry 2024-01-09 01:00 UTC @ 1.10100')
+    expect(positions[1].textContent).toContain('Current 1.10270 · Unrealized -17.0 pips · $-5.10 gross')
+    const closeButtons = [...records('Open positions').querySelectorAll('button')]
+    await click(button('Play'))
+    expect(closeButtons.every((button) => button.disabled)).toBe(true)
+    await click(button('Pause'))
+    await click(closeButtons[0]); await click(closeButtons[1])
+    await click(closeButtons[0]) // Disabled duplicate request.
+    expect(records('Open positions').textContent?.match(/Pending close/g)).toHaveLength(2)
+    expect(recordCount('Closed trades')).toBe(0)
+    await click(button('Play'))
+    await act(async () => vi.advanceTimersByTime(500))
+    expect(replayStatus()).toBe('Complete')
+    expect(recordCount('Open positions')).toBe(0)
+    const closed = [...records('Closed trades').querySelectorAll('li')]
+    expect(closed.map((item) => item.dataset.tradeId)).toEqual(ids)
+    expect(closed[0].textContent).toContain('Exit 2024-01-09 03:00 UTC @ 1.10300')
+    expect(closed[0].textContent).toContain('Realized 18.0 pips · $1.80 gross')
+    expect(closed[1].textContent).toContain('Exit 2024-01-09 03:00 UTC @ 1.10320')
+    expect(closed[1].textContent).toContain('Realized -22.0 pips · $-6.60 gross')
+    expect(button('Buy').disabled).toBe(true)
+    await click(button('Restart'))
+    for (const name of ['Pending orders', 'Open positions', 'Closed trades']) expect(recordCount(name)).toBe(0)
+  })
+
+  it('preserves pending entries, positions and closes through chart navigation and resets on restart/data reload', async () => {
+    request.mockImplementation(async () => new Response(JSON.stringify(tradingHistory())))
+    await act(async () => root.render(<App />))
+    await click(button('Start Replay'))
+    await click(button('Buy'))
+    expect(button('Restart').disabled).toBe(false)
+    await click(button('Restart')) // Restart also clears orders requested at the first candle.
+    expect(recordCount('Pending orders')).toBe(0)
+    await click(button('Buy'))
+    await selectTimeframe(0, 'H4')
+    await click(host.querySelector<HTMLInputElement>('input[value="3"]')!)
+    expect(recordCount('Pending orders')).toBe(1)
+    await click(button('Next Candle'))
+    const position = records('Open positions').querySelector('li')!
+    const id = position.dataset.positionId
+    const chart = vi.mocked(createChart).mock.results[0].value
+    await act(async () => {
+      chart.timeScale().setVisibleLogicalRange({ from: 0, to: 1 })
+      host.querySelector('.chart-pane')!.dispatchEvent(new Event('wheel', { bubbles: true }))
+    })
+    await selectTimeframe(0, 'M15')
+    await enableIndicator(1, 'Ichimoku')
+    await click(host.querySelector<HTMLInputElement>('input[value="1"]')!)
+    expect(records('Open positions').querySelector('li')!.dataset.positionId).toBe(id)
+    expect(progress()).toBe('2 / 5 candles')
+    await click(records('Open positions').querySelector('button')!)
+    await selectTimeframe(0, 'M1')
+    expect(records('Open positions').textContent).toContain('Pending close')
+    await click(button('Next Candle'))
+    await click(button('Buy')) // Reset must clear both a closed record and a pending order.
+    expect(recordCount('Closed trades')).toBe(1)
+    await click(button('Load Data'))
+    expect(replayStatus()).toBe('Ready')
+    for (const name of ['Pending orders', 'Open positions', 'Closed trades']) expect(recordCount(name)).toBe(0)
+    await click(button('Start Replay')); await click(button('Sell')); await click(button('Next Candle'))
+    expect(recordCount('Open positions')).toBe(1)
+    await click(button('Load Data'))
+    expect(recordCount('Open positions')).toBe(0)
+  })
+
+  it('cancels entries before execution and leaves missing-quote orders unfilled at the final candle', async () => {
+    const data = tradingHistory()
+    data.ask = data.ask.slice(0, 2)
+    request.mockResolvedValueOnce(new Response(JSON.stringify(data)))
+    await act(async () => root.render(<App />))
+    await click(button('Start Replay')); await click(button('Buy'))
+    await click(records('Pending orders').querySelector('button')!)
+    await click(button('Next Candle'))
+    expect(recordCount('Open positions')).toBe(0)
+    await click(button('Buy'))
+    await click(button('Next Candle')); await click(button('Next Candle')); await click(button('Next Candle'))
+    expect(replayStatus()).toBe('Complete')
+    expect(recordCount('Pending orders')).toBe(1)
+    expect(recordCount('Open positions')).toBe(0)
+    expect(button('Buy').disabled).toBe(true)
+    expect(host.textContent).toContain('unfilled orders stay pending')
+    await click(records('Pending orders').querySelector('button')!)
+    expect(recordCount('Pending orders')).toBe(0)
+  })
+
+  it('leaves positions open with unavailable valuation at an unmatched final quote, without forcing an exit', async () => {
+    const data = tradingHistory()
+    data.ask = data.ask.slice(0, 2)
+    request.mockResolvedValueOnce(new Response(JSON.stringify(data)))
+    await act(async () => root.render(<App />))
+    await click(button('Start Replay')); await click(button('Buy')); await click(button('Next Candle'))
+    await click(records('Open positions').querySelector('button')!)
+    await click(button('Next Candle')); await click(button('Next Candle')); await click(button('Next Candle'))
+    expect(recordCount('Open positions')).toBe(1)
+    expect(recordCount('Closed trades')).toBe(0)
+    expect(records('Open positions').textContent).toContain('PnL unavailable')
+    expect(records('Open positions').textContent).toContain('Open at end of available history; close unfilled')
+    expect(records('Open positions').querySelector('button')!.disabled).toBe(true)
+  })
+
+  it('does not mark or fill from unrevealed future candles or unmatched ask-only timestamps', async () => {
+    const data = tradingHistory()
+    // Ask only between the first two bid observations, followed by unmatched bid bars.
+    data.ask = [data.ask[0], { ...data.ask[1], timestamp: data.bid[0].timestamp + 60_000 }, data.ask[3], data.ask[4]]
+    data.bid[4].close = 99999; data.bid[4].high = 100000
+    data.ask[3].close = 99999; data.ask[3].high = 100000
+    request.mockResolvedValueOnce(new Response(JSON.stringify(data)))
+    await act(async () => root.render(<App />))
+    await click(button('Start Replay')); await click(button('Buy'))
+    await click(button('Next Candle')); await click(button('Next Candle'))
+    expect(recordCount('Pending orders')).toBe(1)
+    expect(recordCount('Open positions')).toBe(0)
+    expect(records('Pending orders').textContent).not.toContain('99999')
+    await click(button('Next Candle'))
+    expect(recordCount('Pending orders')).toBe(0)
+    expect(records('Open positions').textContent).toContain('Entry 2024-01-09 03:00 UTC @ 1.10320')
+    expect(records('Open positions').textContent).toContain('Current 1.10350')
+    // The future bid close is still unavailable at this replay clock.
+    expect(records('Open positions').textContent).not.toContain('99999')
   })
 })

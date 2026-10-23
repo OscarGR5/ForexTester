@@ -2,9 +2,11 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent }
 import { CandlestickSeries, ColorType, LineStyle, createChart, type CandlestickData, type IChartApi, type ISeriesApi, type Time, type UTCTimestamp } from 'lightweight-charts'
 import { ChartSynchronizer } from './chartSync'
 import { useReplay } from './useReplay'
+import { useTrading } from './useTrading'
+import { TradingPanel } from './TradingPanel'
 import { IndicatorControls } from './IndicatorControls'
 import { IndicatorSeries } from './indicatorSeries'
-import { defaultIndicatorSettings, type IndicatorSettings } from './indicators'
+import { indicatorPreset, type IndicatorSettings } from './indicators'
 import { fetchHistory, TIMEFRAMES, toBidChartCandles, validateDateRange, type DateRange, type HistoryResponse, type Timeframe } from './history'
 
 const DEFAULT_RANGE: DateRange = { from: '2024-01-09', to: '2024-01-10' }
@@ -128,7 +130,7 @@ function ChartPane({ id, timeframe, candles, synchronizer, onTimeframeChange, se
           onChange={(event) => onTimeframeChange(id, event.target.value as Timeframe)}>
           {TIMEFRAMES.map((option) => <option key={option} value={option}>{option}</option>)}
         </select></label>
-        <IndicatorControls id={id} settings={settings} onChange={(next) => onSettingsChange(id, next)} />
+        <IndicatorControls key={timeframe} id={id} settings={settings} onChange={(next) => onSettingsChange(id, next)} />
       </div>
       <div ref={container} className="chart-canvas" aria-hidden="true" />
     </section>
@@ -145,8 +147,10 @@ export function App() {
   const [formError, setFormError] = useState<string | null>(null)
   const [chartCount, setChartCount] = useState(1)
   const [timeframes, setTimeframes] = useState<Timeframe[]>(DEFAULT_TIMEFRAMES)
-  const [indicatorSettings, setIndicatorSettings] = useState<IndicatorSettings[]>(() => DEFAULT_TIMEFRAMES.map(defaultIndicatorSettings))
+  const [indicatorSettings, setIndicatorSettings] = useState<Partial<Record<Timeframe, IndicatorSettings>>[]>(() =>
+    DEFAULT_TIMEFRAMES.map((timeframe) => ({ [timeframe]: indicatorPreset(timeframe) })))
   const replay = useReplay(history?.bid ?? null)
+  const trading = useTrading(history, replay)
   const bounds = useMemo(() => replay.visible.length ? {
     from: replay.visible[0].timestamp / 1000,
     to: replay.visible[replay.visible.length - 1].timestamp / 1000,
@@ -192,6 +196,8 @@ export function App() {
 
   function changeTimeframe(id: number, timeframe: Timeframe) {
     synchronizer.deactivate()
+    setIndicatorSettings((current) => current.map((settings, index) => index === id && !settings[timeframe]
+      ? { ...settings, [timeframe]: indicatorPreset(timeframe) } : settings))
     setTimeframes((current) => current.map((value, index) => index === id ? timeframe : value))
   }
 
@@ -228,15 +234,16 @@ export function App() {
         <div className="chart-stack" style={{ gridTemplateRows: `repeat(${chartCount}, minmax(auto, 1fr))` }}>
           {timeframes.slice(0, chartCount).map((timeframe, id) => <ChartPane key={id} id={id} timeframe={timeframe}
             candles={candles[timeframe]} synchronizer={synchronizer} onTimeframeChange={changeTimeframe}
-            settings={indicatorSettings[id]} onSettingsChange={(chartId, next) => {
+            settings={indicatorSettings[id][timeframe]!} onSettingsChange={(chartId, next) => {
               synchronizer.deactivate()
-              setIndicatorSettings((current) => current.map((value, index) => index === chartId ? next : value))
+              setIndicatorSettings((current) => current.map((value, index) => index === chartId ? { ...value, [timeframe]: next } : value))
             }} />)}
         </div>
         {status === 'loading' && <div className="chart-message" role="status">Loading EURUSD M1 bid candles…</div>}
         {status === 'error' && <div className="chart-message" role="alert"><p>{error}</p><button type="button" onClick={() => setRequestedRange({ ...requestedRange })}>Retry</button></div>}
         {status === 'ready' && history?.bid.length === 0 && <div className="chart-message" role="status">No bid candles are available for this period.</div>}
       </div>
+      <TradingPanel state={trading.state} permission={trading.permission} onEntry={trading.enter} onCancel={trading.cancel} onClose={trading.close} />
       <p className="chart-note">UTC dates · Start inclusive · End exclusive · Up to 7 completed days</p>
     </main>
   )

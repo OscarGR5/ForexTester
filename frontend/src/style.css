@@ -38,7 +38,8 @@ button:disabled { opacity: 0.45; cursor: default; }
 .replay-progress { margin-left: auto; }
 .form-error { margin: 0; color: #e2a2a6; font-size: 0.85rem; }
 
-.chart-workspace { position: relative; flex: 1; min-height: 0; overflow: auto; border: 1px solid #354250; border-radius: 6px; background: #171e28; }
+.chart-workspace { position: relative; flex: 1 0 320px; min-height: 320px; overflow: auto; border: 1px solid #354250; border-radius: 6px; background: #171e28; }
+.chart-workspace:has(.indicator-controls input[aria-label$='Stochastic']:checked) { flex-basis: 380px; min-height: 380px; }
 .chart-stack { display: grid; height: 100%; gap: 8px; padding: 8px; }
 .chart-pane { display: flex; min-height: 300px; flex-direction: column; overflow: hidden; border: 1px solid #354250; border-radius: 4px; }
 .pane-toolbar { display: flex; min-height: 40px; align-items: center; justify-content: space-between; gap: 12px; padding: 3px 10px; background: #1e2935; }
@@ -72,3 +73,27 @@ button:disabled { opacity: 0.45; cursor: default; }
 
 .indicator-source { margin: 6px 0; color: #a7b3c1; font-size: 0.75rem; }
 .indicator-options .indicator-visibility { display: inline-flex; gap: 4px; margin-right: 8px; }
+
+.trading-panel { flex: none; padding: 10px 12px; border: 1px solid #354250; border-radius: 6px; background: #171e28; }
+.trading-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.trading-controls h2 { margin: 0 auto 0 0; font-size: 0.95rem; font-weight: 600; }
+.trading-controls label { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
+.trading-controls input { width: 90px; min-height: 34px; padding: 4px 8px; border: 1px solid #354250; border-radius: 4px; background: #10151d; color: #e5eaf0; color-scheme: dark; }
+.trading-controls input[aria-invalid='true'] { border-color: #e2a2a6; }
+.trading-slots, .trading-message, .trading-note { color: #a7b3c1; font-size: 0.8rem; }
+.trading-message { margin: 8px 0; }
+.trading-note { margin: 8px 0 0; }
+.trade-records { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; max-height: 220px; overflow: auto; }
+.trade-records h3 { margin: 4px 0 6px; font-size: 0.85rem; font-weight: 600; }
+.trade-records p { margin: 0; color: #a7b3c1; font-size: 0.8rem; }
+.trade-records ul { list-style: none; margin: 0; padding: 0; }
+.trade-records li { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; padding: 8px 0; border-top: 1px solid #354250; font-size: 0.8rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.trade-records li span { color: #b2b5be; }
+.trade-records button { font-size: 0.8rem; }
+
+@media (max-width: 600px) {
+  .trade-records { grid-template-columns: 1fr; gap: 12px; max-height: 270px; }
+  .trading-controls h2 { flex-basis: 100%; }
+  .trading-controls button { min-height: 40px; }
+  .pane-toolbar { flex-wrap: wrap; gap: 6px 10px; }
+}
