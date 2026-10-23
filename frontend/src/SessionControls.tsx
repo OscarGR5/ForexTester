@@ -36,13 +36,18 @@ export function SessionControls({ sessions, range, timestamp }: { sessions: Sess
         <button type="button" disabled={sessions.busy || sessions.awaitingChoice || sessions.conflict || !sessions.initialized} onClick={sessions.save}>Save now</button>
       </div>
     </div>
-    <p className="session-status" role="status"><strong>{sessions.busy ? 'Recovering session…' : sessions.awaitingChoice ? 'Choose a saved session or start a new one.' : sessions.saveStatus}</strong>
+    <p className="session-status" role="status"><strong>{sessions.busy ? 'Storage operation in progress…' : sessions.awaitingChoice ? 'Choose a saved session or start a new one.' : sessions.saveStatus}</strong>
       <span>Last successful save: {time(sessions.savedAt)}</span>
       <span>{range.from} → {range.to} UTC{timestamp !== null ? ` · Replay ${time(new Date(timestamp).toISOString())}` : ' · Replay not started'}</span>
     </p>
     <p className="chart-note">Storage: {sessions.storageLocation ?? 'Connecting to local backend…'}</p>
     {sessions.error && <p className="form-error" role="alert">{sessions.error}</p>}
-    {sessions.error && <button type="button" onClick={sessions.retry}>Retry storage connection</button>}
+    {sessions.error && <button type="button" disabled={sessions.busy} onClick={sessions.retry}>Retry storage connection</button>}
+    {sessions.repairTarget && <div aria-label="Historical data repair">
+      <p>“{sessions.repairTarget.name}” needs its original historical data. Repair downloads the saved range and 30-day pre-roll and requires an exact fingerprint match. Trading records are preserved.</p>
+      <button type="button" disabled={sessions.busy} onClick={() => void sessions.repair()}>Repair historical data</button>
+      {sessions.repairProgress && <p role="status">{sessions.busy ? 'Repairing historical data' : 'Last repair download'}: {sessions.repairProgress.completed} / {sessions.repairProgress.total} chunks</p>}
+    </div>}
     {sessions.migrationWarning && <p className="coverage-warning" role="status">{sessions.migrationWarning}</p>}
     {sessions.cacheWarning && <p className="coverage-warning" role="status">{sessions.cacheWarning}</p>}
     {!!sessions.diskErrors.length && <section aria-label="Unreadable disk sessions">{sessions.diskErrors.map((problem) => <div key={problem.id}>
@@ -61,6 +66,22 @@ export function SessionControls({ sessions, range, timestamp }: { sessions: Sess
       <h2>Saved backtests</h2>
       {!sessions.sessions.length ? <p>No saved sessions on disk.</p> : <ul className="saved-sessions">{sessions.sessions.map((record) => <SavedSession key={`${record.id}-${record.name}`} record={record} sessions={sessions} />)}</ul>}
     </div>}
+    <details>
+      <summary>Storage maintenance</summary>
+      <p className="chart-note">Unused files become eligible after seven days. Back up the durable storage directory while the backend is stopped before major maintenance.</p>
+      <button type="button" disabled={sessions.busy || !sessions.initialized} onClick={() => void sessions.previewCleanup()}>Preview cleanup</button>
+      {sessions.cleanupPreview && <div role="status">
+        {sessions.cleanupPreview.safe ? <>
+          <p>{sessions.cleanupPreview.candidateFiles} eligible files · {sessions.cleanupPreview.reclaimableBytes.toLocaleString('en-US')} bytes reclaimable</p>
+          <p>{Object.entries(sessions.cleanupPreview.categories).map(([name, value]) => `${name}: ${value.files} files (${value.bytes.toLocaleString('en-US')} bytes)`).join(' · ')}</p>
+          <button type="button" disabled={sessions.busy || !sessions.cleanupPreview.candidateFiles} onClick={() => void sessions.cleanup()}>Clean up unused files</button>
+        </> : <p className="form-error">{sessions.cleanupPreview.error}</p>}
+      </div>}
+      {sessions.cleanupResult && <div role="status">
+        {sessions.cleanupResult.safe ? <p>Removed {sessions.cleanupResult.removedFiles} files · Reclaimed {sessions.cleanupResult.reclaimedBytes.toLocaleString('en-US')} bytes · {sessions.cleanupResult.remainingFiles} eligible files remain</p> : <p className="form-error">{sessions.cleanupResult.error}</p>}
+        {!!sessions.cleanupResult.failures.length && <><p>Some removals could not be confirmed. Preview and retry cleanup.</p><ul>{sessions.cleanupResult.failures.map((failure) => <li key={failure.file}>{failure.file}: {failure.error}</li>)}</ul></>}
+      </div>}
+    </details>
     <p className="chart-note">Saved on this computer through the local backend. Playback checkpoints save about every 5 seconds; only a successful commit is recoverable. Export CSV for a separate journal copy.</p>
   </section>
 }

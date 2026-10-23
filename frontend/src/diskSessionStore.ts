@@ -1,3 +1,4 @@
+import { StorageApiError, fingerprintMismatch, type StorageCode, type CleanupPreview, type CleanupResult } from './storageProtocol.js'
 import { historyRequestBody } from './historyRequestBody.js'
 import type { EquityPoint } from './equity.js'
 import type { LoadedHistory } from './historyLoader.js'
@@ -10,10 +11,10 @@ export class DiskSessionStore {
   async call<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
     let response: Response
     try { response = await fetch(`/api/storage${path}`, { method, headers: body ? { 'Content-Type': 'application/json' } : undefined, body: body ? body instanceof Blob ? body : JSON.stringify(body) : undefined, cache: 'no-store' }) }
-    catch { throw new Error('Local storage backend is unavailable. Keep this tab open and retry; unsaved changes remain in memory.') }
-    if (response.status === 409) throw new RevisionConflict()
+    catch { throw new StorageApiError('STORAGE_UNAVAILABLE', 'Local storage backend is unavailable. Keep this tab open and retry; unsaved changes remain in memory.') }
     const value = await response.json().catch(() => null)
-    if (!response.ok) throw new Error(value?.error ?? `Filesystem request failed (HTTP ${response.status}).`)
+    if (response.status === 409 && (!value?.code || value.code === 'SESSION_CONFLICT')) throw new RevisionConflict()
+    if (!response.ok) throw new StorageApiError(value?.code ?? 'STORAGE_UNAVAILABLE', value?.error ?? `Filesystem request failed (HTTP ${response.status}).`)
     return value as T
   }
   status() { return this.call<{ directory: string }>('/status') }
@@ -25,11 +26,22 @@ export class DiskSessionStore {
   async cacheHistory(id: string, history: LoadedHistory) {
     let response: Response
     try { response = await fetch(`/api/storage/history/${id}`, { method: 'HEAD', cache: 'no-store' }) }
-    catch { throw new Error('Local storage backend is unavailable. Keep this tab open and retry; unsaved changes remain in memory.') }
+    catch { throw new StorageApiError('STORAGE_UNAVAILABLE', 'Local storage backend is unavailable. Keep this tab open and retry; unsaved changes remain in memory.') }
     if (response.ok) return
-    if (response.status !== 404) throw new Error('Could not verify historical data on disk. Retry Save now.')
+    const code = response.headers.get('X-Storage-Error-Code') as StorageCode | null
+    if (!['HISTORY_MISSING', 'HISTORY_CORRUPT'].includes(code ?? '')) throw new StorageApiError(code ?? 'STORAGE_UNAVAILABLE', 'Could not verify historical data on disk. Check the local backend and retry Save now.')
     const body = typeof Worker !== 'undefined' && history.bid.length + history.ask.length > 8192 ? await historyRequestBody(history) : history
     await this.call(`/history/${id}`, 'PUT', body)
+  }
+  previewCleanup() { return this.call<CleanupPreview>('/cleanup') }
+  cleanup() { return this.call<CleanupResult>('/cleanup', 'POST', { confirm: true }) }
+  async repairHistory(id: string, download: (range: SessionRecord['range']) => Promise<LoadedHistory>) {
+    const { record } = await this.call<{ record: SessionRecord }>(`/sessions/${id}`)
+    await validateRecord(record)
+    const history = validatedHistory(await download(record.range))
+    if (await historyFingerprint(history) !== record.historyId) throw fingerprintMismatch()
+    const body = typeof Worker !== 'undefined' && history.bid.length + history.ask.length > 8192 ? await historyRequestBody(history) : history
+    await this.call(`/history/${record.historyId}`, 'PUT', body)
   }
   async save(base: Pick<SessionRecord, 'id' | 'name' | 'createdAt' | 'range' | 'historyId' | 'totalCandles'>,
     snapshot: SessionSnapshot, previous: SessionRecord | null): Promise<SessionRecord> {
@@ -67,7 +79,7 @@ export class DiskSessionStore {
     }
     const ledger = restoreEquity(points, record.checkpoint.equity, record.checkpoint.trading.account.referenceBalance)
     const history = validatedHistory(await this.call<LoadedHistory>(`/history/${record.historyId}`))
-    if (await historyFingerprint(history) !== record.historyId) throw corrupt()
+    if (await historyFingerprint(history) !== record.historyId) throw new StorageApiError('HISTORY_CORRUPT', 'Historical data failed fingerprint verification. Repair historical data to resume.')
     validateHistoryCheckpoint(record, history)
     if (points.some((point, index) => point.timestamp !== history.bid[record.checkpoint.replay.startIndex + index]?.timestamp) || (ledger.tail && ledger.tail.point.timestamp !== record.checkpoint.replay.timestamp)) throw corrupt()
     return { record, checkpoint: record.checkpoint, ledger, history, cacheWarning: null }

@@ -3,11 +3,12 @@ import { accountRiskError } from './risk'
 import { commissionConfigError } from './commissions'
 import { AutosaveQueue } from './autosave'
 import { historyFingerprint, validatedHistory } from './sessionCodec'
+import { repairableHistory, type CleanupPreview, type CleanupResult } from './storageProtocol'
 import { DiskSessionStore } from './diskSessionStore'
 import { writeUi, readUi, defaultWorkspace, validWorkspace } from './uiPreferences'
 import { RevisionConflict, SessionStore, storageError } from './sessionStore'
 import type { DateRange } from './history'
-import type { LoadedHistory } from './historyLoader'
+import type { LoadedHistory, LoadProgress } from './historyLoader'
 import type { Hydration, SessionRecord, SessionSnapshot } from './sessionTypes'
 
 interface Options {
@@ -16,7 +17,7 @@ interface Options {
   actionVersion: number
   pause: () => void
   captureViewport: () => SessionSnapshot['checkpoint']['workspace']['viewport']
-  download: (range: DateRange) => Promise<LoadedHistory>
+  download: (range: DateRange, progress?: (value: LoadProgress) => void) => Promise<LoadedHistory>
   restore: (hydration: Hydration, history: LoadedHistory) => void
   fresh: (range: DateRange) => void
 }
@@ -44,6 +45,11 @@ export function useSessionPersistence(options: Options) {
   const conflicted = useRef(false)
   const [busy, setBusy] = useState(false)
   const busyRef = useRef(false)
+  const switching = useRef(false)
+  const [repairTarget, setRepairTarget] = useState<{ id: string; name: string } | null>(null)
+  const [repairProgress, setRepairProgress] = useState<LoadProgress | null>(null)
+  const [cleanupPreview, setCleanupPreview] = useState<CleanupPreview | null>(null)
+  const [cleanupResult, setCleanupResult] = useState<CleanupResult | null>(null)
   const [awaitingChoice, setAwaitingChoice] = useState(false)
   const [initialized, setInitialized] = useState(false)
   const ready = useRef(false)
@@ -81,7 +87,10 @@ export function useSessionPersistence(options: Options) {
       channel.current?.postMessage({ id: record.id, revision: record.revision })
       await refresh()
 
-    } catch (reason) { report(reason); throw reason }
+    } catch (reason) {
+      if (target.record && repairableHistory(reason)) setRepairTarget({ id: target.id, name: target.name })
+      report(reason); throw reason
+    }
   }
   async function discoverLegacy() {
     try {
@@ -154,17 +163,25 @@ export function useSessionPersistence(options: Options) {
     if (conflicted.current) throw new RevisionConflict()
     await queue.current?.flush()
   }
-  async function switchWorkspace(id: string | null, range?: DateRange) {
-    if (busyRef.current || !initialized) return
-    setBusy(true)
+  async function switchWorkspace(id: string | null, range?: DateRange, repair = false) {
+    if (switching.current || busyRef.current || !initialized) return
+    switching.current = true; setBusy(true)
     latest.current.pause()
+    let recovering = false
     try {
+      if (id && repair) {
+        busyRef.current = true
+        setRepairProgress({ completed: 0, total: 0 })
+        await store.repairHistory(id, (range) => latest.current.download(range, setRepairProgress))
+        busyRef.current = false
+      }
       // A stale tab must be able to reload the authoritative version. Its
       // unsaved state can never be written over the newer revision.
       if (!conflicted.current) await flush()
       busyRef.current = true; setBusy(true)
       if (id) {
-        const result = await store.recover(id, (range) => latest.current.download(range))
+        recovering = true
+        const result = await store.recover(id)
         const { record } = result
         active.current = { id: record.id, name: record.name, createdAt: record.createdAt, record, history: result.history, historyId: record.historyId, cacheAttempted: true }
         setName(record.name); setSavedAt(record.savedAt); setCacheWarning(result.cacheWarning)
@@ -174,9 +191,14 @@ export function useSessionPersistence(options: Options) {
         active.current = newActive(); writeUi(active.current.id, 'workspace', presentation); setName(active.current.name); setSavedAt(null); setCacheWarning(null)
         latest.current.fresh(range ?? { from: latest.current.history?.tradingFrom ?? '2024-01-09', to: latest.current.history?.to ?? '2024-01-10' })
       }
+      setRepairTarget(null); setRepairProgress(null)
       ready.current = true; setAwaitingChoice(false); conflicted.current = false; setConflict(false); setError(null); setSaveStatus(id ? 'Saved' : 'Saving')
-    } catch (reason) { report(reason) }
-    finally { busyRef.current = false; setBusy(false) }
+    } catch (reason) {
+      if (id && recovering && repairableHistory(reason)) setRepairTarget({ id, name: sessions.find((record) => record.id === id)?.name ?? 'Saved session' })
+      else if (!repair && recovering) setRepairTarget(null)
+      report(reason)
+    }
+    finally { busyRef.current = false; switching.current = false; setBusy(false) }
   }
   function editName(value: string) {
     setName(value)
@@ -208,6 +230,21 @@ export function useSessionPersistence(options: Options) {
       await refresh()
     } catch (reason) { report(reason) }
   }
+  async function previewCleanup() {
+    if (switching.current || busyRef.current) return
+    switching.current = true; setBusy(true); setCleanupResult(null)
+    try { setCleanupPreview(await store.previewCleanup()) }
+    catch (reason) { setCleanupPreview(null); report(reason) }
+    finally { switching.current = false; setBusy(false) }
+  }
+  async function cleanup() {
+    if (switching.current || busyRef.current || !cleanupPreview?.safe || !cleanupPreview.candidateFiles) return
+    if (!window.confirm(`Remove unused storage files at least seven days old? Preview estimates ${cleanupPreview.candidateFiles} files (${cleanupPreview.reclaimableBytes.toLocaleString('en-US')} bytes). Active sessions are revalidated before deletion. Back up the durable storage directory while the backend is stopped before major maintenance.`)) return
+    switching.current = true; setBusy(true)
+    try { setCleanupResult(await store.cleanup()); setCleanupPreview(null) }
+    catch (reason) { report(reason) }
+    finally { switching.current = false; setBusy(false) }
+  }
   async function migrate(id: string, asCopy = false) {
     if (busyRef.current) return
     setBusy(true); latest.current.pause()
@@ -220,7 +257,7 @@ export function useSessionPersistence(options: Options) {
     } catch (reason) { report(reason) }
     finally { busyRef.current = false; setBusy(false) }
   }
-  return { sessions, diskErrors, legacySessions, storageLocation, migrationWarning, migrate, retry: () => { void initialize() }, name, savedAt, saveStatus, error, cacheWarning, conflict, busy, initialized, awaitingChoice,
+  return { repairTarget, repairProgress, repair: () => repairTarget && switchWorkspace(repairTarget.id, undefined, true), cleanupPreview, cleanupResult, previewCleanup, cleanup, sessions, diskErrors, legacySessions, storageLocation, migrationWarning, migrate, retry: () => { void initialize() }, name, savedAt, saveStatus, error, cacheWarning, conflict, busy, initialized, awaitingChoice,
     activeId: active.current?.id ?? null, editName, rename, remove, resume: (id: string) => switchWorkspace(id),
     fresh: (range?: DateRange) => switchWorkspace(null, range), save: () => { if (active.current) active.current.cacheAttempted = false; void flush().catch(report) } }
 }

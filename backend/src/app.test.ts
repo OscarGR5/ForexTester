@@ -1,10 +1,15 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import { once } from 'node:events'
 import type { Server } from 'node:http'
 import type { JsonItem } from 'dukascopy-node'
 import { createApp } from './app.js'
 import type { RatesFetcher } from './history.js'
 
+let cache: string
+beforeEach(async () => { cache = await mkdtemp(join(tmpdir(), 'forextester-cache-test-')); vi.stubEnv('FOREXTESTER_CACHE_DIR', cache) })
 let server: Server | undefined
 const now = () => new Date('2024-01-20T12:00:00.000Z')
 const candle = (timestamp: number, open: number): JsonItem => ({
@@ -22,7 +27,7 @@ async function request(path: string, fetchRates?: RatesFetcher) {
 afterEach(async () => {
   if (server) await new Promise<void>((resolve) => server!.close(() => resolve()))
   server = undefined
-  vi.restoreAllMocks()
+  vi.restoreAllMocks(); vi.unstubAllEnvs(); await rm(cache, { recursive: true, force: true })
 })
 
 describe('health endpoint', () => {
@@ -40,6 +45,7 @@ describe('history endpoint', () => {
   const second = first + 60_000
 
   it('returns separate, ordered bid and ask M1 candles with UTC millisecond timestamps', async () => {
+    vi.stubEnv('DUKASCOPY_CHROME_PATH', '/test/chromium')
     const fetchRates = vi.fn(async (config: Parameters<RatesFetcher>[0]) =>
       config.priceType === 'bid'
         ? [candle(second, 1.1), candle(first, 1.09), candle(first, 1.09)]
@@ -56,7 +62,10 @@ describe('history endpoint', () => {
     expect(fetchRates.mock.calls.map(([config]) => config.priceType)).toEqual(['bid', 'ask'])
     for (const [config] of fetchRates.mock.calls) {
       expect(config).toMatchObject({ instrument: 'eurusd', timeframe: 'm1', format: 'json', utcOffset: 0, useCache: true })
-      expect(config.cacheFolderPath).toMatch(/\.cache\/dukascopy\/$/)
+      expect(config.cacheFolderPath).toBe(join(cache, 'dukascopy') + '/')
+      expect(config.wafTokenCachePath).toBe(join(cache, 'dukascopy/waf-token.json'))
+      expect(config.retryCount).toBe(2)
+      expect(config.chromePath).toBe('/test/chromium')
       expect(config.dates).toEqual({ from: new Date('2024-01-09T00:00:00.000Z'), to: new Date('2024-01-10T00:00:00.000Z') })
     }
   })

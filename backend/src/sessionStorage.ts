@@ -6,6 +6,7 @@ import { gzip, gunzip } from 'node:zlib'
 import { promisify } from 'node:util'
 import { projectRoot as repository } from './projectPaths.js'
 import { corrupt, historyFingerprint, recordDigest, restoreEquity, sha256, validatedHistory, validateHistoryCheckpoint, validateRecord, equitySuffix } from '../../frontend/src/sessionCodec.js'
+import type { StorageCode, CleanupCategory, CleanupPreview, CleanupResult } from '../../frontend/src/storageProtocol.js'
 import { EQUITY_CHUNK_SIZE, type SessionRecord } from '../../frontend/src/sessionTypes.js'
 import type { EquityLedger, EquityPoint } from '../../frontend/src/equity.js'
 import type { LoadedHistory } from '../../frontend/src/historyLoader.js'
@@ -13,8 +14,8 @@ import type { LoadedHistory } from '../../frontend/src/historyLoader.js'
 const compress = promisify(gzip), decompress = promisify(gunzip)
 const HASH = /^[a-f0-9]{64}$/
 const ID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i
-export class StorageFailure extends Error { constructor(public status: number, message: string) { super(message) } }
-export const conflict = () => new StorageFailure(409, 'This session changed on disk. Resume the saved version before continuing. Unsaved changes were kept in this tab.')
+export class StorageFailure extends Error { constructor(public status: number, message: string, public code: StorageCode = 'STORAGE_REQUEST_INVALID') { super(message) } }
+export const conflict = () => new StorageFailure(409, 'This session changed on disk. Resume the saved version before continuing. Unsaved changes were kept in this tab.', 'SESSION_CONFLICT')
 export function validId(id: string) { if (!ID.test(id)) throw new StorageFailure(400, 'Invalid session ID.') }
 export function validHash(hash: string) { if (!HASH.test(hash)) throw new StorageFailure(400, 'Invalid content fingerprint.') }
 export function dataDirectory(env = process.env, home = homedir()): string {
@@ -29,6 +30,7 @@ export interface StorageOptions {
   directory?: string
   // Deterministic fault injection at durability boundaries; never configured through HTTP.
   beforePublish?: (path: string) => Promise<void>
+  beforeRemove?: (path: string) => Promise<void>
 }
 
 // One local backend owns a storage directory. The process lock also prevents a
@@ -37,7 +39,7 @@ export class SessionStorage {
   readonly directory: string
   private initialized: Promise<void> | null = null
   private serial: Promise<unknown> = Promise.resolve()
-  private histories = new Map<string, LoadedHistory>()
+  private histories = new Map<string, { history: LoadedHistory; signature: string }>()
   private ledgers = new Map<string, { digest: string; ledger: EquityLedger }>()
   private ownsLock = false
   private closing: Promise<void> | null = null
@@ -115,15 +117,19 @@ export class SessionStorage {
   private async pointer(id: string): Promise<Manifest | null> {
     validId(id)
     try {
-      const m = await this.json(join(this.directory, 'sessions', `${id}.json`)) as Manifest
+      const path = join(this.directory, 'sessions', `${id}.json`)
+      await this.regularFile(path)
+      const m = await this.json(path) as Manifest
       if (m.version !== 1 || !Number.isSafeInteger(m.revision) || m.revision < 1 || (m.hash !== null && !HASH.test(m.hash))) throw corrupt()
       return m
     } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null; throw error }
   }
   private async readRecord(id: string): Promise<SessionRecord> {
     const m = await this.pointer(id)
-    if (!m?.hash) throw new StorageFailure(404, 'Saved session was not found.')
-    const raw = await readFile(join(this.directory, 'checkpoints', `${m.hash}.json`), 'utf8')
+    if (!m?.hash) throw new StorageFailure(404, 'Saved session was not found.', 'SESSION_NOT_FOUND')
+    const path = join(this.directory, 'checkpoints', `${m.hash}.json`)
+    await this.regularFile(path)
+    const raw = await readFile(path, 'utf8')
     if (await sha256(raw) !== m.hash) throw corrupt()
     const record = JSON.parse(raw) as SessionRecord
     await validateRecord(record)
@@ -132,7 +138,9 @@ export class SessionStorage {
   }
   private async readChunk(hash: string): Promise<EquityChunk> {
     validHash(hash)
-    const raw = await decompress(await readFile(join(this.directory, 'equity', `${hash}.json.gz`)), { maxOutputLength: 2 * 1024 * 1024 })
+    const path = join(this.directory, 'equity', `${hash}.json.gz`)
+    await this.regularFile(path)
+    const raw = await decompress(await readFile(path), { maxOutputLength: 2 * 1024 * 1024 })
     if (await sha256(raw.toString()) !== hash) throw corrupt()
     const points = JSON.parse(raw.toString()) as EquityPoint[]
     if (!Array.isArray(points) || points.length < 1 || points.length > EQUITY_CHUNK_SIZE) throw corrupt()
@@ -144,21 +152,42 @@ export class SessionStorage {
     for (const [index, chunk] of chunks.entries()) if (chunk.points.length !== Math.min(EQUITY_CHUNK_SIZE, record.checkpoint.equity.count - index * EQUITY_CHUNK_SIZE)) throw corrupt()
     return chunks
   }
+  private async regularFile(path: string) {
+    const info = await lstat(path)
+    if (!info.isFile() || info.isSymbolicLink()) throw new StorageFailure(503, 'Unsafe storage file type. Original files were kept.', 'STORAGE_UNSAFE_PATH')
+    return info
+  }
   private async history(id: string, verifyDisk = false): Promise<LoadedHistory> {
     validHash(id)
-    const cached = this.histories.get(id)
-    if (cached && !verifyDisk) {
-      const file = await lstat(join(this.directory, 'history', `${id}.json.gz`))
-      if (!file.isFile() || file.size === 0) throw corrupt()
-      return cached
+    const path = join(this.directory, 'history', `${id}.json.gz`)
+    let bytes: Buffer, signature: string
+    const parent = await lstat(dirname(path))
+    if (!parent.isDirectory() || parent.isSymbolicLink()) throw new StorageFailure(503, 'Historical storage directory is unavailable or unsafe.', 'STORAGE_UNSAFE_PATH')
+    // Only ENOENT for this object means missing history. I/O and permissions
+    // stay outside the content-validation catch and must never offer repair.
+    try {
+      const info = await this.regularFile(path)
+      signature = `${info.dev}/${info.ino}/${info.size}/${info.mtimeMs}/${info.ctimeMs}`
+      const cached = this.histories.get(id)
+      if (cached && !verifyDisk && cached.signature === signature) return cached.history
+      bytes = await readFile(path)
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') throw new StorageFailure(404, 'Historical data is missing. Repair historical data to resume this session.', 'HISTORY_MISSING')
+      throw error
     }
-    const raw = await decompress(await readFile(join(this.directory, 'history', `${id}.json.gz`)), { maxOutputLength: 64 * 1024 * 1024 })
-    const history = validatedHistory(JSON.parse(raw.toString()))
-    if (await historyFingerprint(history) !== id) throw corrupt()
-    this.rememberHistory(id, history)
+    let history: LoadedHistory
+    try {
+      const raw = await decompress(bytes, { maxOutputLength: 64 * 1024 * 1024 })
+      history = validatedHistory(JSON.parse(raw.toString()))
+      if (await historyFingerprint(history) !== id) throw corrupt()
+    } catch {
+      this.histories.delete(id)
+      throw new StorageFailure(422, 'Historical data is corrupted. Repair historical data to resume this session; the checkpoint and trading records were kept.', 'HISTORY_CORRUPT')
+    }
+    this.histories.set(id, { history, signature })
+    if (this.histories.size > 2) this.histories.delete(this.histories.keys().next().value!)
     return history
   }
-  private rememberHistory(id: string, history: LoadedHistory) { this.histories.set(id, history); if (this.histories.size > 2) this.histories.delete(this.histories.keys().next().value!) }
   private rememberLedger(record: SessionRecord, ledger: EquityLedger) { this.ledgers.set(record.id, { digest: record.digest, ledger }); if (this.ledgers.size > 2) this.ledgers.delete(this.ledgers.keys().next().value!) }
   private async ledger(record: SessionRecord): Promise<EquityLedger> {
     const cached = this.ledgers.get(record.id)
@@ -183,14 +212,21 @@ export class SessionStorage {
   get(id: string) { return this.run(() => this.readRecord(id)) }
   restore(id: string) { return this.run(async () => { const record = await this.readRecord(id); return { record, chunks: await this.chunks(record) } }) }
   getHistory(id: string) { return this.run(() => this.history(id, true)) }
-  hasHistory(id: string) { return this.run(async () => { validHash(id); try { await this.history(id, true); return true } catch (e) { if ((e as NodeJS.ErrnoException).code === 'ENOENT') return false; throw e } }) }
+  hasHistory(id: string) { return this.run(async () => { await this.history(id, true); return true }) }
   putHistory(id: string, source: LoadedHistory) { return this.run(async () => {
     validHash(id)
-    const history = validatedHistory(source)
-    if (await historyFingerprint(history) !== id) throw new StorageFailure(400, 'Historical-data fingerprint mismatch.')
-    try { await this.history(id, true); return } catch { /* Replace only with fully validated identical content. */ }
+    let history: LoadedHistory
+    try { history = validatedHistory(source) }
+    catch { throw new StorageFailure(400, 'Replacement historical data contains invalid observations or range boundaries.', 'HISTORY_INVALID') }
+    if (await historyFingerprint(history) !== id) throw new StorageFailure(409, 'The provider returned different historical data. Replacement was rejected; retry later or restore the original dataset from a separate backup while the backend is stopped.', 'HISTORY_FINGERPRINT_MISMATCH')
+    try { await this.history(id, true); return }
+    catch (error) {
+      if (!(error instanceof StorageFailure) || !['HISTORY_MISSING', 'HISTORY_CORRUPT'].includes(error.code)) throw error
+    }
+    // The existing object survives until the fully validated, synced replacement
+    // is ready for atomic publication. All sessions keep the same history ID.
     await this.publish(join(this.directory, 'history', `${id}.json.gz`), await compress(JSON.stringify(history)))
-    this.rememberHistory(id, history)
+    this.histories.delete(id)
   }) }
   save(record: SessionRecord, changed: EquityChunk[], expectedRevision: number, migration?: Manifest['migration']) { return this.run(async () => {
     validId(record.id)
@@ -244,6 +280,83 @@ export class SessionStorage {
     await this.publish(join(this.directory, 'sessions', `${record.id}.json`), Buffer.from(JSON.stringify(manifest)))
     this.rememberLedger(record, ledger)
     return record
+  }) }
+  private emptyPreview(): CleanupPreview {
+    return { safe: true, candidateFiles: 0, reclaimableBytes: 0, categories: {
+      checkpoints: { files: 0, bytes: 0 }, equity: { files: 0, bytes: 0 }, history: { files: 0, bytes: 0 }, temporary: { files: 0, bytes: 0 },
+    } }
+  }
+  private async cleanupPlan() {
+    const preview = this.emptyPreview()
+    const candidates: { path: string; file: string; category: CleanupCategory; bytes: number; dev: number; ino: number; mtimeMs: number; ctimeMs: number }[] = []
+    try {
+      // Validate directory types on every invocation, even after initialization.
+      for (const folder of ['sessions', 'checkpoints', 'equity', 'history', 'imports']) {
+        const info = await lstat(join(this.directory, folder))
+        if (!info.isDirectory() || info.isSymbolicLink()) throw new Error('Unsafe managed directory.')
+      }
+      const live = new Set<string>()
+      for (const name of await readdir(join(this.directory, 'sessions'))) {
+        if (!ID.test(name.slice(0, -5)) || !name.endsWith('.json')) continue
+        const id = name.slice(0, -5), manifest = await this.pointer(id)
+        if (!manifest) throw corrupt()
+        if (!manifest.hash) continue // Tombstone remains; its old blobs are eligible.
+        const record = await this.readRecord(id)
+        // Read from disk, bypassing caches, before claiming cleanup is safe.
+        const chunks = await this.chunks(record), history = await this.history(record.historyId, true)
+        const points = chunks.flatMap((chunk) => chunk.points)
+        const ledger = restoreEquity(points, record.checkpoint.equity, record.checkpoint.trading.account.referenceBalance)
+        validateHistoryCheckpoint(record, history)
+        if (points.some((point, index) => point.timestamp !== history.bid[record.checkpoint.replay.startIndex + index]?.timestamp) || (ledger.tail && ledger.tail.point.timestamp !== record.checkpoint.replay.timestamp)) throw corrupt()
+        live.add(`checkpoints/${manifest.hash}.json`)
+        live.add(`history/${record.historyId}.json.gz`)
+        for (const hash of record.chunkHashes) live.add(`equity/${hash}.json.gz`)
+      }
+      const hash = '[a-f0-9]{64}', uuid = '[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}'
+      const cutoff = Date.now() - 7 * 86_400_000
+      for (const folder of ['sessions', 'checkpoints', 'equity', 'history', 'imports'] as const) {
+        const object = folder === 'sessions' || folder === 'imports' ? `${uuid}\\.json` : `${hash}\\.json${folder === 'checkpoints' ? '' : '\\.gz'}`
+        const normal = new RegExp(`^${object}$`), temporary = new RegExp(`^${object}\\.${uuid}\\.tmp$`)
+        for (const name of await readdir(join(this.directory, folder))) {
+          const path = join(this.directory, folder, name), info = await this.regularFile(path)
+          const file = `${folder}/${name}`, temp = temporary.test(name)
+          if (!temp && (!normal.test(name) || folder === 'sessions' || folder === 'imports')) continue
+          if (live.has(file) || info.mtimeMs > cutoff) continue
+          const category: CleanupCategory = temp ? 'temporary' : folder as CleanupCategory
+          candidates.push({ path, file, category, bytes: info.size, dev: info.dev, ino: info.ino, mtimeMs: info.mtimeMs, ctimeMs: info.ctimeMs })
+          preview.categories[category].files++; preview.categories[category].bytes += info.size
+          preview.candidateFiles++; preview.reclaimableBytes += info.size
+        }
+      }
+    } catch {
+      // Discard partial knowledge, never sweep based on an incomplete mark.
+      return { preview: { ...this.emptyPreview(), safe: false, code: 'CLEANUP_UNSAFE' as const,
+        error: 'Cleanup refused: an active session or managed storage file could not be safely validated. Repair storage and preview again. No files were deleted.' }, candidates: [] }
+    }
+    return { preview, candidates }
+  }
+  previewCleanup() { return this.run(async () => (await this.cleanupPlan()).preview) }
+  cleanup() { return this.run(async (): Promise<CleanupResult> => {
+    // A preview is informational. Recompute reachability under the writer queue.
+    const { preview, candidates } = await this.cleanupPlan()
+    const result: CleanupResult = { ...preview, removedFiles: 0, reclaimedBytes: 0, remainingFiles: preview.candidateFiles, failures: [] }
+    if (!preview.safe) return result
+    for (const candidate of candidates) {
+      try {
+        await this.options.beforeRemove?.(candidate.path)
+        const parent = await lstat(dirname(candidate.path))
+        if (!parent.isDirectory() || parent.isSymbolicLink()) throw new Error('Unsafe directory.')
+        const info = await this.regularFile(candidate.path)
+        if (info.dev !== candidate.dev || info.ino !== candidate.ino || info.size !== candidate.bytes || info.mtimeMs !== candidate.mtimeMs || info.ctimeMs !== candidate.ctimeMs) throw new Error('File changed since validation.')
+        await unlink(candidate.path)
+        result.removedFiles++; result.reclaimedBytes += candidate.bytes; result.remainingFiles--
+        await this.syncDirectory(dirname(candidate.path))
+      } catch {
+        result.failures.push({ file: candidate.file, error: 'Could not confirm removal. Preview and retry cleanup.' })
+      }
+    }
+    this.histories.clear(); this.ledgers.clear()
+    return result
   }) }
   migration(id: string) { return this.run(async () => {
     validId(id)

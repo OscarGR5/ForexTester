@@ -129,7 +129,7 @@ async function click(input: HTMLInputElement | HTMLButtonElement) {
 async function settleStorage() {
   for (let i = 0; i < 100; i++) {
     await act(async () => { await delay(2) })
-    if (!host.querySelector('.session-status')?.textContent?.includes('Recovering session')) return
+    if (host.querySelector('.session-controls')?.getAttribute('aria-busy') !== 'true') return
   }
 }
 
