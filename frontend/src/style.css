@@ -197,3 +197,29 @@ button:disabled { opacity: 0.45; cursor: default; }
   .replay-controls input, .replay-controls select { font-size: 16px; }
   .equity-performance .realized-chart text { font-size: 11px; }
 }
+
+.workspace-controls { display: contents; border: 0; padding: 0; margin: 0; min-width: 0; }
+.workspace-controls[hidden] { display: none; }
+.workspace-controls > * { min-width: 0; }
+.session-controls { flex: none; padding: 10px 12px; border: 1px solid #354250; border-radius: 6px; background: #171e28; }
+.session-heading, .session-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-width: 0; }
+.session-heading { justify-content: space-between; }
+.session-controls label { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; color: #b2b5be; font-size: 0.85rem; }
+.session-controls input { width: 230px; max-width: 100%; min-width: 0; min-height: 36px; padding: 5px 8px; border: 1px solid #354250; border-radius: 4px; background: #10151d; color: #e5eaf0; }
+.session-controls button { font-size: 0.85rem; }
+.session-status { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 8px 0; color: #b2b5be; font-size: 0.8rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.session-status strong { color: #75c4b5; }
+.session-controls h2 { margin: 16px 0 8px; font-size: 1rem; }
+.saved-sessions { list-style: none; padding: 0; margin: 0 0 12px; max-height: 360px; overflow-y: auto; }
+.saved-session { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid #354250; }
+.saved-session-info { display: flex; flex: 1 1 280px; min-width: 0; flex-direction: column; gap: 5px; overflow-wrap: anywhere; }
+.saved-session-info span { color: #b2b5be; font-size: 0.8rem; }
+@media (max-width: 600px) {
+  .session-heading > label { flex-basis: 100%; }
+  .session-heading input { flex: 1; width: 100%; }
+  .session-controls input { font-size: 16px; }
+  .session-controls button { min-height: 40px; }
+  .session-controls .session-actions { max-width: 100%; }
+  .saved-session .session-actions label { flex-basis: 100%; }
+  .session-status { flex-direction: column; }
+}

@@ -1,3 +1,4 @@
+import type { Hydration } from './sessionTypes'
 import { createEquityLedger, recordEquity, type EquityLedger } from './equity'
 import type { CommissionConfig } from './commissions'
 import type { AccountRisk, EntrySizing } from './risk'
@@ -6,14 +7,14 @@ import type { HistoryResponse } from './history'
 import { cancelEntry, configureAccount, configureCommission, createTradingState, observeCandle, modifyStop, requestClose, requestEntry, updateSetupMetadata, type SetupMetadata, type Direction, type TradingPermission, type TradingState } from './trading'
 
 interface ReplayClock { epoch: number; revealed: number; active: boolean; playing: boolean; complete: boolean; startIndex?: number }
-interface Session { history: HistoryResponse | null; epoch: number; processed: number; state: TradingState; equity: EquityLedger }
+interface Session { history: HistoryResponse | null; epoch: number; processed: number; state: TradingState; equity: EquityLedger; actionVersion: number }
 
-export function useTrading(history: HistoryResponse | null, replay: ReplayClock) {
+export function useTrading(history: HistoryResponse | null, replay: ReplayClock, restored?: Hydration | null) {
   const asks = useMemo(() => new Map(history?.ask.map((candle) => [candle.timestamp, candle])), [history])
-  const [session, setSession] = useState<Session>(() => ({ history, epoch: replay.epoch, processed: 0, state: createTradingState(replay.epoch), equity: createEquityLedger(100_000) }))
+  const [session, setSession] = useState<Session>(() => ({ history, epoch: replay.epoch, processed: restored?.checkpoint.executionCursor ?? 0, state: restored?.checkpoint.trading ?? createTradingState(replay.epoch), equity: restored?.ledger ?? createEquityLedger(100_000), actionVersion: 0 }))
   let current = session
   if (session.history !== history || session.epoch !== replay.epoch) {
-    current = { history, epoch: replay.epoch, processed: replay.active ? replay.startIndex ?? 0 : 0, state: createTradingState(replay.epoch, session.state.account, session.state.commission), equity: createEquityLedger(session.state.account.referenceBalance) }
+    current = restored && session.history !== history ? { history, epoch: replay.epoch, processed: restored.checkpoint.executionCursor, state: restored.checkpoint.trading, equity: restored.ledger, actionVersion: session.actionVersion + 1 } : { history, epoch: replay.epoch, processed: replay.active ? replay.startIndex ?? 0 : 0, state: createTradingState(replay.epoch, session.state.account, session.state.commission), equity: createEquityLedger(session.state.account.referenceBalance), actionVersion: session.actionVersion + 1 }
   }
   if (history && current.processed < replay.revealed) {
     let state = current.state
@@ -34,12 +35,14 @@ export function useTrading(history: HistoryResponse | null, replay: ReplayClock)
 
   const permission: TradingPermission = { active: replay.active, playing: replay.playing, hasFuture: !replay.complete }
   const update = (transition: (state: TradingState) => TradingState) => {
-    setSession((previous) => ({ ...previous, state: transition(previous.state) }))
+    setSession((previous) => ({ ...previous, state: transition(previous.state), actionVersion: previous.actionVersion + 1 }))
   }
   const updateSetup = useCallback((id: string, metadata: SetupMetadata) => {
-    setSession((previous) => ({ ...previous, state: updateSetupMetadata(previous.state, id, metadata) }))
+    setSession((previous) => ({ ...previous, state: updateSetupMetadata(previous.state, id, metadata), actionVersion: previous.actionVersion + 1 }))
   }, [])
   return {
+    actionVersion: current.actionVersion,
+    executionCursor: current.processed,
     equity: current.equity,
     state: current.state,
     permission,
@@ -47,7 +50,7 @@ export function useTrading(history: HistoryResponse | null, replay: ReplayClock)
     updateSetup,
     configure: (account: AccountRisk) => setSession((previous) => {
       const state = configureAccount(previous.state, account, permission)
-      return { ...previous, state, equity: state !== previous.state ? createEquityLedger(state.account.referenceBalance) : previous.equity }
+      return { ...previous, state, actionVersion: previous.actionVersion + 1, equity: state !== previous.state ? createEquityLedger(state.account.referenceBalance) : previous.equity }
     }),
     configureCommission: (commission: CommissionConfig) => update((state) => configureCommission(state, commission, permission)),
     modifyStop: (id: string, price: number) => update((state) => modifyStop(state, id, price, permission)),

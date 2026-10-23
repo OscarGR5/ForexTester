@@ -13,7 +13,7 @@ function MetadataEditor({ setup, onChange }: { setup: TradingSetup; onChange: (i
     <label>Setup label / title<input aria-label={`Setup label ${setup.id}`} value={setup.title} onChange={(event) => onChange(setup.id, { ...setup, title: event.target.value })} /></label>
     <label>Strategy / model tag<input aria-label={`Setup tag ${setup.id}`} value={setup.tag} onChange={(event) => onChange(setup.id, { ...setup, tag: event.target.value })} /></label>
     <label className="setup-notes">Notes<textarea aria-label={`Setup notes ${setup.id}`} rows={3} value={setup.notes} onChange={(event) => onChange(setup.id, { ...setup, notes: event.target.value })} /></label>
-    <p className="journal-help">Edits are kept in this session, including after closure. Export CSV before restarting or reloading history.</p>
+    <p className="journal-help">Edits are autosaved with this session, including after closure. Export CSV for a separate journal copy.</p>
   </fieldset>
 }
 
@@ -30,9 +30,19 @@ function PositionDetails({ position }: { position: Position }) {
   </article>
 }
 
-function TradingJournalView({ state, onUpdateSetup }: { state: TradingState; onUpdateSetup: (id: string, metadata: SetupMetadata) => void }) {
-  const [scope, setScope] = useState<AnalyticsScope>('setups')
-  const [view, setView] = useState<AnalyticsScope>('setups')
+interface JournalProps {
+  state: TradingState
+  onUpdateSetup: (id: string, metadata: SetupMetadata) => void
+  scope?: AnalyticsScope
+  view?: AnalyticsScope
+  onScopeChange?: (scope: AnalyticsScope) => void
+  onViewChange?: (view: AnalyticsScope) => void
+}
+function TradingJournalView({ state, onUpdateSetup, scope: savedScope, view: savedView, onScopeChange, onViewChange }: JournalProps) {
+  const [localScope, setLocalScope] = useState<AnalyticsScope>('setups')
+  const [localView, setLocalView] = useState<AnalyticsScope>('setups')
+  const scope = savedScope ?? localScope, view = savedView ?? localView
+  const setScope = onScopeChange ?? setLocalScope, setView = onViewChange ?? setLocalView
   const [expanded, setExpanded] = useState<string | null>(null)
   const rows = useMemo(() => journalSetups(state), [state.setups, state.pending, state.positions, state.closed])
   const positions = useMemo(() => executedPositions(state), [state.positions, state.closed])
@@ -48,7 +58,7 @@ function TradingJournalView({ state, onUpdateSetup }: { state: TradingState; onU
   ]
   return <section className="trading-journal" aria-label="Trading Journal">
     <div className="journal-heading"><h2>Trading Journal</h2><button type="button" disabled={!positions.length} onClick={() => downloadJournalCsv(state)}>Export Journal CSV</button></div>
-    <p className="session-notice">Session only · Not permanently saved. Restart, history reload, and page refresh clear trades, setups, and notes.</p>
+    <p className="session-notice">Trades, setups and notes are included in session checkpoints. Check the last successful save above; CSV exports a separate journal copy.</p>
     <section aria-label="Performance statistics">
       <div className="journal-controls"><h3>Performance by setup / position</h3><label>Statistics scope<select aria-label="Statistics scope" value={scope} onChange={(event) => setScope(event.target.value as AnalyticsScope)}>
         <option value="setups">Completed setups</option><option value="positions">Closed positions</option>
@@ -116,6 +126,7 @@ function TradingJournalView({ state, onUpdateSetup }: { state: TradingState; onU
 
 // Price-only observations do not rebuild the journal or its tables.
 export const TradingJournal = memo(TradingJournalView, (previous, next) =>
-  previous.onUpdateSetup === next.onUpdateSetup &&
+  previous.onUpdateSetup === next.onUpdateSetup && previous.scope === next.scope && previous.view === next.view &&
+  previous.onScopeChange === next.onScopeChange && previous.onViewChange === next.onViewChange &&
   (['session', 'account', 'setups', 'pending', 'positions', 'closed', 'rejected', 'cancelled'] as const)
     .every((key) => previous.state[key] === next.state[key]))

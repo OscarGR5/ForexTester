@@ -54,6 +54,17 @@ export class ChartSynchronizer {
 
   constructor(private bounds?: UtcRange) {}
 
+  snapshot(): { range: UtcRange | null; following: boolean } {
+    return { range: this.viewport ? { ...this.viewport } : null, following: this.following }
+  }
+
+  restore(view: { range: UtcRange | null; following: boolean } | null): void {
+    if (!view) return
+    this.viewport = view.range
+    this.following = view.following
+    for (const id of this.entries.keys()) this.refresh(id)
+  }
+
   // Called after every pane has installed this frame's revealed data.
   advance(bounds?: UtcRange): void {
     const previous = this.bounds
