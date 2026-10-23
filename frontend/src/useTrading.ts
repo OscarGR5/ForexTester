@@ -1,6 +1,7 @@
+import type { AccountRisk, EntrySizing } from './risk'
 import { useMemo, useState } from 'react'
 import type { HistoryResponse } from './history'
-import { cancelEntry, createTradingState, observeCandle, modifyStop, requestClose, requestEntry, type Direction, type TradingPermission, type TradingState } from './trading'
+import { cancelEntry, configureAccount, createTradingState, observeCandle, modifyStop, requestClose, requestEntry, type Direction, type TradingPermission, type TradingState } from './trading'
 
 interface ReplayClock { epoch: number; revealed: number; active: boolean; playing: boolean; complete: boolean }
 interface Session { history: HistoryResponse | null; epoch: number; processed: number; state: TradingState }
@@ -10,7 +11,7 @@ export function useTrading(history: HistoryResponse | null, replay: ReplayClock)
   const [session, setSession] = useState<Session>(() => ({ history, epoch: replay.epoch, processed: 0, state: createTradingState(replay.epoch) }))
   let current = session
   if (session.history !== history || session.epoch !== replay.epoch) {
-    current = { history, epoch: replay.epoch, processed: 0, state: createTradingState(replay.epoch) }
+    current = { history, epoch: replay.epoch, processed: 0, state: createTradingState(replay.epoch, session.state.account) }
   }
   if (history && current.processed < replay.revealed) {
     let state = current.state
@@ -33,7 +34,8 @@ export function useTrading(history: HistoryResponse | null, replay: ReplayClock)
   return {
     state: current.state,
     permission,
-    enter: (direction: Direction, lots: number, stopPrice: number) => update((state) => requestEntry(state, direction, lots, stopPrice, permission)),
+    enter: (direction: Direction, sizing: EntrySizing, stopPrice: number) => update((state) => requestEntry(state, direction, sizing, stopPrice, permission)),
+    configure: (account: AccountRisk) => update((state) => configureAccount(state, account, permission)),
     modifyStop: (id: string, price: number) => update((state) => modifyStop(state, id, price, permission)),
     cancel: (id: string) => update((state) => cancelEntry(state, id)),
     close: (id: string) => update((state) => requestClose(state, id, permission)),

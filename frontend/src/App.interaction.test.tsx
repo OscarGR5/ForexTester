@@ -54,9 +54,11 @@ let root: Root
 let rootMounted: boolean
 let request: ReturnType<typeof vi.fn>
 let defaultStops = true
+let legacyManualWorkflow = true
 
 beforeEach(() => {
   defaultStops = true
+  legacyManualWorkflow = true
   vi.clearAllMocks()
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
   host = document.createElement('div')
@@ -81,12 +83,16 @@ afterEach(async () => {
 })
 
 async function click(input: HTMLInputElement | HTMLButtonElement) {
+  if (legacyManualWorkflow && input.textContent === 'Start Replay') {
+    await selectMode('manual')
+    await setInput('Maximum combined risk (%)', '100')
+  }
   if (defaultStops && ['Buy', 'Sell'].includes(input.textContent ?? '')) await setInput('SL price', input.textContent === 'Buy' ? '0.5' : '2')
   await act(async () => input.click())
 }
 
 async function selectTimeframe(index: number, value: string) {
-  const select = host.querySelectorAll<HTMLSelectElement>('select')[index]
+  const select = host.querySelectorAll<HTMLSelectElement>('select[aria-label$="timeframe"]')[index]
   await act(async () => { select.value = value; select.dispatchEvent(new Event('change', { bubbles: true })) })
 }
 
@@ -131,14 +137,14 @@ describe('chart layout controls', () => {
     expect(host.querySelectorAll('.chart-pane')).toHaveLength(2)
     await selectTimeframe(0, 'M5')
     await selectTimeframe(1, 'H1')
-    expect([...host.querySelectorAll<HTMLSelectElement>('select')].map((select) => select.value)).toEqual(['M5', 'H1'])
+    expect([...host.querySelectorAll<HTMLSelectElement>('select[aria-label$="timeframe"]')].map((select) => select.value)).toEqual(['M5', 'H1'])
     await click(host.querySelector<HTMLInputElement>('input[value="3"]')!)
     await selectTimeframe(0, 'M15')
     await selectTimeframe(2, 'H4')
-    expect([...host.querySelectorAll<HTMLSelectElement>('select')].map((select) => select.value)).toEqual(['M15', 'H1', 'H4'])
+    expect([...host.querySelectorAll<HTMLSelectElement>('select[aria-label$="timeframe"]')].map((select) => select.value)).toEqual(['M15', 'H1', 'H4'])
     await click(host.querySelector<HTMLInputElement>('input[value="1"]')!)
     await click(host.querySelector<HTMLInputElement>('input[value="3"]')!)
-    expect([...host.querySelectorAll<HTMLSelectElement>('select')].map((select) => select.value)).toEqual(['M15', 'H1', 'H4'])
+    expect([...host.querySelectorAll<HTMLSelectElement>('select[aria-label$="timeframe"]')].map((select) => select.value)).toEqual(['M15', 'H1', 'H4'])
     expect(request).toHaveBeenCalledTimes(1)
   })
 
@@ -597,7 +603,12 @@ async function setInput(label: string, value: string) {
     input.dispatchEvent(new Event('input', { bubbles: true }))
   })
 }
+async function selectMode(value: string) {
+  const select = host.querySelector<HTMLSelectElement>('[aria-label="Sizing mode"]')!
+  await act(async () => { select.value = value; select.dispatchEvent(new Event('change', { bubbles: true })) })
+}
 async function volume(value: string) {
+  await selectMode('manual')
   const input = host.querySelector<HTMLInputElement>('.trading-controls input')!
   await act(async () => {
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value)
@@ -975,5 +986,105 @@ describe('stop-loss controls and chart lifecycle', () => {
     await click(button('Next Candle'))
     expect(records('Open positions').textContent).toContain('SL coverage uncertain: ask quote unavailable')
     expect(records('Open positions').textContent).not.toContain('current ask closing quote is unavailable')
+  })
+})
+
+describe('risk sizing controls with shared replay', () => {
+  const data = () => {
+    const bid = [1.1, 1.102, 1.104, 1.103, 1.098].map((open, index) => ({ timestamp: Date.UTC(2024, 0, 9) + index * 60_000,
+      open, high: open + 0.0001, low: open - 0.0001, close: open }))
+    return { ...history, bid, ask: bid.map((bar) => ({ ...bar, open: bar.open + 0.0002, high: bar.high + 0.0002, low: bar.low + 0.0002, close: bar.close + 0.0002 })) }
+  }
+  beforeEach(() => {
+    legacyManualWorkflow = false
+    defaultStops = false
+    request.mockImplementation(async () => new Response(JSON.stringify(data())))
+  })
+
+  it('defaults to Risk %, validates account inputs before replay, and locks them throughout a session', async () => {
+    await act(async () => root.render(<App />))
+    expect(host.querySelector<HTMLSelectElement>('[aria-label="Sizing mode"]')!.value).toBe('risk')
+    expect(host.querySelector<HTMLInputElement>('[aria-label="Risk per entry (%)"]')!.value).toBe('1')
+    await setInput('Reference balance (USD)', '0')
+    expect(button('Start Replay').disabled).toBe(true)
+    expect(host.textContent).toContain('positive, finite reference balance')
+    await setInput('Reference balance (USD)', '50000')
+    await setInput('Maximum combined risk (%)', '3')
+    await click(button('Start Replay'))
+    expect(host.querySelector<HTMLInputElement>('[aria-label="Reference balance (USD)"]')!.disabled).toBe(true)
+    expect(host.querySelector<HTMLInputElement>('[aria-label="Maximum combined risk (%)"]')!.disabled).toBe(true)
+    await setInput('SL price', '1.1002')
+    await click(button('Buy'))
+    await click(button('Next Candle'))
+    expect(records('Open positions').textContent).toContain('Buy · 2.5 lots')
+    expect(records('Open positions').textContent).toContain('Original planned risk $500.00 USD (1.00%)')
+    await click(button('Restart'))
+    expect(recordCount('Open positions')).toBe(0)
+    expect(host.querySelector<HTMLInputElement>('[aria-label="Reference balance (USD)"]')!.value).toBe('50000')
+    expect(records('Combined risk').textContent).toContain('Remaining $1500.00 USD')
+    await click(button('Load Data'))
+    expect(host.querySelector<HTMLInputElement>('[aria-label="Reference balance (USD)"]')!.disabled).toBe(false)
+    expect(host.querySelector<HTMLInputElement>('[aria-label="Maximum combined risk (%)"]')!.value).toBe('3')
+  })
+
+  it('reserves two percentages, fills from the first future opening under StrictMode batching, and preserves sizing through chart changes', async () => {
+    await act(async () => root.render(<StrictMode><App /></StrictMode>))
+    await click(button('Start Replay'))
+    await setInput('SL price', '1.0982')
+    await click(button('Buy'))
+    await setInput('Risk per entry (%)', '1.01')
+    expect(host.textContent).toContain('exceeds the remaining combined risk budget')
+    expect(button('Buy').disabled).toBe(true)
+    await setInput('Risk per entry (%)', '1')
+    await setInput('SL price', '1.104')
+    await click(button('Sell'))
+    expect(records('Combined risk').textContent).toContain('Reserved $2000.00 USD · Remaining $0.00 USD')
+    await selectTimeframe(0, 'M5')
+    await click(host.querySelector<HTMLInputElement>('input[value="2"]')!)
+    expect(recordCount('Pending orders')).toBe(2)
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0))
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    await click(button('Play'))
+    expect(host.querySelector<HTMLInputElement>('[aria-label="Risk per entry (%)"]')!.disabled).toBe(true)
+    await act(async () => vi.advanceTimersByTime(500))
+    await click(button('Pause'))
+    const open = records('Open positions').textContent!
+    expect(open).toContain('Buy · 2.5 lots')
+    expect(open).toContain('Entry 2024-01-09 00:01 UTC @ 1.10220')
+    // The short stops out in the second processed candle. No duplicate entries.
+    expect(records('Closed trades').textContent).toContain('Sell · 5 lots')
+    expect(recordCount('Open positions') + recordCount('Closed trades')).toBe(2)
+    const id = records('Open positions').querySelector<HTMLElement>('li')!.dataset.positionId!
+    await setInput(`Replacement SL ${id}`, '1.1022')
+    await click(host.querySelector<HTMLButtonElement>(`[aria-label="Update SL ${id}"]`)!)
+    expect(records('Combined risk').textContent).toContain('Current planned $0.00 USD (0.00%)')
+    expect(records('Open positions').textContent).toContain('Original planned risk $1000.00 USD (1.00%)')
+    await selectTimeframe(0, 'H1')
+    expect(records('Open positions').textContent).toContain('2.5 lots')
+    await click(button('Next Candle'))
+    await click(host.querySelector<HTMLButtonElement>(`[aria-label="Close position ${id}"]`)!)
+    await click(button('Next Candle'))
+    expect(recordCount('Open positions')).toBe(0)
+    expect(recordCount('Closed trades')).toBe(2)
+    await click(button('Restart'))
+    expect(records('Combined risk').textContent).toContain('Remaining $2000.00 USD')
+    await click(button('Load Data'))
+    expect(recordCount('Closed trades')).toBe(0)
+  })
+
+  it('keeps manual lots unchanged, shows estimates, and rejects risk above the cap at execution', async () => {
+    await act(async () => root.render(<App />))
+    await click(button('Start Replay'))
+    await volume('6')
+    await setInput('SL price', '1.0982')
+    expect(records('Entry estimates').textContent).toContain('Buy estimate: 6.0000 lots · $1200.00 USD')
+    await click(button('Buy'))
+    await click(button('Next Candle'))
+    expect(recordCount('Open positions')).toBe(0)
+    expect(records('Pending orders').textContent).toContain('6 lots')
+    expect(records('Pending orders').textContent).toContain('Actual entry risk exceeds the combined risk cap')
+    await selectMode('risk')
+    expect(host.querySelector<HTMLInputElement>('[aria-label="Risk per entry (%)"]')!.value).toBe('1')
+    expect(host.textContent).toContain('future execution opening')
   })
 })

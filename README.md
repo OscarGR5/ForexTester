@@ -67,9 +67,9 @@ Replay inherits the historical-data limitations below: EURUSD bid charts only, p
 
 ## Simulated trading
 
-The **Simulated trading** panel accepts a positive, finite position volume in standard FX lots, initially **0.01**, and a required positive, finite **SL price** entered as an absolute EURUSD price. The SL field starts blank; the application never derives a fixed pip distance. One EURUSD lot represents **100,000 EUR** of base-currency exposure. Choose **Buy** or **Sell** while replay is active and paused. Trading is disabled in the full-history viewer, during playback, and at the final candle. There must be a later M1 bid candle available to advance to; the application does not look ahead for future quote availability.
+The **Simulated trading** panel defaults to **Risk %** sizing, initially **1%**, with a required positive, finite **SL price** entered as an absolute EURUSD price. **Manual Lots** preserves the positive, finite volume workflow, initially **0.01 lots**. The SL field starts blank; the application never derives a fixed pip distance. One EURUSD lot represents **100,000 EUR** of base-currency exposure. Choose **Buy** or **Sell** while replay is active and paused. Trading is disabled in the full-history viewer, during playback, and at the final candle. There must be a later M1 bid candle available to advance to; the application does not look ahead for future quote availability.
 
-At most **two position slots** can be in use. Pending entries and open positions both consume slots, including positions with a pending close. Each entry keeps its own volume and SL. At the actual opening fill, a Buy SL must be strictly below its ask entry price, and a Sell SL strictly above its bid entry price. Invalid protected entries become rejected-order records with an explicit reason and release their slots. Stops attach immediately to valid fills. **Cancel** removes an unfilled entry and releases its slot. **Close** queues a manual exit; duplicate close requests are disabled. Pending entries can be cancelled during playback or after history ends. Entry, open, pending-close, and closed states are labeled separately.
+At most **two position slots** can be in use. Pending entries and open positions both consume slots, including positions with a pending close. Each entry keeps its own sizing request and SL. Risk-based entries determine their final volume only at execution. At the actual opening fill, a Buy SL must be strictly below its ask entry price, and a Sell SL strictly above its bid entry price. Invalid protected entries become rejected-order records with an explicit reason and release their slots. Stops attach immediately to valid fills. **Cancel** removes an unfilled entry and releases its slot. **Close** queues a manual exit; duplicate close requests are disabled. Pending entries can be cancelled during playback or after history ends. Entry, open, pending-close, and closed states are labeled separately.
 
 Each revealed M1 OHLC bar is treated as an observed, completed candle for trading decisions, although its replay timestamp is the candle’s opening timestamp. An order requested after observing candle N can execute only at a later available M1 opening, never inside candle N. **Next Candle** or **Play** advances the shared clock and processes pending orders chronologically, including all intervening bars when React batches several clock updates. Visual zoom, scrolling, crosshairs, timeframes, and layouts never control execution.
 
@@ -82,13 +82,13 @@ Execution uses historical EURUSD prices, with both bid and ask candles required 
 | Close Buy | Bid open |
 | Close Sell | Ask open |
 
-Multiple queued orders fill independently at that opening. High, low, and close never select a market entry or manual exit price. Automatic stop exits use the rules below. Missing minutes and weekend/overnight gaps advance directly to the next available bid candle. If its ask is missing or has a different timestamp, orders remain pending until a later synchronized quote appears. Ask-only timestamps do not advance the bid replay clock. Prices are never invented or interpolated.
+Queued orders are evaluated in submission order at that opening, subject to the combined planned-risk cap. High, low, and close never select a market entry or manual exit price. Automatic stop exits use the rules below. Missing minutes and weekend/overnight gaps advance directly to the next available bid candle. If its ask is missing or has a different timestamp, orders remain pending until a later synchronized quote appears. Ask-only timestamps do not advance the bid replay clock. Prices are never invented or interpolated.
 
 Open positions show their entry time/price, direction, volume, current closing-side price, and unrealized PnL. Buys are valued at the revealed **bid close** and sells at the revealed **ask close**. The current observed candle must have synchronized bid and ask data; otherwise current price and PnL show **unavailable**, without carrying a stale valuation forward. Closed trades show their actual entry and exit prices/times and realized PnL.
 
 For EURUSD, **1 pip = 0.0001**. Signed price difference is exit or current price minus entry for buys, and entry minus exit or current price for sells. **Pips = signed difference / 0.0001**; **gross USD PnL = signed difference × 100,000 × lots**. For example, a 0.01-lot buy at 1.10020 closed at bid 1.10120 yields 10.0 pips and $1.00 gross. All PnL is **gross, before commissions, swaps, and financing**, not net PnL or account equity.
 
-Calculations retain JavaScript number precision. Display values use fixed decimal rounding: **5 decimals for prices, 1 for pips, 2 for USD**. Volumes retain the entered numeric value, and values that round to zero display without a minus sign. All timestamps are UTC to the minute.
+Calculations retain JavaScript number precision. Display values use fixed decimal rounding: **5 decimals for prices, 1 for pips, 2 for USD**. Manual volumes retain the entered numeric value; automatic volumes use 0.01-lot increments, and values that round to zero display without a minus sign. All timestamps are UTC to the minute.
 
 **Restart**, including at the first replay candle, clears pending entries, open positions, and closed trades. Loading a dataset also clears all trading records and returns to the full-history viewer. Timeframe/layout changes preserve positions and pending orders. At the final candle, remaining positions are labeled **open at end of available history**. Unfilled entries or close requests stay pending. No position is force-closed and no exit price is assumed.
 
@@ -96,7 +96,38 @@ Trading state is session-only, in memory. The pure TypeScript engine in `fronten
 
 Take-profit functionality is intentionally excluded because the trading workflow uses stop-losses and manual profit-taking only.
 
-Current limitations: EURUSD only; M1 candle replay, with no intraminute or tick-price assumptions. **Automatic trailing stops and break-even rules, commissions, swaps, financing, risk-based sizing, margin/leverage simulation, account balances/equity, equity curves, full performance statistics, strategy signals, and persistence are not implemented.** The historical-data backend and its seven-day request limit are unchanged.
+Current limitations: EURUSD only; M1 candle replay, with no intraminute or tick-price assumptions. **Automatic trailing stops and break-even rules, commissions, swaps, financing, margin/leverage simulation, dynamic account balances/equity, equity curves, full performance statistics, strategy signals, and persistence are not implemented.** The historical-data backend and its seven-day request limit are unchanged.
+
+### Risk-based position sizing and combined exposure
+
+**Account risk · USD** starts with a **$100,000 reference balance** and **2% maximum combined planned risk**, or **$2,000**. Edit these before starting replay. Positive finite balances and percentages greater than 0 and at most 100% are required. Session settings lock while replay is active, including after the final candle. Restart clears trading records and retains settings; loading history clears records, retains settings, and unlocks configuration. The reference balance is a fixed sizing input, not simulated cash or equity. USD is the only accounting currency; there is no EUR account conversion.
+
+In **Risk %** mode, enter a percentage and an absolute SL, then choose Buy or Sell. Risk per new entry defaults to 1% and can change while paused without altering existing allocations. The request stores its direction, SL, percentage, and USD budget, without a final volume. Only an eligible future synchronized M1 opening supplies the actual entry: **ask open for Buy, bid open for Sell**. No future candle is inspected at submission and the observed close is never used for final sizing.
+
+```text
+Risk budget USD = reference balance × risk percentage / 100
+Risk per standard lot USD = abs(actual entry price − SL) × 100,000
+Automatic lots = floor((risk budget USD / risk per standard lot USD) / 0.01) × 0.01
+```
+
+For example, $100,000 × 1% = $1,000. A Buy at ask 1.10020 with SL 1.09820 has a 20-pip distance and $200 risk per lot, producing **5.00 lots**. A 30-pip distance produces **3.33 lots**, or **$999** planned risk. If the future entry gaps to 1.10220 with that same SL, the distance becomes 40 pips and the volume becomes **2.50 lots**. Spread is included through the actual execution-side entry. Sizes below **0.01 lots** are rejected rather than rounded up. An SL invalid against the actual entry is rejected through the existing rejected-order records. Floating-point comparisons allow representation noise only; they do not grant additional spending capacity.
+
+The combined cap measures **concurrent planned stop-loss exposure**, plus percentage-order reservations:
+
+```text
+Long planned USD risk = max(0, entry price − current SL) × 100,000 × lots
+Short planned USD risk = max(0, current SL − entry price) × 100,000 × lots
+Available budget = reference balance × maximum risk % / 100
+                   − open planned exposure − pending percentage allocations
+```
+
+Two independent 1% allocations fit within the default 2% cap. A new percentage request exceeding available capacity is refused. Each pending percentage order reserves its full requested USD budget, including any rounding remainder, until it fills, is cancelled, or is rejected. On fill, its actual rounded entry risk replaces the reservation and unused risk is released. Execution rechecks the cap against open positions and all other pending percentage allocations. Already reserved allocations remain protected even when a manual order was submitted earlier. Otherwise orders compete in submission order. Manual exits execute before entries at the opening; automatic stops run after entries, so exposure from an intrabar stop is released after that candle's entry checks.
+
+**Manual Lots** never resizes the entered volume. The panel and pending manual orders show estimates from currently revealed synchronized closing quotes where calculable. Manual entries reserve no USD budget because their future entry risk is unknown. The engine calculates actual planned USD risk and percentage at execution and rejects a fill exceeding the cap. Estimates are labeled and are not guaranteed future fills. Missing synchronized quotes leave orders pending and keep percentage reservations intact. Both pending modes continue to consume one of the two position slots.
+
+A pending manual close keeps the position's exposure until the exit executes. Closed positions release their exposure. Moving an SL closer to entry reduces current planned risk; break-even or profit stops have **zero gross planned downside under the SL-level assumption**. Widening a stop increases exposure and is rejected if open exposure plus reservations would exceed the cap. Existing current-price validation, future-candle effectiveness, stop history, and coverage records still apply. SL changes never resize a position. Each filled position stores its original planned USD risk, original percentage, and sizing reference balance separately from current planned exposure, preserving the entry risk for later R-multiple statistics.
+
+Planned risk is **not a guaranteed maximum realized loss**. Adverse gaps can fill beyond the SL and produce larger losses; OHLC history cannot reconstruct intraminute paths, and slippage is not modeled. Sizing currently excludes **commissions, swaps, financing, and margin requirements**. There is no leverage, liquidation, currency conversion, or dynamic equity model. The seven-day historical-data limit is unchanged.
 
 ### Independent stop-loss execution
 

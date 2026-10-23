@@ -10,7 +10,7 @@ function bar(minute: number, open = 1.1, close = open): Candle {
 function observe(state: TradingState, minute: number, bid = 1.1, ask = 1.1002) {
   return observeCandle(state, bar(minute, bid), bar(minute, ask))
 }
-function initial() { return observe(createTradingState(), 0) }
+function initial() { return observe(createTradingState(0, { referenceBalance: 100_000, maxRiskPercent: 100 }), 0) }
 
 describe('deterministic EURUSD market execution', () => {
   it('queues both directions without using observed OHLC; fills at next ask/bid open', () => {
