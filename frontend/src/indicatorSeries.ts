@@ -1,3 +1,4 @@
+import { performanceStart, performanceEnd, performanceCount } from './replayPerformance.js'
 import { LineSeries, LineStyle, type IChartApi, type ISeriesApi, type WhitespaceData, type UTCTimestamp } from 'lightweight-charts'
 import { calculateIndicators, type ChartCandle, type IndicatorLine, type IndicatorSettings } from './indicators'
 import { IchimokuCloudPrimitive } from './ichimokuCloud'
@@ -26,7 +27,10 @@ export class IndicatorSeries {
       settings.stochastic.length + settings.stochastic.smoothK + settings.stochastic.smoothD,
       settings.ichimoku.tenkan, settings.ichimoku.kijun, settings.ichimoku.spanB)
     const begin = Math.max(0, dirty - lookback - settings.ichimoku.displacement * 2)
+    const calculation = performanceStart()
     const data = calculateIndicators(candles.slice(begin), settings, timeframe)
+    performanceEnd('indicators.calculate', calculation)
+    const rendering = performanceStart()
     const cutoff = candles[dirty]?.time ?? 0
     const enabled: LineKey[] = [
       ...[settings.bollinger, settings.bollinger2].flatMap((group, index): LineKey[] => {
@@ -84,7 +88,10 @@ export class IndicatorSeries {
     if (replace) this.cloudData = []
     while (this.cloudData.length && this.cloudData.at(-1)!.time >= cutoff) this.cloudData.pop()
     for (const point of data.cloud) if (point.time >= cutoff) this.cloudData.push(point)
+    performanceEnd('indicators.series', rendering)
+    const cloudStart = performanceStart()
     this.cloud?.setData(this.cloudData)
+    performanceEnd('cloud.update', cloudStart)
     this.processed = candles.length
     const last = candles.at(-1)?.time
     // Reserve the entire projected horizon, including before the first span is warm.
@@ -100,12 +107,14 @@ export class IndicatorSeries {
       previous.slice(start).every((point, index) => point.time === tail[index].time)
     if (!stable || previous.length === 0) {
       line.data = replace ? tail : [...previous.slice(0, start), ...tail]
+      performanceCount('indicators.setData')
       line.series.setData(line.data)
       return
     }
     for (let index = 0; index < tail.length; index++) {
       const point = tail[index], old = previous[start + index]
       if (!old || ('value' in old ? old.value : undefined) !== ('value' in point ? point.value : undefined)) {
+        performanceCount('indicators.update')
         line.series.update(point, start + index < previous.length - 1)
       }
     }

@@ -1,3 +1,4 @@
+import { performanceStart, performanceEnd, performanceCount } from './replayPerformance.js'
 import { defaultWorkspace, readUi, useUiValue, validWorkspace, validPriceView, type PriceView, writeUi } from './uiPreferences'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { CandlestickSeries, ColorType, LineStyle, createChart, type IChartApi, type IPriceLine, type ISeriesApi, type Time } from 'lightweight-charts'
@@ -119,6 +120,7 @@ function ChartPane({ id, sessionId, timeframe, source, count, synchronizer, onTi
   }, [id, synchronizer])
 
   useLayoutEffect(() => {
+    const frame = performanceStart()
     const series = seriesRef.current!
     const last = previous.current
     const replace = !last || last.synchronizer !== synchronizer || last.timeframe !== timeframe ||
@@ -127,13 +129,16 @@ function ChartPane({ id, sessionId, timeframe, source, count, synchronizer, onTi
     const dirty = bars.advance(source, count)
     const candles = bars.candles
     synchronizer.update(id, candles, timeframe, () => {
-      if (replace) series.setData(candles)
+      const prices = performanceStart()
+      if (replace) { performanceCount('candles.setData'); series.setData(candles) }
       else {
         // Revisit the old tail: it may be a newly completed higher-timeframe bucket.
-        for (let index = dirty; index < candles.length; index++) series.update(candles[index])
+        for (let index = dirty; index < candles.length; index++) { performanceCount('candles.update'); series.update(candles[index]) }
       }
+      performanceEnd('candles.series', prices)
       return indicatorsRef.current!.update(candles, settings, timeframe, replace || previousSettings.current !== settings)
     }, replace ? 0 : dirty)
+    performanceEnd('chart.pane', frame)
     previousSettings.current = settings
     previous.current = { source, count, bars, timeframe, synchronizer }
   }, [id, source, count, synchronizer, timeframe, settings])

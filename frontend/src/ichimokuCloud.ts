@@ -1,3 +1,4 @@
+import { performanceStart, performanceEnd, performanceCount } from './replayPerformance.js'
 import type { IChartApi, IPrimitivePaneRenderer, IPrimitivePaneView, ISeriesApi, ISeriesPrimitive, SeriesAttachedParameter } from 'lightweight-charts'
 import type { CloudPoint } from './indicators'
 
@@ -28,6 +29,7 @@ export class IchimokuCloudPrimitive implements ISeriesPrimitive {
   private readonly renderer: IPrimitivePaneRenderer = {
     draw: (target) => target.useMediaCoordinateSpace(({ context, mediaSize }) => {
       if (!this.chart || !this.series) return
+      const drawing = performanceStart()
       const scale = this.chart.timeScale()
       context.save()
       context.beginPath(); context.rect(0, 0, mediaSize.width, mediaSize.height); context.clip()
@@ -55,6 +57,7 @@ export class IchimokuCloudPrimitive implements ISeriesPrimitive {
         previous = current
       }
       context.restore()
+      performanceEnd('cloud.draw', drawing)
     }),
   }
   private readonly views: IPrimitivePaneView[] = [{ zOrder: () => 'bottom', renderer: () => this.renderer }]

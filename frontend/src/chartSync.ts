@@ -1,3 +1,4 @@
+import { performanceStart, performanceEnd, performanceCount } from './replayPerformance.js'
 import type { CandlestickData, IChartApi, ISeriesApi, LogicalRange, MouseEventParams, UTCTimestamp } from 'lightweight-charts'
 import { TIMEFRAME_MS, type Timeframe } from './history.js'
 
@@ -175,6 +176,8 @@ export class ChartSynchronizer {
   }
 
   private applyViewport(target: Entry, viewport: UtcRange): void {
+    const started = performanceStart()
+    performanceCount('sync.request')
     const lastIndex = target.times.length - 1
     if (lastIndex === 0) {
       target.chart.timeScale().fitContent()
@@ -193,12 +196,14 @@ export class ChartSynchronizer {
     if (current && Math.abs(current.from - from) < 0.001 && Math.abs(current.to - projectedTo) < 0.001) return
     target.setting = true
     try {
+      performanceCount('sync.setRange')
       target.chart.timeScale().setVisibleLogicalRange({ from, to: projectedTo })
       // The library may clamp the requested range at a history edge. Suppress
       // the range it actually applied when its change callback arrives.
       target.pending = target.chart.timeScale().getVisibleLogicalRange()
     } finally {
       target.setting = false
+      performanceEnd('sync.apply', started)
     }
   }
 

@@ -1,3 +1,4 @@
+import { performanceStart, performanceEnd, performanceCount } from './replayPerformance.js'
 import { useUiValue, validBoolean } from './uiPreferences'
 import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { type EquityLedger, type EquityPoint } from './equity'
@@ -50,7 +51,7 @@ export const EquityChart = memo(function EquityChart({ ledger, referenceBalance,
     observer.observe(container.current)
     return () => observer.disconnect()
   }, [])
-  const points = useMemo(() => downsampleEquity(equityObservations(ledger), width), [ledger, width])
+  const points = useMemo(() => { const started = performanceStart(); const points = downsampleEquity(equityObservations(ledger), width); performanceEnd('equity.prepare', started); return points }, [ledger, width])
   const current = ledger.tail?.point
   const money = (value: number | null | undefined) => value === null || value === undefined ? 'Unavailable' : `$${number(value, 2)}`
   let min = referenceBalance, max = referenceBalance
