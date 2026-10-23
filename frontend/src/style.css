@@ -52,3 +52,20 @@ button:disabled { opacity: 0.45; cursor: default; }
   .app-shell { padding: 12px; }
   .date-controls { width: 100%; }
 }
+
+.indicator-controls { margin-left: auto; font-size: 0.85rem; }
+.indicator-controls summary { min-height: 34px; display: list-item; align-content: center; padding: 5px 8px; color: #e5eaf0; cursor: pointer; }
+.indicator-controls summary:focus-visible { outline: 2px solid #85c8d4; outline-offset: 2px; }
+.pane-toolbar:has(.indicator-controls[open]) { flex-wrap: wrap; }
+.indicator-controls[open] { flex-basis: 100%; }
+.indicator-options { display: flex; flex-wrap: wrap; gap: 12px; max-height: 210px; overflow: auto; padding: 4px 0 8px; }
+.indicator-options fieldset { flex: 1; min-width: 190px; margin: 0; padding: 6px 10px; border: 1px solid #354250; }
+.indicator-options legend label { color: #e5eaf0; }
+.indicator-options input[type='checkbox'] { accent-color: #75c4b5; }
+.indicator-options .indicator-parameter { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 10px; margin: 5px 0; }
+.indicator-parameter input { width: 76px; padding: 4px; border: 1px solid #354250; border-radius: 4px; background: #171e28; color: #e5eaf0; color-scheme: dark; }
+.indicator-parameter input[aria-invalid='true'] { border-color: #e2a2a6; }
+.parameter-error { flex-basis: 100%; color: #e2a2a6; font-size: 0.75rem; }
+.chart-pane:has(.indicator-controls[open]) { min-height: 510px; }
+.chart-pane:has(.indicator-controls input[aria-label$='Stochastic']:checked) { min-height: 360px; }
+.chart-pane:has(.indicator-controls[open] input[aria-label$='Stochastic']:checked) { min-height: 570px; }

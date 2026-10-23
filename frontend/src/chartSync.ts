@@ -35,6 +35,7 @@ interface Entry {
   times: number[]
   byTime: Map<number, CandlestickData<UTCTimestamp>>
   step: number
+  projectedBars: number
   setting: boolean
   pending: LogicalRange | null
   onRange: (range: LogicalRange | null) => void
@@ -65,7 +66,7 @@ export class ChartSynchronizer {
   }
 
   update(id: number, candles: readonly CandlestickData<UTCTimestamp>[], timeframe: Timeframe,
-    applyData: () => void): void {
+    applyData: () => number | void): void {
     const entry = this.entries.get(id)
     if (!entry) return
     entry.setting = true
@@ -73,7 +74,7 @@ export class ChartSynchronizer {
       entry.times = candles.map((candle) => candle.time as number)
       entry.byTime = new Map(candles.map((candle) => [candle.time as number, candle]))
       entry.step = TIMEFRAME_MS[timeframe] / 1000
-      applyData()
+      entry.projectedBars = applyData() ?? 0
       if (!this.viewport && entry.times.length > 0) this.initializeViewport(entry)
       if (this.viewport && entry.times.length > 0) this.applyViewport(entry, this.viewport)
       entry.pending = entry.chart.timeScale().getVisibleLogicalRange()
@@ -108,7 +109,7 @@ export class ChartSynchronizer {
     const entry: Entry = {
       chart, series, times: candles.map((candle) => candle.time as number),
       byTime: new Map(candles.map((candle) => [candle.time as number, candle])),
-      step: TIMEFRAME_MS[timeframe] / 1000, setting: false, pending: null,
+      step: TIMEFRAME_MS[timeframe] / 1000, projectedBars: 0, setting: false, pending: null,
       onRange: (range) => this.onRange(id, range),
       onCrosshair: (param) => this.onCrosshair(id, param),
     }
@@ -167,12 +168,13 @@ export class ChartSynchronizer {
     const width = Math.min(lastIndex, requestedTo - requestedFrom)
     const to = Math.max(width, Math.min(lastIndex, requestedTo))
     const from = to - width
+    const projectedTo = to + (viewport.to >= target.times[lastIndex] ? target.projectedBars : 0)
     if (from >= to) return
     const current = target.chart.timeScale().getVisibleLogicalRange()
-    if (current && Math.abs(current.from - from) < 0.001 && Math.abs(current.to - to) < 0.001) return
+    if (current && Math.abs(current.from - from) < 0.001 && Math.abs(current.to - projectedTo) < 0.001) return
     target.setting = true
     try {
-      target.chart.timeScale().setVisibleLogicalRange({ from, to })
+      target.chart.timeScale().setVisibleLogicalRange({ from, to: projectedTo })
       // The library may clamp the requested range at a history edge. Suppress
       // the range it actually applied when its change callback arrives.
       target.pending = target.chart.timeScale().getVisibleLogicalRange()
