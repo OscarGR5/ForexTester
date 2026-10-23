@@ -479,10 +479,10 @@ describe('per-chart indicators', () => {
     await act(async () => root.render(<App />))
     await waitForStartup()
     const chart = vi.mocked(createChart).mock.results[0].value
-    expect(chart.addSeries).toHaveBeenCalledTimes(1)
+    expect(chart.addSeries).toHaveBeenCalledTimes(2) // Price plus bounded whitespace time slots.
     await shortPeriods()
     await enableIndicator(1, 'BB #1')
-    expect(chart.addSeries).toHaveBeenCalledTimes(4)
+    expect(chart.addSeries).toHaveBeenCalledTimes(5)
     const middle = indicatorLine(0, 'middle')!
     expect(middle.data()).toHaveLength(4)
     const valid = structuredClone(middle.data())
@@ -515,7 +515,7 @@ describe('per-chart indicators', () => {
     await enableIndicator(1, 'BB #2')
     const chart = vi.mocked(createChart).mock.results[0].value
     const upper = indicatorLine(0, 'upper')!, second = indicatorLine(0, 'upper2')!
-    expect(chart.addSeries).toHaveBeenCalledTimes(6)
+    expect(chart.addSeries).toHaveBeenCalledTimes(7)
     expect(indicatorLine(0, 'middle2')).toBeUndefined()
     expect(second.data()).toHaveLength(4)
     const original = structuredClone(upper.data())

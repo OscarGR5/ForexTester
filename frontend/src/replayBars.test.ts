@@ -58,3 +58,40 @@ describe('incremental chart data and bounded indicator tails',()=>{
   for(const line of series)expect(line.values).toEqual(expected[line.title as 'k'|'d'])
  })
 })
+
+it('reports no dirty candles when higher-timeframe OHLC is unchanged', () => {
+ const bars = new ReplayBars('H4')
+ const flat = source.slice(0, 4).map((candle) => ({ ...candle, open: 1.1, high: 1.2, low: 1, close: 1.15 }))
+ bars.advance(flat, 1)
+ const previous = bars.candles[0]
+ expect(bars.advance(flat, 2)).toBe(1)
+ expect(bars.candles[0]).toBe(previous)
+ expect(bars.advance(flat, 2)).toBe(1)
+})
+
+it('appends newly warm indicator observations without replacing historical lines', () => {
+ const { chart, series } = fakeChart(), manager = new IndicatorSeries(chart), bars = new ReplayBars('M1')
+ const settings = defaultIndicatorSettings(); settings.bollinger.enabled = true; settings.stochastic.enabled = true
+ bars.advance(source, 1); manager.update(bars.candles, settings, 'M1', true)
+ for (let count = 2; count < 90; count++) { bars.advance(source, count); manager.update(bars.candles, settings, 'M1', false) }
+ const expected = calculateIndicators(bars.candles, settings, 'M1')
+ for (const line of series) {
+  expect(line.setData).toHaveBeenCalledTimes(1)
+  expect(line.values.map(p => p.time)).toEqual(expected[line.title as 'k'].map(p => p.time))
+  for (let i = 0; i < line.values.length; i++) expect(line.values[i].value).toBeCloseTo(expected[line.title as 'k'][i].value, 8)
+ }
+})
+
+it('rebuilds exact custom Bollinger settings and visibility when settings change', () => {
+ const { chart, series } = fakeChart(), manager = new IndicatorSeries(chart), bars = new ReplayBars('M5')
+ const settings = defaultIndicatorSettings(); settings.bollinger.enabled = true
+ bars.advance(source, 1500); manager.update(bars.candles, settings, 'M5', true)
+ const changed = { ...settings, bollinger: { ...settings.bollinger, length: 37, stdDev: 1.7, basisVisible: false } }
+ manager.update(bars.candles, changed, 'M5', true)
+ expect(chart.removeSeries).toHaveBeenCalledTimes(1)
+ const expected = calculateIndicators(bars.candles, changed, 'M5')
+ for (const line of series.filter(line => line.title !== 'middle')) {
+  expect(line.values.map(p => p.time)).toEqual(expected[line.title as 'upper'].map(p => p.time))
+  for (let i = 0; i < line.values.length; i++) expect(line.values[i].value).toBeCloseTo(expected[line.title as 'upper'][i].value, 8)
+ }
+})

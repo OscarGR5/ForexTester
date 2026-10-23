@@ -1,3 +1,4 @@
+import { verifyReplayWorkspace } from './chart-replay-verification'
 // Requires the existing verification-only playwright-core and a Chromium installation.
 import { chromium } from 'playwright-core'
 import { createServer } from 'vite'
@@ -14,8 +15,9 @@ import { indicatorPreset } from '../frontend/src/indicators'
 import { createTradingState } from '../frontend/src/trading'
 const label = process.argv[2] ?? 'after'
 const benchmarkRoot = process.env.BENCHMARK_ROOT ?? process.cwd()
+const appRoot = process.env.APP_ROOT ?? process.cwd()
 const directory = await mkdtemp(join(tmpdir(), 'forextester-browser-'))
-const vite = await createServer({ configFile: false, root: join(process.cwd(), 'frontend'), server: { host: '127.0.0.1', port: 5187, strictPort: true, fs: { allow: [process.cwd(), benchmarkRoot] }, proxy: { '/api': { target: 'http://127.0.0.1:3017', changeOrigin: false } } }, plugins: [{ name: 'chart-benchmark-page', configureServer(server) { server.middlewares.use('/task19-benchmark.html', (_request, response) => { response.setHeader('Content-Type', 'text/html'); response.end('<!doctype html><html><head><link rel="stylesheet" href="/src/style.css"></head><body></body></html>') }) } }] })
+const vite = await createServer({ configFile: false, root: join(appRoot, 'frontend'), server: { host: '127.0.0.1', port: 5187, strictPort: true, fs: { allow: [process.cwd(), benchmarkRoot, appRoot] }, proxy: { '/api': { target: 'http://127.0.0.1:3017', changeOrigin: false } } }, plugins: [{ name: 'chart-benchmark-page', configureServer(server) { server.middlewares.use('/task19-benchmark.html', (_request, response) => { response.setHeader('Content-Type', 'text/html'); response.end('<!doctype html><html><head><link rel="stylesheet" href="/src/style.css"></head><body></body></html>') }) } }] })
 const child = spawn(process.execPath, ['--import', 'tsx', 'scripts/durable-storage-browser-server.mts'], { env: { ...process.env, FOREXTESTER_DATA_DIR: directory }, stdio: ['ignore', 'pipe', 'pipe'] })
 await new Promise<void>((resolve, reject) => { child.stdout!.once('data', () => resolve()); child.once('exit', (code) => reject(Error(`Backend exited ${code}`))); child.stderr!.on('data', d => process.stderr.write(d)) })
 await vite.listen()
@@ -30,6 +32,9 @@ try {
     ['A', ['M1'], 1, false], ['B', ['M5', 'H1'], 10, false], ['C', ['M5', 'M15', 'H4'], 100, false], ['D', ['M5', 'M15', 'H4'], 100, true],
   ] as const) {
     if (process.env.SCENARIO && process.env.SCENARIO !== scenario || process.env.DAYS && Number(process.env.DAYS) !== days) continue
+    // Keep the real browser pointer inside the first price pane as it mounts.
+    // Hover is part of the workload: it exposes synchronous library hit-testing.
+    await direct.mouse.move(200, 60)
     // Absolute /@fs import keeps the harness out of the production application.
     const sample = await direct.evaluate(async ({ path, days, timeframes, batch, late }) => {
       const fixture = await import(/* @vite-ignore */ path)
@@ -65,20 +70,32 @@ try {
     await store.cacheHistory(base.historyId, history); await store.save(base, snapshot, null)
   }
   globalThis.fetch = nativeFetch
-  for (const days of [2, 90]) for (const [scenario, frames, speed] of [['A', ['M1'], '1'], ['B', ['M5', 'H1'], '10'], ['C', ['M5', 'M15', 'H4'], '100'], ['D', ['M5', 'M15', 'H4'], '100']] as const) {
-    if (process.env.SCENARIO && process.env.SCENARIO !== scenario) continue
+  for (const days of [2, 90]) for (const [scenario, frames, speed] of [['A', ['M1'], '1'], ['B', ['M5', 'H1'], '10'], ['C', ['M5', 'M15', 'H4'], '100'], ['D', ['M5', 'M15', 'H4'], '100'], ['H', ['M5', 'M15', 'H4'], '100']] as const) {
+    if (scenario === 'H' && days !== 90 || process.env.DAYS && Number(process.env.DAYS) !== days || process.env.SCENARIO && process.env.SCENARIO !== scenario) continue
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } })
     await context.addInitScript('globalThis.__name = (target) => target')
     await context.addInitScript(() => { globalThis.__forexReplayPerformance = { samples: {}, counts: {} } })
     const page = await context.newPage(); page.on('pageerror', e => errors.push(e.message))
     await page.goto(origin)
-    await page.locator('.saved-session').filter({ has: page.locator('.saved-session-info strong').filter({ hasText: new RegExp(`^Task19-${days}${scenario === 'D' ? '-late' : ''}$`) }) }).getByRole('button', { name: 'Resume session', exact: true }).click()
+    await page.locator('.saved-session').filter({ has: page.locator('.saved-session-info strong').filter({ hasText: new RegExp(`^Task19-${days}${scenario === 'D' || scenario === 'H' ? '-late' : ''}$`) }) }).getByRole('button', { name: 'Resume session', exact: true }).click()
     await page.waitForFunction(() => { const f = document.querySelector<HTMLFieldSetElement>('.workspace-controls'); return f && !f.disabled && !f.hidden })
     await page.locator(`input[name="chart-count"][value="${frames.length}"]`).check()
     for (let i = 0; i < frames.length; i++) await page.getByLabel(`Chart ${i + 1} timeframe`, { exact: true }).selectOption(frames[i])
     await page.getByLabel('Replay speed', { exact: true }).selectOption(speed)
     await page.waitForTimeout(400)
     const before = await page.locator('[aria-label="Replay progress"]').textContent()
+    let playingAt = 0, capturingCheckpoints = true
+    const checkpoints: { startMs: number; elapsedMs?: number; bytes: number; cursor: number; equityCount: number; playing: boolean }[] = []
+    const requests = new Map<object, typeof checkpoints[number]>()
+    page.on('request', request => {
+      if (!capturingCheckpoints || !playingAt || !request.url().endsWith('/checkpoint')) return
+      const body = request.postDataJSON(), checkpoint = body?.record?.checkpoint
+      if (!checkpoint) return
+      const sample = { startMs: performance.now() - playingAt, bytes: request.postDataBuffer()?.length ?? 0,
+        cursor: checkpoint.executionCursor, equityCount: checkpoint.equity.count, playing: checkpoint.replay.playing }
+      checkpoints.push(sample); requests.set(request, sample)
+    })
+    page.on('requestfinished', request => { const sample = requests.get(request); if (sample) sample.elapsedMs = performance.now() - playingAt - sample.startMs })
     await page.evaluate(() => {
       globalThis.__forexReplayPerformance = { samples: {}, counts: {} }
       const metrics = globalThis.__forexReplayPerformance
@@ -86,13 +103,16 @@ try {
       let previous = performance.now(), end = previous + 6400
       const tick = () => { const now = performance.now(); (metrics.samples['browser.timerLag'] ??= []).push(Math.max(0, now - previous - 50)); previous = now; if (now < end) setTimeout(tick, 50) }; setTimeout(tick, 50)
     })
-    const started = performance.now(); await page.getByRole('button', { name: 'Play', exact: true }).click(); await page.waitForTimeout(6200)
+    const started = performance.now(); playingAt = started; await page.getByRole('button', { name: 'Play', exact: true }).click()
+    if (scenario === 'H') { const box = await page.locator('.chart-canvas').first().boundingBox(); assert.ok(box); await page.mouse.move(box.x + 200, box.y + 70) }
+    await page.waitForTimeout(6200)
     const pauseAt = performance.now(); if (await page.getByRole('button', { name: 'Pause', exact: true }).isEnabled()) await page.getByRole('button', { name: 'Pause', exact: true }).click()
     const elapsed = performance.now() - started, pauseMs = performance.now() - pauseAt
     const after = await page.locator('[aria-label="Replay progress"]').textContent()
     const metrics = await page.evaluate(() => ({ ...globalThis.__forexReplayPerformance, heap: (performance as any).memory?.usedJSHeapSize }))
+    capturingCheckpoints = false
     const observations = Number(after!.split('/')[0]) - Number(before!.split('/')[0])
-    results.app.push({ days, scenario, frames, speed, observations, elapsed, observationsPerSecond: observations / elapsed * 1000, pauseMs, metrics })
+    results.app.push({ days, scenario, frames, speed, observations, elapsed, observationsPerSecond: observations / elapsed * 1000, pauseMs, metrics, checkpoints })
     await writeFile(`/tmp/task19-${label}.json`, JSON.stringify(results, null, 2))
     assert.ok(observations > 0); console.log(JSON.stringify({ phase: 'app', days, scenario, observations, elapsed, pauseMs }))
     if (days === 90 && scenario === 'C') {
@@ -101,6 +121,7 @@ try {
       await page.getByRole('button', { name: 'Save now', exact: true }).click(); await page.locator('.session-status strong').filter({ hasText: /^Saved$/ }).waitFor()
       for (const width of [1440, 390]) { await page.setViewportSize({ width, height: 1000 }); await page.screenshot({ path: `/tmp/task19-${label}-${width}.png`, fullPage: true }); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width) }
       assert.equal(await page.locator('.tv-lightweight-charts').count(), 3)
+      if (process.env.VERIFY) results.verification = await verifyReplayWorkspace(page)
     }
     await context.close()
   }

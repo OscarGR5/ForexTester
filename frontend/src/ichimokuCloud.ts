@@ -41,7 +41,6 @@ export class IchimokuCloudPrimitive implements ISeriesPrimitive {
       }
       for (let index = Math.max(0, low - 1); index < this.points.length; index++) {
         const point = this.points[index]
-        if (visible && typeof visible.to === 'number' && point.time > visible.to && previous) break
         const x = scale.timeToCoordinate(point.time)
         const a = this.series.priceToCoordinate(point.a), b = this.series.priceToCoordinate(point.b)
         if (x === null || a === null || b === null) { previous = null; continue }
@@ -55,6 +54,7 @@ export class IchimokuCloudPrimitive implements ISeriesPrimitive {
           }
         }
         previous = current
+        if (visible && typeof visible.to === 'number' && point.time > visible.to) break
       }
       context.restore()
       performanceEnd('cloud.draw', drawing)
@@ -66,5 +66,19 @@ export class IchimokuCloudPrimitive implements ISeriesPrimitive {
   }
   detached(): void { this.chart = null; this.series = null; this.requestUpdate = null; this.points = [] }
   setData(points: CloudPoint[]): void { this.points = points; this.requestUpdate?.() }
+  updateTail(tail: CloudPoint[], cutoff: number, replace: boolean): void {
+    let start = replace ? 0 : this.points.length
+    while (start > 0 && this.points[start - 1].time >= cutoff) start--
+    let changed = this.points.length - start !== tail.length
+    for (let i = 0; !changed && i < tail.length; i++) {
+      const old = this.points[start + i], next = tail[i]
+      changed = old.time !== next.time || old.a !== next.a || old.b !== next.b
+    }
+    if (!changed) return
+    this.points.length = start
+    for (const point of tail) this.points.push(point)
+    performanceCount('cloud.redraw')
+    this.requestUpdate?.()
+  }
   paneViews(): IPrimitivePaneView[] { return this.views }
 }
