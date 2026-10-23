@@ -25,6 +25,7 @@ node_modules/
 dist/
 build/
 coverage/
+.cache/
 
 # Python caches and virtual environments (for future tooling)
 __pycache__/
