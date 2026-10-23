@@ -117,10 +117,18 @@ export class ChartSynchronizer {
   }
 
   private applyViewport(target: Entry, viewport: UtcRange): void {
-    const first = target.times[0]
-    const last = target.times[target.times.length - 1]
-    const from = utcToLogical(target.times, Math.max(first, Math.min(last, viewport.from)), target.step)
-    const to = utcToLogical(target.times, Math.max(first, Math.min(last, viewport.to)), target.step)
+    const lastIndex = target.times.length - 1
+    if (lastIndex === 0) {
+      target.chart.timeScale().fitContent()
+      return
+    }
+    const requestedFrom = utcToLogical(target.times, viewport.from, target.step)
+    const requestedTo = utcToLogical(target.times, viewport.to, target.step)
+    // Keep the requested span while shifting it onto existing candle positions.
+    // UTC times inside the final bucket map beyond its opening logical index.
+    const width = Math.min(lastIndex, requestedTo - requestedFrom)
+    const to = Math.max(width, Math.min(lastIndex, requestedTo))
+    const from = to - width
     if (from >= to) return
     const current = target.chart.timeScale().getVisibleLogicalRange()
     if (current && Math.abs(current.from - from) < 0.001 && Math.abs(current.to - to) < 0.001) return

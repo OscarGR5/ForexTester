@@ -7,11 +7,19 @@ function candles(times: number[]): CandlestickData<UTCTimestamp>[] {
   return times.map((time) => ({ time: time as UTCTimestamp, open: 1, high: 2, low: 0.5, close: 1.5 }))
 }
 
-function fakeChart(initial: LogicalRange = { from: 0, to: 4 } as LogicalRange) {
+function fakeChart(initial: LogicalRange = { from: 0, to: 4 } as LogicalRange, maxLogical?: number, minimumSpan = 0) {
   let range = initial
   let onRange: ((range: LogicalRange | null) => void) | undefined
   let onCrosshair: ((param: MouseEventParams) => void) | undefined
-  const setVisibleLogicalRange = vi.fn((next: LogicalRange) => { range = next; onRange?.(next) })
+  const setVisibleLogicalRange = vi.fn((next: LogicalRange) => {
+    if (next.from >= next.to || (maxLogical !== undefined && (next.from < 0 || next.to > maxLogical))) {
+      throw new Error('Range exceeds available chart candles')
+    }
+    range = next.to - next.from < minimumSpan
+      ? { from: next.to - minimumSpan, to: next.to } as LogicalRange
+      : next
+    onRange?.(range)
+  })
   const setCrosshairPosition = vi.fn(() => onCrosshair?.({ time: 0 as UTCTimestamp } as MouseEventParams))
   const clearCrosshairPosition = vi.fn()
   const unsubscribeRange = vi.fn(() => { onRange = undefined })
@@ -25,7 +33,7 @@ function fakeChart(initial: LogicalRange = { from: 0, to: 4 } as LogicalRange) {
     setCrosshairPosition, clearCrosshairPosition,
   } as unknown as IChartApi
   return { chart, setVisibleLogicalRange, setCrosshairPosition, clearCrosshairPosition,
-    unsubscribeRange, unsubscribeCrosshair,
+    unsubscribeRange, unsubscribeCrosshair, getRange: () => range,
     emitRange: (next: LogicalRange) => { range = next; onRange?.(next) },
     emitCrosshair: (time?: number) => onCrosshair?.({ time: time as UTCTimestamp | undefined } as MouseEventParams) }
 }
@@ -101,7 +109,8 @@ describe('UTC chart synchronization', () => {
     expect(m15.setVisibleLogicalRange).not.toHaveBeenCalled()
     sync.activate(1)
     h4.emitRange({ from: 0.2, to: 0.8 } as LogicalRange)
-    expect(m15.setVisibleLogicalRange).toHaveBeenLastCalledWith({ from: 3.2, to: 12.8 })
+    expect(m15.setVisibleLogicalRange.mock.lastCall![0].from).toBeCloseTo(3.2)
+    expect(m15.setVisibleLogicalRange.mock.lastCall![0].to).toBeCloseTo(12.8)
   })
 
   it('maps the last coarse candle through the final loaded M1 timestamp', () => {
@@ -113,5 +122,51 @@ describe('UTC chart synchronization', () => {
     sync.activate(1)
     h4.emitRange({ from: 0.5, to: 1 } as LogicalRange)
     expect(m1.setVisibleLogicalRange).toHaveBeenLastCalledWith({ from: 120, to: 479 })
+  })
+
+  it('synchronizes an M1 viewport wholly inside the last H4 candle and back', () => {
+    const lastM1 = 23 * 3600 + 59 * 60
+    const sync = new ChartSynchronizer({ from: 0, to: lastM1 })
+    const m1 = fakeChart({ from: 0, to: 1439 } as LogicalRange, 1439)
+    const h4 = fakeChart({ from: 0, to: 5 } as LogicalRange, 5, 1)
+    register(sync, 0, m1, Array.from({ length: 1440 }, (_, index) => index * 60), 'M1')
+    register(sync, 1, h4, [0, 4, 8, 12, 16, 20].map((hour) => hour * 3600), 'H4')
+
+    const previousCalls = h4.setVisibleLogicalRange.mock.calls.length
+    sync.activate(0)
+    m1.emitRange({ from: 1320, to: 1439 } as LogicalRange)
+    expect(h4.setVisibleLogicalRange).toHaveBeenCalledTimes(previousCalls + 1)
+    const applied = h4.setVisibleLogicalRange.mock.lastCall![0]
+    expect(applied.from).toBeGreaterThanOrEqual(0)
+    expect(applied.from).toBeLessThan(applied.to)
+    expect(applied.to).toBe(5)
+    expect(h4.getRange()).toEqual({ from: 4, to: 5 })
+    expect(m1.setVisibleLogicalRange).not.toHaveBeenCalled()
+
+    sync.activate(1)
+    h4.emitRange({ from: 3, to: 5 } as LogicalRange)
+    expect(m1.setVisibleLogicalRange).toHaveBeenLastCalledWith({ from: 720, to: 1439 })
+  })
+
+  it('updates H1 and H4 near the data end and preserves that view when a third chart joins', () => {
+    const lastM1 = 23 * 3600 + 59 * 60
+    const sync = new ChartSynchronizer({ from: 0, to: lastM1 })
+    const m1 = fakeChart({ from: 0, to: 1439 } as LogicalRange, 1439)
+    const h1 = fakeChart({ from: 0, to: 23 } as LogicalRange, 23)
+    const h4 = fakeChart({ from: 0, to: 5 } as LogicalRange, 5, 1)
+    register(sync, 0, m1, Array.from({ length: 1440 }, (_, index) => index * 60), 'M1')
+    register(sync, 1, h1, Array.from({ length: 24 }, (_, index) => index * 3600), 'H1')
+    sync.activate(0)
+    m1.emitRange({ from: 1320, to: 1439 } as LogicalRange)
+    expect(h1.setVisibleLogicalRange.mock.lastCall![0].to).toBe(23)
+
+    sync.deactivate()
+    register(sync, 2, h4, [0, 4, 8, 12, 16, 20].map((hour) => hour * 3600), 'H4')
+    expect(h4.setVisibleLogicalRange.mock.lastCall![0].to).toBe(5)
+    expect(h4.getRange()).toEqual({ from: 4, to: 5 })
+    sync.activate(2)
+    h4.emitRange({ from: 3, to: 5 } as LogicalRange)
+    expect(m1.setVisibleLogicalRange).toHaveBeenLastCalledWith({ from: 720, to: 1439 })
+    expect(h1.setVisibleLogicalRange.mock.lastCall![0].to).toBe(23)
   })
 })
