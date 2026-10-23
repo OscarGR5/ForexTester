@@ -1,4 +1,5 @@
 import type { Candle } from './history'
+import { commissionConfigError, DEFAULT_COMMISSION, perSideCommissionUsd, type CommissionConfig } from './commissions'
 import { accountRiskError, DEFAULT_ACCOUNT_RISK, exceedsRisk, plannedRisk, riskBudget, sizeFromRisk, validRiskPercent, type AccountRisk, type EntrySizing } from './risk'
 
 export type Direction = 'buy' | 'sell'
@@ -18,6 +19,8 @@ export interface StopModification { oldPrice: number; newPrice: number; timestam
 export interface CoverageWarning { from: number; to: number; side: 'bid' | 'ask'; reason: 'missing_quote' | 'clock_gap' }
 export interface Position extends PendingEntry {
   lots: number
+  commission: CommissionConfig
+  entryCommissionUsd: number
   initialRiskUsd: number
   initialRiskPercent: number
   referenceBalance: number
@@ -29,6 +32,10 @@ export interface Position extends PendingEntry {
   coverageWarnings: CoverageWarning[]
 }
 export interface ClosedTrade extends Position {
+  grossPnlUsd: number
+  exitCommissionUsd: number
+  totalCommissionUsd: number
+  netPnlUsd: number
   exitTime: number
   exitPrice: number
   exitReason: 'manual' | 'stop_loss'
@@ -38,6 +45,7 @@ export interface RejectedEntry extends PendingEntry { rejectedAt: number; reason
 export interface Quote { bid: Candle | null; ask: Candle | null }
 export interface TradingState {
   account: AccountRisk
+  commission: CommissionConfig
   session: number
   nextId: number
   observedTimestamp: number | null
@@ -49,8 +57,10 @@ export interface TradingState {
 }
 export interface TradingPermission { active: boolean; playing: boolean; hasFuture: boolean }
 
-export function createTradingState(session = 0, account: AccountRisk = DEFAULT_ACCOUNT_RISK): TradingState {
-  return { account: { ...account }, session, nextId: 1, observedTimestamp: null, quote: null, pending: [], positions: [], closed: [], rejected: [] }
+export function createTradingState(session = 0, account: AccountRisk = DEFAULT_ACCOUNT_RISK, commission: CommissionConfig = DEFAULT_COMMISSION): TradingState {
+  const error = commissionConfigError(commission)
+  if (error) throw new Error(error)
+  return { account: { ...account }, commission: { ...commission }, session, nextId: 1, observedTimestamp: null, quote: null, pending: [], positions: [], closed: [], rejected: [] }
 }
 
 export function validLots(lots: number): boolean {
@@ -75,8 +85,13 @@ export function configureAccount(state: TradingState, account: AccountRisk, perm
   return { ...state, account: { ...account } }
 }
 
+export function configureCommission(state: TradingState, commission: CommissionConfig, permission: TradingPermission): TradingState {
+  if (permission.active || state.positions.length || state.pending.length || commissionConfigError(commission)) return state
+  return { ...state, commission: { ...commission } }
+}
+
 export function entryRequestError(state: TradingState, sizing: EntrySizing, stopPrice: number): string | null {
-  const configurationError = accountRiskError(state.account)
+  const configurationError = accountRiskError(state.account) ?? commissionConfigError(state.commission)
   if (configurationError) return configurationError
   if (!validStopPrice(stopPrice)) return 'Enter a required positive, finite SL price.'
   if (typeof sizing === 'number') return validLots(sizing) ? null : 'Enter a positive, finite volume in lots.'
@@ -166,8 +181,7 @@ export function observeCandle(state: TradingState, bid: Candle, ask?: Candle): T
     }
     // A synchronized manual exit at the opening precedes intrabar stops.
     if (synchronized && position.closeRequestedAt !== null && timestamp > position.closeRequestedAt) {
-      closed.push({ ...position, exitTime: timestamp, exitPrice: position.direction === 'buy' ? quote.bid!.open : quote.ask!.open,
-        exitReason: 'manual', stopFillType: null })
+      closed.push(closePosition(position, timestamp, position.direction === 'buy' ? quote.bid!.open : quote.ask!.open, 'manual', null))
     } else positions.push(position)
   }
   const pending: PendingEntry[] = []
@@ -184,12 +198,14 @@ export function observeCandle(state: TradingState, bid: Candle, ask?: Candle): T
         const initialRiskUsd = lots === null ? Infinity : plannedRisk({ ...order, entryPrice, lots })
         const usedUsd = positions.reduce((sum, position) => sum + plannedRisk(position), 0) + reservedUsd
         const maximumUsd = riskBudget(state.account.referenceBalance, state.account.maxRiskPercent)
+        const entryCommissionUsd = lots === null ? 0 : perSideCommissionUsd(lots, state.commission)
         const reason = lots === null || !validLots(lots)
           ? 'Calculated volume is below 0.01 lots or cannot be represented safely. Entry rejected.'
+          : !Number.isFinite(entryCommissionUsd * 2) ? 'Commission cannot be represented safely. Entry rejected.'
           : !Number.isFinite(initialRiskUsd) ? 'Actual planned risk cannot be represented safely. Entry rejected.'
           : exceedsRisk(usedUsd + initialRiskUsd, maximumUsd) ? 'Actual entry risk exceeds the combined risk cap, including pending allocations.' : null
         if (reason) rejected.push({ ...order, rejectedAt: timestamp, reason })
-        else positions.push({ ...order, lots: lots!, initialRiskUsd,
+        else positions.push({ ...order, lots: lots!, commission: { ...state.commission }, entryCommissionUsd, initialRiskUsd,
           initialRiskPercent: initialRiskUsd / state.account.referenceBalance * 100, referenceBalance: state.account.referenceBalance,
           entryTime: timestamp, entryPrice, closeRequestedAt: null,
           stopEffectiveAfter: order.requestedAt, stopModifications: [], coverageWarnings: [] })
@@ -206,8 +222,7 @@ export function observeCandle(state: TradingState, bid: Candle, ask?: Candle): T
       const gap = position.direction === 'buy' ? candle.open < position.stopPrice : candle.open > position.stopPrice
       const touched = position.direction === 'buy' ? candle.low <= position.stopPrice : candle.high >= position.stopPrice
       if (gap || touched) {
-        closed.push({ ...position, exitTime: timestamp, exitPrice: gap ? candle.open : position.stopPrice,
-          exitReason: 'stop_loss', stopFillType: gap ? 'gap_open' : 'level' })
+        closed.push(closePosition(position, timestamp, gap ? candle.open : position.stopPrice, 'stop_loss', gap ? 'gap_open' : 'level'))
         continue
       }
     }
@@ -222,10 +237,35 @@ export function grossPnl(position: Pick<Position, 'direction' | 'entryPrice' | '
   return { pips: difference / 0.0001, usd: difference * 100_000 * position.lots }
 }
 
+function closePosition(position: Position, exitTime: number, exitPrice: number, exitReason: ClosedTrade['exitReason'], stopFillType: ClosedTrade['stopFillType']): ClosedTrade {
+  const grossPnlUsd = grossPnl(position, exitPrice).usd
+  const exitCommissionUsd = perSideCommissionUsd(position.lots, position.commission)
+  const totalCommissionUsd = position.entryCommissionUsd + exitCommissionUsd
+  return { ...position, exitTime, exitPrice, exitReason, stopFillType,
+    grossPnlUsd, exitCommissionUsd, totalCommissionUsd, netPnlUsd: grossPnlUsd - totalCommissionUsd }
+}
+
+export function realizedSummary(trades: readonly ClosedTrade[]) {
+  return trades.reduce((summary, trade) => ({ count: summary.count + 1,
+    grossPnlUsd: summary.grossPnlUsd + trade.grossPnlUsd,
+    totalCommissionUsd: summary.totalCommissionUsd + trade.totalCommissionUsd,
+    netPnlUsd: summary.netPnlUsd + trade.netPnlUsd,
+  }), { count: 0, grossPnlUsd: 0, totalCommissionUsd: 0, netPnlUsd: 0 })
+}
+
+export function stopLossEstimates(position: Position) {
+  const expectedCommissionUsd = position.entryCommissionUsd + perSideCommissionUsd(position.lots, position.commission)
+  return { initialLossUsd: position.initialRiskUsd + expectedCommissionUsd,
+    currentLossUsd: Math.max(0, -grossPnl(position, position.stopPrice).usd + expectedCommissionUsd) }
+}
+
 export function markPosition(position: Position, quote: Quote | null) {
   if (!quote?.bid || !quote.ask) return null
   const price = position.direction === 'buy' ? quote.bid.close : quote.ask.close
-  return { price, ...grossPnl(position, price) }
+  const gross = grossPnl(position, price)
+  const estimatedExitCommissionUsd = perSideCommissionUsd(position.lots, position.commission)
+  return { price, ...gross, estimatedExitCommissionUsd,
+    estimatedNetPnlUsd: gross.usd - position.entryCommissionUsd - estimatedExitCommissionUsd }
 }
 
 export function formatTradingNumber(value: number, digits: number): string {

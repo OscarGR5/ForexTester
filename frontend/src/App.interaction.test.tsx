@@ -85,7 +85,7 @@ afterEach(async () => {
 async function click(input: HTMLInputElement | HTMLButtonElement) {
   if (legacyManualWorkflow && input.textContent === 'Start Replay') {
     await selectMode('manual')
-    await setInput('Maximum combined risk (%)', '100')
+    await setInput('Maximum combined gross planned risk (%)', '100')
   }
   if (defaultStops && ['Buy', 'Sell'].includes(input.textContent ?? '')) await setInput('SL price', input.textContent === 'Buy' ? '0.5' : '2')
   await act(async () => input.click())
@@ -1009,10 +1009,10 @@ describe('risk sizing controls with shared replay', () => {
     expect(button('Start Replay').disabled).toBe(true)
     expect(host.textContent).toContain('positive, finite reference balance')
     await setInput('Reference balance (USD)', '50000')
-    await setInput('Maximum combined risk (%)', '3')
+    await setInput('Maximum combined gross planned risk (%)', '3')
     await click(button('Start Replay'))
     expect(host.querySelector<HTMLInputElement>('[aria-label="Reference balance (USD)"]')!.disabled).toBe(true)
-    expect(host.querySelector<HTMLInputElement>('[aria-label="Maximum combined risk (%)"]')!.disabled).toBe(true)
+    expect(host.querySelector<HTMLInputElement>('[aria-label="Maximum combined gross planned risk (%)"]')!.disabled).toBe(true)
     await setInput('SL price', '1.1002')
     await click(button('Buy'))
     await click(button('Next Candle'))
@@ -1024,7 +1024,7 @@ describe('risk sizing controls with shared replay', () => {
     expect(records('Combined risk').textContent).toContain('Remaining $1500.00 USD')
     await click(button('Load Data'))
     expect(host.querySelector<HTMLInputElement>('[aria-label="Reference balance (USD)"]')!.disabled).toBe(false)
-    expect(host.querySelector<HTMLInputElement>('[aria-label="Maximum combined risk (%)"]')!.value).toBe('3')
+    expect(host.querySelector<HTMLInputElement>('[aria-label="Maximum combined gross planned risk (%)"]')!.value).toBe('3')
   })
 
   it('reserves two percentages, fills from the first future opening under StrictMode batching, and preserves sizing through chart changes', async () => {
@@ -1086,5 +1086,122 @@ describe('risk sizing controls with shared replay', () => {
     await selectMode('risk')
     expect(host.querySelector<HTMLInputElement>('[aria-label="Risk per entry (%)"]')!.value).toBe('1')
     expect(host.textContent).toContain('future execution opening')
+  })
+})
+
+describe('commission configuration and replay accounting', () => {
+  const rateLabel = 'Round-trip commission (USD per standard lot)'
+  const summary = () => records('Realized summary').textContent!
+  beforeEach(() => {
+    request.mockImplementation(async () => new Response(JSON.stringify(tradingHistory())))
+  })
+
+  it('accepts decimals and zero, rejects invalid input, and locks the retained rate through replay completion', async () => {
+    await act(async () => root.render(<App />))
+    const rate = host.querySelector<HTMLInputElement>(`[aria-label="${rateLabel}"]`)!
+    expect(rate.value).toBe('0')
+    await setInput(rateLabel, '7.25')
+    expect(rate.value).toBe('7.25')
+    for (const invalid of ['-1', '', 'Infinity', 'NaN']) {
+      await setInput(rateLabel, invalid)
+      expect(rate.value).toBe('7.25')
+      expect(host.textContent).toContain('Previous valid rate retained')
+    }
+    await setInput(rateLabel, '0'); expect(rate.value).toBe('0')
+    await setInput(rateLabel, '7')
+    await click(button('Start Replay'))
+    expect(rate.disabled).toBe(true)
+    await setInput(rateLabel, '99') // Programmatic event must also respect engine locking.
+    expect(rate.value).toBe('7')
+    for (let i = 0; i < 4; i++) await click(button('Next Candle'))
+    expect(replayStatus()).toBe('Complete')
+    expect(rate.disabled).toBe(true)
+    await click(button('Restart'))
+    expect(rate.value).toBe('7')
+    expect(rate.disabled).toBe(true)
+    await changeDates()
+    expect(rate.value).toBe('7')
+    expect(rate.disabled).toBe(false)
+  })
+
+  it('charges two independent volumes once during batched StrictMode replay and preserves fees across chart changes', async () => {
+    await act(async () => root.render(<StrictMode><App /></StrictMode>))
+    await setInput(rateLabel, '7')
+    await click(button('Start Replay'))
+    await volume('0.01'); await click(button('Buy'))
+    await volume('0.03'); await click(button('Sell'))
+    expect(summary()).toContain('Realized commissions $0.00 USD')
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0))
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    await click(button('Play'))
+    await act(async () => vi.advanceTimersByTime(500))
+    await click(button('Pause'))
+    expect(recordCount('Open positions')).toBe(2)
+    expect(records('Open positions').textContent).toContain('Entry commission (incurred) $0.04 USD · Estimated exit commission $0.04 USD')
+    expect(records('Open positions').textContent).toContain('Estimated net PnL (mark-to-close): $1.23 USD')
+    expect(records('Open positions').textContent).toContain('Estimated net PnL (mark-to-close): $-5.31 USD')
+    const snapshot = records('Open positions').textContent
+    await selectTimeframe(0, 'H1')
+    await click(host.querySelector<HTMLInputElement>('input[value="3"]')!)
+    expect(records('Open positions').textContent).toBe(snapshot)
+    for (const closeButton of records('Open positions').querySelectorAll<HTMLButtonElement>('button[aria-label^="Close position"]')) await click(closeButton)
+    await click(button('Play'))
+    await act(async () => vi.advanceTimersByTime(500))
+    expect(recordCount('Closed trades')).toBe(2)
+    // 0.01 lots: $1.80 gross - $0.07 fees = $1.73 net.
+    // 0.03 lots: -$6.60 gross - $0.21 fees = -$6.81 net.
+    expect(records('Closed trades').textContent).toContain('Total commission $0.07 USD')
+    expect(records('Closed trades').textContent).toContain('Net realized PnL $1.73 USD')
+    expect(records('Closed trades').textContent).toContain('Net realized PnL $-6.81 USD')
+    expect(summary()).toContain('2 closed positions · Gross realized $-4.80 USD · Realized commissions $0.28 USD · Net realized $-5.08 USD')
+    await click(button('Restart'))
+    expect(recordCount('Closed trades')).toBe(0)
+    expect(summary()).toContain('0 closed positions · Gross realized $0.00 USD · Realized commissions $0.00 USD · Net realized $0.00 USD')
+    expect(host.querySelector<HTMLInputElement>(`[aria-label="${rateLabel}"]`)!.value).toBe('7')
+  })
+
+  it('retains incurred entry cost but no realized fees or estimated valuation at unmatched end-of-history quotes', async () => {
+    const data = tradingHistory()
+    data.ask = data.ask.slice(0, 2)
+    request.mockImplementation(async () => new Response(JSON.stringify(data)))
+    await act(async () => root.render(<App />))
+    await setInput(rateLabel, '7')
+    await click(button('Start Replay'))
+    await volume('0.02'); await click(button('Buy')); await click(button('Next Candle'))
+    await click(records('Open positions').querySelector<HTMLButtonElement>('button')!)
+    for (let i = 0; i < 3; i++) await click(button('Next Candle'))
+    expect(records('Open positions').textContent).toContain('Entry commission (incurred) $0.07 USD · Estimated exit commission $0.07 USD')
+    expect(records('Open positions').textContent).toContain('PnL unavailable')
+    expect(records('Open positions').textContent).toContain('Estimated net PnL (mark-to-close): unavailable')
+    expect(recordCount('Closed trades')).toBe(0)
+    expect(summary()).toContain('Realized commissions $0.00 USD')
+    await click(button('Load Data'))
+    expect(recordCount('Open positions')).toBe(0)
+    expect(summary()).toContain('Net realized $0.00 USD')
+    expect(host.querySelector<HTMLInputElement>(`[aria-label="${rateLabel}"]`)!.value).toBe('7')
+  })
+
+  it('records both fees once for a same-candle automatic stop in StrictMode', async () => {
+    defaultStops = false
+    const data = tradingHistory()
+    data.bid[1] = { ...data.bid[1], low: 1.097, high: 1.102 }
+    request.mockImplementation(async () => new Response(JSON.stringify(data)))
+    await act(async () => root.render(<StrictMode><App /></StrictMode>))
+    await setInput(rateLabel, '7')
+    await click(button('Start Replay'))
+    await volume('2'); await setInput('SL price', '1.0982'); await click(button('Buy'))
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0))
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    await click(button('Play'))
+    await act(async () => vi.advanceTimersByTime(500))
+    await click(button('Pause'))
+    expect(recordCount('Open positions')).toBe(0)
+    expect(recordCount('Closed trades')).toBe(1)
+    // Ask 1.1012 -> SL 1.0982 = -30 pips * $20/pip, less $14 fees.
+    expect(records('Closed trades').textContent).toContain('Stop loss · level fill')
+    expect(records('Closed trades').textContent).toContain('Total commission $14.00 USD')
+    expect(records('Closed trades').textContent).toContain('Net realized PnL $-614.00 USD')
+    await click(button('Next Candle'))
+    expect(summary()).toContain('Realized commissions $14.00 USD')
   })
 })

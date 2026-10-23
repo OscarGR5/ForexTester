@@ -123,3 +123,5 @@ button:disabled { opacity: 0.45; cursor: default; }
   .account-risk label { justify-content: space-between; width: 100%; }
   .account-risk input, .trading-controls select { font-size: 16px; }
 }
+
+.realized-summary { margin: 8px 0 12px; font-size: 0.8rem; font-variant-numeric: tabular-nums; line-height: 1.6; color: #e5eaf0; overflow-wrap: anywhere; }

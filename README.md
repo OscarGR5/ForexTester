@@ -86,7 +86,7 @@ Queued orders are evaluated in submission order at that opening, subject to the 
 
 Open positions show their entry time/price, direction, volume, current closing-side price, and unrealized PnL. Buys are valued at the revealed **bid close** and sells at the revealed **ask close**. The current observed candle must have synchronized bid and ask data; otherwise current price and PnL show **unavailable**, without carrying a stale valuation forward. Closed trades show their actual entry and exit prices/times and realized PnL.
 
-For EURUSD, **1 pip = 0.0001**. Signed price difference is exit or current price minus entry for buys, and entry minus exit or current price for sells. **Pips = signed difference / 0.0001**; **gross USD PnL = signed difference × 100,000 × lots**. For example, a 0.01-lot buy at 1.10020 closed at bid 1.10120 yields 10.0 pips and $1.00 gross. All PnL is **gross, before commissions, swaps, and financing**, not net PnL or account equity.
+For EURUSD, **1 pip = 0.0001**. Signed price difference is exit or current price minus entry for buys, and entry minus exit or current price for sells. **Pips = signed difference / 0.0001**; **gross USD PnL = signed difference × 100,000 × lots**. For example, a 0.01-lot buy at 1.10020 closed at bid 1.10120 yields 10.0 pips and $1.00 gross. Price-based pips and gross USD PnL retain these calculations. Net USD PnL subtracts recorded entry and exit commissions, as described below. Neither value is account equity. Swaps and financing are not modeled.
 
 Calculations retain JavaScript number precision. Display values use fixed decimal rounding: **5 decimals for prices, 1 for pips, 2 for USD**. Manual volumes retain the entered numeric value; automatic volumes use 0.01-lot increments, and values that round to zero display without a minus sign. All timestamps are UTC to the minute.
 
@@ -96,11 +96,11 @@ Trading state is session-only, in memory. The pure TypeScript engine in `fronten
 
 Take-profit functionality is intentionally excluded because the trading workflow uses stop-losses and manual profit-taking only.
 
-Current limitations: EURUSD only; M1 candle replay, with no intraminute or tick-price assumptions. **Automatic trailing stops and break-even rules, commissions, swaps, financing, margin/leverage simulation, dynamic account balances/equity, equity curves, full performance statistics, strategy signals, and persistence are not implemented.** The historical-data backend and its seven-day request limit are unchanged.
+Current limitations: EURUSD only; M1 candle replay, with no intraminute or tick-price assumptions. **Automatic trailing stops and break-even rules, swaps, financing, margin/leverage simulation, dynamic account balances/equity, equity curves, full performance statistics, strategy signals, and persistence are not implemented.** The historical-data backend and its seven-day request limit are unchanged.
 
 ### Risk-based position sizing and combined exposure
 
-**Account risk · USD** starts with a **$100,000 reference balance** and **2% maximum combined planned risk**, or **$2,000**. Edit these before starting replay. Positive finite balances and percentages greater than 0 and at most 100% are required. Session settings lock while replay is active, including after the final candle. Restart clears trading records and retains settings; loading history clears records, retains settings, and unlocks configuration. The reference balance is a fixed sizing input, not simulated cash or equity. USD is the only accounting currency; there is no EUR account conversion.
+**Account settings · USD** starts with a **$100,000 reference balance** and **2% maximum combined planned risk**, or **$2,000**. Edit these before starting replay. Positive finite balances and percentages greater than 0 and at most 100% are required. Session settings lock while replay is active, including after the final candle. Restart clears trading records and retains settings; loading history clears records, retains settings, and unlocks configuration. The reference balance is a fixed sizing input, not simulated cash or equity. USD is the only accounting currency; there is no EUR account conversion.
 
 In **Risk %** mode, enter a percentage and an absolute SL, then choose Buy or Sell. Risk per new entry defaults to 1% and can change while paused without altering existing allocations. The request stores its direction, SL, percentage, and USD budget, without a final volume. Only an eligible future synchronized M1 opening supplies the actual entry: **ask open for Buy, bid open for Sell**. No future candle is inspected at submission and the observed close is never used for final sizing.
 
@@ -112,7 +112,7 @@ Automatic lots = floor((risk budget USD / risk per standard lot USD) / 0.01) × 
 
 For example, $100,000 × 1% = $1,000. A Buy at ask 1.10020 with SL 1.09820 has a 20-pip distance and $200 risk per lot, producing **5.00 lots**. A 30-pip distance produces **3.33 lots**, or **$999** planned risk. If the future entry gaps to 1.10220 with that same SL, the distance becomes 40 pips and the volume becomes **2.50 lots**. Spread is included through the actual execution-side entry. Sizes below **0.01 lots** are rejected rather than rounded up. An SL invalid against the actual entry is rejected through the existing rejected-order records. Floating-point comparisons allow representation noise only; they do not grant additional spending capacity.
 
-The combined cap measures **concurrent planned stop-loss exposure**, plus percentage-order reservations:
+The combined cap measures **concurrent gross planned stop-loss exposure**, excluding commissions, plus percentage-order reservations:
 
 ```text
 Long planned USD risk = max(0, entry price − current SL) × 100,000 × lots
@@ -128,6 +128,50 @@ Two independent 1% allocations fit within the default 2% cap. A new percentage r
 A pending manual close keeps the position's exposure until the exit executes. Closed positions release their exposure. Moving an SL closer to entry reduces current planned risk; break-even or profit stops have **zero gross planned downside under the SL-level assumption**. Widening a stop increases exposure and is rejected if open exposure plus reservations would exceed the cap. Existing current-price validation, future-candle effectiveness, stop history, and coverage records still apply. SL changes never resize a position. Each filled position stores its original planned USD risk, original percentage, and sizing reference balance separately from current planned exposure, preserving the entry risk for later R-multiple statistics.
 
 Planned risk is **not a guaranteed maximum realized loss**. Adverse gaps can fill beyond the SL and produce larger losses; OHLC history cannot reconstruct intraminute paths, and slippage is not modeled. Sizing currently excludes **commissions, swaps, financing, and margin requirements**. There is no leverage, liquidation, currency conversion, or dynamic equity model. The seven-day historical-data limit is unchanged.
+
+### Configurable commissions and net USD PnL
+
+Before starting replay, enter **Round-trip commission (USD per standard lot)** in Account settings. The default is **$0.00**. This is a user-entered USD amount, not a broker tariff. Zero and nonnegative finite decimal rates are accepted; negative, NaN, infinite, and empty inputs are rejected, with the previous valid displayed rate retained. EUR-denominated fees are not converted or treated as USD. USD is the only accounting currency.
+
+The symmetrical model charges half the round-trip rate at each actual execution:
+
+```text
+Entry commission USD = lots × (round-trip USD per lot / 2)
+Exit commission USD  = lots × (round-trip USD per lot / 2)
+Total commission USD = entry commission + exit commission
+Net realized USD PnL = gross realized USD PnL − total commission
+```
+
+For **2.00 lots at $7.00 per standard lot round-trip**, entry costs **$7.00**, exit costs **$7.00**, and total commission is **$14.00**. A Buy at ask 1.10020 closed at bid 1.10120 earns **10 pips and $200.00 gross**, or **$186.00 net**. Exiting at 1.09920 gives **−10 pips, −$200.00 gross, and −$214.00 net**. Exiting at the entry price gives **0 pips, $0.00 gross, and −$14.00 net**. Pips describe price movement and are never called net of commissions.
+
+Entry commission becomes an incurred cost only when a pending entry fills. Pending, cancelled, and rejected entries incur no fee. Manual closes and automatic stops charge exit commission using the position's recorded rate; gross PnL uses the actual exit fill, including adverse gap-through openings. Entry and SL on the same candle charge each side once. Open positions at the end of history retain their entry costs, without an actual exit fee or invented closing trade.
+
+Each executed position stores its USD rate and actual entry commission. Each closed record additionally stores gross USD PnL, exit commission, total commission, and net USD PnL independently. A single pure engine closing transition handles both manual and stop exits. The compact realized summary totals **closed positions only**: count, gross PnL, their entry plus exit commissions, and net PnL. Entry fees on positions still open remain visible on those positions and are excluded from that closed-position summary. Calculations retain number precision internally; USD display values round to two decimals, so displayed per-side amounts may not sum exactly to displayed totals for small volumes.
+
+Open positions show gross unrealized PnL, the incurred entry commission, estimated exit commission, and **estimated net PnL (mark-to-close)**:
+
+```text
+Estimated net USD PnL = gross unrealized USD PnL
+                       − recorded entry commission − estimated exit commission
+```
+
+This is an estimate of closing at the latest revealed **bid close for a Buy or ask close for a Sell**, not realized net PnL or a guaranteed next-opening fill. Both current bid and ask candles must be available at the replay timestamp. If they are unavailable, gross unrealized and estimated net valuation show unavailable, while the recorded entry fee and known estimated exit fee stay visible. No stale quote is carried forward.
+
+**Spread is already incorporated through actual historical bid/ask executions.** Buy entries use ask, Sell entries use bid, Buy exits use bid, and Sell exits use ask. No synthetic spread charge, second spread subtraction, or configurable spread override is applied. Historical ask spikes can still trigger short stops.
+
+Commissions do not change requested gross risk percentages, future-opening sizing, manual volumes, 0.01-lot automatic rounding, reservations, original risk fields, or the **gross planned risk cap**. A separate informational estimate adds expected fees to original planned SL risk:
+
+```text
+Estimated total loss at initial SL = initialRiskUsd + expected round-trip commission
+Estimated total downside at current SL = max(0, −gross USD PnL at current SL
+                                               + incurred entry fee + expected exit fee)
+```
+
+For 5.00 lots with $1,000 original gross SL risk and $7.00 per lot round-trip, estimated initial total loss is **$1,035**. Two such positions still fit a **$2,000 gross cap**, even though their combined fee-adjusted estimate is $2,070. A break-even price stop on 2.00 lots has zero gross planned risk but **$14** estimated net downside. A profit stop can offset some or all fees. These SL estimates assume a normal fill at the configured level, not a maximum guaranteed loss; adverse gaps can increase the realized loss. They are separate from realized PnL and current gross planned exposure.
+
+The rate locks for the entire active replay, including pauses and completion. **Restart** clears all execution records, position fees, and summary totals while keeping the rate locked and unchanged. History reload also clears records and totals, retains the rate, and unlocks settings before the next replay. Chart layout, timeframe, and indicator changes preserve fees. React StrictMode and batched playback process chronological candle transitions idempotently. Settings and records are memory-only and do not survive a page refresh.
+
+This simple symmetrical model may differ from a real broker because of **minimum ticket fees, broker-side rounding, account-currency denomination, tiered fee schedules, or other broker-specific charging practices**. No broker preset, FX conversion, swaps, overnight financing, extra slippage, dynamic balance/equity, or margin/leverage simulation is added. Configurations must be finite; a fill whose commission overflows JavaScript's numeric range is rejected without charging a fee. Historical data, M1 OHLC limitations, stop coverage warnings, and the seven-day history limit still apply.
 
 ### Independent stop-loss execution
 
@@ -150,7 +194,7 @@ Missing or invalid required quote-side observations produce persistent **SL cove
 
 Closed records retain SL, modification history, coverage warnings, actual exit price, triggering candle timestamp, exit reason (**manual** or **stop_loss**), and stop fill type (**level** or **gap-through opening**). Rejections, stops, positions, orders, modifications, warnings, and closed records reset with the trading session. Positions still open at the final candle remain open; no forced exit is assumed.
 
-These are M1 OHLC assumptions, not tick reconstruction: normal intrabar crossings fill at SL without modeling intraminute sequence, liquidity, or slippage beyond adverse opening gaps. Missing periods remain uncertain. Bid charts cannot display ask spikes. There are no take profits, trailing stops, automatic break-even adjustments, fees, account balances, risk sizing, or persistence. The seven-day historical request limit is unchanged.
+These are M1 OHLC assumptions, not tick reconstruction: normal intrabar crossings fill at SL without modeling intraminute sequence, liquidity, or slippage beyond adverse opening gaps. Missing periods remain uncertain. Bid charts cannot display ask spikes. There are no take profits, trailing stops, automatic break-even adjustments, swaps, financing, simulated account balances, or persistence. The seven-day historical request limit is unchanged.
 
 ## Chart appearance
 
@@ -227,4 +271,4 @@ To run a live integration check, start the backend and run the `curl` command ab
 
 ## Current status
 
-The React/Vite frontend displays one to three synchronized historical EURUSD bid candlestick charts using TradingView Lightweight Charts. The Node.js backend exposes `GET /api/health` and `GET /api/history`. Charts preserve market gaps. The full-history viewer remains available until replay starts; manual replay then progressively reveals M1 data with synchronized partial higher-timeframe candles. Bollinger Bands, slow Stochastic, and Ichimoku Cloud are available independently on each chart, including during replay. Automatic indicator presets and simulated market orders are available. Independent adjustable stop-losses execute on revealed M1 bid/ask data, with gap-through fills and coverage warnings. Statistics and journaling are not implemented yet. Take profits are intentionally excluded.
+The React/Vite frontend displays one to three synchronized historical EURUSD bid candlestick charts using TradingView Lightweight Charts. The Node.js backend exposes `GET /api/health` and `GET /api/history`. Charts preserve market gaps. The full-history viewer remains available until replay starts; manual replay then progressively reveals M1 data with synchronized partial higher-timeframe candles. Bollinger Bands, slow Stochastic, and Ichimoku Cloud are available independently on each chart, including during replay. Automatic indicator presets and simulated market orders are available. Independent adjustable stop-losses execute on revealed M1 bid/ask data, with gap-through fills and coverage warnings. Configurable USD per-lot commissions, gross/net PnL, open mark-to-close estimates, and a compact realized summary are available. Statistics and journaling are not implemented yet. Take profits are intentionally excluded.
