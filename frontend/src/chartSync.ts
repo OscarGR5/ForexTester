@@ -1,5 +1,5 @@
 import type { CandlestickData, IChartApi, ISeriesApi, LogicalRange, MouseEventParams, UTCTimestamp } from 'lightweight-charts'
-import { TIMEFRAME_MS, type Timeframe } from './history'
+import { TIMEFRAME_MS, type Timeframe } from './history.js'
 
 export interface UtcRange { from: number; to: number }
 
@@ -43,6 +43,7 @@ interface Entry {
 }
 
 export class ChartSynchronizer {
+  onViewportChange?: () => void
   private entries = new Map<number, Entry>()
   private viewport: UtcRange | null = null
   private applyingRange = false
@@ -60,7 +61,9 @@ export class ChartSynchronizer {
 
   restore(view: { range: UtcRange | null; following: boolean } | null): void {
     if (!view) return
-    this.viewport = view.range
+    const width = view.range ? view.range.to - view.range.from : 0
+    this.viewport = view.following && view.range && this.bounds
+      ? { from: this.bounds.to - width, to: this.bounds.to } : view.range
     this.following = view.following
     for (const id of this.entries.keys()) this.refresh(id)
   }
@@ -160,6 +163,7 @@ export class ChartSynchronizer {
     if (from >= to) return
     this.viewport = { from, to }
     this.following = to >= last - source.step
+    this.onViewportChange?.()
     this.applyingRange = true
     try {
       for (const [targetId, target] of this.entries) {

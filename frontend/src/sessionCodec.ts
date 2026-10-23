@@ -1,11 +1,11 @@
-import { accountRiskError, exceedsRisk } from './risk'
-import { commissionConfigError, perSideCommissionUsd } from './commissions'
-import { combinedRisk, grossPnl, type TradingState } from './trading'
-import { createEquityLedger, type EquityLedger, type EquityPoint } from './equity'
-import { parseHistory, TIMEFRAMES, validateDateRange } from './history'
-import { PREROLL_DAYS, replayStartIndex, type LoadedHistory } from './historyLoader'
-import { defaultIndicatorSettings, validateIndicatorSettings } from './indicators'
-import { STORAGE_VERSION, type EquitySummary, type SessionRecord } from './sessionTypes'
+import { accountRiskError, exceedsRisk } from './risk.js'
+import { commissionConfigError, perSideCommissionUsd } from './commissions.js'
+import { combinedRisk, grossPnl, type TradingState } from './trading.js'
+import { createEquityLedger, type EquityLedger, type EquityPoint } from './equity.js'
+import { parseHistory, TIMEFRAMES, validateDateRange } from './history.js'
+import { PREROLL_DAYS, replayStartIndex, type LoadedHistory } from './historyLoader.js'
+import { defaultIndicatorSettings, validateIndicatorSettings } from './indicatorSettings.js'
+import { STORAGE_VERSION, type EquitySummary, type SessionRecord } from './sessionTypes.js'
 
 export const corrupt = () => new Error('Saved session is corrupt or incomplete. The original data was kept. Retry recovery or explicitly delete this session.')
 function requireValid(value: unknown): asserts value { if (!value) throw corrupt() }
@@ -27,7 +27,7 @@ export async function recordDigest(record: Omit<SessionRecord, 'digest'> | Sessi
 }
 export function validatedHistory(value: LoadedHistory): LoadedHistory {
   requireValid(value && !validateDateRange({ from: value.tradingFrom, to: value.to }))
-  requireValid(Date.parse(value.from) === Date.parse(value.tradingFrom) - PREROLL_DAYS * 86_400_000)
+  requireValid(typeof value.from === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value.from) && Date.parse(value.from) === Date.parse(value.tradingFrom) - PREROLL_DAYS * 86_400_000)
   return { ...parseHistory(value, { from: value.from, to: value.to }), tradingFrom: value.tradingFrom }
 }
 // Explicit little-endian IEEE-754 numbers, side lengths and UTC range form the
@@ -165,12 +165,12 @@ export function equitySuffix(ledger: EquityLedger, from: number): EquityPoint[] 
   }
   return points
 }
-export function restoreEquity(points: readonly EquityPoint[], summary: EquitySummary, referenceBalance: number): EquityLedger {
-  const ledger = createEquityLedger(referenceBalance)
-  let previous = -1
+export function restoreEquity(points: readonly EquityPoint[], summary: EquitySummary, referenceBalance: number, initial?: EquityLedger): EquityLedger {
+  const ledger = initial ? { ...initial } : createEquityLedger(referenceBalance)
+  let previous = ledger.tail?.point.timestamp ?? -1
   for (const point of points) {
     requireValid(point && timestamp(point.timestamp) && point.timestamp > previous && finite(point.cashUsd) && typeof point.clockGap === 'boolean' &&
-      Array.isArray(point.missingSides) && point.missingSides.every((side) => side === 'bid' || side === 'ask'))
+      Array.isArray(point.missingSides) && point.missingSides.length <= 2 && new Set(point.missingSides).size === point.missingSides.length && point.missingSides.every((side) => side === 'bid' || side === 'ask'))
     requireValid(point.clockGap === (previous >= 0 && point.timestamp > previous + 60_000))
     requireValid(point.missingSides.length ? point.unrealizedUsd === null && point.equityUsd === null && point.drawdownUsd === null && point.drawdownPercent === null
       : finite(point.unrealizedUsd) && finite(point.equityUsd) && near(point.equityUsd, point.cashUsd + point.unrealizedUsd))

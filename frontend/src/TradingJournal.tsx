@@ -1,3 +1,4 @@
+import { useUiValue, validSelection, validBoolean } from './uiPreferences'
 import { memo, Fragment, useMemo, useState } from 'react'
 import { completedObservations, executedPositions, isClosed, journalSetups, netR, performanceStats, positionStatus, realizedPerformance, type AnalyticsScope } from './analytics'
 import { downloadJournalCsv } from './journalCsv'
@@ -31,6 +32,7 @@ function PositionDetails({ position }: { position: Position }) {
 }
 
 interface JournalProps {
+  sessionId?: string | null
   state: TradingState
   onUpdateSetup: (id: string, metadata: SetupMetadata) => void
   scope?: AnalyticsScope
@@ -38,12 +40,14 @@ interface JournalProps {
   onScopeChange?: (scope: AnalyticsScope) => void
   onViewChange?: (view: AnalyticsScope) => void
 }
-function TradingJournalView({ state, onUpdateSetup, scope: savedScope, view: savedView, onScopeChange, onViewChange }: JournalProps) {
+function TradingJournalView({ sessionId = null, state, onUpdateSetup, scope: savedScope, view: savedView, onScopeChange, onViewChange }: JournalProps) {
   const [localScope, setLocalScope] = useState<AnalyticsScope>('setups')
   const [localView, setLocalView] = useState<AnalyticsScope>('setups')
   const scope = savedScope ?? localScope, view = savedView ?? localView
   const setScope = onScopeChange ?? setLocalScope, setView = onViewChange ?? setLocalView
-  const [expanded, setExpanded] = useState<string | null>(null)
+  const [expanded, setExpanded] = useUiValue<string | null>(sessionId, 'expandedJournal', null, validSelection)
+  const [more, setMore] = useUiValue(sessionId, 'moreStatistics', false, validBoolean)
+  const [requests, setRequests] = useUiValue(sessionId, 'requestsExpanded', false, validBoolean)
   const rows = useMemo(() => journalSetups(state), [state.setups, state.pending, state.positions, state.closed])
   const positions = useMemo(() => executedPositions(state), [state.positions, state.closed])
   const observations = useMemo(() => scope === 'setups' ? completedObservations(rows) : state.closed, [scope, rows, state.closed])
@@ -65,7 +69,7 @@ function TradingJournalView({ state, onUpdateSetup, scope: savedScope, view: sav
       </select></label></div>
       {!stats.count && <p className="journal-empty">No {scope === 'setups' ? 'completed setups' : 'closed positions'} yet. Pending and open entries do not count.</p>}
       <dl className="journal-kpis">{kpis.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
-      <details className="additional-statistics"><summary>More statistics and calculation conventions</summary>
+      <details className="additional-statistics" open={more} onToggle={(event) => setMore(event.currentTarget.open)}><summary>More statistics and calculation conventions</summary>
         <dl className="journal-kpis">
           {[['Average net winner USD', money(stats.averageWinnerUsd)], ['Average net loser USD', money(stats.averageLoserUsd)],
             ['Largest net winner USD', money(stats.largestWinnerUsd)], ['Largest net loser USD', money(stats.largestLoserUsd)],
@@ -115,7 +119,7 @@ function TradingJournalView({ state, onUpdateSetup, scope: savedScope, view: sav
           </Fragment>
         })}</tbody>
       </table></div>}
-    <details className="journal-requests"><summary>Rejected / cancelled requests ({state.rejected.length + state.cancelled.length})</summary>
+    <details className="journal-requests" open={requests} onToggle={(event) => setRequests(event.currentTarget.open)}><summary>Rejected / cancelled requests ({state.rejected.length + state.cancelled.length})</summary>
       {!state.rejected.length && !state.cancelled.length ? <p>No rejected or cancelled requests.</p> : <ul>
         {state.rejected.map((entry) => <li key={entry.id}>Rejected · {entry.id} · Setup {entry.setupId} · {entry.direction} · Requested {tradingTime(entry.requestedAt)} · Rejected {tradingTime(entry.rejectedAt)} · {entry.reason}</li>)}
         {state.cancelled.map((entry) => <li key={entry.id}>Cancelled · {entry.id} · Setup {entry.setupId} · {entry.direction} · Requested {tradingTime(entry.requestedAt)} · Cancelled {tradingTime(entry.cancelledAt)}</li>)}
@@ -126,7 +130,7 @@ function TradingJournalView({ state, onUpdateSetup, scope: savedScope, view: sav
 
 // Price-only observations do not rebuild the journal or its tables.
 export const TradingJournal = memo(TradingJournalView, (previous, next) =>
-  previous.onUpdateSetup === next.onUpdateSetup && previous.scope === next.scope && previous.view === next.view &&
+  previous.sessionId === next.sessionId && previous.onUpdateSetup === next.onUpdateSetup && previous.scope === next.scope && previous.view === next.view &&
   previous.onScopeChange === next.onScopeChange && previous.onViewChange === next.onViewChange &&
   (['session', 'account', 'setups', 'pending', 'positions', 'closed', 'rejected', 'cancelled'] as const)
     .every((key) => previous.state[key] === next.state[key]))

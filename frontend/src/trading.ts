@@ -1,6 +1,6 @@
-import type { Candle } from './history'
-import { commissionConfigError, DEFAULT_COMMISSION, perSideCommissionUsd, type CommissionConfig } from './commissions'
-import { accountRiskError, DEFAULT_ACCOUNT_RISK, exceedsRisk, plannedRisk, riskBudget, sizeFromRisk, validRiskPercent, type AccountRisk, type EntrySizing } from './risk'
+import type { Candle } from './history.js'
+import { commissionConfigError, DEFAULT_COMMISSION, perSideCommissionUsd, type CommissionConfig } from './commissions.js'
+import { accountRiskError, DEFAULT_ACCOUNT_RISK, exceedsRisk, plannedRisk, riskBudget, sizeFromRisk, validRiskPercent, type AccountRisk, type EntrySizing } from './risk.js'
 
 export type Direction = 'buy' | 'sell'
 export interface SetupMetadata { title: string; tag: string; notes: string }

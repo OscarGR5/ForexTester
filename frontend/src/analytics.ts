@@ -1,4 +1,4 @@
-import { type SetupStatus, type ClosedTrade, type Position, type TradingSetup, type TradingState } from './trading'
+import { type SetupStatus, type ClosedTrade, type Position, type TradingSetup, type TradingState } from './trading.js'
 
 export type AnalyticsScope = 'setups' | 'positions'
 export interface Observation {

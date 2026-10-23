@@ -266,3 +266,25 @@ describe('Ichimoku projection synchronization', () => {
     expect(projected.getRange()).toEqual({ from: 0, to: 4 })
   })
 })
+
+it('restores a saved horizontal zoom and following preference using public chart APIs', () => {
+  const times = Array.from({ length: 13 }, (_, i) => i * 60)
+  const original = new ChartSynchronizer({ from: 0, to: 720 }), first = fakeChart()
+  register(original, 0, first, times, 'M1')
+  original.activate(0); first.emitRange({ from: 2, to: 6 } as LogicalRange)
+  const saved = original.snapshot()
+  expect(saved).toEqual({ range: { from: 120, to: 360 }, following: false })
+  const restored = new ChartSynchronizer({ from: 0, to: 720 }), second = fakeChart()
+  restored.restore(saved); register(restored, 0, second, times, 'M1')
+  expect(second.getRange()).toEqual({ from: 2, to: 6 })
+  restored.advance({ from: 0, to: 780 })
+  expect(restored.snapshot()).toEqual(saved)
+})
+
+it('aligns a following viewport with the recovered replay edge when UI storage lags the disk checkpoint', () => {
+  const sync = new ChartSynchronizer({ from: 0, to: 1200 }), chart = fakeChart()
+  sync.restore({ range: { from: 120, to: 360 }, following: true })
+  register(sync, 0, chart, Array.from({ length: 21 }, (_, i) => i * 60), 'M1')
+  expect(sync.snapshot()).toEqual({ range: { from: 960, to: 1200 }, following: true })
+  expect(chart.getRange()).toEqual({ from: 16, to: 20 })
+})

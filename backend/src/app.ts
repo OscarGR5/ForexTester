@@ -1,4 +1,6 @@
 import { createServer, type Server } from 'node:http'
+import { SessionStorage } from './sessionStorage.js'
+import { sessionApi } from './sessionApi.js'
 import { loadHistory, type RatesFetcher } from './history.js'
 
 const MAX_HISTORY_DAYS = 7 // Per-chunk provider safety limit; the frontend coordinates longer intervals.
@@ -11,9 +13,11 @@ function parseUtcDate(value: string | null): number | null {
     : null
 }
 
-export function createApp(fetchRates?: RatesFetcher, now: () => Date = () => new Date()): Server {
-  return createServer(async (request, response) => {
+export function createApp(fetchRates?: RatesFetcher, now: () => Date = () => new Date(), storage = new SessionStorage()): Server {
+  const server = createServer(async (request, response) => {
     response.setHeader('Content-Type', 'application/json; charset=utf-8')
+
+    if (await sessionApi(request, response, storage)) return
 
     if (request.method === 'GET' && request.url === '/api/health') {
       response.writeHead(200)
@@ -52,4 +56,6 @@ export function createApp(fetchRates?: RatesFetcher, now: () => Date = () => new
     response.writeHead(404)
     response.end(JSON.stringify({ error: 'Not found' }))
   })
+  server.on('close', () => { void storage.close().catch(() => {}) })
+  return server
 }

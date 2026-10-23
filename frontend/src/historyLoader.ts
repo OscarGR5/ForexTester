@@ -1,4 +1,4 @@
-import { aggregateBidCandles, fetchHistory, parseHistory, validateDateRange, type Candle, type DateRange, type HistoryResponse } from './history'
+import { aggregateBidCandles, fetchHistory, parseHistory, validateDateRange, type Candle, type DateRange, type HistoryResponse } from './history.js'
 
 const DAY = 86_400_000
 const date = (ms: number) => new Date(ms).toISOString().slice(0, 10)

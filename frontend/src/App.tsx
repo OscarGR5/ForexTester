@@ -1,3 +1,4 @@
+import { defaultWorkspace, readUi, useUiValue, validWorkspace, validPriceView, type PriceView, writeUi } from './uiPreferences'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { CandlestickSeries, ColorType, LineStyle, createChart, type IChartApi, type IPriceLine, type ISeriesApi, type Time } from 'lightweight-charts'
 import { SessionControls } from './SessionControls'
@@ -21,10 +22,10 @@ import { TIMEFRAMES, type Candle, validateDateRange, type DateRange, type Timefr
 
 const EMPTY_CANDLES: readonly Candle[] = []
 const DEFAULT_RANGE: DateRange = { from: '2024-01-09', to: '2024-01-10' }
-const DEFAULT_TIMEFRAMES: Timeframe[] = ['M1', 'M5', 'H1']
 
 interface ChartPaneProps {
   id: number
+  sessionId: string | null
   timeframe: Timeframe
   source: readonly Candle[]
   count: number
@@ -35,7 +36,7 @@ interface ChartPaneProps {
   onTimeframeChange: (id: number, timeframe: Timeframe) => void
 }
 
-function ChartPane({ id, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions }: ChartPaneProps) {
+function ChartPane({ id, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions }: ChartPaneProps) {
   const container = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
@@ -155,6 +156,23 @@ function ChartPane({ id, timeframe, source, count, synchronizer, onTimeframeChan
     }
   }, [positions])
 
+  useEffect(() => {
+    const scale = seriesRef.current!.priceScale()
+    const stored = readUi(sessionId, `price:${id}:${timeframe}`, null as PriceView | null, (v): v is PriceView | null => v === null || validPriceView(v))
+    if (stored) { scale.applyOptions({ autoScale: stored.autoScale }); if (!stored.autoScale && stored.range) scale.setVisibleRange(stored.range) }
+    const save = () => {
+      if (!seriesRef.current || !scale.getVisibleRange || !scale.options) return
+      const autoScale = scale.options().autoScale
+      writeUi(sessionId, `price:${id}:${timeframe}`, { autoScale, range: autoScale ? null : scale.getVisibleRange() })
+    }
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const schedule = () => { if (!timer) timer = setTimeout(() => { timer = null; save() }, 250) }
+    const element = container.current
+    element?.addEventListener('pointerup', schedule); element?.addEventListener('wheel', schedule)
+    window.addEventListener('pagehide', save); document.addEventListener('visibilitychange', save)
+    return () => { if (timer) clearTimeout(timer); save(); element?.removeEventListener('pointerup', schedule); element?.removeEventListener('wheel', schedule); window.removeEventListener('pagehide', save); document.removeEventListener('visibilitychange', save) }
+  }, [sessionId, id, timeframe])
+
   return (
     <section className="chart-pane" aria-label={`Chart ${id + 1}: EURUSD ${timeframe} bid`}
       onPointerDownCapture={() => synchronizer.activate(id)}
@@ -181,16 +199,10 @@ export function App() {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [error, setError] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
-  const [chartCount, setChartCount] = useState(1)
-  const [timeframes, setTimeframes] = useState<Timeframe[]>(DEFAULT_TIMEFRAMES)
-  const [indicatorSettings, setIndicatorSettings] = useState<Partial<Record<Timeframe, IndicatorSettings>>[]>(() =>
-    DEFAULT_TIMEFRAMES.map((timeframe) => ({ [timeframe]: indicatorPreset(timeframe) })))
   const [loader] = useState(() => new HistoryLoader())
   const [loadProgress, setLoadProgress] = useState<LoadProgress>({ completed: 0, total: 0 })
   const [replayStart, setReplayStart] = useState('')
   const [hydration, setHydration] = useState<Hydration | null>(null)
-  const [statisticsScope, setStatisticsScope] = useState<AnalyticsScope>('setups')
-  const [journalScope, setJournalScope] = useState<AnalyticsScope>('setups')
   const skipHistoryLoad = useRef(false)
   const tradingFrom = history?.tradingFrom ?? requestedRange.from
   const startMs = Date.parse(`${replayStart || `${tradingFrom}T00:00`}:00Z`)
@@ -202,16 +214,7 @@ export function App() {
     to: history.bid[replay.count - 1].timestamp / 1000,
   } : undefined, [history, replay.count])
   const warmup = useMemo(() => ichimokuWarmup(history?.bid ?? [], startMs), [history, startMs])
-  // A new session resets the viewport and subscriptions, while panes retain their chart instances.
-  const synchronizer = useMemo(() => {
-    const sync = new ChartSynchronizer(bounds)
-    if (hydration && replay.epoch === hydration.checkpoint.trading.session) sync.restore(hydration.checkpoint.workspace.viewport)
-    return sync
-  }, [history, replay.epoch])
-  useLayoutEffect(() => { synchronizer.advance(bounds) }, [synchronizer, bounds])
-
-  const workspace = useMemo<WorkspaceSettings>(() => ({ chartCount, timeframes, indicators: indicatorSettings, statisticsScope, journalScope, viewport: null }),
-    [chartCount, timeframes, indicatorSettings, statisticsScope, journalScope])
+  const workspace = useMemo<WorkspaceSettings>(() => defaultWorkspace(), [])
   const snapshot = useMemo<SessionSnapshot | null>(() => history ? ({ ledger: trading.equity, checkpoint: {
     replay: { started: replay.active, index: replay.active ? replay.count - 1 : null, timestamp: replay.timestamp,
       startIndex: replay.active ? replay.startIndex : startIndex, startTimestamp: startMs, speed: replay.speed, complete: replay.complete, playing: replay.playing },
@@ -225,18 +228,46 @@ export function App() {
       setHydration(saved); setHistory(source); setRequestedRange(saved.record.range)
       setFrom(saved.record.range.from); setTo(saved.record.range.to)
       setReplayStart(new Date(saved.checkpoint.replay.startTimestamp).toISOString().slice(0, 16))
-      const settings = saved.checkpoint.workspace
-      setChartCount(settings.chartCount); setTimeframes(settings.timeframes); setIndicatorSettings(settings.indicators)
-      setStatisticsScope(settings.statisticsScope); setJournalScope(settings.journalScope)
       setStatus('ready'); setError(null); setFormError(null)
     },
     fresh: (range) => {
       setHydration(null); setHistory(null); setRequestedRange({ ...range }); setFrom(range.from); setTo(range.to)
-      setStatisticsScope('setups'); setJournalScope('setups')
     },
   })
 
+  const [uiWorkspace, setUiWorkspace] = useUiValue(sessions.activeId, 'workspace', workspace, validWorkspace)
+  const { chartCount, timeframes, indicators: indicatorSettings, statisticsScope, journalScope } = uiWorkspace
+  const setChartCount = (chartCount: number) => setUiWorkspace((w) => ({ ...w, chartCount }))
+  const setTimeframes = (update: (v: Timeframe[]) => Timeframe[]) => setUiWorkspace((w) => ({ ...w, timeframes: update(w.timeframes) }))
+  const setIndicatorSettings = (update: (v: WorkspaceSettings['indicators']) => WorkspaceSettings['indicators']) => setUiWorkspace((w) => ({ ...w, indicators: update(w.indicators) }))
+  const setStatisticsScope = (statisticsScope: AnalyticsScope) => setUiWorkspace((w) => ({ ...w, statisticsScope }))
+  const setJournalScope = (journalScope: AnalyticsScope) => setUiWorkspace((w) => ({ ...w, journalScope }))
+  const synchronizer = useMemo(() => {
+    const sync = new ChartSynchronizer(bounds)
+    sync.restore(readUi(sessions.activeId, 'workspace', workspace, validWorkspace).viewport)
+    return sync
+  }, [history, replay.epoch, sessions.activeId])
+  useLayoutEffect(() => { synchronizer.advance(bounds) }, [synchronizer, bounds])
   useEffect(() => {
+    if (!sessions.activeId) return
+    const persist = () => {
+      const stored = readUi(sessions.activeId, 'workspace', workspace, validWorkspace)
+      const viewport = synchronizer.snapshot()
+      if (JSON.stringify(viewport) !== JSON.stringify(stored.viewport)) writeUi(sessions.activeId, 'workspace', { ...stored, viewport })
+    }
+    let timer: ReturnType<typeof setTimeout> | null = null
+    synchronizer.onViewportChange = () => { if (!timer) timer = setTimeout(() => { timer = null; persist() }, 250) }
+    const scroll = () => writeUi(sessions.activeId, 'scrollY', Math.max(0, Math.min(1000000, window.scrollY)))
+    const hidden = () => { persist(); scroll() }
+    window.addEventListener('pagehide', hidden); document.addEventListener('visibilitychange', hidden)
+    const scrollY = readUi(sessions.activeId, 'scrollY', 0, (v): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 1000000)
+    let frame = 0
+    if (scrollY && typeof requestAnimationFrame === 'function') frame = requestAnimationFrame(() => window.scrollTo(0, scrollY))
+    return () => { if (timer) clearTimeout(timer); if (frame) cancelAnimationFrame(frame); synchronizer.onViewportChange = undefined; persist(); scroll(); window.removeEventListener('pagehide', hidden); document.removeEventListener('visibilitychange', hidden) }
+  }, [sessions.activeId, synchronizer])
+
+  useEffect(() => {
+    if (!sessions.initialized || sessions.awaitingChoice) return
     if (skipHistoryLoad.current) { skipHistoryLoad.current = false; return }
     const controller = new AbortController()
     let active = true
@@ -259,7 +290,7 @@ export function App() {
       active = false
       controller.abort()
     }
-  }, [requestedRange, loader])
+  }, [requestedRange, loader, sessions.initialized, sessions.awaitingChoice])
 
   function loadData(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -328,7 +359,7 @@ export function App() {
       <div className="chart-workspace" aria-label="EURUSD bid chart workspace">
         <div className="chart-stack" style={{ gridTemplateRows: `repeat(${chartCount}, minmax(auto, 1fr))` }}>
           {timeframes.slice(0, chartCount).map((timeframe, id) => <ChartPane key={id} id={id} timeframe={timeframe}
-            positions={trading.state.positions} source={history?.bid ?? EMPTY_CANDLES} count={replay.count} synchronizer={synchronizer} onTimeframeChange={changeTimeframe}
+            sessionId={sessions.activeId} positions={trading.state.positions} source={history?.bid ?? EMPTY_CANDLES} count={replay.count} synchronizer={synchronizer} onTimeframeChange={changeTimeframe}
             settings={indicatorSettings[id][timeframe]!} onSettingsChange={(chartId, next) => {
               synchronizer.deactivate()
               setIndicatorSettings((current) => current.map((value, index) => index === chartId ? { ...value, [timeframe]: next } : value))
@@ -338,9 +369,9 @@ export function App() {
         {status === 'error' && <div className="chart-message" role="alert"><p>{error}</p><button type="button" onClick={() => setRequestedRange({ ...requestedRange })}>Retry</button></div>}
         {status === 'ready' && history && startIndex >= history.bid.length && <div className="chart-message" role="status">No bid candles are available at or after the chosen replay start within this trading period.</div>}
       </div>
-      <TradingPanel onConfigureCommission={trading.configureCommission} onConfigure={trading.configure} state={trading.state} permission={trading.permission} onEntry={trading.enter} onCancel={trading.cancel} onClose={trading.close} onModifyStop={trading.modifyStop} />
-      <TradingJournal key={`${sessions.activeId}-${trading.state.session}`} state={trading.state} onUpdateSetup={trading.updateSetup} scope={statisticsScope} view={journalScope} onScopeChange={setStatisticsScope} onViewChange={setJournalScope} />
-      <EquityChart ledger={trading.equity} referenceBalance={trading.state.account.referenceBalance} />
+      <TradingPanel sessionId={sessions.activeId} onConfigureCommission={trading.configureCommission} onConfigure={trading.configure} state={trading.state} permission={trading.permission} onEntry={trading.enter} onCancel={trading.cancel} onClose={trading.close} onModifyStop={trading.modifyStop} />
+      <TradingJournal sessionId={sessions.activeId} key={`${sessions.activeId}-${trading.state.session}`} state={trading.state} onUpdateSetup={trading.updateSetup} scope={statisticsScope} view={journalScope} onScopeChange={setStatisticsScope} onViewChange={setJournalScope} />
+      <EquityChart sessionId={sessions.activeId} ledger={trading.equity} referenceBalance={trading.state.account.referenceBalance} />
       </fieldset>
       <p className="chart-note">UTC dates · Start inclusive · End exclusive · Up to 90 completed days</p>
     </main>

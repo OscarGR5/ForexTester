@@ -1,3 +1,4 @@
+import { useUiValue, validBoolean } from './uiPreferences'
 import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { type EquityLedger, type EquityPoint } from './equity'
 import { formatTradingNumber as number, tradingTime } from './trading'
@@ -39,10 +40,10 @@ export function downsampleEquity(points: readonly EquityPoint[], pixels: number)
   return [...selected].sort((a, b) => a - b).map((index) => points[index])
 }
 
-export const EquityChart = memo(function EquityChart({ ledger, referenceBalance }: { ledger: EquityLedger; referenceBalance: number }) {
+export const EquityChart = memo(function EquityChart({ ledger, referenceBalance, sessionId = null }: { ledger: EquityLedger; referenceBalance: number; sessionId?: string | null }) {
   const container = useRef<HTMLElement>(null)
   const [width, setWidth] = useState(960)
-  const [showCash, setShowCash] = useState(false)
+  const [showCash, setShowCash] = useUiValue(sessionId, 'showCashReference', false, validBoolean)
   useLayoutEffect(() => {
     if (!container.current || typeof ResizeObserver === 'undefined') return
     const observer = new ResizeObserver(([entry]) => setWidth(Math.max(280, Math.floor(entry.contentRect.width))))

@@ -1,4 +1,4 @@
-import { grossPnl, type TradingState } from './trading'
+import { grossPnl, type TradingState } from './trading.js'
 
 export interface EquityPoint {
   timestamp: number

@@ -1,9 +1,9 @@
-import type { AnalyticsScope } from './analytics'
-import type { UtcRange } from './chartSync'
-import type { EquityLedger } from './equity'
-import type { DateRange, Timeframe } from './history'
-import type { IndicatorSettings } from './indicators'
-import type { TradingState } from './trading'
+import type { AnalyticsScope } from './analytics.js'
+import type { UtcRange } from './chartSync.js'
+import type { EquityLedger } from './equity.js'
+import type { DateRange, Timeframe } from './history.js'
+import type { IndicatorSettings } from './indicatorSettings.js'
+import type { TradingState } from './trading.js'
 
 export const STORAGE_VERSION = 1
 export const EQUITY_CHUNK_SIZE = 1024
