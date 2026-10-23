@@ -1,5 +1,6 @@
 import { getHistoricalRates, instrumentMetaData, type ConfigJsonItem, type JsonItem } from 'dukascopy-node'
-import { fileURLToPath } from 'node:url'
+import { join, sep } from 'node:path'
+import { projectRoot } from './projectPaths.js'
 
 export interface Candle {
   timestamp: number
@@ -20,8 +21,8 @@ export interface HistoryResponse {
 
 export type RatesFetcher = (config: ConfigJsonItem) => Promise<JsonItem[]>
 
-const cacheFolderPath = fileURLToPath(new URL('../../.cache/dukascopy/', import.meta.url))
-const wafTokenCachePath = fileURLToPath(new URL('../../.cache/dukascopy/waf-token.json', import.meta.url))
+const cacheFolderPath = join(projectRoot, '.cache/dukascopy') + sep
+const wafTokenCachePath = join(projectRoot, '.cache/dukascopy/waf-token.json')
 
 function normalizeCandles(items: JsonItem[], from: number, to: number): Candle[] {
   const byTimestamp = new Map<number, Candle>()

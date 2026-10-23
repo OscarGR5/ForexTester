@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { diskApiFixture } from '../../tests/diskApiFixture'
 import { IDBFactory, IDBKeyRange } from 'fake-indexeddb'
 import { webcrypto } from 'node:crypto'
 import { setTimeout as delay } from 'node:timers/promises'
@@ -18,6 +19,8 @@ vi.mock('lightweight-charts', () => ({
       subscribeVisibleLogicalRangeChange: vi.fn(), unsubscribeVisibleLogicalRangeChange: vi.fn() }
     const makeSeries = () => {
     let values: CandlestickData<UTCTimestamp>[] = []
+    let autoScale = true, priceRange = { from: 1.09, to: 1.11 }
+    const priceScale = { applyOptions: vi.fn((next: { autoScale?: boolean }) => { if (typeof next.autoScale === 'boolean') autoScale = next.autoScale }), options: () => ({ autoScale }), getVisibleRange: () => priceRange, setVisibleRange: vi.fn((next: typeof priceRange) => { priceRange = next }) }
     return {
       setData: vi.fn((next: typeof values) => { values = next.map((candle) => ({ ...candle })) }),
       update: vi.fn((candle: typeof values[number], historical = false) => {
@@ -33,7 +36,7 @@ vi.mock('lightweight-charts', () => ({
       }),
       data: () => values,
       attachPrimitive: vi.fn(), detachPrimitive: vi.fn(), createPriceLine: vi.fn((options) => ({ applyOptions: vi.fn(), options: () => options })), removePriceLine: vi.fn(),
-      priceScale: () => ({ applyOptions: vi.fn() }),
+      priceScale: () => priceScale,
     }
     }
     return {
@@ -59,7 +62,10 @@ let request: ReturnType<typeof vi.fn<(path: string, options?: RequestInit) => Pr
 let defaultStops = true
 let legacyManualWorkflow = true
 
-beforeEach(() => {
+let disk: Awaited<ReturnType<typeof diskApiFixture>>
+beforeEach(async () => {
+  disk = await diskApiFixture()
+  window.localStorage.clear()
   vi.stubGlobal('indexedDB', new IDBFactory())
   vi.stubGlobal('IDBKeyRange', IDBKeyRange)
   vi.stubGlobal('crypto', webcrypto)
@@ -82,6 +88,7 @@ beforeEach(() => {
   // Existing execution fixtures provide trading candles only. Warm-up loading is
   // exercised separately with prior-history fixtures and real browser checks.
   vi.stubGlobal('fetch', (path: string, options?: RequestInit) => {
+    if (path.startsWith('/api/storage')) return disk.fetch(path, options)
     const params = new URL(path, 'http://test.local').searchParams
     if (params.get('from')! < history.from) return Promise.resolve(new Response(JSON.stringify({
       ...history, from: params.get('from'), to: params.get('to'), bid: [], ask: [],
@@ -93,11 +100,19 @@ beforeEach(() => {
 afterEach(async () => {
   if (rootMounted) await act(async () => root.unmount())
   host.remove()
+  await disk.close()
   vi.useRealTimers()
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
 })
 
+async function waitForStartup() {
+  for (let i = 0; i < 500; i++) {
+    if (!host.querySelector<HTMLFieldSetElement>('.workspace-controls')?.disabled || host.querySelector('.saved-session')) return
+    await act(async () => { await delay(2) })
+  }
+  throw new Error(`Startup did not settle: ${host.querySelector('.session-controls')?.textContent}`)
+}
 async function click(input: HTMLInputElement | HTMLButtonElement) {
   // Startup checks IndexedDB before enabling workspace actions.
   for (let i = 0; input.closest<HTMLFieldSetElement>('.workspace-controls')?.disabled && i < 100; i++) {
@@ -145,6 +160,7 @@ describe('chart layout controls', () => {
 
   it('removes every chart and subscription under React StrictMode cleanup', async () => {
     await act(async () => root.render(<StrictMode><App /></StrictMode>))
+    await waitForStartup()
     await click(host.querySelector<HTMLInputElement>('input[value="3"]')!)
     await act(async () => root.unmount())
     rootMounted = false
@@ -159,6 +175,7 @@ describe('chart layout controls', () => {
 
   it('selects timeframes independently and preserves them across 1, 2, and 3 chart layouts without downloading again', async () => {
     await act(async () => root.render(<App />))
+    await waitForStartup()
     expect(host.querySelectorAll('.chart-pane')).toHaveLength(1)
     await click(host.querySelector<HTMLInputElement>('input[value="2"]')!)
     expect(host.querySelectorAll('.chart-pane')).toHaveLength(2)
@@ -177,6 +194,7 @@ describe('chart layout controls', () => {
 
   it('uses one date request for all displayed charts', async () => {
     await act(async () => root.render(<App />))
+    await waitForStartup()
     await click(host.querySelector<HTMLInputElement>('input[value="3"]')!)
     const start = host.querySelector<HTMLInputElement>('input[aria-label="Start date"]')!
     const end = host.querySelector<HTMLInputElement>('input[aria-label="End date"]')!
@@ -223,6 +241,7 @@ async function changeDates() {
 describe('shared market replay', () => {
   it('preserves full history until Start Replay, then reveals exactly one candle per manual step across gaps', async () => {
     await act(async () => root.render(<App />))
+    await waitForStartup()
     expect(chartSeries(0).data()).toHaveLength(5)
     expect(replayStatus()).toBe('Ready')
     expect(button('Play').disabled).toBe(true)
@@ -242,6 +261,7 @@ describe('shared market replay', () => {
 
   it('plays at the fixed interval, pauses without advancing, and stops at the final candle', async () => {
     await act(async () => root.render(<App />))
+    await waitForStartup()
     vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0))
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
     await click(button('Start Replay'))
@@ -282,6 +302,7 @@ describe('shared market replay', () => {
 
   it('restarts while playing and after completion, removing previously revealed candles', async () => {
     await act(async () => root.render(<App />))
+    await waitForStartup()
     vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0))
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
     await click(button('Start Replay'))
@@ -302,6 +323,7 @@ describe('shared market replay', () => {
 
   it('preserves the shared clock and timer when layouts and timeframes change', async () => {
     await act(async () => root.render(<App />))
+    await waitForStartup()
     vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0))
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
     await click(button('Start Replay'))
@@ -328,6 +350,7 @@ describe('shared market replay', () => {
 
   it('cleans the running timer and every subscription on StrictMode unmount', async () => {
     await act(async () => root.render(<StrictMode><App /></StrictMode>))
+    await waitForStartup()
     vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0))
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
     await click(button('Start Replay'))
@@ -345,6 +368,7 @@ describe('shared market replay', () => {
 
   it('resets playback on a different historical period and starts from the new dataset', async () => {
     await act(async () => root.render(<App />))
+    await waitForStartup()
     vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0))
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
     await click(button('Start Replay'))
@@ -364,6 +388,7 @@ describe('shared market replay', () => {
     let resolve!: (response: Response) => void
     request.mockImplementationOnce(() => new Promise<Response>((done) => { resolve = done }))
     await act(async () => root.render(<App />))
+    await waitForStartup()
     expect(button('Start Replay').disabled).toBe(true)
     await act(async () => resolve(new Response(JSON.stringify({ ...history, bid: [] }))))
     expect(button('Start Replay').disabled).toBe(true)
@@ -391,6 +416,7 @@ describe('lookahead protection at the chart boundary', () => {
       const original = structuredClone(source)
       request.mockResolvedValueOnce(new Response(JSON.stringify({ ...history, bid: source })))
       await act(async () => root.render(<App />))
+    await waitForStartup()
       await selectTimeframe(0, timeframe)
       await click(button('Start Replay'))
       const series = chartSeries(0)
@@ -451,6 +477,7 @@ async function shortPeriods(chart = 1) {
 describe('per-chart indicators', () => {
   it('starts disabled, validates edits immediately, and removes only disabled indicator series', async () => {
     await act(async () => root.render(<App />))
+    await waitForStartup()
     const chart = vi.mocked(createChart).mock.results[0].value
     expect(chart.addSeries).toHaveBeenCalledTimes(1)
     await shortPeriods()
@@ -482,6 +509,7 @@ describe('per-chart indicators', () => {
 
   it('renders two independent overlays, controls each line, and keeps the second basis hidden', async () => {
     await act(async () => root.render(<App />))
+    await waitForStartup()
     await shortPeriods()
     await enableIndicator(1, 'BB #1')
     await enableIndicator(1, 'BB #2')
@@ -507,6 +535,7 @@ describe('per-chart indicators', () => {
 
   it('preserves independent settings across one-, two-, and three-chart layouts', async () => {
     await act(async () => root.render(<App />))
+    await waitForStartup()
     await click(host.querySelector<HTMLInputElement>('input[value="3"]')!)
     // Use M1 on each pane to exercise manual settings independently of presets.
     await selectTimeframe(1, 'M1'); await selectTimeframe(2, 'M1')
@@ -539,6 +568,7 @@ describe('per-chart indicators', () => {
 
   it('resets active indicators on restart and date reload, reusing the price chart', async () => {
     await act(async () => root.render(<App />))
+    await waitForStartup()
     await shortPeriods()
     for (const name of ['BB #1', 'BB #2', 'Stochastic', 'Ichimoku']) await enableIndicator(1, name)
     await click(button('Start Replay'))
@@ -565,6 +595,7 @@ describe('per-chart indicators', () => {
 
   it('cleans panes, cloud primitives, series and synchronization subscriptions', async () => {
     await act(async () => root.render(<StrictMode><App /></StrictMode>))
+    await waitForStartup()
     await shortPeriods()
     for (const name of ['BB #1', 'BB #2', 'Stochastic', 'Ichimoku']) await enableIndicator(1, name)
     const chart = vi.mocked(createChart).mock.results.at(-1)!.value
@@ -589,6 +620,7 @@ describe('per-chart indicators', () => {
     bid.at(-1)!.high = 1e6; bid.at(-1)!.low = 0.001; bid.at(-1)!.close = 99999
     request.mockResolvedValueOnce(new Response(JSON.stringify({ ...history, bid })))
     await act(async () => root.render(<App />))
+    await waitForStartup()
     await selectTimeframe(0, timeframe)
     await shortPeriods()
     for (const name of ['BB #1', 'BB #2', 'Stochastic', 'Ichimoku']) {
@@ -663,6 +695,7 @@ describe('trading journal and performance integration', () => {
 
   it('starts with empty completed-setup statistics and accessible empty states', async () => {
     await act(async () => root.render(<App />))
+    await waitForStartup()
     expect(kpi('Completed setups')).toBe('0')
     expect(kpi('Win rate')).toBe('Unavailable')
     expect(journal().textContent).toContain('included in session checkpoints')
@@ -676,6 +709,7 @@ describe('trading journal and performance integration', () => {
 
   it('requires explicit grouping, blocks opposite direction and counts the completed setup once under StrictMode', async () => {
     await act(async () => root.render(<StrictMode><App /></StrictMode>))
+    await waitForStartup()
     await setInput('Round-trip commission (USD per standard lot)', '35')
     await click(button('Start Replay')); await click(button('Buy'))
     const setupId = setupRows()[0].dataset.journalSetupId!
@@ -716,6 +750,7 @@ describe('trading journal and performance integration', () => {
 
   it('preserves notes through layout/timeframe changes and clears journal data on restart and history reload', async () => {
     await act(async () => root.render(<App />))
+    await waitForStartup()
     await setInput('Round-trip commission (USD per standard lot)', '7')
     await click(button('Start Replay')); await click(button('Buy')); await click(button('Next Candle'))
     const setupId = setupRows()[0].dataset.journalSetupId!
@@ -749,6 +784,7 @@ describe('trading journal and performance integration', () => {
 
   it('keeps unrelated entries separate and exposes cancelled requests outside completed statistics', async () => {
     await act(async () => root.render(<App />))
+    await waitForStartup()
     await click(button('Start Replay')); await click(button('Buy')); await click(button('Buy'))
     expect(setupRows()).toHaveLength(2)
     await click(records('Pending orders').querySelector<HTMLButtonElement>('button')!)
@@ -761,6 +797,7 @@ describe('trading journal and performance integration', () => {
 
   it('does not duplicate outcomes when timer advances batch across several bars', async () => {
     await act(async () => root.render(<StrictMode><App /></StrictMode>))
+    await waitForStartup()
     await click(button('Start Replay')); await click(button('Buy')); await click(button('Next Candle'))
     await click(records('Open positions').querySelector<HTMLButtonElement>('button')!)
     vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0))
@@ -778,6 +815,7 @@ describe('trading journal and performance integration', () => {
     vi.stubGlobal('URL', class extends URL { static createObjectURL = createUrl; static revokeObjectURL = revokeUrl })
     const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
     await act(async () => root.render(<App />))
+    await waitForStartup()
     await click(button('Start Replay')); await click(button('Buy')); await click(button('Next Candle'))
     await click(button('Export Journal CSV'))
     expect(createUrl).toHaveBeenCalledTimes(1)
@@ -792,6 +830,7 @@ describe('trading journal and performance integration', () => {
 describe('timeframe indicator presets', () => {
   it.each(TIMEFRAMES)('initializes %s with its default parameters and line visibility', async (timeframe) => {
     await act(async () => root.render(<App />))
+    await waitForStartup()
     await selectTimeframe(0, timeframe)
     const bands = timeframe === 'M5' || timeframe === 'M15'
     expect(checked(1, 'BB #1')).toBe(bands)
@@ -813,6 +852,7 @@ describe('timeframe indicator presets', () => {
 
   it('restores each chart/timeframe override across layout changes, replay, and date loads', async () => {
     await act(async () => root.render(<App />))
+    await waitForStartup()
     await selectTimeframe(0, 'M5')
     await parameter(1, 'BB #1 Length', '7')
     await enableIndicator(1, 'BB #2') // Explicitly disable a preset indicator.
@@ -850,6 +890,7 @@ describe('simulated trading with the shared replay clock', () => {
   it('validates lots and disables trading in full-history mode and while playing', async () => {
     request.mockResolvedValueOnce(new Response(JSON.stringify(tradingHistory())))
     await act(async () => root.render(<App />))
+    await waitForStartup()
     expect(button('Buy').disabled).toBe(true)
     expect(button('Sell').disabled).toBe(true)
     await click(button('Start Replay'))
@@ -875,6 +916,7 @@ describe('simulated trading with the shared replay clock', () => {
   it('fills two independent positions at the first eligible bar during batched StrictMode playback', async () => {
     request.mockImplementation(async () => new Response(JSON.stringify(tradingHistory())))
     await act(async () => root.render(<StrictMode><App /></StrictMode>))
+    await waitForStartup()
     await click(button('Start Replay'))
     await click(button('Buy'))
     await volume('0.03')
@@ -925,6 +967,7 @@ describe('simulated trading with the shared replay clock', () => {
   it('preserves pending entries, positions and closes through chart navigation and resets on restart/data reload', async () => {
     request.mockImplementation(async () => new Response(JSON.stringify(tradingHistory())))
     await act(async () => root.render(<App />))
+    await waitForStartup()
     await click(button('Start Replay'))
     await click(button('Buy'))
     expect(button('Restart').disabled).toBe(false)
@@ -967,6 +1010,7 @@ describe('simulated trading with the shared replay clock', () => {
     data.ask = data.ask.slice(0, 2)
     request.mockResolvedValueOnce(new Response(JSON.stringify(data)))
     await act(async () => root.render(<App />))
+    await waitForStartup()
     await click(button('Start Replay')); await click(button('Buy'))
     await click(records('Pending orders').querySelector('button')!)
     await click(button('Next Candle'))
@@ -987,6 +1031,7 @@ describe('simulated trading with the shared replay clock', () => {
     data.ask = data.ask.slice(0, 2)
     request.mockResolvedValueOnce(new Response(JSON.stringify(data)))
     await act(async () => root.render(<App />))
+    await waitForStartup()
     await click(button('Start Replay')); await click(button('Buy')); await click(button('Next Candle'))
     await click(records('Open positions').querySelector('button')!)
     await click(button('Next Candle')); await click(button('Next Candle')); await click(button('Next Candle'))
@@ -1005,6 +1050,7 @@ describe('simulated trading with the shared replay clock', () => {
     data.ask[3].close = 99999; data.ask[3].high = 100000
     request.mockResolvedValueOnce(new Response(JSON.stringify(data)))
     await act(async () => root.render(<App />))
+    await waitForStartup()
     await click(button('Start Replay')); await click(button('Buy'))
     await click(button('Next Candle')); await click(button('Next Candle'))
     expect(recordCount('Pending orders')).toBe(1)
@@ -1037,6 +1083,7 @@ describe('stop-loss controls and chart lifecycle', () => {
 
   it('requires SL, preserves independent pending prices, and surfaces actual-fill rejections', async () => {
     await act(async () => root.render(<App />))
+    await waitForStartup()
     await click(button('Start Replay'))
     expect(button('Buy').disabled).toBe(true)
     await setInput('SL price', '1.101')
@@ -1054,6 +1101,7 @@ describe('stop-loss controls and chart lifecycle', () => {
 
   it('keeps independent SL lines on every chart, updates profit SL, and cleans up after stops and reset', async () => {
     await act(async () => root.render(<App />))
+    await waitForStartup()
     await click(button('Start Replay'))
     await setInput('SL price', '1.099'); await click(button('Buy'))
     await volume('0.03'); await setInput('SL price', '1.098'); await click(button('Buy'))
@@ -1093,6 +1141,7 @@ describe('stop-loss controls and chart lifecycle', () => {
     data.ask[1].high = 1.15
     request.mockImplementation(async () => new Response(JSON.stringify(data)))
     await act(async () => root.render(<StrictMode><App /></StrictMode>))
+    await waitForStartup()
     await click(button('Start Replay'))
     await setInput('SL price', '1.103'); await click(button('Sell'))
     await setInput('SL price', '1.098'); await click(button('Buy'))
@@ -1125,6 +1174,7 @@ describe('stop-loss controls and chart lifecycle', () => {
 
   it('preserves coincident stop IDs when panes are removed and recreated', async () => {
     await act(async () => root.render(<App />))
+    await waitForStartup()
     await click(button('Start Replay')); await setInput('SL price', '1.099')
     await click(button('Buy')); await click(button('Buy')); await click(button('Next Candle'))
     const ids = [...records('Open positions').querySelectorAll('li')].map((item) => item.dataset.positionId!)
@@ -1144,6 +1194,7 @@ describe('stop-loss controls and chart lifecycle', () => {
     const data = stopHistory(); data.ask = data.ask.filter((_, index) => index !== 2)
     request.mockImplementation(async () => new Response(JSON.stringify(data)))
     await act(async () => root.render(<App />))
+    await waitForStartup()
     await click(button('Start Replay')); await setInput('SL price', '1.105'); await click(button('Sell'))
     await click(button('Next Candle')); await click(button('Next Candle'))
     expect(records('Open positions').textContent).toContain('SL coverage uncertain: ask quote unavailable')
@@ -1169,6 +1220,7 @@ describe('risk sizing controls with shared replay', () => {
 
   it('defaults to Risk %, validates account inputs before replay, and locks them throughout a session', async () => {
     await act(async () => root.render(<App />))
+    await waitForStartup()
     expect(host.querySelector<HTMLSelectElement>('[aria-label="Sizing mode"]')!.value).toBe('risk')
     expect(host.querySelector<HTMLInputElement>('[aria-label="Risk per entry (%)"]')!.value).toBe('1')
     await setInput('Reference balance (USD)', '0')
@@ -1195,6 +1247,7 @@ describe('risk sizing controls with shared replay', () => {
 
   it('reserves two percentages, fills from the first future opening under StrictMode batching, and preserves sizing through chart changes', async () => {
     await act(async () => root.render(<StrictMode><App /></StrictMode>))
+    await waitForStartup()
     await click(button('Start Replay'))
     await setInput('SL price', '1.0982')
     await click(button('Buy'))
@@ -1240,6 +1293,7 @@ describe('risk sizing controls with shared replay', () => {
 
   it('keeps manual lots unchanged, shows estimates, and rejects risk above the cap at execution', async () => {
     await act(async () => root.render(<App />))
+    await waitForStartup()
     await click(button('Start Replay'))
     await volume('6')
     await setInput('SL price', '1.0982')
@@ -1264,6 +1318,7 @@ describe('commission configuration and replay accounting', () => {
 
   it('accepts decimals and zero, rejects invalid input, and locks the retained rate through replay completion', async () => {
     await act(async () => root.render(<App />))
+    await waitForStartup()
     const rate = host.querySelector<HTMLInputElement>(`[aria-label="${rateLabel}"]`)!
     expect(rate.value).toBe('0')
     await setInput(rateLabel, '7.25')
@@ -1292,6 +1347,7 @@ describe('commission configuration and replay accounting', () => {
 
   it('charges two independent volumes once during batched StrictMode replay and preserves fees across chart changes', async () => {
     await act(async () => root.render(<StrictMode><App /></StrictMode>))
+    await waitForStartup()
     await setInput(rateLabel, '7')
     await click(button('Start Replay'))
     await volume('0.01'); await click(button('Buy'))
@@ -1331,6 +1387,7 @@ describe('commission configuration and replay accounting', () => {
     data.ask = data.ask.slice(0, 2)
     request.mockImplementation(async () => new Response(JSON.stringify(data)))
     await act(async () => root.render(<App />))
+    await waitForStartup()
     await setInput(rateLabel, '7')
     await click(button('Start Replay'))
     await volume('0.02'); await click(button('Buy')); await click(button('Next Candle'))
@@ -1353,6 +1410,7 @@ describe('commission configuration and replay accounting', () => {
     data.bid[1] = { ...data.bid[1], low: 1.097, high: 1.102 }
     request.mockImplementation(async () => new Response(JSON.stringify(data)))
     await act(async () => root.render(<StrictMode><App /></StrictMode>))
+    await waitForStartup()
     await setInput(rateLabel, '7')
     await click(button('Start Replay'))
     await volume('2'); await setInput('SL price', '1.0982'); await click(button('Buy'))
@@ -1374,7 +1432,8 @@ describe('commission configuration and replay accounting', () => {
 
 describe('warm-up context and selected replay start', () => {
   it('keeps real pre-roll visible and hides every candle after the selected first observation', async () => {
-    vi.stubGlobal('fetch', async (path: string) => {
+    vi.stubGlobal('fetch', async (path: string, options?: RequestInit) => {
+      if (path.startsWith('/api/storage')) return disk.fetch(path, options)
       const params = new URL(path, 'http://test.local').searchParams
       const from = params.get('from')!, to = params.get('to')!
       const warm = Date.parse(from) < Date.UTC(2024, 0, 9)
@@ -1382,6 +1441,7 @@ describe('warm-up context and selected replay start', () => {
       return new Response(JSON.stringify({ ...history, from, to, bid, ask: bid.map(bar => ({ ...bar, open: bar.open + 0.0002, high: bar.high + 0.0002, low: bar.low + 0.0002, close: bar.close + 0.0002 })) }))
     })
     await act(async () => root.render(<StrictMode><App /></StrictMode>))
+    await waitForStartup()
     await setInput('Replay start (UTC)', '2024-01-09T02:00')
     await click(button('Start Replay'))
     expect(host.querySelector('time')!.textContent).toBe('2024-01-09 02:00 UTC')
@@ -1420,13 +1480,32 @@ describe('session lifecycle and workspace hydration', () => {
     await act(async () => root.unmount())
     root = createRoot(host)
     await act(async () => root.render(<StrictMode><App /></StrictMode>))
+    await waitForStartup()
     await until(() => !!button('Resume session'))
     expect(host.querySelector('fieldset.workspace-controls')?.hasAttribute('hidden')).toBe(true)
     await click(button('Resume session'))
     await until(() => !host.querySelector('fieldset.workspace-controls')?.hasAttribute('hidden') && !host.querySelector('.session-status')?.textContent?.includes('Recovering'))
   }
+  it('restores a public vertical price range and the equity cash-reference preference', async () => {
+    await act(async () => root.render(<App />)); await waitForStartup()
+    await click(button('Start Replay')); await click(button('Next Candle')); await saveNow()
+    const record = (await disk.storage.list()).sessions[0]
+    await act(async () => root.unmount())
+    const key = `forextester:ui:v1:${record.id}`, preferences = JSON.parse(localStorage.getItem(key) ?? '{}')
+    localStorage.setItem(key, JSON.stringify({ ...preferences, 'price:0:M1': { autoScale: false, range: { from: 1.099, to: 1.101 } }, showCashReference: true }))
+    root = createRoot(host)
+    await act(async () => root.render(<StrictMode><App /></StrictMode>)); await waitForStartup()
+    await click(button('Resume session'))
+    await until(() => !host.querySelector<HTMLFieldSetElement>('.workspace-controls')!.disabled)
+    const activeChart = vi.mocked(createChart).mock.results.map((r) => r.value).find((chart) => vi.mocked(chart.remove).mock.calls.length === 0)!
+    const activeScale = vi.mocked(activeChart.addSeries).mock.results[0].value.priceScale()
+    expect(activeScale.getVisibleRange()).toEqual({ from: 1.099, to: 1.101 })
+    expect(activeScale.options().autoScale).toBe(false)
+    expect(host.querySelector<HTMLInputElement>('.equity-cash-toggle input')!.checked).toBe(true)
+  })
   it('restores trades, SL, notes, account settings, chart configurations and scopes together after refresh', async () => {
     await act(async () => root.render(<StrictMode><App /></StrictMode>))
+    await waitForStartup()
     await until(() => !host.querySelector<HTMLInputElement>('[aria-label="Current session name"]')!.disabled)
     await setInput('Current session name', 'London recovery')
     await setInput('Reference balance (USD)', '10000')
@@ -1471,6 +1550,7 @@ describe('session lifecycle and workspace hydration', () => {
   })
   it('requires restart confirmation, retains records on cancel, and replaces only the active checkpoint on approval', async () => {
     await act(async () => root.render(<App />))
+    await waitForStartup()
     await click(button('Start Replay')); await click(button('Buy')); await click(button('Next Candle')); await saveNow()
     vi.mocked(window.confirm).mockReturnValueOnce(false)
     await click(button('Restart')); expect(recordCount('Open positions')).toBe(1)
@@ -1480,10 +1560,12 @@ describe('session lifecycle and workspace hydration', () => {
   })
   it('keeps a date-changed session separate and makes both sessions available after refresh', async () => {
     await act(async () => root.render(<App />))
+    await waitForStartup()
     await click(button('Start Replay')); await click(button('Buy')); await click(button('Next Candle')); await saveNow()
     await changeDates(); await saveNow()
     await act(async () => root.unmount()); root = createRoot(host)
     await act(async () => root.render(<App />))
+    await waitForStartup()
     await until(() => host.querySelectorAll('.saved-session').length === 2)
     const original = [...host.querySelectorAll('.saved-session')].find((row) => row.textContent?.includes('2024-01-09 → 2024-01-10'))!
     await click(original.querySelector('button')!); await until(() => replayStatus() === 'Paused' && recordCount('Open positions') === 1)

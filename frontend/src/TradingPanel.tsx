@@ -1,9 +1,11 @@
+import { emptyOrderDraft, useUiValue, validOrderDraft } from './uiPreferences'
 import { useState } from 'react'
 import { commissionConfigError, perSideCommissionUsd, type CommissionConfig } from './commissions'
 import { accountRiskError, plannedRisk, riskBudget, sizeFromRisk, validRiskPercent, type AccountRisk, type EntrySizing } from './risk'
 import { combinedRisk, entryRequestError, canRequestOrder, formatTradingNumber as number, grossPnl, markPosition, realizedSummary, setupAssignmentError, stopLossEstimates, tradingTime, validLots, validStopPrice, stopModificationError, type PendingEntry, type Position, type Direction, type TradingPermission, type TradingState } from './trading'
 
 interface Props {
+  sessionId?: string | null
   state: TradingState
   permission: TradingPermission
   onEntry: (direction: Direction, sizing: EntrySizing, stopPrice: number, setupId: string | null) => void
@@ -29,8 +31,8 @@ function StopRecords({ position }: { position: Position }) {
   </>
 }
 
-function StopEditor({ state, position, permission, onModify }: { state: TradingState; position: Position; permission: TradingPermission; onModify: (id: string, price: number) => void }) {
-  const [value, setValue] = useState(number(position.stopPrice, 5))
+function StopEditor({ sessionId, state, position, permission, onModify }: { sessionId: string | null; state: TradingState; position: Position; permission: TradingPermission; onModify: (id: string, price: number) => void }) {
+  const [value, setValue] = useUiValue(sessionId, `stopDraft:${state.session}:${position.id}`, number(position.stopPrice, 5), (v): v is string => typeof v === 'string' && v.length <= 64 && (v === '' || Number.isFinite(Number(v))))
   const price = Number(value)
   const error = stopModificationError(state, position, price, permission)
   const errorId = `stop-error-${position.id}`
@@ -44,17 +46,18 @@ function StopEditor({ state, position, permission, onModify }: { state: TradingS
   </div>
 }
 
-export function TradingPanel({ state, permission, onEntry, onConfigure, onConfigureCommission, onCancel, onClose, onModifyStop }: Props) {
-  const [selection, setSelection] = useState<{ session: number; id: string | null }>({ session: state.session, id: null })
+export function TradingPanel({ sessionId = null, state, permission, onEntry, onConfigure, onConfigureCommission, onCancel, onClose, onModifyStop }: Props) {
   const activeSetupIds = new Set([...state.pending, ...state.positions].map((entry) => entry.setupId))
   const eligibleSetups = state.setups.filter((setup) => activeSetupIds.has(setup.id) && !setupAssignmentError(state, setup.direction, setup.id))
-  const selectedSetupId = selection.session === state.session && eligibleSetups.some((setup) => setup.id === selection.id) ? selection.id : null
   const [commissionError, setCommissionError] = useState<string | null>(null)
   const summary = realizedSummary(state.closed)
-  const [mode, setMode] = useState<'risk' | 'manual'>('risk')
-  const [risk, setRisk] = useState('1')
-  const [volume, setVolume] = useState('0.01')
-  const [stop, setStop] = useState('')
+  const [draft, setDraft] = useUiValue(sessionId, 'orderDraft', emptyOrderDraft, validOrderDraft)
+  const { mode, risk, volume, stop } = draft
+  const setMode = (mode: 'risk' | 'manual') => setDraft((d) => ({ ...d, mode }))
+  const setRisk = (risk: string) => setDraft((d) => ({ ...d, risk }))
+  const setVolume = (volume: string) => setDraft((d) => ({ ...d, volume }))
+  const setStop = (stop: string) => setDraft((d) => ({ ...d, stop }))
+  const selectedSetupId = eligibleSetups.some((setup) => setup.id === draft.setupId) ? draft.setupId : null
   const stopPrice = Number(stop)
   const validStop = stop !== '' && validStopPrice(stopPrice)
   const lots = Number(volume)
@@ -101,7 +104,7 @@ export function TradingPanel({ state, permission, onEntry, onConfigure, onConfig
     {accountError && <p className="form-error" role="alert">{accountError}</p>}
     <div className="trading-controls">
       <label>Setup<select aria-label="Setup assignment" value={selectedSetupId ?? ''}
-        onChange={(event) => setSelection({ session: state.session, id: event.target.value || null })}>
+        onChange={(event) => setDraft((d) => ({ ...d, setupId: event.target.value || null }))}>
         <option value="">New setup</option>
         {eligibleSetups.map((setup) => <option key={setup.id} value={setup.id}>Add entry to {setup.id} · {setup.direction === 'buy' ? 'Buy' : 'Sell'}{setup.title ? ` · ${setup.title}` : ''}</option>)}
       </select></label>
@@ -166,7 +169,7 @@ export function TradingPanel({ state, permission, onEntry, onConfigure, onConfig
             {pendingClose && <span>Close requested {tradingTime(position.closeRequestedAt!)}</span>}
             {!permission.hasFuture && <span>Open at end of available history{pendingClose ? '; close unfilled' : ''}.</span>}
             <button type="button" aria-label={`Close position ${position.id}`} disabled={!canOrder || pendingClose} onClick={() => onClose(position.id)}>Close</button>
-            <StopEditor key={`${position.id}-${position.stopPrice}`} state={state} position={position} permission={permission} onModify={onModifyStop} />
+            <StopEditor sessionId={sessionId} key={`${position.id}-${position.stopPrice}`} state={state} position={position} permission={permission} onModify={onModifyStop} />
             <StopRecords position={position} />
           </li>
         })}</ul>}

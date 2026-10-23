@@ -3,6 +3,8 @@ import { accountRiskError } from './risk'
 import { commissionConfigError } from './commissions'
 import { AutosaveQueue } from './autosave'
 import { historyFingerprint, validatedHistory } from './sessionCodec'
+import { DiskSessionStore } from './diskSessionStore'
+import { writeUi, readUi, defaultWorkspace, validWorkspace } from './uiPreferences'
 import { RevisionConflict, SessionStore, storageError } from './sessionStore'
 import type { DateRange } from './history'
 import type { LoadedHistory } from './historyLoader'
@@ -24,9 +26,14 @@ interface Active {
 }
 const newActive = (): Active => ({ id: crypto.randomUUID(), name: 'Untitled backtest', createdAt: new Date().toISOString(), record: null, history: null, historyId: null, cacheAttempted: false })
 export function useSessionPersistence(options: Options) {
-  const [store] = useState(() => new SessionStore())
+  const [store] = useState(() => new DiskSessionStore())
+  const [legacyStore] = useState(() => new SessionStore())
+  const [legacySessions, setLegacySessions] = useState<SessionRecord[]>([])
+  const [storageLocation, setStorageLocation] = useState<string | null>(null)
+  const [migrationWarning, setMigrationWarning] = useState<string | null>(null)
   const active = useRef<Active | null>(null)
   const latest = useRef(options)
+  const [diskErrors, setDiskErrors] = useState<DiskSessionStore['listErrors']>([])
   const [sessions, setSessions] = useState<SessionRecord[]>([])
   const [name, setName] = useState('Untitled backtest')
   const [savedAt, setSavedAt] = useState<string | null>(null)
@@ -44,7 +51,7 @@ export function useSessionPersistence(options: Options) {
   const promptTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const channel = useRef<BroadcastChannel | null>(null)
   useLayoutEffect(() => { latest.current = options }, [options])
-  async function refresh() { const rows = await store.list(); setSessions(rows); return rows }
+  async function refresh() { const rows = await store.list(); setSessions(rows); setDiskErrors(store.listErrors); return rows }
   function report(reason: unknown) {
     setSaveStatus('Error'); setError(storageError(reason))
     if (reason instanceof RevisionConflict) { conflicted.current = true; setConflict(true); latest.current.pause() }
@@ -61,35 +68,52 @@ export function useSessionPersistence(options: Options) {
         const history = validatedHistory(current.history)
         target.historyId = await historyFingerprint(history); target.history = current.history; target.cacheAttempted = false
       }
-      const snapshot = { ...current.snapshot, checkpoint: { ...current.snapshot.checkpoint,
-        workspace: { ...current.snapshot.checkpoint.workspace, viewport: current.captureViewport() } } }
-      // Commit the small authoritative snapshot first. A large history cache
-      // must never consume the quota needed to save trading records.
+      const snapshot = current.snapshot
+      // Publish validated history before a checkpoint can reference it.
+      if (!target.cacheAttempted) {
+        await store.cacheHistory(target.historyId!, current.history)
+        target.cacheAttempted = true
+      }
       const record = await store.save({ id: target.id, name: target.name, createdAt: target.createdAt,
         range: { from: current.history.tradingFrom, to: current.history.to }, historyId: target.historyId!, totalCandles: current.history.bid.length }, snapshot, target.record)
       target.record = record
-      setSavedAt(record.savedAt); setSaveStatus('Saved'); setError(null)
+      setSavedAt(record.savedAt); setSaveStatus(latest.current.snapshot === snapshot && target.name === record.name ? 'Saved' : 'Saving'); setError(null)
       channel.current?.postMessage({ id: record.id, revision: record.revision })
       await refresh()
-      if (!target.cacheAttempted) {
-        target.cacheAttempted = true
-        try { await store.cacheHistory(target.historyId!, current.history); setCacheWarning(null) }
-        catch (reason) { setCacheWarning(`History cache unavailable: ${storageError(reason)} Trading checkpoint was saved. Recovery will require downloading exactly matching history.`) }
-      }
+
     } catch (reason) { report(reason); throw reason }
+  }
+  async function discoverLegacy() {
+    try {
+      const rows = await legacyStore.list(), pending: SessionRecord[] = []
+      for (const row of rows) {
+        const receipt = await store.migrationReceipt(row.id)
+        if (receipt?.digest !== row.digest) pending.push(row)
+      }
+      setLegacySessions(pending); setMigrationWarning(null)
+      return pending
+    } catch (reason) { setMigrationWarning(`Browser migration discovery failed: ${storageError(reason)} Disk sessions remain available. Retry storage to discover browser sessions again.`); return [] }
+  }
+  async function initialize(live = () => true) {
+    try {
+      const status = await store.status(), rows = await store.list()
+      if (!live()) return
+      setStorageLocation(status.directory); setSessions(rows); setDiskErrors(store.listErrors)
+      const legacy = await discoverLegacy()
+      if (!live()) return
+      if (!active.current) {
+        if (rows.length || legacy.length || store.listErrors.length) setAwaitingChoice(true)
+        else { active.current = newActive(); ready.current = true; setAwaitingChoice(false) }
+      }
+      if (!conflicted.current) setError(null)
+      setInitialized(true)
+    } catch (reason) { if (live()) { report(reason); setAwaitingChoice(true) } }
   }
   useEffect(() => {
     let live = true
     queue.current = new AutosaveQueue(write)
-    refresh().then((rows) => {
-      if (!live) return
-      if (rows.length) setAwaitingChoice(true)
-      else { active.current ??= newActive(); ready.current = true }
-      setInitialized(true)
-    }).catch((reason) => {
-      if (!live) return
-      report(reason); active.current ??= newActive(); ready.current = true; setInitialized(true)
-    })
+    void initialize(() => live)
+
     // Revision checks in the write transaction are authoritative. Broadcasts
     // shorten the time until an active editor sees the conflict.
     if (typeof BroadcastChannel !== 'undefined') {
@@ -110,7 +134,7 @@ export function useSessionPersistence(options: Options) {
     if (!initialized || awaitingChoice || busy || conflict || !current) return
     const changed = before?.snapshot !== current || before?.action !== options.actionVersion
     const important = !savedAt || !current.checkpoint.replay.playing || before?.action !== options.actionVersion ||
-      before?.snapshot?.checkpoint.workspace !== current.checkpoint.workspace || !before?.snapshot?.checkpoint.replay.started
+      !before?.snapshot?.checkpoint.replay.started
     if (!changed && savedAt) return
     if (important) {
       setSaveStatus('Saving')
@@ -131,7 +155,7 @@ export function useSessionPersistence(options: Options) {
     await queue.current?.flush()
   }
   async function switchWorkspace(id: string | null, range?: DateRange) {
-    if (busyRef.current) return
+    if (busyRef.current || !initialized) return
     setBusy(true)
     latest.current.pause()
     try {
@@ -146,7 +170,8 @@ export function useSessionPersistence(options: Options) {
         setName(record.name); setSavedAt(record.savedAt); setCacheWarning(result.cacheWarning)
         latest.current.restore(result, result.history)
       } else {
-        active.current = newActive(); setName(active.current.name); setSavedAt(null); setCacheWarning(null)
+        const presentation = readUi(active.current?.id ?? null, 'workspace', defaultWorkspace(), validWorkspace)
+        active.current = newActive(); writeUi(active.current.id, 'workspace', presentation); setName(active.current.name); setSavedAt(null); setCacheWarning(null)
         latest.current.fresh(range ?? { from: latest.current.history?.tradingFrom ?? '2024-01-09', to: latest.current.history?.to ?? '2024-01-10' })
       }
       ready.current = true; setAwaitingChoice(false); conflicted.current = false; setConflict(false); setError(null); setSaveStatus(id ? 'Saved' : 'Saving')
@@ -168,7 +193,7 @@ export function useSessionPersistence(options: Options) {
     } catch (reason) { report(reason) }
   }
   async function remove(record: SessionRecord) {
-    if (!window.confirm(`Delete “${record.name}” and all its saved trades, notes and progress? This cannot be undone.`)) return
+    if (!window.confirm(`Delete “${record.name}” from saved backtests? It cannot be resumed afterward. This cannot be undone in the app.`)) return
     try {
       if (record.id === active.current?.id) {
         await flush()
@@ -183,7 +208,19 @@ export function useSessionPersistence(options: Options) {
       await refresh()
     } catch (reason) { report(reason) }
   }
-  return { sessions, name, savedAt, saveStatus, error, cacheWarning, conflict, busy, initialized, awaitingChoice,
+  async function migrate(id: string, asCopy = false) {
+    if (busyRef.current) return
+    setBusy(true); latest.current.pause()
+    try {
+      if (!conflicted.current) await flush()
+      busyRef.current = true
+      const result = await store.migrate(legacyStore, id, (range) => latest.current.download(range), asCopy)
+      if (validWorkspace(result.checkpoint.workspace)) writeUi(result.record.id, 'workspace', result.checkpoint.workspace)
+      await refresh(); await discoverLegacy(); setError(null)
+    } catch (reason) { report(reason) }
+    finally { busyRef.current = false; setBusy(false) }
+  }
+  return { sessions, diskErrors, legacySessions, storageLocation, migrationWarning, migrate, retry: () => { void initialize() }, name, savedAt, saveStatus, error, cacheWarning, conflict, busy, initialized, awaitingChoice,
     activeId: active.current?.id ?? null, editName, rename, remove, resume: (id: string) => switchWorkspace(id),
     fresh: (range?: DateRange) => switchWorkspace(null, range), save: () => { if (active.current) active.current.cacheAttempted = false; void flush().catch(report) } }
 }

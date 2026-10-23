@@ -1,9 +1,9 @@
 // Deterministic offline fixtures shared by persistence tests and measurements.
-import { createEquityLedger, recordEquity, type EquityLedger } from './equity'
-import { defaultIndicatorSettings } from './indicators'
-import type { LoadedHistory } from './historyLoader'
-import { createTradingState, observeCandle, type TradingState } from './trading'
-import { equitySummary, type SessionSnapshot } from './sessionTypes'
+import { createEquityLedger, recordEquity, type EquityLedger } from './equity.js'
+import { defaultIndicatorSettings } from './indicators.js'
+import type { LoadedHistory } from './historyLoader.js'
+import { createTradingState, observeCandle, type TradingState } from './trading.js'
+import { equitySummary, type SessionSnapshot } from './sessionTypes.js'
 export const FIXTURE_START = Date.UTC(2024, 0, 1)
 export function sessionHistory(count = 200): LoadedHistory {
   const bid = Array.from({ length: count }, (_, i) => ({ timestamp: FIXTURE_START + i * 60_000, open: 1.1 + i % 10 * .00001, high: 1.1008, low: 1.0995, close: 1.1001 }))

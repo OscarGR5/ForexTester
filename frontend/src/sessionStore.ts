@@ -1,11 +1,11 @@
-import type { EquityPoint } from './equity'
-import type { LoadedHistory } from './historyLoader'
-import { corrupt, equitySuffix, historyFingerprint, recordDigest, restoreEquity, sha256, validateHistoryCheckpoint, validatedHistory, validateRecord } from './sessionCodec'
-import { EQUITY_CHUNK_SIZE, STORAGE_VERSION, type Hydration, type SessionRecord, type SessionSnapshot } from './sessionTypes'
+import type { EquityPoint } from './equity.js'
+import type { LoadedHistory } from './historyLoader.js'
+import { corrupt, equitySuffix, historyFingerprint, recordDigest, restoreEquity, sha256, validateHistoryCheckpoint, validatedHistory, validateRecord } from './sessionCodec.js'
+import { EQUITY_CHUNK_SIZE, STORAGE_VERSION, type Hydration, type SessionRecord, type SessionSnapshot } from './sessionTypes.js'
 
 export const DATABASE_NAME = 'forextester-sessions'
 export class RevisionConflict extends Error {
-  constructor() { super('This session changed in another tab. Editing is paused to protect the newer checkpoint; unsaved changes in this tab were not committed. Resume the saved session to continue, or create a new session.') }
+  constructor() { super('This session changed in another tab or browser. Editing is paused to protect the newer checkpoint; unsaved changes in this tab were not committed. Resume the saved session to continue, or create a new session.') }
 }
 export function storageError(error: unknown): string {
   if (error instanceof Error && error.name === 'QuotaExceededError') return 'Browser storage quota exceeded. This checkpoint was not saved. Free browser storage and try Save now; export your journal separately.'
