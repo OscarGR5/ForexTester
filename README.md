@@ -38,7 +38,13 @@ npm run dev:frontend
 
 Open the URL printed by Vite, normally http://127.0.0.1:5173. The API health check is at http://127.0.0.1:3001/api/health. Keep both servers running: Vite forwards same-origin `/api` requests to the backend at `http://127.0.0.1:3001`.
 
-The chart automatically loads EURUSD M1 bid candles for January 9, 2024 (inclusive) through January 10, 2024 (exclusive). Use **Start date** and **End date**, then **Load Data**, to choose another period. Dates are UTC, and the end date must be no later than the current UTC date. Each request covers at most seven completed days. The chart supports zoom, horizontal scrolling, and a crosshair; it fits each loaded period on screen and resizes with the window.
+The chart automatically loads EURUSD M1 bid candles for January 9, 2024 (inclusive) through January 10, 2024 (exclusive). Use **Start date** and **End date**, then **Load Data**, to choose another period. Dates are UTC, and the end date must be no later than the current UTC date. Each request covers at most seven completed days.
+
+Choose **1**, **2**, or **3** charts with the **Charts** control. Multiple charts stack vertically with equal initial heights; the workspace scrolls when they cannot fit. Each chart has its own **Timeframe** selector: M1, M5, M15, H1, or H4. Charts may use the same timeframe. The initial selections are M1, M5, and H1, and selections remain when switching layouts.
+
+All timeframes come from the loaded M1 bid candles in the browser. Aggregated candles use UTC-aligned bucket starts, the first available open, highest high, lowest low, and last available close. Missing minutes and market closures stay missing; a bucket with some missing minutes still uses its available candles. The original M1 bid and ask data remain in the API response. Changing a timeframe or layout does not request more history. Changing the date range reloads history once for all charts.
+
+Zooming and horizontal scrolling synchronize the visible UTC period across displayed charts. The crosshair follows the corresponding existing candle bucket when one is available. Synchronization maps each chart's view through candle timestamps rather than matching candle indexes. Around gaps and on very coarse timeframes, the view can differ slightly because each chart has its own candle spacing and Lightweight Charts limits its zoom. A crosshair is cleared on a chart if its corresponding bucket has no candle. Charts do not create candles in missing periods.
 
 ## Development commands
 
@@ -80,4 +86,4 @@ To run a live integration check, start the backend and run the `curl` command ab
 
 ## Current status
 
-The React/Vite frontend displays one historical EURUSD M1 bid candlestick chart using TradingView Lightweight Charts. The Node.js backend exposes `GET /api/health` and `GET /api/history`. The chart preserves market gaps and does not hide future candles; replay will handle that later. Additional timeframes and charts, indicators, replay, trading, and statistics features listed above are not implemented yet. The approved future stack includes `technicalindicators`; that package is deferred until indicators are built.
+The React/Vite frontend displays one to three synchronized historical EURUSD bid candlestick charts using TradingView Lightweight Charts. The Node.js backend exposes `GET /api/health` and `GET /api/history`. Charts preserve market gaps and do not hide future candles; replay will handle that later. Indicators, replay, trading, and statistics features listed above are not implemented yet. The approved future stack includes `technicalindicators`; that package is deferred until indicators are built.

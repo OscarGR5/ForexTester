@@ -22,6 +22,31 @@ export interface DateRange {
   to: string
 }
 
+export const TIMEFRAMES = ['M1', 'M5', 'M15', 'H1', 'H4'] as const
+export type Timeframe = typeof TIMEFRAMES[number]
+
+export const TIMEFRAME_MS: Record<Timeframe, number> = {
+  M1: 60_000, M5: 300_000, M15: 900_000, H1: 3_600_000, H4: 14_400_000,
+}
+
+export function aggregateBidCandles(candles: readonly Candle[], timeframe: Timeframe): Candle[] {
+  if (timeframe === 'M1') return [...candles]
+  const width = TIMEFRAME_MS[timeframe]
+  const aggregated: Candle[] = []
+  for (const candle of candles) {
+    const timestamp = Math.floor(candle.timestamp / width) * width
+    const previous = aggregated[aggregated.length - 1]
+    if (previous?.timestamp === timestamp) {
+      previous.high = Math.max(previous.high, candle.high)
+      previous.low = Math.min(previous.low, candle.low)
+      previous.close = candle.close
+    } else {
+      aggregated.push({ timestamp, open: candle.open, high: candle.high, low: candle.low, close: candle.close })
+    }
+  }
+  return aggregated
+}
+
 const DAY_MS = 86_400_000
 
 function utcDate(value: string): number | null {
@@ -79,8 +104,8 @@ export function parseHistory(value: unknown, range: DateRange): HistoryResponse 
   }
 }
 
-export function toBidChartCandles(history: HistoryResponse): CandlestickData<UTCTimestamp>[] {
-  return history.bid.map(({ timestamp, open, high, low, close }) => ({
+export function toBidChartCandles(history: HistoryResponse, timeframe: Timeframe = 'M1'): CandlestickData<UTCTimestamp>[] {
+  return aggregateBidCandles(history.bid, timeframe).map(({ timestamp, open, high, low, close }) => ({
     time: (timestamp / 1000) as UTCTimestamp,
     open, high, low, close,
   }))

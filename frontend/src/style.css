@@ -8,9 +8,9 @@
 
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }
-button, input { font: inherit; }
+button, input, select { font: inherit; }
 
-.app-shell { display: flex; height: 100dvh; min-height: 540px; flex-direction: column; gap: 12px; padding: 16px; }
+.app-shell { display: flex; height: 100dvh; min-height: 0; flex-direction: column; gap: 12px; padding: 16px; }
 .app-header { display: flex; min-height: 38px; align-items: center; }
 h1 { margin: 0; font-size: 1.25rem; font-weight: 600; }
 
@@ -20,14 +20,24 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 600; }
 .instrument span { color: #a7b3c1; font-size: 0.9rem; }
 .instrument .bid-label { color: #75c4b5; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.06em; }
 .date-controls label { display: flex; align-items: center; gap: 8px; color: #a7b3c1; font-size: 0.85rem; }
-.date-controls input { min-height: 34px; padding: 4px 8px; border: 1px solid #354250; border-radius: 4px; background: #171e28; color: #e5eaf0; color-scheme: dark; }
+.date-controls input, .pane-toolbar select { min-height: 34px; padding: 4px 8px; border: 1px solid #354250; border-radius: 4px; background: #171e28; color: #e5eaf0; color-scheme: dark; }
+.layout-controls { display: flex; align-items: center; gap: 4px; margin: 0; padding: 0; border: 0; }
+.layout-controls legend { float: left; margin-right: 8px; color: #a7b3c1; font-size: 0.85rem; line-height: 34px; }
+.layout-controls label { display: flex; align-items: center; gap: 4px; min-height: 34px; padding: 0 8px; border: 1px solid #354250; background: #171e28; cursor: pointer; }
+.layout-controls label:first-of-type { border-radius: 4px 0 0 4px; }
+.layout-controls label:last-of-type { border-radius: 0 4px 4px 0; }
+.layout-controls input { accent-color: #75c4b5; }
 button { min-height: 34px; padding: 5px 12px; border: 1px solid #4d6d79; border-radius: 4px; background: #2a4955; color: #f2f7f8; cursor: pointer; }
 button:hover { background: #355c69; }
-button:focus-visible, input:focus-visible { outline: 2px solid #85c8d4; outline-offset: 2px; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #85c8d4; outline-offset: 2px; }
 .form-error { margin: 0; color: #e2a2a6; font-size: 0.85rem; }
 
-.chart-workspace { position: relative; flex: 1; min-height: 420px; overflow: hidden; border: 1px solid #354250; border-radius: 6px; background: #171e28; }
-.chart-canvas { position: absolute; inset: 0; }
+.chart-workspace { position: relative; flex: 1; min-height: 0; overflow: auto; border: 1px solid #354250; border-radius: 6px; background: #171e28; }
+.chart-stack { display: grid; height: 100%; gap: 8px; padding: 8px; }
+.chart-pane { display: flex; min-height: 300px; flex-direction: column; overflow: hidden; border: 1px solid #354250; border-radius: 4px; }
+.pane-toolbar { display: flex; min-height: 40px; align-items: center; justify-content: space-between; gap: 12px; padding: 3px 10px; background: #1e2935; }
+.pane-toolbar label { display: flex; align-items: center; gap: 8px; color: #a7b3c1; font-size: 0.85rem; }
+.chart-canvas { position: relative; flex: 1; min-height: 0; }
 .chart-message { position: absolute; z-index: 2; top: 50%; left: 50%; max-width: min(90%, 460px); transform: translate(-50%, -50%); padding: 18px 24px; border: 1px solid #354250; border-radius: 6px; background: #1e2935; box-shadow: 0 6px 28px #0007; text-align: center; color: #e5eaf0; }
 .chart-message p { margin: 0 0 12px; }
 .chart-note { margin: 0; color: #8b9baa; font-size: 0.8rem; }
@@ -35,5 +45,4 @@ button:focus-visible, input:focus-visible { outline: 2px solid #85c8d4; outline-
 @media (max-width: 600px) {
   .app-shell { padding: 12px; }
   .date-controls { width: 100%; }
-  .chart-workspace { min-height: 360px; }
 }
