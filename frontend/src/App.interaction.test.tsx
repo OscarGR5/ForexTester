@@ -52,7 +52,7 @@ const history = {
 let host: HTMLDivElement
 let root: Root
 let rootMounted: boolean
-let request: ReturnType<typeof vi.fn>
+let request: ReturnType<typeof vi.fn<(path: string, options?: RequestInit) => Promise<Response>>>
 let defaultStops = true
 let legacyManualWorkflow = true
 
@@ -72,7 +72,15 @@ beforeEach(() => {
     return new Response(JSON.stringify({ ...history, from, to: params.get('to'),
       bid: history.bid.map((candle) => ({ ...candle, timestamp: candle.timestamp + shift })) }), { status: 200 })
   })
-  vi.stubGlobal('fetch', request)
+  // Existing execution fixtures provide trading candles only. Warm-up loading is
+  // exercised separately with prior-history fixtures and real browser checks.
+  vi.stubGlobal('fetch', (path: string, options?: RequestInit) => {
+    const params = new URL(path, 'http://test.local').searchParams
+    if (params.get('from')! < history.from) return Promise.resolve(new Response(JSON.stringify({
+      ...history, from: params.get('from'), to: params.get('to'), bid: [], ask: [],
+    })))
+    return request(path, options)
+  })
 })
 
 afterEach(async () => {
@@ -340,9 +348,9 @@ describe('shared market replay', () => {
     await act(async () => resolve(new Response(JSON.stringify({ ...history, bid: [] }))))
     expect(button('Start Replay').disabled).toBe(true)
     request.mockResolvedValueOnce(new Response(JSON.stringify({ error: 'Unavailable' }), { status: 502 }))
-    await click(button('Load Data'))
+    await changeDates()
     expect(button('Start Replay').disabled).toBe(true)
-    request.mockResolvedValueOnce(new Response(JSON.stringify({ ...history, bid: history.bid.slice(0, 1) })))
+    request.mockResolvedValueOnce(new Response(JSON.stringify({ ...history, from: '2024-01-10', to: '2024-01-11', bid: [{ ...history.bid[0], timestamp: Date.UTC(2024, 0, 10) }] })))
     await click(button('Retry'))
     await click(button('Start Replay'))
     expect(replayStatus()).toBe('Complete')
@@ -664,9 +672,12 @@ describe('trading journal and performance integration', () => {
     expect(setupRows()[0].textContent).toContain('partially closed')
     expect(setupRows()[0].textContent).toContain('Partial realized PnL')
     expect(kpi('Completed setups')).toBe('0')
+    expect(journal().querySelectorAll('.net-point')).toHaveLength(0)
     await selectJournal('Statistics scope', 'positions')
     expect(kpi('Closed positions')).toBe('1')
     expect(kpi('Net realized USD')).toBe('$0.45')
+    expect(journal().querySelectorAll('.net-point')).toHaveLength(2)
+    expect(journal().textContent).toContain('Closed-position cumulative net results')
     await click(records('Open positions').querySelector<HTMLButtonElement>('button')!)
     await click(button('Next Candle'))
     await selectJournal('Statistics scope', 'setups')
@@ -675,11 +686,12 @@ describe('trading journal and performance integration', () => {
     expect(kpi('Commissions USD')).toBe('$1.40')
     expect(kpi('Win rate')).toBe('100.00%')
     expect(setupRows()[0].textContent).toContain('completed')
-    expect(journal().querySelectorAll('.net-point')).toHaveLength(3)
+    expect(journal().querySelectorAll('.net-point')).toHaveLength(2)
     await selectJournal('Journal view', 'positions')
     expect(journal().querySelectorAll('[data-journal-position-id]')).toHaveLength(2)
     await selectJournal('Statistics scope', 'positions')
     expect(kpi('Closed positions')).toBe('2')
+    expect(journal().querySelectorAll('.net-point')).toHaveLength(3)
   })
 
   it('preserves notes through layout/timeframe changes and clears journal data on restart and history reload', async () => {
@@ -1337,5 +1349,33 @@ describe('commission configuration and replay accounting', () => {
     expect(records('Closed trades').textContent).toContain('Net realized PnL $-614.00 USD')
     await click(button('Next Candle'))
     expect(summary()).toContain('Realized commissions $14.00 USD')
+  })
+})
+
+describe('warm-up context and selected replay start', () => {
+  it('keeps real pre-roll visible and hides every candle after the selected first observation', async () => {
+    vi.stubGlobal('fetch', async (path: string) => {
+      const params = new URL(path, 'http://test.local').searchParams
+      const from = params.get('from')!, to = params.get('to')!
+      const warm = Date.parse(from) < Date.UTC(2024, 0, 9)
+      const bid = warm ? [{ ...history.bid[0], timestamp: Date.parse(from) }] : history.bid
+      return new Response(JSON.stringify({ ...history, from, to, bid, ask: bid.map(bar => ({ ...bar, open: bar.open + 0.0002, high: bar.high + 0.0002, low: bar.low + 0.0002, close: bar.close + 0.0002 })) }))
+    })
+    await act(async () => root.render(<StrictMode><App /></StrictMode>))
+    await setInput('Replay start (UTC)', '2024-01-09T02:00')
+    await click(button('Start Replay'))
+    expect(host.querySelector('time')!.textContent).toBe('2024-01-09 02:00 UTC')
+    expect(progress()).toBe('1 / 3 candles')
+    expect(chartSeries(1).data()).toHaveLength(8) // StrictMode disposed the first chart.
+    expect(chartSeries(1).data().at(-1)!.time).toBe(Date.UTC(2024, 0, 9, 2) / 1000)
+    const equity = records('Account equity and equity drawdown')
+    expect(equity.textContent).toContain('1 M1 observations')
+    expect(host.textContent).toContain('H4 Ichimoku warm-up incomplete')
+    await click(button('Buy'))
+    await click(button('Next Candle'))
+    expect(records('Open positions').textContent).toContain('2024-01-09 03:00 UTC')
+    await click(button('Restart'))
+    expect(records('Open positions').textContent).not.toContain('2024-01-09 03:00 UTC')
+    expect(host.querySelector('time')!.textContent).toBe('2024-01-09 02:00 UTC')
   })
 })

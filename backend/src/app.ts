@@ -1,7 +1,7 @@
 import { createServer, type Server } from 'node:http'
 import { loadHistory, type RatesFetcher } from './history.js'
 
-const MAX_HISTORY_DAYS = 7 // Temporary limit while testing historical downloads.
+const MAX_HISTORY_DAYS = 7 // Per-chunk provider safety limit; the frontend coordinates longer intervals.
 
 function parseUtcDate(value: string | null): number | null {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null

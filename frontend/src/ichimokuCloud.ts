@@ -32,7 +32,14 @@ export class IchimokuCloudPrimitive implements ISeriesPrimitive {
       context.save()
       context.beginPath(); context.rect(0, 0, mediaSize.width, mediaSize.height); context.clip()
       let previous: CloudVertex | null = null
-      for (const point of this.points) {
+      const visible = scale.getVisibleRange?.()
+      let low = 0, high = this.points.length
+      if (visible && typeof visible.from === 'number') {
+        while (low < high) { const middle = (low + high) >>> 1; if (this.points[middle].time < visible.from) low = middle + 1; else high = middle }
+      }
+      for (let index = Math.max(0, low - 1); index < this.points.length; index++) {
+        const point = this.points[index]
+        if (visible && typeof visible.to === 'number' && point.time > visible.to && previous) break
         const x = scale.timeToCoordinate(point.time)
         const a = this.series.priceToCoordinate(point.a), b = this.series.priceToCoordinate(point.b)
         if (x === null || a === null || b === null) { previous = null; continue }

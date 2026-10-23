@@ -65,7 +65,7 @@ describe('historical chart data', () => {
 
   it('uses the backend UTC date limits', () => {
     expect(validateDateRange(range, '2024-01-11')).toBeNull()
-    expect(validateDateRange({ from: '2024-01-01', to: '2024-01-09' }, '2024-01-11')).not.toBeNull()
+    expect(validateDateRange({ from: '2024-01-01', to: '2024-04-02' }, '2024-04-03')).not.toBeNull()
     expect(validateDateRange({ from: '2024-01-09', to: '2024-01-12' }, '2024-01-11')).not.toBeNull()
     expect(validateDateRange({ from: '2024-02-30', to: '2024-03-01' }, '2024-03-02')).not.toBeNull()
   })
@@ -76,7 +76,7 @@ describe('historical chart data', () => {
     vi.stubGlobal('fetch', mock)
     await expect(fetchHistory(range)).resolves.toMatchObject({ bid: [bid], ask: [ask] })
     expect(mock.mock.calls[0][0]).toBe('/api/history?symbol=EURUSD&from=2024-01-09&to=2024-01-10')
-    await expect(fetchHistory(range)).rejects.toThrow('Provider unavailable')
+    await expect(fetchHistory(range)).rejects.toThrow('Historical data is temporarily unavailable.')
   })
 
   it('reports connectivity failures', async () => {

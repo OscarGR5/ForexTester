@@ -10,6 +10,6 @@ describe('application shell', () => {
     expect(html).toContain('Bid')
     expect(html).toContain('value="2024-01-09"')
     expect(html).toContain('value="2024-01-10"')
-    expect(html).toContain('Loading EURUSD M1 bid candles')
+    expect(html).toContain('Loading EURUSD bid/ask history')
   })
 })

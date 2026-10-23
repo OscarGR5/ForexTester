@@ -62,8 +62,8 @@ export function validateDateRange({ from, to }: DateRange, todayUtc = new Date()
   const toMs = utcDate(to)
   const todayMs = utcDate(todayUtc)
   if (fromMs === null || toMs === null || todayMs === null || fromMs >= toMs ||
-    toMs > todayMs || (toMs - fromMs) / DAY_MS > 7) {
-    return 'Choose 1 to 7 completed UTC days. Start is inclusive; end is exclusive.'
+    toMs > todayMs || (toMs - fromMs) / DAY_MS > 90) {
+    return 'Choose 1 to 90 completed UTC days. Start is inclusive; end is exclusive.'
   }
   return null
 }
@@ -117,7 +117,7 @@ export async function fetchHistory(range: DateRange, signal?: AbortSignal): Prom
   const body: unknown = await response.json().catch(() => null)
   if (!response.ok) {
     const message = isRecord(body) && typeof body.error === 'string'
-      ? body.error
+      ? 'Historical data is temporarily unavailable.'
       : `Historical data request failed (HTTP ${response.status}).`
     throw new Error(message)
   }

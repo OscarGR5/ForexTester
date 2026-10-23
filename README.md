@@ -38,7 +38,7 @@ npm run dev:frontend
 
 Open the URL printed by Vite, normally http://127.0.0.1:5173. The API health check is at http://127.0.0.1:3001/api/health. Keep both servers running: Vite forwards same-origin `/api` requests to the backend at `http://127.0.0.1:3001`.
 
-The chart automatically loads EURUSD M1 bid candles for January 9, 2024 (inclusive) through January 10, 2024 (exclusive). Use **Start date** and **End date**, then **Load Data**, to choose another period. Dates are UTC, and the end date must be no later than the current UTC date. Each request covers at most seven completed days.
+The chart automatically loads EURUSD M1 bid candles for January 9, 2024 (inclusive) through January 10, 2024 (exclusive). Use **Start date** and **End date**, then **Load Data**, to choose another period. Dates are UTC, and the end date must be no later than the current UTC date. Select up to **90 completed UTC calendar days**. Loading includes 30 earlier calendar days for chart/indicator warm-up, using multiple backend requests of no more than seven days each.
 
 Choose **1**, **2**, or **3** charts with the **Charts** control. Multiple charts stack vertically with equal initial heights; the workspace scrolls when they cannot fit. Each chart has its own **Timeframe** selector: M1, M5, M15, H1, or H4. Charts may use the same timeframe. The initial selections are M1, M5, and H1, and selections remain when switching layouts.
 
@@ -48,14 +48,14 @@ Zooming and horizontal scrolling synchronize the visible UTC period across displ
 
 ## Market replay
 
-The initial chart view shows the full loaded history. Choose **Start Replay** to hide that history and enter replay paused at the first available M1 bid candle. The toolbar shows the simulation timestamp in UTC, status (**Ready**, **Playing**, **Paused**, or **Complete**), and revealed/total M1 candle count.
+The initial chart view shows the full loaded history. Choose a **Replay start (UTC)** within the selected trading interval, then **Start Replay**. Replay starts paused at the first available M1 bid candle at or after that timestamp. The default is the selected start date. All earlier loaded candles remain visible as historical context; no subsequent trading-period candles are revealed. The toolbar shows the simulation timestamp in UTC, status (**Ready**, **Playing**, **Paused**, or **Complete**), and revealed/total M1 candle count.
 
-- **Play** advances one available M1 candle every 250 ms.
+- **Play** advances every 250 ms. **Replay speed** selects **1×**, **10×**, or **100×** available M1 observations per interval. Every intervening observation still passes through execution, stops, fees and equity accounting chronologically; charts refresh once per batch.
 - **Pause** freezes the revealed market state.
 - **Next Candle** advances exactly one available M1 candle while paused.
-- **Restart** returns the current dataset to its first candle, paused.
+- **Restart** returns to the chosen replay start, paused, retaining historical context and clearing trading and equity observations.
 
-Playback stops automatically at the final candle and shows **Complete**. Controls are disabled when their actions are unavailable. A dataset containing one candle is complete immediately on starting replay. There is no speed selector or saved replay session.
+Playback stops automatically at the final candle and shows **Complete**. Controls are disabled when their actions are unavailable. A dataset containing one candle is complete immediately on starting replay. There is no saved replay session.
 
 All charts share one simulation clock, regardless of their timeframes or the number of charts displayed. Timeframe and layout changes preserve the clock, playing/paused state, and revealed history. Loading a historical period clears the session and returns to the full-history viewer; start a new replay explicitly. Editing date inputs alone does not load data or reset replay. Missing M1 minutes and weekend closures are skipped directly, without synthetic candles or waiting through the missing period.
 
@@ -63,7 +63,7 @@ During replay, chart data is built only from the revealed M1 prefix. Each M1 can
 
 Chart instances remain alive while replay advances or timeframes change. The current series candle is updated and new buckets are appended. The synchronized view follows the latest revealed data when viewing the replay edge. Scrolling back preserves an older view while playback continues; navigating back to the edge resumes following. Zooming, scrolling, and crosshairs have access only to revealed prices. Different candle spacing and minimum zoom limits can still produce slightly different views on coarse timeframes, especially early in replay when only one bucket exists.
 
-Replay inherits the historical-data limitations below: EURUSD bid charts only, provider gaps and availability, completed UTC days, and at most seven days per request. Simulated market entries and manual exits use this same clock, as described below. The session-only Trading Journal and performance dashboard use only executions already revealed by replay. Tick replay and replay persistence are not implemented. Independent automatic stop-loss execution uses the same revealed M1 clock.
+Replay inherits the historical-data limitations below: EURUSD bid charts only, provider gaps and availability, completed UTC days, up to 90 selected days, and at most seven days per backend chunk. Simulated market entries and manual exits use this same clock, as described below. The session-only Trading Journal and performance dashboard use only executions already revealed by replay. Tick replay and replay persistence are not implemented. Independent automatic stop-loss execution uses the same revealed M1 clock.
 
 ## Simulated trading
 
@@ -96,7 +96,7 @@ Trading state is session-only, in memory. The pure TypeScript engine in `fronten
 
 Take-profit functionality is intentionally excluded because the trading workflow uses stop-losses and manual profit-taking only.
 
-Current limitations: EURUSD only; M1 candle replay, with no intraminute or tick-price assumptions. **Automatic trailing stops and break-even rules, swaps, financing, margin/leverage simulation, dynamic account balances/equity, full mark-to-market equity curves, strategy signals, and persistence are not implemented.** The historical-data backend and its seven-day request limit are unchanged.
+Current limitations: EURUSD only; M1 candle replay, with no intraminute or tick-price assumptions. **Automatic trailing stops and break-even rules, swaps, financing, margin/leverage simulation, strategy signals, and persistence are not implemented.** The historical-data backend and its seven-day request limit are unchanged.
 
 ### Risk-based position sizing and combined exposure
 
@@ -127,7 +127,7 @@ Two independent 1% allocations fit within the default 2% cap. A new percentage r
 
 A pending manual close keeps the position's exposure until the exit executes. Closed positions release their exposure. Moving an SL closer to entry reduces current planned risk; break-even or profit stops have **zero gross planned downside under the SL-level assumption**. Widening a stop increases exposure and is rejected if open exposure plus reservations would exceed the cap. Existing current-price validation, future-candle effectiveness, stop history, and coverage records still apply. SL changes never resize a position. Each filled position stores its original planned USD risk, original percentage, and sizing reference balance separately from current planned exposure, preserving the entry risk for later R-multiple statistics.
 
-Planned risk is **not a guaranteed maximum realized loss**. Adverse gaps can fill beyond the SL and produce larger losses; OHLC history cannot reconstruct intraminute paths, and slippage is not modeled. Sizing currently excludes **commissions, swaps, financing, and margin requirements**. There is no leverage, liquidation, currency conversion, or dynamic equity model. The seven-day historical-data limit is unchanged.
+Planned risk is **not a guaranteed maximum realized loss**. Adverse gaps can fill beyond the SL and produce larger losses; OHLC history cannot reconstruct intraminute paths, and slippage is not modeled. Sizing currently excludes **commissions, swaps, financing, and margin requirements**. There is no leverage, liquidation, currency conversion, or equity-based risk sizing. The reference balance remains fixed even as simulated cash and equity change.
 
 ### Configurable commissions and net USD PnL
 
@@ -171,7 +171,7 @@ For 5.00 lots with $1,000 original gross SL risk and $7.00 per lot round-trip, e
 
 The rate locks for the entire active replay, including pauses and completion. **Restart** clears all execution records, position fees, and summary totals while keeping the rate locked and unchanged. History reload also clears records and totals, retains the rate, and unlocks settings before the next replay. Chart layout, timeframe, and indicator changes preserve fees. React StrictMode and batched playback process chronological candle transitions idempotently. Settings and records are memory-only and do not survive a page refresh.
 
-This simple symmetrical model may differ from a real broker because of **minimum ticket fees, broker-side rounding, account-currency denomination, tiered fee schedules, or other broker-specific charging practices**. No broker preset, FX conversion, swaps, overnight financing, extra slippage, dynamic balance/equity, or margin/leverage simulation is added. Configurations must be finite; a fill whose commission overflows JavaScript's numeric range is rejected without charging a fee. Historical data, M1 OHLC limitations, stop coverage warnings, and the seven-day history limit still apply.
+This simple symmetrical model may differ from a real broker because of **minimum ticket fees, broker-side rounding, account-currency denomination, tiered fee schedules, or other broker-specific charging practices**. No broker preset, FX conversion, swaps, overnight financing, extra slippage, or margin/leverage simulation is added. Configurations must be finite; a fill whose commission overflows JavaScript's numeric range is rejected without charging a fee. Historical data and M1 OHLC limitations, stop coverage warnings, and the seven-day per-request limit still apply.
 
 ### Independent stop-loss execution
 
@@ -194,7 +194,7 @@ Missing or invalid required quote-side observations produce persistent **SL cove
 
 Closed records retain SL, modification history, coverage warnings, actual exit price, triggering candle timestamp, exit reason (**manual** or **stop_loss**), and stop fill type (**level** or **gap-through opening**). Rejections, stops, positions, orders, modifications, warnings, and closed records reset with the trading session. Positions still open at the final candle remain open; no forced exit is assumed.
 
-These are M1 OHLC assumptions, not tick reconstruction: normal intrabar crossings fill at SL without modeling intraminute sequence, liquidity, or slippage beyond adverse opening gaps. Missing periods remain uncertain. Bid charts cannot display ask spikes. There are no take profits, trailing stops, automatic break-even adjustments, swaps, financing, simulated account balances, or persistence. The seven-day historical request limit is unchanged.
+These are M1 OHLC assumptions, not tick reconstruction: normal intrabar crossings fill at SL without modeling intraminute sequence, liquidity, or slippage beyond adverse opening gaps. Missing periods remain uncertain. Bid charts cannot display ask spikes. There are no take profits, trailing stops, automatic break-even adjustments, swaps, financing, or persistence. The seven-day historical request limit is unchanged.
 
 ## Trading Journal and setup grouping
 
@@ -226,11 +226,34 @@ The journal is **session only and not permanently saved**. Timeframe/layout chan
 
 ### Realized PnL and drawdown
 
-The performance chart always uses **closed-position events**, independent of the KPI scope. It starts at $0 cumulative net PnL, adds each closed position's net result once, and orders events by exit timestamp, preserving deterministic engine execution order within the same M1 timestamp. The horizontal axis is closure event number, rather than elapsed time, so simultaneous exits remain distinct. The responsive SVG charts add no dependency or market-chart subscriptions. Point tooltips and the expandable event table retain exact UTC timestamps. The table includes the starting baseline, cumulative net PnL, realized balance, high-water mark, and drawdown for each event.
+**Statistics scope** also controls the realized curve and its drawdown:
 
-Realized balance = fixed reference balance + cumulative closed-position net PnL. The high-water mark starts at the initial reference balance and rises only when realized balance makes a new peak. Drawdown USD = high-water mark − current realized balance. Drawdown % = drawdown USD ÷ positive high-water mark × 100. Maximum dollar and percentage drawdowns are tracked across chronological events, including early losses and multiple exits at one timestamp. If realized balance reaches zero or below, USD drawdown remains valid; affected percentage observations and maximum percentage reporting become **unavailable**, with an explicit warning.
+- **Completed-setup cumulative net results:** include completed setups only. Attribute the combined net result at the final position exit, ordered by completion timestamp. A two-position setup contributes one event; partially closed setups contribute none. This deferral is analytical attribution, not actual account cash flow or a broker balance.
+- **Closed-position cumulative net results:** include each individual closed position at its simulated exit, including partial setups. Same-timestamp closes retain deterministic engine order.
 
-This is a **closed-trade-only realized balance curve, not full mark-to-market account equity**. Open-position valuations do not enter it. Entry commissions on still-open positions have already been incurred, but enter the curve with the position's full net result only when it closes. Realized drawdown therefore has a closed-position event basis even when the dashboard counts completed setups. Coverage warnings remain on execution records; the chart cannot reconstruct missing prices or intraminute equity. Nothing looks ahead to unrevealed exits or forces open positions closed at the end of history.
+Both curves start at $0 cumulative net results. The horizontal axis is observation number so simultaneous events stay distinct. Tooltips and the expandable event table retain exact UTC completion times. **Maximum completed-setup drawdown** and **Maximum closed-position realized drawdown** use the fixed reference balance plus the selected cumulative net results, with the high-water mark initialized at that balance. USD drawdown is high-water mark minus the current attributed value. Percentage drawdown divides by the positive high-water mark; percentage reporting becomes unavailable if the attributed value reaches zero or below. Neither curve includes open-position valuation.
+
+### Account equity and equity drawdown
+
+The independent **Mark-to-market account equity** curve records state after every revealed M1 trading observation, including all intermediate observations at fast playback speeds:
+
+```text
+Cash = reference balance + gross realized PnL
+       - entry commissions on every executed entry - exit commissions on closed positions
+Equity = cash + open-position gross unrealized PnL
+       = reference balance + closed-position net realized PnL
+         + open-position gross unrealized PnL - open-position incurred entry commissions
+```
+
+Entry commissions reduce cash and equity immediately. Closure replaces the open mark with realized cash and charges only the exit commission; entry fees are not counted twice. Estimated future exit commissions are excluded from equity. The existing net mark-to-close estimate remains separate. Moving an SL does not create a cash transaction. A $10,000 account with a 1-lot long at ask 1.10020, bid close 1.10000 and $7 round-trip commission has $9,996.50 cash, -$20 unrealized, and $9,976.50 equity. Closing there leaves $9,973.00 cash/equity.
+
+Longs use the current **bid close**; shorts use the current **ask close**. Only the sides needed by open positions are required. If any required side is missing, cash remains known while portfolio unrealized PnL, equity and current drawdown are unavailable for that observation. The condition is recorded and counted. No stale quote is reused. Valuation resumes on fresh quotes without reconstructing the missing interval. Lines break across missing valuations and M1 clock gaps, including weekends, rather than interpolating prices/equity. Existing SL coverage warnings remain independent.
+
+**Maximum mark-to-market equity drawdown** uses every valid M1 equity observation, with an initial high-water mark equal to the reference balance. Current drawdown USD = high-water mark minus equity; percentage = USD drawdown / positive high-water mark × 100. Missing valuations do not change the high-water mark or create drawdown observations. If equity reaches zero or below, percentage reporting becomes unavailable with an explicit warning; USD drawdown remains available. The panel shows current cash, equity, gross unrealized PnL, maximum equity, current drawdown and maximum equity drawdown. It is independent of Statistics scope. An optional cash reference line separates execution cash flow from open valuation.
+
+This is the closest available simulated account drawdown, subject to **M1 OHLC** timing: snapshots are after processing a complete revealed candle at its opening timestamp, not tick-level or continuously observable equity. No unrevealed candle is used. Equity excludes **swaps/overnight financing, additional slippage, broker-specific margin rules, and account-currency conversion**. Sizing still uses the fixed reference balance, with no compounding or equity-based risk sizing. Open positions are never force-closed at the end of history.
+
+Displayed equity points are reduced by screen-width time buckets when necessary, retaining endpoints, equity/cash extrema, drawdown peaks and unavailable-region boundaries. The full-precision ledger, financial calculations and maximum drawdown always retain every M1 event.
 
 ### Journal CSV schema
 
@@ -246,7 +269,7 @@ For open positions, exit timestamp/price/reason, exit and total realized commiss
 
 CSV uses CRLF record separators, double-quoted fields, doubled embedded quotes, and preserves commas/newlines inside notes. User-entered labels, tags, and notes starting with `=`, `+`, `-`, or `@`, including after leading whitespace/control characters, receive a leading apostrophe to prevent spreadsheet formulas. This export-only protection preserves original in-memory text. CSV import is not implemented.
 
-The existing bid/ask spread, gross risk cap, percentage/manual sizing, per-lot commission model, and seven-day history limit are unchanged. No take profits, new order types/pairs, compounding, swaps, financing, or automatic strategies are introduced.
+The existing bid/ask spread, gross risk cap, percentage/manual sizing, per-lot commission model, are unchanged. No take profits, new order types/pairs, compounding, swaps, financing, or automatic strategies are introduced.
 
 ## Chart appearance
 
@@ -279,9 +302,11 @@ There are no filled or invented warm-up values. Default Bollinger Bands need 20 
 
 Ichimoku Span A is the average of Tenkan and Kijun; Span B is the midpoint of the 52-period high/low. They plot 26 candle positions ahead. Within known history, displacement follows actual candle positions across gaps. Beyond the revealed edge, timestamps extend by the selected timeframe interval, using whitespace time slots without OHLC data. As a gap becomes known, projected timestamps are realigned to the newly revealed candle positions. Cloud fill is split at interpolated Span A/B intersections so its color changes at the crossover. The chart reserves room for the projected horizon at the current edge; synchronized crosshairs still require a real price candle.
 
-During replay, all indicators use only the revealed M1 prefix aggregated to the selected timeframe. The current incomplete higher-timeframe candle recalculates as M1 candles arrive. Forward Ichimoku positions contain calculations from known candles only, and Chikou uses already known closing prices. Restart clears prior indicator observations and recalculates from the first revealed candle. Timeframe changes recalculate from the available prefix; loading dates returns to the full-history viewer. Indicators do not request additional history.
+During replay, all indicators use only the revealed M1 prefix aggregated to the selected timeframe. The current incomplete higher-timeframe candle recalculates as M1 candles arrive. Forward Ichimoku positions contain calculations from known candles only, and Chikou uses already known closing prices. Restart clears prior indicator observations and recalculates from the chosen start plus its earlier historical context. Timeframe changes recalculate from the available prefix; loading dates returns to the full-history viewer. The historical loader fetches warm-up history before replay starts; indicators never fetch or inspect future prices.
 
-The seven-day backend limit remains in place. Short ranges and coarse timeframes may never provide enough candles for default settings, especially around market closures. In particular, seven calendar days contain at most 42 H4 positions, so default H4 Span B/cloud cannot warm up in one request. Reduce periods to inspect shorter histories; the application does not pad them or fetch extra data.
+The loader adds **30 calendar days of pre-roll** before the requested trading start through the same seven-day chunk coordinator. It initializes M1/M5/M15/H1/H4 charts from real UTC-aligned candles. Pre-roll and any candles before a later chosen replay start are context only: they create no engine executions, journal outcomes, or equity snapshots. At replay start the first available trading candle is revealed, with no later prices available to indicators.
+
+Default H4 Ichimoku checks actual prior H4 observation count: 52 observations produce Span B, and **78 observations (52 + 26 displacement)** make the paired cloud available at the replay edge. The UI warns below that count; 30 calendar days alone is no guarantee because weekends and provider gaps reduce observations. Forward spans remain causal projections from known prices, never future market candles. Custom settings retain their own natural warm-up. At the provider boundary, history before the library's documented EURUSD M1 start is empty and any remaining warm-up warning stays visible; candles are never padded.
 
 ## Development commands
 
@@ -294,7 +319,9 @@ npm run start --workspace backend # starts the built API after npm run build
 
 ## Historical EURUSD data
 
-The backend downloads EURUSD 1-minute bid and ask OHLC candles from Dukascopy through `dukascopy-node` when a historical period is requested. No broker connection or file import is needed. Dates are UTC calendar dates: `from` is inclusive and `to` is exclusive. Both dates must use `YYYY-MM-DD`, and the end date must be no later than the current UTC date, so only completed days are requested. A temporary 7-day maximum per request limits downloads during testing.
+The backend downloads EURUSD 1-minute bid and ask OHLC candles from Dukascopy through `dukascopy-node` when a historical period is requested. No broker connection or file import is needed. Dates are UTC calendar dates: `from` is inclusive and `to` is exclusive. Both dates must use `YYYY-MM-DD`, and the end date must be no later than the current UTC date, so only completed days are requested. The **seven-day per-request maximum** remains a provider safety limit. The browser splits the 30-day pre-roll and selected interval into chronological nonoverlapping chunks, with **two chunks downloading concurrently**. Each response is validated before independently merging bid and ask, sorting timestamps and rejecting conflicting duplicate observations. Weekend and missing-minute gaps remain absent. No selected interval is accepted until every chunk succeeds.
+
+Progress shows completed/total chunks. A failed chunk is identified by number and UTC boundaries; **Retry** reuses successful chunks in the mounted loader's bounded memory cache (40 chunks) and downloads unfinished ones. Dukascopy's daily disk cache avoids upstream repeats even when new chunk boundaries overlap existing days. Loading a new range aborts obsolete browser requests and ignores their results. The provider library has no cancellation interface, so server-side work already running may finish populating its cache. Error responses expose no provider secrets or stack traces.
 
 With the backend running, request one day:
 
@@ -323,4 +350,11 @@ To run a live integration check, start the backend and run the `curl` command ab
 
 ## Current status
 
-The React/Vite frontend displays one to three synchronized historical EURUSD bid candlestick charts using TradingView Lightweight Charts. The Node.js backend exposes `GET /api/health` and `GET /api/history`. Charts preserve market gaps. The full-history viewer remains available until replay starts; manual replay then progressively reveals M1 data with synchronized partial higher-timeframe candles. Bollinger Bands, slow Stochastic, and Ichimoku Cloud are available independently on each chart, including during replay. Automatic indicator presets and simulated market orders are available. Independent adjustable stop-losses execute on revealed M1 bid/ask data, with gap-through fills and coverage warnings. Configurable USD per-lot commissions, gross/net PnL, open mark-to-close estimates, explicit setup grouping, session-only journal metadata, setup/position analytics, realized PnL/drawdown, and safe CSV export are available. Take profits and persistent records are intentionally excluded.
+The React/Vite frontend displays one to three synchronized historical EURUSD bid candlestick charts using TradingView Lightweight Charts. The Node.js backend exposes `GET /api/health` and `GET /api/history`. Charts preserve market gaps. The full-history viewer remains available until replay starts; manual replay then progressively reveals M1 data with synchronized partial higher-timeframe candles. Bollinger Bands, slow Stochastic, and Ichimoku Cloud are available independently on each chart, including during replay. Automatic indicator presets and simulated market orders are available. Selected history extends to 90 days plus 30-day warm-up; replay supports a chosen UTC start and 1×/10×/100× speeds. Independent adjustable stop-losses execute on revealed M1 bid/ask data, with gap-through fills and coverage warnings. Configurable USD per-lot commissions, gross/net PnL, open mark-to-close estimates, explicit setup grouping, session-only journal metadata, setup/position analytics, scope-aligned realized results/drawdown, M1 account equity/drawdown, and safe CSV export are available. Take profits and persistent records are intentionally excluded.
+
+
+## Replay performance
+
+Charts append M1/timeframe aggregates and synchronize only the changed tail. Indicator calculation replays a bounded dependency window, including Ichimoku displacement and stochastic smoothing, instead of rebuilding historical observations on every step. Chart instances survive playback and timeframe changes. Settings changes, restart, new history and displaced timestamp realignment across gaps can require series replacement. Ordinary candle updates use series updates. A persistent equity ledger appends each M1 snapshot without copying previous points or recalculating financial history. Price-only events preserve journal record identities so large journal tables do not rerender unnecessarily.
+
+Initial history parsing, chart installation, indicator initialization and visualization downsampling still grow with the loaded history. Longer ranges also increase provider download time and in-memory data volume. The largest allowed indicator periods are more expensive than defaults. Run deterministic 1-, 30- and 90-day CPU fixtures with `node_modules/.bin/tsx scripts/replay-benchmark.mts`. See [Task 15 verification](docs/task-15-verification.md) for measured operations, real-browser checks and limitations.
