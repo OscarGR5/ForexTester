@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { CandlestickSeries, ColorType, LineStyle, createChart, type CandlestickData, type IChartApi, type ISeriesApi, type Time, type UTCTimestamp } from 'lightweight-charts'
+import { CandlestickSeries, ColorType, LineStyle, createChart, type CandlestickData, type IChartApi, type IPriceLine, type ISeriesApi, type Time, type UTCTimestamp } from 'lightweight-charts'
 import { ChartSynchronizer } from './chartSync'
 import { useReplay } from './useReplay'
+import type { Position } from './trading'
 import { useTrading } from './useTrading'
 import { TradingPanel } from './TradingPanel'
 import { IndicatorControls } from './IndicatorControls'
@@ -17,16 +18,18 @@ interface ChartPaneProps {
   timeframe: Timeframe
   candles: CandlestickData<UTCTimestamp>[]
   synchronizer: ChartSynchronizer
+  positions: Position[]
   settings: IndicatorSettings
   onSettingsChange: (id: number, settings: IndicatorSettings) => void
   onTimeframeChange: (id: number, timeframe: Timeframe) => void
 }
 
-function ChartPane({ id, timeframe, candles, synchronizer, onTimeframeChange, settings, onSettingsChange }: ChartPaneProps) {
+function ChartPane({ id, timeframe, candles, synchronizer, onTimeframeChange, settings, onSettingsChange, positions }: ChartPaneProps) {
   const container = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
   const indicatorsRef = useRef<IndicatorSeries | null>(null)
+  const stopLines = useRef(new Map<string, IPriceLine>())
   const previousSettings = useRef<IndicatorSettings | null>(null)
   const unregisterRef = useRef<(() => void) | null>(null)
   const previous = useRef<{ candles: typeof candles; timeframe: Timeframe; synchronizer: ChartSynchronizer } | null>(null)
@@ -72,6 +75,7 @@ function ChartPane({ id, timeframe, candles, synchronizer, onTimeframeChange, se
       indicatorsRef.current?.dispose()
       indicatorsRef.current = null
       previousSettings.current = null
+      stopLines.current.clear()
       chart.remove()
       chartRef.current = null
       seriesRef.current = null
@@ -118,6 +122,24 @@ function ChartPane({ id, timeframe, candles, synchronizer, onTimeframeChange, se
     previousSettings.current = settings
     previous.current = { candles, timeframe, synchronizer }
   }, [id, candles, synchronizer, timeframe, settings])
+
+  useLayoutEffect(() => {
+    const series = seriesRef.current!
+    const ids = new Set(positions.map((position) => position.id))
+    for (const [id, line] of stopLines.current) {
+      if (!ids.has(id)) { series.removePriceLine(line); stopLines.current.delete(id) }
+    }
+    for (const position of positions) {
+      const ordinal = Number(position.id.split('-').at(-1))
+      const overlapping = positions.filter((item) => item.stopPrice === position.stopPrice).map((item) => item.id)
+      const options = { price: position.stopPrice, color: ordinal % 2 ? '#ef9a9a' : '#ffcc80', lineWidth: 1 as const,
+        lineStyle: ordinal % 2 ? LineStyle.Dashed : LineStyle.Dotted, axisLabelVisible: true,
+        title: `SL ${overlapping.join(' / ')} · ${position.stopPrice.toFixed(5)}` }
+      const line = stopLines.current.get(position.id)
+      if (line) line.applyOptions(options)
+      else stopLines.current.set(position.id, series.createPriceLine(options))
+    }
+  }, [positions])
 
   return (
     <section className="chart-pane" aria-label={`Chart ${id + 1}: EURUSD ${timeframe} bid`}
@@ -233,7 +255,7 @@ export function App() {
       <div className="chart-workspace" aria-label="EURUSD bid chart workspace">
         <div className="chart-stack" style={{ gridTemplateRows: `repeat(${chartCount}, minmax(auto, 1fr))` }}>
           {timeframes.slice(0, chartCount).map((timeframe, id) => <ChartPane key={id} id={id} timeframe={timeframe}
-            candles={candles[timeframe]} synchronizer={synchronizer} onTimeframeChange={changeTimeframe}
+            positions={trading.state.positions} candles={candles[timeframe]} synchronizer={synchronizer} onTimeframeChange={changeTimeframe}
             settings={indicatorSettings[id][timeframe]!} onSettingsChange={(chartId, next) => {
               synchronizer.deactivate()
               setIndicatorSettings((current) => current.map((value, index) => index === chartId ? { ...value, [timeframe]: next } : value))
@@ -243,7 +265,7 @@ export function App() {
         {status === 'error' && <div className="chart-message" role="alert"><p>{error}</p><button type="button" onClick={() => setRequestedRange({ ...requestedRange })}>Retry</button></div>}
         {status === 'ready' && history?.bid.length === 0 && <div className="chart-message" role="status">No bid candles are available for this period.</div>}
       </div>
-      <TradingPanel state={trading.state} permission={trading.permission} onEntry={trading.enter} onCancel={trading.cancel} onClose={trading.close} />
+      <TradingPanel state={trading.state} permission={trading.permission} onEntry={trading.enter} onCancel={trading.cancel} onClose={trading.close} onModifyStop={trading.modifyStop} />
       <p className="chart-note">UTC dates · Start inclusive · End exclusive · Up to 7 completed days</p>
     </main>
   )

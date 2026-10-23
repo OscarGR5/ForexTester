@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { HistoryResponse } from './history'
-import { cancelEntry, createTradingState, observeCandle, requestClose, requestEntry, type Direction, type TradingPermission, type TradingState } from './trading'
+import { cancelEntry, createTradingState, observeCandle, modifyStop, requestClose, requestEntry, type Direction, type TradingPermission, type TradingState } from './trading'
 
 interface ReplayClock { epoch: number; revealed: number; active: boolean; playing: boolean; complete: boolean }
 interface Session { history: HistoryResponse | null; epoch: number; processed: number; state: TradingState }
@@ -33,7 +33,8 @@ export function useTrading(history: HistoryResponse | null, replay: ReplayClock)
   return {
     state: current.state,
     permission,
-    enter: (direction: Direction, lots: number) => update((state) => requestEntry(state, direction, lots, permission)),
+    enter: (direction: Direction, lots: number, stopPrice: number) => update((state) => requestEntry(state, direction, lots, stopPrice, permission)),
+    modifyStop: (id: string, price: number) => update((state) => modifyStop(state, id, price, permission)),
     cancel: (id: string) => update((state) => cancelEntry(state, id)),
     close: (id: string) => update((state) => requestClose(state, id, permission)),
   }
