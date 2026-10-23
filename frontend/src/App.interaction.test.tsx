@@ -7,7 +7,7 @@ import { App } from './App'
 import { TIMEFRAMES, TIMEFRAME_MS, type Candle } from './history'
 
 vi.mock('lightweight-charts', () => ({
-  CandlestickSeries: {}, LineSeries: {}, LineStyle: { Dashed: 2 }, ColorType: { Solid: 'solid' },
+  CandlestickSeries: {}, LineSeries: {}, LineStyle: { Dashed: 2, Dotted: 1 }, ColorType: { Solid: 'solid' },
   createChart: vi.fn(() => {
     let range = { from: 0, to: 2 }
     const scale = { getVisibleLogicalRange: () => range, fitContent: vi.fn(),
@@ -29,7 +29,7 @@ vi.mock('lightweight-charts', () => ({
         else values.push({ ...candle })
       }),
       data: () => values,
-      attachPrimitive: vi.fn(), detachPrimitive: vi.fn(), createPriceLine: vi.fn(),
+      attachPrimitive: vi.fn(), detachPrimitive: vi.fn(), createPriceLine: vi.fn((options) => ({ applyOptions: vi.fn(), options: () => options })), removePriceLine: vi.fn(),
       priceScale: () => ({ applyOptions: vi.fn() }),
     }
     }
@@ -53,8 +53,10 @@ let host: HTMLDivElement
 let root: Root
 let rootMounted: boolean
 let request: ReturnType<typeof vi.fn>
+let defaultStops = true
 
 beforeEach(() => {
+  defaultStops = true
   vi.clearAllMocks()
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
   host = document.createElement('div')
@@ -79,6 +81,7 @@ afterEach(async () => {
 })
 
 async function click(input: HTMLInputElement | HTMLButtonElement) {
+  if (defaultStops && ['Buy', 'Sell'].includes(input.textContent ?? '')) await setInput('SL price', input.textContent === 'Buy' ? '0.5' : '2')
   await act(async () => input.click())
 }
 
@@ -587,6 +590,13 @@ function checked(chart: number, indicator: string) {
 }
 function records(name: string) { return host.querySelector<HTMLElement>(`[aria-label="${name}"]`)! }
 function recordCount(name: string) { return records(name).querySelectorAll('li').length }
+async function setInput(label: string, value: string) {
+  const input = [...host.querySelectorAll<HTMLInputElement>('input')].find((input) => input.getAttribute('aria-label') === label || input.closest('label')?.textContent === label)!
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value)
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+}
 async function volume(value: string) {
   const input = host.querySelector<HTMLInputElement>('.trading-controls input')!
   await act(async () => {
@@ -673,6 +683,7 @@ describe('simulated trading with the shared replay clock', () => {
       await click(button('Buy'))
       expect(recordCount('Pending orders')).toBe(0)
     }
+    await setInput('SL price', '0.5')
     await volume('0.025')
     expect(button('Buy').disabled).toBe(false)
     vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0))
@@ -711,7 +722,7 @@ describe('simulated trading with the shared replay clock', () => {
     expect(positions[1].textContent).toContain('Sell · 0.03 lots')
     expect(positions[1].textContent).toContain('Entry 2024-01-09 01:00 UTC @ 1.10100')
     expect(positions[1].textContent).toContain('Current 1.10270 · Unrealized -17.0 pips · $-5.10 gross')
-    const closeButtons = [...records('Open positions').querySelectorAll('button')]
+    const closeButtons = [...records('Open positions').querySelectorAll<HTMLButtonElement>('button[aria-label^="Close position"]')]
     await click(button('Play'))
     expect(closeButtons.every((button) => button.disabled)).toBe(true)
     await click(button('Pause'))
@@ -828,5 +839,141 @@ describe('simulated trading with the shared replay clock', () => {
     expect(records('Open positions').textContent).toContain('Current 1.10350')
     // The future bid close is still unavailable at this replay clock.
     expect(records('Open positions').textContent).not.toContain('99999')
+  })
+})
+
+describe('stop-loss controls and chart lifecycle', () => {
+  function stopHistory() {
+    const bid = [
+      [1.1, 1.0998, 1.1003, 1.1001],
+      [1.1001, 1.0998, 1.1004, 1.1002],
+      [1.1003, 1.1001, 1.1021, 1.102],
+      [1.102, 1.1008, 1.1022, 1.1015],
+      [1.1015, 1.0988, 1.1017, 1.099],
+      [1.099, 1.0988, 1.0993, 1.0992],
+    ].map(([open, low, high, close], index) => ({ timestamp: Date.UTC(2024, 0, 9) + index * 60_000, open, low, high, close }))
+    return { ...history, bid, ask: bid.map((candle) => ({ ...candle, open: candle.open + 0.0002,
+      low: candle.low + 0.0002, high: candle.high + 0.0002, close: candle.close + 0.0002 })) }
+  }
+  beforeEach(() => { defaultStops = false; request.mockImplementation(async () => new Response(JSON.stringify(stopHistory()))) })
+  const priceSeries = (chartIndex = 0) => vi.mocked(createChart).mock.results[chartIndex].value.addSeries.mock.results[0].value
+
+  it('requires SL, preserves independent pending prices, and surfaces actual-fill rejections', async () => {
+    await act(async () => root.render(<App />))
+    await click(button('Start Replay'))
+    expect(button('Buy').disabled).toBe(true)
+    await setInput('SL price', '1.101')
+    await click(button('Buy'))
+    await setInput('SL price', '1.103')
+    await volume('0.03'); await click(button('Sell'))
+    expect(records('Pending orders').textContent).toContain('SL 1.10100')
+    expect(records('Pending orders').textContent).toContain('SL 1.10300')
+    await click(button('Next Candle'))
+    expect(recordCount('Open positions')).toBe(1)
+    expect(records('Pending orders').textContent).toContain('Rejected Buy')
+    expect(records('Pending orders').textContent).toContain('actual entry 1.10030')
+    expect(button('Buy').disabled).toBe(false)
+  })
+
+  it('keeps independent SL lines on every chart, updates profit SL, and cleans up after stops and reset', async () => {
+    await act(async () => root.render(<App />))
+    await click(button('Start Replay'))
+    await setInput('SL price', '1.099'); await click(button('Buy'))
+    await volume('0.03'); await setInput('SL price', '1.098'); await click(button('Buy'))
+    await click(button('Next Candle'))
+    const ids = [...records('Open positions').querySelectorAll('li')].map((item) => item.dataset.positionId!)
+    expect(priceSeries().createPriceLine.mock.calls.map(([options]: [{price: number}]) => options.price)).toEqual([1.099, 1.098])
+    await click(host.querySelector<HTMLInputElement>('input[value="3"]')!)
+    for (const index of [1, 2]) expect(priceSeries(index).createPriceLine.mock.calls.slice(0, 2).map(([options]: [{price: number}]) => options.price)).toEqual([1.099, 1.098])
+    await click(button('Next Candle'))
+    await setInput(`Replacement SL ${ids[0]}`, '1.1003') // Break-even.
+    await click(button('Update SL'))
+    expect(records('Open positions').textContent).toContain('1.09900 → 1.10030')
+    await setInput(`Replacement SL ${ids[0]}`, '1.101')
+    await click([...host.querySelectorAll<HTMLButtonElement>('button')].find((item) => item.getAttribute('aria-label') === `Update SL ${ids[0]}`)!)
+    const creationCount = vi.mocked(createChart).mock.calls.length
+    for (const index of [0, 1, 2]) {
+      const line = priceSeries(index).createPriceLine.mock.results[0].value
+      expect(line.applyOptions).toHaveBeenLastCalledWith(expect.objectContaining({ price: 1.101 }))
+    }
+    await selectTimeframe(0, 'H1')
+    expect(records('Open positions').textContent).toContain('SL 1.10100')
+    await click(button('Next Candle'))
+    expect(recordCount('Open positions')).toBe(1)
+    expect(records('Closed trades').textContent).toContain('Realized 7.0 pips · $0.70 gross')
+    expect(records('Closed trades').textContent).toContain('Stop loss · level fill')
+    expect(records('Closed trades').textContent).toContain('Triggering M1 candle timestamp')
+    expect(createChart).toHaveBeenCalledTimes(creationCount)
+    for (const index of [0, 1, 2]) expect(priceSeries(index).removePriceLine).toHaveBeenCalledTimes(1)
+    await click(button('Restart'))
+    for (const index of [0, 1, 2]) expect(priceSeries(index).removePriceLine).toHaveBeenCalledTimes(2)
+    expect(recordCount('Open positions')).toBe(0)
+    expect(recordCount('Closed trades')).toBe(0)
+  })
+
+  it('stops same-candle shorts on ask spikes during batched StrictMode playback without duplicates or pausing', async () => {
+    const data = stopHistory()
+    data.ask[1].high = 1.15
+    request.mockImplementation(async () => new Response(JSON.stringify(data)))
+    await act(async () => root.render(<StrictMode><App /></StrictMode>))
+    await click(button('Start Replay'))
+    await setInput('SL price', '1.103'); await click(button('Sell'))
+    await setInput('SL price', '1.098'); await click(button('Buy'))
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0))
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    await click(button('Play'))
+    await act(async () => vi.advanceTimersByTime(750))
+    expect(replayStatus()).toBe('Playing')
+    expect(recordCount('Open positions')).toBe(1)
+    expect(recordCount('Closed trades')).toBe(1)
+    const trade = records('Closed trades').textContent!
+    expect(trade).toContain('Entry 2024-01-09 00:01 UTC @ 1.10010')
+    expect(trade).toContain('Exit 2024-01-09 00:01 UTC @ 1.10300')
+    expect(trade).toContain('Realized -29.0 pips · $-2.90 gross')
+    expect([...records('Open positions').querySelectorAll('button')].every((item) => item.disabled)).toBe(true)
+    await act(async () => vi.advanceTimersByTime(1000))
+    expect(replayStatus()).toBe('Complete')
+    expect(recordCount('Closed trades')).toBe(1)
+    expect(records('Open positions').textContent).toContain('Open at end of available history')
+    expect(host.querySelector<HTMLInputElement>('input[aria-label^="Replacement SL"]')!.disabled).toBe(true)
+    const activeCharts = vi.mocked(createChart).mock.results.filter((result) => !result.value.remove.mock.calls.length)
+    expect(activeCharts).toHaveLength(1)
+    await click(button('Load Data'))
+    expect(recordCount('Closed trades')).toBe(0)
+    expect(recordCount('Open positions')).toBe(0)
+    expect(activeCharts[0].value.addSeries.mock.results[0].value.removePriceLine).toHaveBeenCalledTimes(1)
+    await act(async () => vi.advanceTimersByTime(1000))
+    expect(replayStatus()).toBe('Ready')
+  })
+
+  it('preserves coincident stop IDs when panes are removed and recreated', async () => {
+    await act(async () => root.render(<App />))
+    await click(button('Start Replay')); await setInput('SL price', '1.099')
+    await click(button('Buy')); await click(button('Buy')); await click(button('Next Candle'))
+    const ids = [...records('Open positions').querySelectorAll('li')].map((item) => item.dataset.positionId!)
+    expect(priceSeries().createPriceLine.mock.calls.map(([options]: [{title: string}]) => options.title)).toEqual([
+      `SL ${ids.join(' / ')} · 1.09900`, `SL ${ids.join(' / ')} · 1.09900`,
+    ])
+    await click(host.querySelector<HTMLInputElement>('input[value="3"]')!)
+    await click(host.querySelector<HTMLInputElement>('input[value="1"]')!)
+    expect(vi.mocked(createChart).mock.results[1].value.remove).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(createChart).mock.results[2].value.remove).toHaveBeenCalledTimes(1)
+    await click(host.querySelector<HTMLInputElement>('input[value="3"]')!)
+    for (const index of [3, 4]) expect(priceSeries(index).createPriceLine.mock.calls.slice(0, 2).map(([options]: [{price: number}]) => options.price)).toEqual([1.099, 1.099])
+    expect(recordCount('Open positions')).toBe(2)
+  })
+
+  it('shows persistent ask coverage warnings and blocks changes until a current quote is available', async () => {
+    const data = stopHistory(); data.ask = data.ask.filter((_, index) => index !== 2)
+    request.mockImplementation(async () => new Response(JSON.stringify(data)))
+    await act(async () => root.render(<App />))
+    await click(button('Start Replay')); await setInput('SL price', '1.105'); await click(button('Sell'))
+    await click(button('Next Candle')); await click(button('Next Candle'))
+    expect(records('Open positions').textContent).toContain('SL coverage uncertain: ask quote unavailable')
+    expect(records('Open positions').textContent).toContain('current ask closing quote is unavailable')
+    expect(button('Update SL').disabled).toBe(true)
+    await click(button('Next Candle'))
+    expect(records('Open positions').textContent).toContain('SL coverage uncertain: ask quote unavailable')
+    expect(records('Open positions').textContent).not.toContain('current ask closing quote is unavailable')
   })
 })

@@ -97,3 +97,13 @@ button:disabled { opacity: 0.45; cursor: default; }
   .trading-controls button { min-height: 40px; }
   .pane-toolbar { flex-wrap: wrap; gap: 6px 10px; }
 }
+
+.stop-editor { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; max-width: 100%; }
+.stop-editor label { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.stop-editor input { width: 110px; min-height: 34px; padding: 4px 8px; border: 1px solid #354250; border-radius: 4px; background: #10151d; color: #e5eaf0; color-scheme: dark; }
+.stop-editor input[aria-invalid='true'] { border-color: #e2a2a6; }
+.stop-editor p, .stop-editor > span { flex-basis: 100%; }
+.trade-records .coverage-warning { color: #ffcc80; }
+@media (max-width: 600px) {
+  .trading-controls input, .stop-editor input { font-size: 16px; }
+}

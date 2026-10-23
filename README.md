@@ -10,7 +10,7 @@ ForexTester is a personal, browser-based forex backtesting application for Linux
 - Display one, two, or three synchronized charts at once, including vertically stacked layouts.
 - Include Ichimoku Cloud, Bollinger Bands, and Stochastic Oscillator indicators with configurable settings.
 - Allow manual simulated buy and sell orders.
-- Support multiple simultaneous positions, each with independent stop-loss (SL) and take-profit (TP) levels.
+- Support multiple simultaneous positions, each with an independent stop-loss (SL). Take-profit functionality is intentionally excluded because the trading workflow uses stop-losses and manual profit-taking only.
 - Provide controls to replay a backtest.
 - Show performance statistics and trade history when a backtest finishes.
 - Use a TradingView-inspired dark chart template and indicator styling.
@@ -63,13 +63,13 @@ During replay, chart data is built only from the revealed M1 prefix. Each M1 can
 
 Chart instances remain alive while replay advances or timeframes change. The current series candle is updated and new buckets are appended. The synchronized view follows the latest revealed data when viewing the replay edge. Scrolling back preserves an older view while playback continues; navigating back to the edge resumes following. Zooming, scrolling, and crosshairs have access only to revealed prices. Different candle spacing and minimum zoom limits can still produce slightly different views on coarse timeframes, especially early in replay when only one bucket exists.
 
-Replay inherits the historical-data limitations below: EURUSD bid charts only, provider gaps and availability, completed UTC days, and at most seven days per request. Simulated market entries and manual exits use this same clock, as described below. Tick replay, automatic SL/TP execution, performance statistics, journaling, and replay persistence are not implemented.
+Replay inherits the historical-data limitations below: EURUSD bid charts only, provider gaps and availability, completed UTC days, and at most seven days per request. Simulated market entries and manual exits use this same clock, as described below. Tick replay, performance statistics, journaling, and replay persistence are not implemented. Independent automatic stop-loss execution uses the same revealed M1 clock.
 
 ## Simulated trading
 
-The **Simulated trading** panel accepts a positive, finite position volume in standard FX lots, initially **0.01**. One EURUSD lot represents **100,000 EUR** of base-currency exposure. Choose **Buy** or **Sell** while replay is active and paused. Trading is disabled in the full-history viewer, during playback, and at the final candle. There must be a later M1 bid candle available to advance to; the application does not look ahead for future quote availability.
+The **Simulated trading** panel accepts a positive, finite position volume in standard FX lots, initially **0.01**, and a required positive, finite **SL price** entered as an absolute EURUSD price. The SL field starts blank; the application never derives a fixed pip distance. One EURUSD lot represents **100,000 EUR** of base-currency exposure. Choose **Buy** or **Sell** while replay is active and paused. Trading is disabled in the full-history viewer, during playback, and at the final candle. There must be a later M1 bid candle available to advance to; the application does not look ahead for future quote availability.
 
-At most **two position slots** can be in use. Pending entries and open positions both consume slots, including positions with a pending close. Each entry keeps its own volume. **Cancel** removes an unfilled entry and releases its slot. **Close** queues a manual exit; duplicate close requests are disabled. Pending entries can be cancelled during playback or after history ends. Entry, open, pending-close, and closed states are labeled separately.
+At most **two position slots** can be in use. Pending entries and open positions both consume slots, including positions with a pending close. Each entry keeps its own volume and SL. At the actual opening fill, a Buy SL must be strictly below its ask entry price, and a Sell SL strictly above its bid entry price. Invalid protected entries become rejected-order records with an explicit reason and release their slots. Stops attach immediately to valid fills. **Cancel** removes an unfilled entry and releases its slot. **Close** queues a manual exit; duplicate close requests are disabled. Pending entries can be cancelled during playback or after history ends. Entry, open, pending-close, and closed states are labeled separately.
 
 Each revealed M1 OHLC bar is treated as an observed, completed candle for trading decisions, although its replay timestamp is the candle’s opening timestamp. An order requested after observing candle N can execute only at a later available M1 opening, never inside candle N. **Next Candle** or **Play** advances the shared clock and processes pending orders chronologically, including all intervening bars when React batches several clock updates. Visual zoom, scrolling, crosshairs, timeframes, and layouts never control execution.
 
@@ -82,7 +82,7 @@ Execution uses historical EURUSD prices, with both bid and ask candles required 
 | Close Buy | Bid open |
 | Close Sell | Ask open |
 
-Multiple queued orders fill independently at that opening. High, low, and close never select an execution price. Missing minutes and weekend/overnight gaps advance directly to the next available bid candle. If its ask is missing or has a different timestamp, orders remain pending until a later synchronized quote appears. Ask-only timestamps do not advance the bid replay clock. Prices are never invented or interpolated.
+Multiple queued orders fill independently at that opening. High, low, and close never select a market entry or manual exit price. Automatic stop exits use the rules below. Missing minutes and weekend/overnight gaps advance directly to the next available bid candle. If its ask is missing or has a different timestamp, orders remain pending until a later synchronized quote appears. Ask-only timestamps do not advance the bid replay clock. Prices are never invented or interpolated.
 
 Open positions show their entry time/price, direction, volume, current closing-side price, and unrealized PnL. Buys are valued at the revealed **bid close** and sells at the revealed **ask close**. The current observed candle must have synchronized bid and ask data; otherwise current price and PnL show **unavailable**, without carrying a stale valuation forward. Closed trades show their actual entry and exit prices/times and realized PnL.
 
@@ -94,7 +94,32 @@ Calculations retain JavaScript number precision. Display values use fixed decima
 
 Trading state is session-only, in memory. The pure TypeScript engine in `frontend/src/trading.ts` owns execution rules and transitions; `useTrading.ts` consumes the existing replay clock and processes every newly revealed bid candle with its matching ask. Chart components do not own trading state. IDs are deterministic and unique within and across replay sessions on the current page. Automated tests use local fixtures and controlled timers, with no live-data dependency.
 
-Current limitations: EURUSD only; M1 candle replay, with no intraminute or tick-price assumptions. **Automatic SL/TP, commissions, swaps, financing, risk-based sizing, margin/leverage simulation, account balances/equity, equity curves, full performance statistics, strategy signals, and persistence are not implemented.** The historical-data backend and its seven-day request limit are unchanged.
+Take-profit functionality is intentionally excluded because the trading workflow uses stop-losses and manual profit-taking only.
+
+Current limitations: EURUSD only; M1 candle replay, with no intraminute or tick-price assumptions. **Automatic trailing stops and break-even rules, commissions, swaps, financing, risk-based sizing, margin/leverage simulation, account balances/equity, equity curves, full performance statistics, strategy signals, and persistence are not implemented.** The historical-data backend and its seven-day request limit are unchanged.
+
+### Independent stop-loss execution
+
+Each newly revealed M1 candle is processed in this order: eligible synchronized manual closes at the opening, eligible market entries at the opening, automatic stops for all remaining positions including new entries, then current quote/PnL valuation. Stops operate during both **Play** and **Next Candle**, without pausing playback. Batched clock updates process every newly revealed candle chronologically. No unrevealed candle can trigger a stop.
+
+| Position | Triggering quote side | Intrabar level trigger | Gap-through opening fill |
+| --- | --- | --- | --- |
+| Buy | Bid | Bid low at or below SL: fill at SL | Bid open below SL: fill at bid open |
+| Sell | Ask at the current bid-clock timestamp | Ask high at or above SL: fill at SL | Ask open above SL: fill at ask open |
+
+An opening quote exactly equal to SL is a level fill. A stop is not a guaranteed exit price: adverse gaps use the actual opening quote, and realized pips/USD use that fill. Temporary spread widening can trigger a short's SL through ask alone even when the bid chart never touches it. Stop monitoring does not require the irrelevant quote side, even though market entries and manual closes continue to require synchronized bid and ask candles.
+
+An entry at an M1 opening is protected throughout that same candle. It may enter and stop out with the same timestamp. Exit times identify the **triggering M1 candle**, not a known intraminute execution time. A synchronized manual close eligible at the opening has priority over the stop on that candle. If missing quotes prevent the manual close, the position's stop remains active whenever its required side is observable.
+
+Open positions display their IDs and current stops. Edit **Replacement SL** and choose **Update SL** while replay is active, paused, and has another candle available. A Buy replacement must be below the current available bid close; a Sell replacement must be above the current available ask close. The required current quote must exist, and prices must be positive and finite. Break-even and profit stops are allowed. Changes apply only from the next available M1 candle and never re-evaluate a previously observed bar. Records retain each old/new level and the simulation timestamp of the change. Playback and the end of history disable modifications. Stops never move automatically.
+
+Every displayed chart shows horizontal SL lines labeled with position IDs and five-decimal prices. Different positions use different colors and line patterns; coincident levels label both IDs. Updates change the existing lines without recreating charts. Lines disappear on closure, restart, or history reload. Layout, timeframe, and indicator changes preserve execution state and SL modifications.
+
+Missing or invalid required quote-side observations produce persistent **SL coverage uncertain** warnings with the side and inclusive affected M1 timestamps. Skipped bid-clock intervals, including weekend closures, are also recorded as uncertain clock gaps for positions held across them. No stop evaluation or fill is invented inside a missing interval. When quotes resume, the engine evaluates the available opening for an adverse gap before evaluating that candle's range. A resumed quote on the safe side cannot prove the stop was never crossed during the gap; the warning remains on open and closed records. Ask-only timestamps never advance replay. If the entire bid dataset is empty, replay cannot start. Existing synchronized-quote valuation rules still apply.
+
+Closed records retain SL, modification history, coverage warnings, actual exit price, triggering candle timestamp, exit reason (**manual** or **stop_loss**), and stop fill type (**level** or **gap-through opening**). Rejections, stops, positions, orders, modifications, warnings, and closed records reset with the trading session. Positions still open at the final candle remain open; no forced exit is assumed.
+
+These are M1 OHLC assumptions, not tick reconstruction: normal intrabar crossings fill at SL without modeling intraminute sequence, liquidity, or slippage beyond adverse opening gaps. Missing periods remain uncertain. Bid charts cannot display ask spikes. There are no take profits, trailing stops, automatic break-even adjustments, fees, account balances, risk sizing, or persistence. The seven-day historical request limit is unchanged.
 
 ## Chart appearance
 
@@ -171,4 +196,4 @@ To run a live integration check, start the backend and run the `curl` command ab
 
 ## Current status
 
-The React/Vite frontend displays one to three synchronized historical EURUSD bid candlestick charts using TradingView Lightweight Charts. The Node.js backend exposes `GET /api/health` and `GET /api/history`. Charts preserve market gaps. The full-history viewer remains available until replay starts; manual replay then progressively reveals M1 data with synchronized partial higher-timeframe candles. Bollinger Bands, slow Stochastic, and Ichimoku Cloud are available independently on each chart, including during replay. Automatic indicator presets and simulated market orders are available. Automatic SL/TP execution, statistics, and journaling are not implemented yet.
+The React/Vite frontend displays one to three synchronized historical EURUSD bid candlestick charts using TradingView Lightweight Charts. The Node.js backend exposes `GET /api/health` and `GET /api/history`. Charts preserve market gaps. The full-history viewer remains available until replay starts; manual replay then progressively reveals M1 data with synchronized partial higher-timeframe candles. Bollinger Bands, slow Stochastic, and Ichimoku Cloud are available independently on each chart, including during replay. Automatic indicator presets and simulated market orders are available. Independent adjustable stop-losses execute on revealed M1 bid/ask data, with gap-through fills and coverage warnings. Statistics and journaling are not implemented yet. Take profits are intentionally excluded.
