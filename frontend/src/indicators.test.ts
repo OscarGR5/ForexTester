@@ -6,7 +6,8 @@ import { cloudPolygons } from './ichimokuCloud'
 const bars = (closes: number[]): ChartCandle[] => closes.map((close, index) => ({ time: (1704758400 + index * 60) as ChartCandle['time'], open: close, high: close + 2, low: close - 2, close }))
 function settings() {
   const s = defaultIndicatorSettings()
-  s.bollinger = { enabled: true, length: 3, stdDev: 2 }
+  s.bollinger = { ...s.bollinger, enabled: true, length: 3, stdDev: 2 }
+  s.bollinger2 = { ...s.bollinger2, enabled: true, length: 3 }
   s.stochastic = { enabled: true, length: 3, smoothK: 2, smoothD: 2 }
   s.ichimoku = { enabled: true, tenkan: 2, kijun: 3, spanB: 4, displacement: 2 }
   return s
@@ -19,6 +20,39 @@ describe('indicator calculations', () => {
     expect(data.upper[0].value).toBeCloseTo(12 + 2 * Math.sqrt(8 / 3), 12)
     expect(data.lower[0].value).toBeCloseTo(12 - 2 * Math.sqrt(8 / 3), 12)
     expect(data.middle[0].time).toBe(bars([10, 12, 14])[2].time)
+  })
+  it('uses the approved defaults and independent settings objects', () => {
+    const defaults = defaultIndicatorSettings()
+    expect(defaults.bollinger).toEqual({ enabled: false, length: 20, stdDev: 2, basisVisible: true, upperVisible: true, lowerVisible: true })
+    expect(defaults.bollinger2).toEqual({ enabled: false, length: 20, stdDev: 1, basisVisible: false, upperVisible: true, lowerVisible: true })
+    expect(defaults.stochastic).toEqual({ enabled: false, length: 30, smoothK: 10, smoothD: 10 })
+    expect(defaults.ichimoku).toEqual({ enabled: false, tenkan: 9, kijun: 26, spanB: 52, displacement: 26 })
+    defaults.bollinger.length = 7
+    expect(defaults.bollinger2.length).toBe(20)
+    expect(defaultIndicatorSettings().bollinger.length).toBe(20)
+  })
+  it('calculates both bands independently on the same candles', () => {
+    const s = settings(), source = bars([10, 12, 14, 18])
+    const result = calculateIndicators(source, s, 'M1')
+    expect(result.middle2).toEqual(result.middle)
+    expect(result.upper2[0].value).toBeCloseTo(12 + Math.sqrt(8 / 3), 12)
+    expect(result.lower2[0].value).toBeCloseTo(12 - Math.sqrt(8 / 3), 12)
+    s.bollinger2.length = 4
+    const changed = calculateIndicators(source, s, 'M1')
+    expect(changed.upper).toEqual(result.upper)
+    expect(changed.upper2).toHaveLength(1)
+    s.bollinger.enabled = false
+    const single = calculateIndicators(source, s, 'M1')
+    expect(single.upper).toEqual([])
+    expect(single.upper2).toEqual(changed.upper2)
+  })
+  it('warms up default stochastic at candles 39 and 48', () => {
+    const s = defaultIndicatorSettings()
+    s.stochastic.enabled = true
+    const source = bars(Array.from({ length: 50 }, (_, i) => 10 + i))
+    const data = calculateIndicators(source, s, 'M1')
+    expect(data.k[0].time).toBe(source[38].time)
+    expect(data.d[0].time).toBe(source[47].time)
   })
   it('smooths raw %K to slow %K and then %D with independent warm-ups', () => {
     // Each rising 3-bar window spans 6. Raw K=100*(close-(close-4))/6=200/3.
@@ -71,7 +105,7 @@ describe('indicator calculations', () => {
   })
   it('validates every numeric parameter, including disabled indicators', () => {
     expect(validateIndicatorSettings(defaultIndicatorSettings())).toBeNull()
-    for (const [group, values] of Object.entries(settings())) for (const key of Object.keys(values).filter((k) => k !== 'enabled')) {
+    for (const [group, values] of Object.entries(settings())) for (const key of Object.keys(values).filter((k) => !['enabled', 'basisVisible', 'upperVisible', 'lowerVisible'].includes(k))) {
       for (const value of [0, -1, NaN, Infinity, 10001, ...(key === 'stdDev' ? [101] : [1.5])]) {
         const s = settings()
         Object.assign(s[group as keyof typeof s], { [key]: value })

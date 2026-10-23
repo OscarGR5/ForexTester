@@ -3,10 +3,11 @@ import { calculateIndicators, type ChartCandle, type IndicatorLine, type Indicat
 import { IchimokuCloudPrimitive } from './ichimokuCloud'
 import { TIMEFRAME_MS, type Timeframe } from './history'
 
-// Provisional colors, kept in one place pending the TradingView references.
+// TradingView-inspired template; colors remain provisional for visual fine-tuning.
 export const INDICATOR_COLORS = {
-  upper: '#8dacf0', middle: '#c9a55c', lower: '#8dacf0', k: '#83b4ff', d: '#e7b46e',
-  tenkan: '#69b6f1', kijun: '#e39399', spanA: '#75c4b5', spanB: '#d99398', chikou: '#c2a1e8',
+  upper: '#ffffff', middle: '#2962ff', lower: '#ffffff',
+  upper2: '#ffffff', middle2: '#2962ff', lower2: '#ffffff', k: '#2962ff', d: '#ff9800',
+  tenkan: '#81d4fa', kijun: '#4caf50', spanA: '#b2b5be', spanB: '#b2b5be', chikou: '#cddc39',
 }
 type LineKey = keyof typeof INDICATOR_COLORS
 type RenderLine = (IndicatorLine[number] | WhitespaceData<UTCTimestamp>)[]
@@ -20,7 +21,14 @@ export class IndicatorSeries {
   update(candles: readonly ChartCandle[], settings: IndicatorSettings, timeframe: Timeframe, replace: boolean): number {
     const data = calculateIndicators(candles, settings, timeframe)
     const enabled: LineKey[] = [
-      ...(settings.bollinger.enabled ? ['upper', 'middle', 'lower'] as const : []),
+      ...[settings.bollinger, settings.bollinger2].flatMap((group, index): LineKey[] => {
+        if (!group.enabled) return []
+        const keys: LineKey[] = []
+        if (group.upperVisible) keys.push(index === 0 ? 'upper' : 'upper2')
+        if (group.basisVisible) keys.push(index === 0 ? 'middle' : 'middle2')
+        if (group.lowerVisible) keys.push(index === 0 ? 'lower' : 'lower2')
+        return keys
+      }),
       ...(settings.stochastic.enabled ? ['k', 'd'] as const : []),
       ...(settings.ichimoku.enabled ? ['tenkan', 'kijun', 'spanA', 'spanB', 'chikou'] as const : []),
     ]
@@ -43,7 +51,7 @@ export class IndicatorSeries {
         line = { series, data: [] }
         this.lines.set(key, line)
         if (key === 'k') {
-          for (const price of [20, 80]) series.createPriceLine({ price, color: '#7d8996', lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: '' })
+          for (const price of [80, 40]) series.createPriceLine({ price, color: '#7d8996', lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: '' })
           series.priceScale().applyOptions({ scaleMargins: { top: 0.05, bottom: 0.05 } })
           this.chart.panes()[0].setStretchFactor(3)
           this.chart.panes()[1].setStretchFactor(1)

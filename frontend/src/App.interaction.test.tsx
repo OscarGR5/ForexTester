@@ -408,7 +408,7 @@ async function parameter(chart: number, name: string, value: string) {
   return input
 }
 async function shortPeriods(chart = 1) {
-  for (const name of ['Length', '%K length', '%K smoothing', '%D smoothing', 'Tenkan', 'Kijun', 'Span B', 'Displacement']) await parameter(chart, name, '2')
+  for (const name of ['BB #1 Length', 'BB #2 Length', '%K length', '%K smoothing', '%D smoothing', 'Tenkan', 'Kijun', 'Span B', 'Displacement']) await parameter(chart, name, '2')
 }
 
 describe('per-chart indicators', () => {
@@ -417,24 +417,24 @@ describe('per-chart indicators', () => {
     const chart = vi.mocked(createChart).mock.results[0].value
     expect(chart.addSeries).toHaveBeenCalledTimes(1)
     await shortPeriods()
-    await enableIndicator(1, 'Bollinger Bands')
+    await enableIndicator(1, 'BB #1')
     expect(chart.addSeries).toHaveBeenCalledTimes(4)
     const middle = indicatorLine(0, 'middle')!
     expect(middle.data()).toHaveLength(4)
     const valid = structuredClone(middle.data())
     for (const value of ['', '0', '-2', '1.5', '10001']) {
-      expect((await parameter(1, 'Length', value)).getAttribute('aria-invalid')).toBe('true')
+      expect((await parameter(1, 'BB #1 Length', value)).getAttribute('aria-invalid')).toBe('true')
       expect(middle.data()).toEqual(valid)
     }
-    await parameter(1, 'Length', '3')
+    await parameter(1, 'BB #1 Length', '3')
     expect(middle.data()).toHaveLength(3)
     await enableIndicator(1, 'Stochastic')
     const kIndex = vi.mocked(chart.addSeries).mock.calls.findIndex((call: unknown[]) => (call[1] as { title?: string })?.title === 'k')
     expect(vi.mocked(chart.addSeries).mock.calls[kIndex][2]).toBe(1)
     const k = indicatorLine(0, 'k')!
     expect(k.createPriceLine).toHaveBeenCalledTimes(2)
-    expect(vi.mocked(k.createPriceLine).mock.calls.map((call: { price: number }[]) => call[0].price)).toEqual([20, 80])
-    await enableIndicator(1, 'Bollinger Bands')
+    expect(vi.mocked(k.createPriceLine).mock.calls.map((call: { price: number }[]) => call[0].price)).toEqual([80, 40])
+    await enableIndicator(1, 'BB #1')
     expect(chart.removeSeries).toHaveBeenCalledTimes(3)
     expect(indicatorLine(0, 'k')!.data()).toHaveLength(3)
     await enableIndicator(1, 'Stochastic')
@@ -443,13 +443,40 @@ describe('per-chart indicators', () => {
     expect(request).toHaveBeenCalledTimes(1)
   })
 
+  it('renders two independent overlays, controls each line, and keeps the second basis hidden', async () => {
+    await act(async () => root.render(<App />))
+    await shortPeriods()
+    await enableIndicator(1, 'BB #1')
+    await enableIndicator(1, 'BB #2')
+    const chart = vi.mocked(createChart).mock.results[0].value
+    const upper = indicatorLine(0, 'upper')!, second = indicatorLine(0, 'upper2')!
+    expect(chart.addSeries).toHaveBeenCalledTimes(6)
+    expect(indicatorLine(0, 'middle2')).toBeUndefined()
+    expect(second.data()).toHaveLength(4)
+    const original = structuredClone(upper.data())
+    await parameter(1, 'BB #2 Length', '3')
+    await parameter(1, 'BB #2 Std. deviation', '0.5')
+    expect(second.data()).toHaveLength(3)
+    expect(upper.data()).toEqual(original)
+    await enableIndicator(1, 'BB #2 Basis')
+    expect(indicatorLine(0, 'middle2')!.data()).toHaveLength(3)
+    await enableIndicator(1, 'BB #2 Upper')
+    expect(chart.removeSeries).toHaveBeenCalledWith(second)
+    await enableIndicator(1, 'BB #1')
+    expect(chart.removeSeries).toHaveBeenCalledWith(upper)
+    expect(chart.removeSeries).not.toHaveBeenCalledWith(indicatorLine(0, 'lower2'))
+    expect(createChart).toHaveBeenCalledTimes(1)
+  })
+
   it('preserves independent settings across one-, two-, and three-chart layouts', async () => {
     await act(async () => root.render(<App />))
     await click(host.querySelector<HTMLInputElement>('input[value="3"]')!)
     await shortPeriods(1); await shortPeriods(2); await shortPeriods(3)
-    await parameter(1, 'Length', '3')
-    await enableIndicator(1, 'Bollinger Bands')
+    await parameter(1, 'BB #1 Length', '3')
+    await enableIndicator(1, 'BB #1')
     await enableIndicator(2, 'Ichimoku')
+    await enableIndicator(2, 'BB #2')
+    await parameter(2, 'BB #2 Length', '4')
     await enableIndicator(3, 'Stochastic')
     expect(indicatorLine(0, 'middle')!.data()).toHaveLength(3)
     expect(indicatorLine(0, 'spanA')).toBeUndefined()
@@ -460,9 +487,12 @@ describe('per-chart indicators', () => {
     expect(second.remove).toHaveBeenCalledTimes(1)
     expect(indicatorLine(1, 'spanA')!.detachPrimitive).toHaveBeenCalledTimes(1)
     await click(host.querySelector<HTMLInputElement>('input[value="3"]')!)
-    expect(host.querySelector<HTMLInputElement>('[aria-label="Chart 1 Length"]')!.value).toBe('3')
+    expect(host.querySelector<HTMLInputElement>('[aria-label="Chart 1 BB #1 Length"]')!.value).toBe('3')
     expect(host.querySelector<HTMLInputElement>('[aria-label="Chart 2 Ichimoku"]')!.checked).toBe(true)
     expect(host.querySelector<HTMLInputElement>('[aria-label="Chart 3 Stochastic"]')!.checked).toBe(true)
+    expect(host.querySelector<HTMLInputElement>('[aria-label="Chart 2 BB #2 Length"]')!.value).toBe('4')
+    expect(host.querySelector<HTMLInputElement>('[aria-label="Chart 1 BB #2"]')!.checked).toBe(false)
+    expect(indicatorLine(3, 'upper2')).toBeDefined()
     expect(indicatorLine(3, 'spanA')!.attachPrimitive).toHaveBeenCalledTimes(1)
     expect(indicatorLine(4, 'k')).toBeDefined()
     expect(request).toHaveBeenCalledTimes(1)
@@ -471,7 +501,7 @@ describe('per-chart indicators', () => {
   it('resets active indicators on restart and date reload, reusing the price chart', async () => {
     await act(async () => root.render(<App />))
     await shortPeriods()
-    for (const name of ['Bollinger Bands', 'Stochastic', 'Ichimoku']) await enableIndicator(1, name)
+    for (const name of ['BB #1', 'BB #2', 'Stochastic', 'Ichimoku']) await enableIndicator(1, name)
     await click(button('Start Replay'))
     expect(indicatorLine(0, 'middle')!.data()).toHaveLength(0)
     expect(indicatorLine(0, 'k')!.data()).toHaveLength(0)
@@ -497,7 +527,7 @@ describe('per-chart indicators', () => {
   it('cleans panes, cloud primitives, series and synchronization subscriptions', async () => {
     await act(async () => root.render(<StrictMode><App /></StrictMode>))
     await shortPeriods()
-    for (const name of ['Bollinger Bands', 'Stochastic', 'Ichimoku']) await enableIndicator(1, name)
+    for (const name of ['BB #1', 'BB #2', 'Stochastic', 'Ichimoku']) await enableIndicator(1, name)
     const chart = vi.mocked(createChart).mock.results.at(-1)!.value
     const add = vi.mocked(chart.addSeries)
     const span = add.mock.results[add.mock.calls.findIndex((call: unknown[]) => (call[1] as { title?: string })?.title === 'spanA')].value
@@ -505,7 +535,7 @@ describe('per-chart indicators', () => {
     expect(span.detachPrimitive).toHaveBeenCalledTimes(1)
     await enableIndicator(1, 'Ichimoku')
     await act(async () => root.unmount()); rootMounted = false
-    expect(chart.removeSeries).toHaveBeenCalledTimes(15)
+    expect(chart.removeSeries).toHaveBeenCalledTimes(17)
     expect(chart.remove).toHaveBeenCalledTimes(1)
     for (const result of add.mock.results) if (vi.mocked(result.value.attachPrimitive).mock.calls.length) expect(result.value.detachPrimitive).toHaveBeenCalledTimes(1)
     expect(chart.unsubscribeCrosshairMove).toHaveBeenCalledTimes(vi.mocked(chart.subscribeCrosshairMove).mock.calls.length)
@@ -522,12 +552,13 @@ describe('per-chart indicators', () => {
     await act(async () => root.render(<App />))
     await selectTimeframe(0, timeframe)
     await shortPeriods()
-    for (const name of ['Bollinger Bands', 'Stochastic', 'Ichimoku']) await enableIndicator(1, name)
+    for (const name of ['BB #1', 'BB #2', 'Stochastic', 'Ichimoku']) await enableIndicator(1, name)
     await click(button('Start Replay'))
     const { calculateIndicators, defaultIndicatorSettings } = await import('./indicators')
     const { toBidChartCandles } = await import('./history')
     const s = defaultIndicatorSettings()
-    s.bollinger = { enabled: true, length: 2, stdDev: 2 }
+    s.bollinger = { ...s.bollinger, enabled: true, length: 2, stdDev: 2 }
+    s.bollinger2 = { ...s.bollinger2, enabled: true, length: 2 }
     s.stochastic = { enabled: true, length: 2, smoothK: 2, smoothD: 2 }
     s.ichimoku = { enabled: true, tenkan: 2, kijun: 2, spanB: 2, displacement: 2 }
     const middle = indicatorLine(0, 'middle')!, k = indicatorLine(0, 'k')!
@@ -535,7 +566,7 @@ describe('per-chart indicators', () => {
     for (let count = 1; count < bid.length; count++) {
       if (count > 1) await click(button('Next Candle'))
       const expected = calculateIndicators(toBidChartCandles({ bid: bid.slice(0, count) }, timeframe), s, timeframe)
-      for (const title of ['upper', 'middle', 'lower', 'k', 'd', 'tenkan', 'kijun', 'spanB', 'chikou'] as const) expect(indicatorLine(0, title)!.data()).toEqual(expected[title])
+      for (const title of ['upper', 'middle', 'lower', 'upper2', 'lower2', 'k', 'd', 'tenkan', 'kijun', 'spanB', 'chikou'] as const) expect(indicatorLine(0, title)!.data()).toEqual(expected[title])
       expect(indicatorLine(0, 'spanA')!.data().filter((p) => 'value' in p)).toEqual(expected.spanA)
       expect(expected.middle.every((p) => p.value < 100)).toBe(true)
     }

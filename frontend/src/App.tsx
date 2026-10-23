@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { CandlestickSeries, ColorType, createChart, type CandlestickData, type IChartApi, type ISeriesApi, type Time, type UTCTimestamp } from 'lightweight-charts'
+import { CandlestickSeries, ColorType, LineStyle, createChart, type CandlestickData, type IChartApi, type ISeriesApi, type Time, type UTCTimestamp } from 'lightweight-charts'
 import { ChartSynchronizer } from './chartSync'
 import { useReplay } from './useReplay'
 import { IndicatorControls } from './IndicatorControls'
@@ -34,13 +34,18 @@ function ChartPane({ id, timeframe, candles, synchronizer, onTimeframeChange, se
     const chart = createChart(container.current, {
       autoSize: true,
       layout: {
-        background: { type: ColorType.Solid, color: '#171e28' },
-        textColor: '#a7b3c1',
+        background: { type: ColorType.Solid, color: '#131722' },
+        textColor: '#b2b5be',
         attributionLogo: true,
+        panes: { separatorColor: '#b2b5be', separatorHoverColor: '#d1d4dc' },
       },
       grid: {
-        vertLines: { color: '#26313d' },
-        horzLines: { color: '#26313d' },
+        vertLines: { visible: false },
+        horzLines: { visible: false },
+      },
+      crosshair: {
+        vertLine: { color: '#9598a1', style: LineStyle.Dashed, width: 1 },
+        horzLine: { color: '#9598a1', style: LineStyle.Dashed, width: 1 },
       },
       rightPriceScale: { borderColor: '#354250' },
       timeScale: { borderColor: '#354250', timeVisible: true, secondsVisible: false, fixLeftEdge: true, fixRightEdge: true },
@@ -51,9 +56,9 @@ function ChartPane({ id, timeframe, candles, synchronizer, onTimeframeChange, se
       },
     })
     const series = chart.addSeries(CandlestickSeries, {
-      upColor: '#4aa99a', downColor: '#d27d82',
-      borderUpColor: '#4aa99a', borderDownColor: '#d27d82',
-      wickUpColor: '#4aa99a', wickDownColor: '#d27d82',
+      upColor: '#ffffff', downColor: '#2962ff',
+      borderUpColor: '#ffffff', borderDownColor: '#ffffff',
+      wickUpColor: '#ffffff', wickDownColor: '#ffffff',
       priceFormat: { type: 'price', precision: 5, minMove: 0.00001 },
     })
     chartRef.current = chart
