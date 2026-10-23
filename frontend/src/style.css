@@ -125,3 +125,64 @@ button:disabled { opacity: 0.45; cursor: default; }
 }
 
 .realized-summary { margin: 8px 0 12px; font-size: 0.8rem; font-variant-numeric: tabular-nums; line-height: 1.6; color: #e5eaf0; overflow-wrap: anywhere; }
+
+.app-shell > * { min-width: 0; }
+.trading-controls select { max-width: 100%; }
+.trading-controls label { min-width: 0; flex-wrap: wrap; }
+.trading-journal { flex: none; min-width: 0; padding: 16px 12px; border: 1px solid #354250; border-radius: 6px; background: #171e28; }
+.journal-heading, .journal-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.journal-heading h2 { margin: 0; font-size: 1.05rem; font-weight: 600; }
+.trading-journal h3 { margin: 0; font-size: 0.95rem; font-weight: 600; }
+.trading-journal h4 { margin: 12px 0 6px; font-size: 0.85rem; }
+.journal-controls { margin: 20px 0 10px; }
+.journal-controls label { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 0.85rem; }
+.journal-controls select, .setup-metadata input, .setup-metadata textarea { min-height: 36px; max-width: 100%; padding: 6px 8px; border: 1px solid #354250; border-radius: 4px; background: #10151d; color: #e5eaf0; font: inherit; }
+.session-notice, .journal-help, .journal-empty { color: #b2b5be; font-size: 0.8rem; line-height: 1.6; }
+.session-notice { margin: 8px 0 16px; }
+.journal-empty { margin: 12px 0; }
+.journal-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px 24px; margin: 16px 0; }
+.journal-kpis > div { min-width: 0; }
+.journal-kpis dt { color: #b2b5be; font-size: 0.8rem; line-height: 1.5; }
+.journal-kpis dd { margin: 5px 0 0; font-size: 1rem; font-weight: 600; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.trading-journal summary { width: fit-content; min-height: 36px; align-content: center; cursor: pointer; font-size: 0.85rem; }
+.trading-journal summary:focus-visible, .journal-table-scroll:focus-visible, textarea:focus-visible { outline: 2px solid #85c8d4; outline-offset: 2px; }
+.realized-performance { margin: 20px 0; padding: 16px 0; border-top: 1px solid #354250; border-bottom: 1px solid #354250; }
+.realized-chart { display: block; width: 100%; max-height: 280px; background: #131722; }
+.realized-chart text { fill: #b2b5be; font-size: 13px; font-variant-numeric: tabular-nums; }
+.chart-baseline { stroke: #4d6d79; stroke-width: 1; stroke-dasharray: 4 4; }
+.net-curve, .drawdown-curve { fill: none; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.net-curve { stroke: #75c4b5; }
+.net-point { fill: #75c4b5; }
+.drawdown-curve { stroke: #e2a2a6; }
+.drawdown-chart { max-height: 160px; }
+.drawdown-summary { font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+.journal-table-scroll { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; }
+.journal-table-scroll table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+.journal-table-scroll caption { padding: 8px 0; text-align: left; color: #b2b5be; }
+.journal-table-scroll th, .journal-table-scroll td { padding: 10px 12px; border-bottom: 1px solid #354250; vertical-align: top; min-width: 100px; max-width: 240px; overflow-wrap: anywhere; }
+.journal-table-scroll thead th { color: #b2b5be; font-weight: 500; }
+.journal-table-scroll td:nth-child(6), .journal-table-scroll td:nth-child(7) { min-width: 150px; }
+.journal-table-scroll button { margin-top: 6px; font-size: 0.8rem; }
+.partial-result { display: block; color: #ffcc80; font-size: 0.75rem; }
+.setup-detail { max-width: 900px; white-space: normal; }
+.setup-metadata { display: flex; flex-wrap: wrap; gap: 12px 20px; margin: 0; padding: 12px; border: 1px solid #354250; }
+.setup-metadata label { display: flex; flex: 1 1 220px; min-width: 0; flex-direction: column; gap: 6px; }
+.setup-metadata .setup-notes { flex-basis: 100%; }
+.setup-metadata textarea { width: 100%; resize: vertical; }
+.setup-metadata p { flex-basis: 100%; margin: 0; }
+.position-detail { margin-top: 16px; line-height: 1.7; }
+.position-detail p { margin: 6px 0; }
+.coverage-warning { color: #ffcc80; }
+.journal-requests { margin-top: 16px; font-size: 0.8rem; overflow-wrap: anywhere; }
+.journal-requests li { margin: 8px 0; line-height: 1.6; }
+@media (max-width: 600px) {
+  .journal-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .journal-controls { align-items: flex-start; }
+  .journal-controls label { width: 100%; justify-content: space-between; }
+  .journal-controls select, .setup-metadata input, .setup-metadata textarea { font-size: 16px; }
+  .journal-heading button, .journal-table-scroll button { min-height: 40px; }
+  .journal-heading button { width: 100%; }
+  .realized-chart { min-height: 150px; }
+  .drawdown-chart { min-height: 120px; }
+  .journal-table-scroll:has(.setup-detail) .setup-detail { max-width: 300px; }
+}

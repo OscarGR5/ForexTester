@@ -63,7 +63,7 @@ During replay, chart data is built only from the revealed M1 prefix. Each M1 can
 
 Chart instances remain alive while replay advances or timeframes change. The current series candle is updated and new buckets are appended. The synchronized view follows the latest revealed data when viewing the replay edge. Scrolling back preserves an older view while playback continues; navigating back to the edge resumes following. Zooming, scrolling, and crosshairs have access only to revealed prices. Different candle spacing and minimum zoom limits can still produce slightly different views on coarse timeframes, especially early in replay when only one bucket exists.
 
-Replay inherits the historical-data limitations below: EURUSD bid charts only, provider gaps and availability, completed UTC days, and at most seven days per request. Simulated market entries and manual exits use this same clock, as described below. Tick replay, performance statistics, journaling, and replay persistence are not implemented. Independent automatic stop-loss execution uses the same revealed M1 clock.
+Replay inherits the historical-data limitations below: EURUSD bid charts only, provider gaps and availability, completed UTC days, and at most seven days per request. Simulated market entries and manual exits use this same clock, as described below. The session-only Trading Journal and performance dashboard use only executions already revealed by replay. Tick replay and replay persistence are not implemented. Independent automatic stop-loss execution uses the same revealed M1 clock.
 
 ## Simulated trading
 
@@ -96,7 +96,7 @@ Trading state is session-only, in memory. The pure TypeScript engine in `fronten
 
 Take-profit functionality is intentionally excluded because the trading workflow uses stop-losses and manual profit-taking only.
 
-Current limitations: EURUSD only; M1 candle replay, with no intraminute or tick-price assumptions. **Automatic trailing stops and break-even rules, swaps, financing, margin/leverage simulation, dynamic account balances/equity, equity curves, full performance statistics, strategy signals, and persistence are not implemented.** The historical-data backend and its seven-day request limit are unchanged.
+Current limitations: EURUSD only; M1 candle replay, with no intraminute or tick-price assumptions. **Automatic trailing stops and break-even rules, swaps, financing, margin/leverage simulation, dynamic account balances/equity, full mark-to-market equity curves, strategy signals, and persistence are not implemented.** The historical-data backend and its seven-day request limit are unchanged.
 
 ### Risk-based position sizing and combined exposure
 
@@ -196,6 +196,58 @@ Closed records retain SL, modification history, coverage warnings, actual exit p
 
 These are M1 OHLC assumptions, not tick reconstruction: normal intrabar crossings fill at SL without modeling intraminute sequence, liquidity, or slippage beyond adverse opening gaps. Missing periods remain uncertain. Bid charts cannot display ask spikes. There are no take profits, trailing stops, automatic break-even adjustments, swaps, financing, simulated account balances, or persistence. The seven-day historical request limit is unchanged.
 
+## Trading Journal and setup grouping
+
+A **position** is one executed entry with its own volume, entry, SL, original risk, SL modifications, commissions, exit, and coverage warnings. A **setup** is one trading idea containing one or two entries in EURUSD with the same direction. Entries in a setup can have different volumes, stops, entry times, and exits. Grouping never changes pricing, risk sizing, commission charges, or the independent two-concurrent-position limit.
+
+The order panel's **Setup** selector defaults to **New setup**. Submitting a valid request creates a stable setup ID and associates the pending entry with it. To group a second entry, explicitly select **Add entry to [setup ID]** before Buy or Sell. The opposite direction is disabled. Only setups with a pending or open entry and fewer than two submitted slots are eligible. Closed entries still consume their setup slots; cancelled and rejected requests release theirs. Completed setups cannot be reopened. Entries submitted close together are separate setups unless explicitly associated.
+
+The separate **Trading Journal** section defaults to **Setup view**, with one row per idea. It shows combined original risk for executed entries, realized results for closed positions, and pending/open/partially closed/completed/rejected-cancelled status. A setup is complete only after at least one execution and no pending or open entries remain. One closed member plus a pending or open member is **partially closed**. Results for an incomplete setup are labeled **partial realized PnL**, and final setup R and final exit time remain unavailable. A setup with only cancelled/rejected requests is never a completed trade.
+
+Choose **Details / notes** to inspect individual executions, entry/exit prices and UTC times, SL changes, commission breakdowns, exit reasons, original risk, R, and coverage warnings. Edit the optional title, free-text strategy/model tag, and plain-text notes here, including after completion. **Position view** lists all executed open and closed positions separately. Rejected/cancelled requests have their own expandable inspection area and are excluded from completed statistics and CSV position rows.
+
+The journal is **session only and not permanently saved**. Timeframe/layout changes, playback, pauses, and indicator edits preserve it. Restart, history reload, and page refresh clear setups, notes, executions, and derived statistics. The existing reference balance and commission settings survive replay restarts/history reloads, retaining their existing configuration semantics. Export CSV before resetting. There is no LocalStorage, IndexedDB, database, cloud saving, or cross-session analytics.
+
+### Performance statistics
+
+**Statistics scope** defaults to **Completed setups** and can switch to **Closed positions** independently of the journal view. Setup observations combine all of their executed members; incomplete setups are excluded. Position observations include closed positions even when their setup is incomplete. Totals show gross realized PnL, entry-plus-exit commissions, and net realized PnL in USD. Zero-observation totals are $0; averages, win rate, and undefined ratios display **Unavailable**.
+
+- Net PnL = gross PnL − entry commission − exit commission. Every win/loss classification uses this net result at full internal precision.
+- Win rate = number of strictly positive net observations ÷ all completed observations × 100. Exactly zero is a non-winner and stays in the denominator. Four wins, three losses, and one zero give 50%.
+- Non-winners include strictly negative and exactly zero outcomes; both counts are displayed. Average loser and largest loser use strictly negative results only. Average/largest winners use strictly positive results.
+- Profit factor = sum of positive net PnL ÷ absolute sum of negative net PnL. Zero contributes to neither sum. Wins without losses display **∞ (no net losses)**; only losses give 0; empty or zero-only outcomes are unavailable.
+- Position net R = net realized PnL ÷ original planned gross SL risk recorded at entry. For example, $2,000 gross − $35 commission over $1,000 original risk = 1.965R.
+- Completed setup net R = combined member net PnL ÷ combined member original gross risk. A $750 net result over $1,000 + $500 risk is 0.5R, not an average of position R values. SL changes never change this denominator, and adverse gap-through fills can lose more than 1R. Nonpositive/nonfinite denominators return unavailable.
+- Average net R averages valid observation R values; total net R is their **sum**, not total PnL divided by total session risk. The number of valid denominators is disclosed.
+- Holding duration is entry-to-exit for a position, or earliest member entry to final member exit for a completed setup. Average holding duration is displayed in minutes.
+- Net return = selected observations' net PnL ÷ fixed reference balance × 100. This does not compound or alter sizing.
+
+**More statistics and calculation conventions** contains the winner/loser averages and extremes, average/total R, holding duration, and reference-balance return.
+
+### Realized PnL and drawdown
+
+The performance chart always uses **closed-position events**, independent of the KPI scope. It starts at $0 cumulative net PnL, adds each closed position's net result once, and orders events by exit timestamp, preserving deterministic engine execution order within the same M1 timestamp. The horizontal axis is closure event number, rather than elapsed time, so simultaneous exits remain distinct. The responsive SVG charts add no dependency or market-chart subscriptions. Point tooltips and the expandable event table retain exact UTC timestamps. The table includes the starting baseline, cumulative net PnL, realized balance, high-water mark, and drawdown for each event.
+
+Realized balance = fixed reference balance + cumulative closed-position net PnL. The high-water mark starts at the initial reference balance and rises only when realized balance makes a new peak. Drawdown USD = high-water mark − current realized balance. Drawdown % = drawdown USD ÷ positive high-water mark × 100. Maximum dollar and percentage drawdowns are tracked across chronological events, including early losses and multiple exits at one timestamp. If realized balance reaches zero or below, USD drawdown remains valid; affected percentage observations and maximum percentage reporting become **unavailable**, with an explicit warning.
+
+This is a **closed-trade-only realized balance curve, not full mark-to-market account equity**. Open-position valuations do not enter it. Entry commissions on still-open positions have already been incurred, but enter the curve with the position's full net result only when it closes. Realized drawdown therefore has a closed-position event basis even when the dashboard counts completed setups. Coverage warnings remain on execution records; the chart cannot reconstruct missing prices or intraminute equity. Nothing looks ahead to unrevealed exits or forces open positions closed at the end of history.
+
+### Journal CSV schema
+
+**Export Journal CSV** downloads all executed position records in the current session, including open positions. There is one header row and one row per executed position, ordered by entry timestamp and stable position ID. Requests that never executed are excluded. The filename contains the session ID.
+
+```csv
+setup_id,position_id,symbol,direction,volume_lots,entry_timestamp_utc,entry_price,exit_timestamp_utc,exit_price,exit_reason,initial_sl,final_sl,original_risk_usd,gross_pnl_usd,entry_commission_usd,exit_commission_usd,total_commission_usd,net_pnl_usd,net_r,setup_label,setup_tag,setup_notes,status,coverage_warnings
+```
+
+Timestamps use ISO 8601 UTC (`2024-01-09T00:01:00.000Z`); prices are EURUSD, risk/PnL/commissions are USD, and volume is standard lots. Numbers retain the engine's full JavaScript precision without UI rounding. `initial_sl` is the original stop recorded at execution; `final_sl` is the latest stop. `status` is `open`, `pending close`, or `closed`. Exit reason is `manual` or `stop_loss`. `coverage_warnings` is a JSON array with side, reason, and inclusive `from`/`to` ISO UTC timestamps. Empty arrays are `[]`.
+
+For open positions, exit timestamp/price/reason, exit and total realized commission, gross/net realized PnL, and net R are blank. Incurred entry commission and known execution/risk fields remain populated. Invalid R denominators are blank. Open-position results and exit fees are never estimated for export.
+
+CSV uses CRLF record separators, double-quoted fields, doubled embedded quotes, and preserves commas/newlines inside notes. User-entered labels, tags, and notes starting with `=`, `+`, `-`, or `@`, including after leading whitespace/control characters, receive a leading apostrophe to prevent spreadsheet formulas. This export-only protection preserves original in-memory text. CSV import is not implemented.
+
+The existing bid/ask spread, gross risk cap, percentage/manual sizing, per-lot commission model, and seven-day history limit are unchanged. No take profits, new order types/pairs, compounding, swaps, financing, or automatic strategies are introduced.
+
 ## Chart appearance
 
 The TradingView-inspired template uses a dark navy canvas, white bull bodies, blue bear bodies, white borders/wicks, hidden grid lines, light gray scale text, a light pane separator, and subtle dashed gray crosshairs. TradingView attribution remains enabled. The toolbar and vertically stacked 1 / 2 / 3 chart layouts retain their existing behavior. Styling is an approximation of the approved reference summary, with further fine-tuning possible.
@@ -271,4 +323,4 @@ To run a live integration check, start the backend and run the `curl` command ab
 
 ## Current status
 
-The React/Vite frontend displays one to three synchronized historical EURUSD bid candlestick charts using TradingView Lightweight Charts. The Node.js backend exposes `GET /api/health` and `GET /api/history`. Charts preserve market gaps. The full-history viewer remains available until replay starts; manual replay then progressively reveals M1 data with synchronized partial higher-timeframe candles. Bollinger Bands, slow Stochastic, and Ichimoku Cloud are available independently on each chart, including during replay. Automatic indicator presets and simulated market orders are available. Independent adjustable stop-losses execute on revealed M1 bid/ask data, with gap-through fills and coverage warnings. Configurable USD per-lot commissions, gross/net PnL, open mark-to-close estimates, and a compact realized summary are available. Statistics and journaling are not implemented yet. Take profits are intentionally excluded.
+The React/Vite frontend displays one to three synchronized historical EURUSD bid candlestick charts using TradingView Lightweight Charts. The Node.js backend exposes `GET /api/health` and `GET /api/history`. Charts preserve market gaps. The full-history viewer remains available until replay starts; manual replay then progressively reveals M1 data with synchronized partial higher-timeframe candles. Bollinger Bands, slow Stochastic, and Ichimoku Cloud are available independently on each chart, including during replay. Automatic indicator presets and simulated market orders are available. Independent adjustable stop-losses execute on revealed M1 bid/ask data, with gap-through fills and coverage warnings. Configurable USD per-lot commissions, gross/net PnL, open mark-to-close estimates, explicit setup grouping, session-only journal metadata, setup/position analytics, realized PnL/drawdown, and safe CSV export are available. Take profits and persistent records are intentionally excluded.

@@ -623,6 +623,140 @@ function tradingHistory() {
   }
 }
 
+describe('trading journal and performance integration', () => {
+  beforeEach(() => { request.mockImplementation(async () => new Response(JSON.stringify(tradingHistory()))) })
+  async function selectJournal(label: string, value: string) {
+    const select = host.querySelector<HTMLSelectElement>(`select[aria-label="${label}"]`)!
+    await act(async () => { select.value = value; select.dispatchEvent(new Event('change', { bubbles: true })) })
+  }
+  const journal = () => records('Trading Journal')
+  const setupRows = () => journal().querySelectorAll<HTMLElement>('[data-journal-setup-id]')
+  const kpi = (name: string) => [...journal().querySelectorAll('dt')].find((item) => item.textContent === name)!.nextElementSibling!.textContent
+
+  it('starts with empty completed-setup statistics and accessible empty states', async () => {
+    await act(async () => root.render(<App />))
+    expect(kpi('Completed setups')).toBe('0')
+    expect(kpi('Win rate')).toBe('Unavailable')
+    expect(journal().textContent).toContain('Not permanently saved')
+    expect(journal().textContent).toContain('No setups yet')
+    expect(button('Export Journal CSV').disabled).toBe(true)
+    await selectJournal('Journal view', 'positions')
+    expect(journal().textContent).toContain('No executed positions yet')
+    await selectJournal('Statistics scope', 'positions')
+    expect(kpi('Closed positions')).toBe('0')
+  })
+
+  it('requires explicit grouping, blocks opposite direction and counts the completed setup once under StrictMode', async () => {
+    await act(async () => root.render(<StrictMode><App /></StrictMode>))
+    await setInput('Round-trip commission (USD per standard lot)', '35')
+    await click(button('Start Replay')); await click(button('Buy'))
+    const setupId = setupRows()[0].dataset.journalSetupId!
+    await selectJournal('Setup assignment', setupId)
+    expect(button('Sell').disabled).toBe(true)
+    await volume('0.03'); await click(button('Buy'))
+    expect(setupRows()).toHaveLength(1)
+    expect(records('Pending orders').textContent?.match(new RegExp(setupId, 'g'))).toHaveLength(2)
+    await click(button('Next Candle'))
+    expect(setupRows()[0].textContent).toContain('open')
+    const firstId = records('Open positions').querySelector<HTMLElement>('li')!.dataset.positionId!
+    await click(host.querySelector<HTMLButtonElement>(`button[aria-label="Close position ${firstId}"]`)!)
+    await click(button('Next Candle'))
+    expect(setupRows()[0].textContent).toContain('partially closed')
+    expect(setupRows()[0].textContent).toContain('Partial realized PnL')
+    expect(kpi('Completed setups')).toBe('0')
+    await selectJournal('Statistics scope', 'positions')
+    expect(kpi('Closed positions')).toBe('1')
+    expect(kpi('Net realized USD')).toBe('$0.45')
+    await click(records('Open positions').querySelector<HTMLButtonElement>('button')!)
+    await click(button('Next Candle'))
+    await selectJournal('Statistics scope', 'setups')
+    expect(kpi('Completed setups')).toBe('1')
+    expect(kpi('Net realized USD')).toBe('$4.80')
+    expect(kpi('Commissions USD')).toBe('$1.40')
+    expect(kpi('Win rate')).toBe('100.00%')
+    expect(setupRows()[0].textContent).toContain('completed')
+    expect(journal().querySelectorAll('.net-point')).toHaveLength(3)
+    await selectJournal('Journal view', 'positions')
+    expect(journal().querySelectorAll('[data-journal-position-id]')).toHaveLength(2)
+    await selectJournal('Statistics scope', 'positions')
+    expect(kpi('Closed positions')).toBe('2')
+  })
+
+  it('preserves notes through layout/timeframe changes and clears journal data on restart and history reload', async () => {
+    await act(async () => root.render(<App />))
+    await setInput('Round-trip commission (USD per standard lot)', '7')
+    await click(button('Start Replay')); await click(button('Buy')); await click(button('Next Candle'))
+    const setupId = setupRows()[0].dataset.journalSetupId!
+    await click(host.querySelector<HTMLButtonElement>(`[aria-label="Details for setup ${setupId}"]`)!)
+    await setInput(`Setup label ${setupId}`, 'London pullback')
+    const textarea = host.querySelector<HTMLTextAreaElement>(`[aria-label="Setup notes ${setupId}"]`)!
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(textarea, 'Watch spread\nReview later')
+      textarea.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    await selectTimeframe(0, 'M15')
+    await click(host.querySelector<HTMLInputElement>('input[value="3"]')!)
+    expect(setupRows()[0].textContent).toContain('London pullback')
+    expect(host.querySelector<HTMLTextAreaElement>(`[aria-label="Setup notes ${setupId}"]`)!.value).toContain('Review later')
+    await click(records('Open positions').querySelector<HTMLButtonElement>('button')!)
+    await click(button('Next Candle'))
+    await setInput(`Setup tag ${setupId}`, 'Free form after closure')
+    expect(setupRows()[0].textContent).toContain('Free form after closure')
+    await click(button('Restart'))
+    expect(setupRows()).toHaveLength(0)
+    expect(kpi('Completed setups')).toBe('0')
+    expect(journal().querySelectorAll('.net-point')).toHaveLength(0)
+    expect(host.querySelector<HTMLInputElement>('[aria-label="Round-trip commission (USD per standard lot)"]')!.value).toBe('7')
+    await click(button('Buy')); await click(button('Next Candle'))
+    expect(setupRows()).toHaveLength(1)
+    await click(button('Load Data'))
+    expect(setupRows()).toHaveLength(0)
+    expect(journal().textContent).not.toContain('London pullback')
+    expect(host.querySelector<HTMLInputElement>('[aria-label="Round-trip commission (USD per standard lot)"]')!.value).toBe('7')
+  })
+
+  it('keeps unrelated entries separate and exposes cancelled requests outside completed statistics', async () => {
+    await act(async () => root.render(<App />))
+    await click(button('Start Replay')); await click(button('Buy')); await click(button('Buy'))
+    expect(setupRows()).toHaveLength(2)
+    await click(records('Pending orders').querySelector<HTMLButtonElement>('button')!)
+    expect(setupRows()[0].textContent).toContain('rejected/cancelled')
+    expect(journal().querySelector('.journal-requests')!.textContent).toContain('Cancelled')
+    expect(kpi('Completed setups')).toBe('0')
+    await click(button('Next Candle'))
+    expect(journal().querySelectorAll('.net-point')).toHaveLength(0)
+  })
+
+  it('does not duplicate outcomes when timer advances batch across several bars', async () => {
+    await act(async () => root.render(<StrictMode><App /></StrictMode>))
+    await click(button('Start Replay')); await click(button('Buy')); await click(button('Next Candle'))
+    await click(records('Open positions').querySelector<HTMLButtonElement>('button')!)
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0))
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    await click(button('Play'))
+    await act(async () => vi.advanceTimersByTime(2000))
+    expect(kpi('Completed setups')).toBe('1')
+    expect(journal().querySelectorAll('.net-point')).toHaveLength(2)
+    expect(setupRows()).toHaveLength(1)
+    expect(replayStatus()).toBe('Complete')
+  })
+
+  it('downloads one session CSV blob and revokes its URL', async () => {
+    const createUrl = vi.fn((_blob: Blob) => 'blob:journal-test'), revokeUrl = vi.fn()
+    vi.stubGlobal('URL', class extends URL { static createObjectURL = createUrl; static revokeObjectURL = revokeUrl })
+    const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    await act(async () => root.render(<App />))
+    await click(button('Start Replay')); await click(button('Buy')); await click(button('Next Candle'))
+    await click(button('Export Journal CSV'))
+    expect(createUrl).toHaveBeenCalledTimes(1)
+    expect(createUrl.mock.calls[0][0]).toBeInstanceOf(Blob)
+    expect(anchorClick).toHaveBeenCalledTimes(1)
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    expect(revokeUrl).toHaveBeenCalledWith('blob:journal-test')
+    anchorClick.mockRestore()
+  })
+})
+
 describe('timeframe indicator presets', () => {
   it.each(TIMEFRAMES)('initializes %s with its default parameters and line visibility', async (timeframe) => {
     await act(async () => root.render(<App />))

@@ -3,8 +3,12 @@ import { commissionConfigError, DEFAULT_COMMISSION, perSideCommissionUsd, type C
 import { accountRiskError, DEFAULT_ACCOUNT_RISK, exceedsRisk, plannedRisk, riskBudget, sizeFromRisk, validRiskPercent, type AccountRisk, type EntrySizing } from './risk'
 
 export type Direction = 'buy' | 'sell'
+export interface SetupMetadata { title: string; tag: string; notes: string }
+export interface TradingSetup extends SetupMetadata { id: string; symbol: 'EURUSD'; direction: Direction }
+export type SetupStatus = 'pending' | 'open' | 'partially closed' | 'completed' | 'rejected/cancelled'
 export interface PendingEntry {
   id: string
+  setupId: string
   direction: Direction
   lots: number | null
   mode: 'risk' | 'manual'
@@ -19,6 +23,7 @@ export interface StopModification { oldPrice: number; newPrice: number; timestam
 export interface CoverageWarning { from: number; to: number; side: 'bid' | 'ask'; reason: 'missing_quote' | 'clock_gap' }
 export interface Position extends PendingEntry {
   lots: number
+  initialStopPrice: number
   commission: CommissionConfig
   entryCommissionUsd: number
   initialRiskUsd: number
@@ -42,25 +47,60 @@ export interface ClosedTrade extends Position {
   stopFillType: 'level' | 'gap_open' | null
 }
 export interface RejectedEntry extends PendingEntry { rejectedAt: number; reason: string }
+export interface CancelledEntry extends PendingEntry { cancelledAt: number }
 export interface Quote { bid: Candle | null; ask: Candle | null }
 export interface TradingState {
   account: AccountRisk
   commission: CommissionConfig
   session: number
   nextId: number
+  nextSetupId: number
+  setups: TradingSetup[]
   observedTimestamp: number | null
   quote: Quote | null
   pending: PendingEntry[]
   positions: Position[]
   closed: ClosedTrade[]
   rejected: RejectedEntry[]
+  cancelled: CancelledEntry[]
 }
 export interface TradingPermission { active: boolean; playing: boolean; hasFuture: boolean }
 
 export function createTradingState(session = 0, account: AccountRisk = DEFAULT_ACCOUNT_RISK, commission: CommissionConfig = DEFAULT_COMMISSION): TradingState {
   const error = commissionConfigError(commission)
   if (error) throw new Error(error)
-  return { account: { ...account }, commission: { ...commission }, session, nextId: 1, observedTimestamp: null, quote: null, pending: [], positions: [], closed: [], rejected: [] }
+  return { account: { ...account }, commission: { ...commission }, session, nextId: 1, nextSetupId: 1, setups: [], observedTimestamp: null, quote: null, pending: [], positions: [], closed: [], rejected: [], cancelled: [] }
+}
+
+export function setupEntries(state: TradingState, setupId: string) {
+  return { pending: state.pending.filter((entry) => entry.setupId === setupId),
+    open: state.positions.filter((entry) => entry.setupId === setupId),
+    closed: state.closed.filter((entry) => entry.setupId === setupId) }
+}
+
+export function setupStatus(state: TradingState, setupId: string): SetupStatus {
+  const { pending, open, closed } = setupEntries(state, setupId)
+  if (closed.length && (pending.length || open.length)) return 'partially closed'
+  if (open.length) return 'open'
+  if (pending.length) return 'pending'
+  return closed.length ? 'completed' : 'rejected/cancelled'
+}
+
+export function setupAssignmentError(state: TradingState, direction: Direction, setupId: string | null): string | null {
+  if (setupId === null) return null
+  const setup = state.setups.find((item) => item.id === setupId)
+  if (!setup) return 'Selected setup does not exist in this session.'
+  if (setup.direction !== direction) return 'The entry direction must match the selected setup.'
+  const { pending, open, closed } = setupEntries(state, setupId)
+  if (!pending.length && !open.length) return 'Only setups with a pending or open entry can accept another entry.'
+  if (pending.length + open.length + closed.length >= 2) return 'A setup can contain at most two submitted entry slots.'
+  return null
+}
+
+export function updateSetupMetadata(state: TradingState, id: string, metadata: SetupMetadata): TradingState {
+  if (!state.setups.some((setup) => setup.id === id)) return state
+  return { ...state, setups: state.setups.map((setup) => setup.id === id
+    ? { ...setup, title: metadata.title, tag: metadata.tag, notes: metadata.notes } : setup) }
 }
 
 export function validLots(lots: number): boolean {
@@ -101,20 +141,26 @@ export function entryRequestError(state: TradingState, sizing: EntrySizing, stop
   return null
 }
 
-export function requestEntry(state: TradingState, direction: Direction, sizing: EntrySizing, stopPrice: number, permission: TradingPermission): TradingState {
+export function requestEntry(state: TradingState, direction: Direction, sizing: EntrySizing, stopPrice: number, permission: TradingPermission, selectedSetupId: string | null = null): TradingState {
   if (!canRequestOrder(permission) || state.observedTimestamp === null || entryRequestError(state, sizing, stopPrice) ||
+    setupAssignmentError(state, direction, selectedSetupId) ||
     state.pending.length + state.positions.length >= 2) return state
+  const setupId = selectedSetupId ?? `${state.session}-S${state.nextSetupId}`
   const riskPercent = typeof sizing === 'number' ? null : sizing.riskPercent
-  const order: PendingEntry = { id: `${state.session}-${state.nextId}`, direction,
+  const order: PendingEntry = { id: `${state.session}-${state.nextId}`, setupId, direction,
     mode: typeof sizing === 'number' ? 'manual' : 'risk', lots: typeof sizing === 'number' ? sizing : null,
     requestedRiskPercent: riskPercent, requestedRiskUsd: riskPercent === null ? null : riskBudget(state.account.referenceBalance, riskPercent),
     stopPrice, requestedAt: state.observedTimestamp }
-  return { ...state, nextId: state.nextId + 1, pending: [...state.pending, order] }
+  return { ...state, nextId: state.nextId + 1, pending: [...state.pending, order],
+    nextSetupId: state.nextSetupId + (selectedSetupId === null ? 1 : 0),
+    setups: selectedSetupId === null ? [...state.setups, { id: setupId, symbol: 'EURUSD', direction, title: '', tag: '', notes: '' }] : state.setups }
 }
 
 export function cancelEntry(state: TradingState, id: string): TradingState {
-  if (!state.pending.some((order) => order.id === id)) return state
-  return { ...state, pending: state.pending.filter((order) => order.id !== id) }
+  const order = state.pending.find((item) => item.id === id)
+  if (!order || state.observedTimestamp === null) return state
+  return { ...state, pending: state.pending.filter((order) => order.id !== id),
+    cancelled: [...state.cancelled, { ...order, cancelledAt: state.observedTimestamp }] }
 }
 
 export function requestClose(state: TradingState, id: string, permission: TradingPermission): TradingState {
@@ -205,7 +251,7 @@ export function observeCandle(state: TradingState, bid: Candle, ask?: Candle): T
           : !Number.isFinite(initialRiskUsd) ? 'Actual planned risk cannot be represented safely. Entry rejected.'
           : exceedsRisk(usedUsd + initialRiskUsd, maximumUsd) ? 'Actual entry risk exceeds the combined risk cap, including pending allocations.' : null
         if (reason) rejected.push({ ...order, rejectedAt: timestamp, reason })
-        else positions.push({ ...order, lots: lots!, commission: { ...state.commission }, entryCommissionUsd, initialRiskUsd,
+        else positions.push({ ...order, lots: lots!, initialStopPrice: order.stopPrice, commission: { ...state.commission }, entryCommissionUsd, initialRiskUsd,
           initialRiskPercent: initialRiskUsd / state.account.referenceBalance * 100, referenceBalance: state.account.referenceBalance,
           entryTime: timestamp, entryPrice, closeRequestedAt: null,
           stopEffectiveAfter: order.requestedAt, stopModifications: [], coverageWarnings: [] })
@@ -228,7 +274,12 @@ export function observeCandle(state: TradingState, bid: Candle, ask?: Candle): T
     }
     surviving.push(position)
   }
-  return { ...state, observedTimestamp: timestamp, quote, pending, positions: surviving, closed, rejected }
+  // Quote-only observations preserve record identities for journal/curve memoization.
+  return { ...state, observedTimestamp: timestamp, quote,
+    pending: pending.length === state.pending.length ? state.pending : pending,
+    positions: surviving.length === state.positions.length && surviving.every((position, index) => position === state.positions[index]) ? state.positions : surviving,
+    closed: closed.length === state.closed.length ? state.closed : closed,
+    rejected: rejected.length === state.rejected.length ? state.rejected : rejected }
 }
 
 // Keep full precision in state; round only when formatting for display.
