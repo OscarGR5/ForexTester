@@ -37,6 +37,12 @@ export async function sessionApi(request: IncomingMessage, response: ServerRespo
     if (path.includes('%') || path.includes('..') || path.includes('\\')) throw new StorageFailure(400, 'Invalid storage path.')
     if (request.method === 'GET' && path === '/api/storage/status') { send(200, await storage.status()); return true }
     if (request.method === 'GET' && path === '/api/storage/sessions') { send(200, await storage.list()); return true }
+    if (request.method === 'GET' && path === '/api/storage/cleanup') { send(200, await storage.previewCleanup()); return true }
+    if (request.method === 'POST' && path === '/api/storage/cleanup') {
+      const body = await readJson(request, 4096)
+      if (body.confirm !== true) throw new StorageFailure(400, 'Explicit cleanup confirmation is required.')
+      send(200, await storage.cleanup()); return true
+    }
     const history = /^\/api\/storage\/history\/([^/]+)$/.exec(path)
     if (history) {
       validHash(history[1])
@@ -71,7 +77,10 @@ export async function sessionApi(request: IncomingMessage, response: ServerRespo
     }
     throw new StorageFailure(404, 'Storage endpoint not found.')
   } catch (error) {
-    if (error instanceof StorageFailure) send(error.status, { error: error.message })
+    if (error instanceof StorageFailure) {
+      response.setHeader('X-Storage-Error-Code', error.code)
+      send(error.status, { code: error.code, error: error.message })
+    }
     else {
       const code = (error as NodeJS.ErrnoException).code
       const message = code === 'ENOSPC' || code === 'EDQUOT' ? 'Disk full. Checkpoint was not confirmed saved; free disk space and retry.'
@@ -79,7 +88,11 @@ export async function sessionApi(request: IncomingMessage, response: ServerRespo
         : code === 'ENOENT' ? 'Required storage data is missing. Original committed files were kept.'
         : error instanceof Error && (error.message.includes('session') || error.message.includes('backend') || error.message.includes('writer.lock') || error.message.includes('fingerprint')) ? error.message
         : 'Filesystem storage failed. Check the storage directory and retry; original committed files were kept.'
-      send(503, { error: message })
+      const apiCode = code === 'ENOSPC' || code === 'EDQUOT' ? 'STORAGE_FULL'
+        : code === 'EACCES' || code === 'EPERM' || code === 'EROFS' ? 'STORAGE_PERMISSION_DENIED'
+        : code === 'ENOENT' ? 'STORAGE_DATA_MISSING' : 'STORAGE_UNAVAILABLE'
+      response.setHeader('X-Storage-Error-Code', apiCode)
+      send(503, { code: apiCode, error: message })
     }
   }
   return true

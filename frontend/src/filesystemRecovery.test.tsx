@@ -1,3 +1,5 @@
+import { rm } from 'node:fs/promises'
+import { join } from 'node:path'
 // @vitest-environment jsdom
 import { StrictMode, act } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -18,19 +20,20 @@ let store: DiskSessionStore
 let disk: Awaited<ReturnType<typeof diskApiFixture>>
 beforeEach(async () => { disk = await diskApiFixture(); vi.stubGlobal('fetch', disk.fetch); vi.stubGlobal('crypto', webcrypto); vi.stubGlobal('IDBKeyRange', IDBKeyRange); store = new DiskSessionStore() })
 afterEach(async () => { vi.useRealTimers(); await disk.close(); vi.unstubAllGlobals() })
-async function persisted(sim: ReturnType<typeof sessionSimulation>, speed: 1 | 10 | 100, playing: boolean) {
+async function persisted(sim: ReturnType<typeof sessionSimulation>, speed: 1 | 10 | 100, playing: boolean, repair = false) {
   await store.cacheHistory(await historyFingerprint(sim.history), sim.history)
   const record = await store.save({ id: crypto.randomUUID(), name: 'Recovery', createdAt: '2026-10-23T00:00:00.000Z', range: { from: sim.history.tradingFrom, to: sim.history.to }, historyId: await historyFingerprint(sim.history), totalCandles: sim.history.bid.length }, sim.snapshot(playing, speed), null)
+  if (repair) { await rm(join(disk.directory, 'history', `${record.historyId}.json.gz`)); await store.repairHistory(record.id, async () => sim.history) }
   return store.recover(record.id, async () => sim.history)
 }
 describe('deliberate StrictMode hydration and next-candle execution', () => {
-  it.each([1, 10, 100] as const)('restores a previously playing %s× session paused and matches uninterrupted execution without duplicate fees or equity', async (speed) => {
+  it.each([1, 10, 100].flatMap((speed) => [false, true].map((repair) => ({ speed: speed as 1 | 10 | 100, repair }))))('restores a previously playing $speed× session paused (repair=$repair) and matches uninterrupted execution without duplicate fees or equity', async ({ speed, repair }) => {
     const history = sessionHistory(205); history.bid[65].low = 1.097
     const sim = sessionSimulation(history); sim.observe()
     sim.state = requestEntry(sim.state, 'buy', .1, 1.098, manualPermission)
     sim.state = requestEntry(sim.state, 'buy', .2, 1.098, manualPermission, sim.state.setups[0].id)
     sim.observe(21)
-    const saved = await persisted(sim, speed, true), root = createRoot(document.createElement('div'))
+    const saved = await persisted(sim, speed, true, repair), root = createRoot(document.createElement('div'))
     let replay!: ReturnType<typeof useReplay>, trading!: ReturnType<typeof useTrading>
     function Harness() { replay = useReplay(saved.history.bid, 0, { replay: saved.checkpoint.replay, epoch: saved.checkpoint.trading.session }); trading = useTrading(saved.history, replay, saved); return null }
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })

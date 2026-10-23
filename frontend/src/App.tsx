@@ -222,7 +222,7 @@ export function App() {
   } }) : null, [history, trading.state, trading.equity, trading.executionCursor, replay.active, replay.count, replay.timestamp, replay.startIndex, replay.speed, replay.complete, replay.playing, startIndex, startMs, workspace])
   const sessions = useSessionPersistence({ history, snapshot, actionVersion: trading.actionVersion, pause: replay.pause,
     captureViewport: () => synchronizer.snapshot(),
-    download: (range) => new HistoryLoader().load(range, new AbortController().signal, setLoadProgress),
+    download: (range, progress) => new HistoryLoader().load(range, new AbortController().signal, progress ?? setLoadProgress),
     restore: (saved, source) => {
       skipHistoryLoad.current = true
       setHydration(saved); setHistory(source); setRequestedRange(saved.record.range)

@@ -103,7 +103,7 @@ describe('durable storage and integrity', () => {
   })
   it('rejects wrong history and equity hashes before publication', async () => {
     const { saved } = await fixture()
-    await expect(api.storage.putHistory('f'.repeat(64), sessionHistory())).rejects.toThrow('fingerprint')
+    await expect(api.storage.putHistory('f'.repeat(64), sessionHistory())).rejects.toMatchObject({ code: 'HISTORY_FINGERPRINT_MISMATCH' })
     const record = { ...saved, revision: 2 }; record.digest = await recordDigest(record)
     await expect(api.storage.save(record, [{ hash: 'f'.repeat(64), points: [] }], 1)).rejects.toThrow('hash')
     expect((await client.recover(saved.id)).record).toEqual(saved)
