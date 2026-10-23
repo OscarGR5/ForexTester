@@ -1,46 +1,14 @@
+import { performanceStart, performanceEnd } from './replayPerformance.js'
 import { useUiValue, validBoolean } from './uiPreferences'
 import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { type EquityLedger, type EquityPoint } from './equity'
 import { formatTradingNumber as number, tradingTime } from './trading'
 
-export function equityObservations(ledger: EquityLedger): EquityPoint[] {
-  const points: EquityPoint[] = new Array(ledger.count)
-  let node = ledger.tail
-  for (let index = points.length - 1; node; node = node.previous) points[index--] = node.point
-  return points
-}
-
-// Display only. Keep time-bucket endpoints and all financial extrema, plus both
-// sides of missing observations and clock gaps. The ledger remains untouched.
-export function downsampleEquity(points: readonly EquityPoint[], pixels: number): EquityPoint[] {
-  if (points.length <= pixels * 4) return [...points]
-  const first = points[0].timestamp, span = points.at(-1)!.timestamp - first || 1
-  const selected = new Set<number>([0, points.length - 1])
-  let bucket = -1, start = 0, min = 0, max = 0, dd = 0, cashMin = 0, cashMax = 0
-  const flush = (end: number) => { for (const index of [start, end, min, max, dd, cashMin, cashMax]) selected.add(index) }
-  for (let index = 0; index < points.length; index++) {
-    const point = points[index]
-    const nextBucket = Math.floor((point.timestamp - first) / span * Math.max(1, pixels / 4))
-    if (nextBucket !== bucket) {
-      if (index) flush(index - 1)
-      bucket = nextBucket; start = min = max = dd = cashMin = cashMax = index
-    }
-    if (point.equityUsd !== null) {
-      if (points[min].equityUsd === null || point.equityUsd < points[min].equityUsd!) min = index
-      if (points[max].equityUsd === null || point.equityUsd > points[max].equityUsd!) max = index
-      if ((point.drawdownUsd ?? 0) > (points[dd].drawdownUsd ?? 0)) dd = index
-    }
-    if (point.cashUsd < points[cashMin].cashUsd) cashMin = index
-    if (point.cashUsd > points[cashMax].cashUsd) cashMax = index
-    if (point.clockGap || (index && (point.equityUsd === null) !== (points[index - 1].equityUsd === null))) {
-      selected.add(index); if (index) selected.add(index - 1)
-    }
-  }
-  flush(points.length - 1)
-  return [...selected].sort((a, b) => a - b).map((index) => points[index])
-}
+export { equityObservations, downsampleEquity } from './equityDisplay'
+import { EquityDisplay } from './equityDisplay'
 
 export const EquityChart = memo(function EquityChart({ ledger, referenceBalance, sessionId = null }: { ledger: EquityLedger; referenceBalance: number; sessionId?: string | null }) {
+  const [display] = useState(() => new EquityDisplay())
   const container = useRef<HTMLElement>(null)
   const [width, setWidth] = useState(960)
   const [showCash, setShowCash] = useUiValue(sessionId, 'showCashReference', false, validBoolean)
@@ -50,7 +18,7 @@ export const EquityChart = memo(function EquityChart({ ledger, referenceBalance,
     observer.observe(container.current)
     return () => observer.disconnect()
   }, [])
-  const points = useMemo(() => downsampleEquity(equityObservations(ledger), width), [ledger, width])
+  const points = useMemo(() => { const started = performanceStart(); const points = display.update(ledger, width); performanceEnd('equity.prepare', started); return points }, [ledger, width, display])
   const current = ledger.tail?.point
   const money = (value: number | null | undefined) => value === null || value === undefined ? 'Unavailable' : `$${number(value, 2)}`
   let min = referenceBalance, max = referenceBalance

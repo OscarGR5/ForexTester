@@ -25,7 +25,7 @@ function fakeChart(initial: LogicalRange = { from: 0, to: 4 } as LogicalRange, m
   const unsubscribeRange = vi.fn(() => { onRange = undefined })
   const unsubscribeCrosshair = vi.fn(() => { onCrosshair = undefined })
   const chart = {
-    timeScale: () => ({ getVisibleLogicalRange: () => range, setVisibleLogicalRange,
+    timeScale: () => ({ getVisibleLogicalRange: () => range, setVisibleLogicalRange, coordinateToTime: (x: number) => x as UTCTimestamp,
       fitContent: vi.fn(), subscribeVisibleLogicalRangeChange: (handler: typeof onRange) => { onRange = handler },
       unsubscribeVisibleLogicalRangeChange: unsubscribeRange }),
     subscribeCrosshairMove: (handler: typeof onCrosshair) => { onCrosshair = handler },
@@ -35,7 +35,8 @@ function fakeChart(initial: LogicalRange = { from: 0, to: 4 } as LogicalRange, m
   return { chart, setVisibleLogicalRange, setCrosshairPosition, clearCrosshairPosition,
     unsubscribeRange, unsubscribeCrosshair, getRange: () => range,
     emitRange: (next: LogicalRange) => { range = next; onRange?.(next) },
-    emitCrosshair: (time?: number) => onCrosshair?.({ time: time as UTCTimestamp | undefined } as MouseEventParams) }
+    emitCrosshair: (time?: number, point?: { x: number; y: number }, paneIndex = 0) => onCrosshair?.({ time: time as UTCTimestamp | undefined, sourceEvent: {}, point, paneIndex } as MouseEventParams),
+    emitProgrammatic: (time: number) => onCrosshair?.({ time: time as UTCTimestamp, point: { x: time, y: 1 } } as MouseEventParams) }
 }
 
 const series = {} as ISeriesApi<'Candlestick'>
@@ -287,4 +288,55 @@ it('aligns a following viewport with the recovered replay edge when UI storage l
   register(sync, 0, chart, Array.from({ length: 21 }, (_, i) => i * 60), 'M1')
   expect(sync.snapshot()).toEqual({ range: { from: 960, to: 1200 }, following: true })
   expect(chart.getRange()).toEqual({ from: 16, to: 20 })
+})
+
+it('deduplicates identical synchronized crosshairs while retaining price changes and source handoff', () => {
+  const sync = new ChartSynchronizer(), m1 = fakeChart(), m5 = fakeChart()
+  register(sync, 0, m1, [0, 60, 120, 180, 240, 300], 'M1')
+  register(sync, 1, m5, [0, 300], 'M5')
+  m1.emitCrosshair(60); m1.emitCrosshair(120); m1.emitCrosshair(180)
+  expect(m5.setCrosshairPosition).toHaveBeenCalledTimes(1)
+  m1.emitCrosshair(300)
+  expect(m5.setCrosshairPosition).toHaveBeenCalledTimes(2)
+  sync.update(1, [candles([0])[0], { ...candles([300])[0], close: 1.7 }], 'M5', () => {}, 1)
+  m1.emitCrosshair(300)
+  expect(m5.setCrosshairPosition).toHaveBeenLastCalledWith(1.7, 300, series)
+  expect(m5.setCrosshairPosition).toHaveBeenCalledTimes(3)
+  m5.emitCrosshair(0)
+  m1.emitCrosshair(300)
+  expect(m5.setCrosshairPosition).toHaveBeenCalledTimes(4)
+  m5.clearCrosshairPosition.mockClear()
+  m1.emitCrosshair(); m1.emitCrosshair()
+  expect(m5.clearCrosshairPosition).toHaveBeenCalledTimes(1)
+})
+
+
+it('clears crosshairs during a batch and restores the source oscillator pane before paint', () => {
+  const sync = new ChartSynchronizer({ from: 0, to: 300 }), source = fakeChart(), target = fakeChart()
+  const oscillator = { coordinateToPrice: vi.fn((y: number) => y) }
+  Object.assign(source.chart, { panes: () => [{ getSeries: () => [series] }, { getSeries: () => [oscillator] }] })
+  const stop = register(sync, 0, source, [0, 300], 'M5')
+  register(sync, 1, target, [0, 60, 120, 180, 240, 300], 'M1')
+  source.emitCrosshair(300, { x: 300, y: 40 }, 1)
+  target.setCrosshairPosition.mockClear()
+  target.emitProgrammatic(120)
+  expect(source.setCrosshairPosition).not.toHaveBeenCalled()
+  sync.update(0, candles([0, 300]), 'M5', () => {
+    expect(source.clearCrosshairPosition).toHaveBeenCalled()
+  }, 1)
+  sync.advance({ from: 0, to: 300 })
+  expect(oscillator.coordinateToPrice).toHaveBeenCalledWith(40)
+  expect(source.setCrosshairPosition).toHaveBeenLastCalledWith(40, 300, oscillator)
+  stop()
+  expect(target.clearCrosshairPosition).toHaveBeenCalled()
+})
+
+
+it('does not redraw an absent crosshair during ordinary playback without a pointer over a chart', () => {
+  const sync = new ChartSynchronizer({ from: 0, to: 300 }), chart = fakeChart()
+  register(sync, 0, chart, [0, 300], 'M5')
+  sync.update(0, candles([0, 300, 600]), 'M5', () => {}, 2)
+  sync.advance({ from: 0, to: 600 })
+  expect(chart.clearCrosshairPosition).not.toHaveBeenCalled()
+  expect(chart.setCrosshairPosition).not.toHaveBeenCalled()
 })

@@ -1,5 +1,7 @@
+import { ChartTimeSlots } from './chartTimeSlots'
+import { performanceStart, performanceEnd, performanceCount, performanceValue } from './replayPerformance.js'
 import { defaultWorkspace, readUi, useUiValue, validWorkspace, validPriceView, type PriceView, writeUi } from './uiPreferences'
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { CandlestickSeries, ColorType, LineStyle, createChart, type IChartApi, type IPriceLine, type ISeriesApi, type Time } from 'lightweight-charts'
 import { SessionControls } from './SessionControls'
 import { useSessionPersistence } from './useSessionPersistence'
@@ -36,10 +38,12 @@ interface ChartPaneProps {
   onTimeframeChange: (id: number, timeframe: Timeframe) => void
 }
 
-function ChartPane({ id, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions }: ChartPaneProps) {
+const ChartPane = memo(function ChartPane({ id, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions }: ChartPaneProps) {
   const container = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
+  const timeSlots = useRef<ChartTimeSlots | null>(null)
+  const updateSettings = useCallback((next: IndicatorSettings) => onSettingsChange(id, next), [id, onSettingsChange])
   const indicatorsRef = useRef<IndicatorSeries | null>(null)
   const stopLines = useRef(new Map<string, IPriceLine>())
   const previousSettings = useRef<IndicatorSettings | null>(null)
@@ -80,12 +84,14 @@ function ChartPane({ id, sessionId, timeframe, source, count, synchronizer, onTi
     })
     chartRef.current = chart
     seriesRef.current = series
+    timeSlots.current = new ChartTimeSlots(chart)
     indicatorsRef.current = new IndicatorSeries(chart)
     return () => {
       unregisterRef.current?.()
       unregisterRef.current = null
       indicatorsRef.current?.dispose()
       indicatorsRef.current = null
+      timeSlots.current = null
       previousSettings.current = null
       stopLines.current.clear()
       chart.remove()
@@ -119,6 +125,7 @@ function ChartPane({ id, sessionId, timeframe, source, count, synchronizer, onTi
   }, [id, synchronizer])
 
   useLayoutEffect(() => {
+    const frame = performanceStart()
     const series = seriesRef.current!
     const last = previous.current
     const replace = !last || last.synchronizer !== synchronizer || last.timeframe !== timeframe ||
@@ -126,14 +133,25 @@ function ChartPane({ id, sessionId, timeframe, source, count, synchronizer, onTi
     const bars = replace ? new ReplayBars(timeframe) : last.bars
     const dirty = bars.advance(source, count)
     const candles = bars.candles
+    performanceValue(`chart.${id}.cursor`, count)
+    performanceValue(`chart.${id}.time`, candles.at(-1)?.time ?? 0)
+    if (!replace && dirty === candles.length && previousSettings.current === settings) {
+      previous.current = { source, count, bars, timeframe, synchronizer }
+      performanceEnd('chart.pane', frame)
+      return
+    }
     synchronizer.update(id, candles, timeframe, () => {
-      if (replace) series.setData(candles)
+      timeSlots.current!.prepare(candles, replace)
+      const prices = performanceStart()
+      if (replace) { performanceCount('candles.setData'); series.setData(candles) }
       else {
         // Revisit the old tail: it may be a newly completed higher-timeframe bucket.
-        for (let index = dirty; index < candles.length; index++) series.update(candles[index])
+        for (let index = dirty; index < candles.length; index++) { performanceCount('candles.update'); series.update(candles[index]) }
       }
+      performanceEnd('candles.series', prices)
       return indicatorsRef.current!.update(candles, settings, timeframe, replace || previousSettings.current !== settings)
     }, replace ? 0 : dirty)
+    performanceEnd('chart.pane', frame)
     previousSettings.current = settings
     previous.current = { source, count, bars, timeframe, synchronizer }
   }, [id, source, count, synchronizer, timeframe, settings])
@@ -184,12 +202,12 @@ function ChartPane({ id, sessionId, timeframe, source, count, synchronizer, onTi
           onChange={(event) => onTimeframeChange(id, event.target.value as Timeframe)}>
           {TIMEFRAMES.map((option) => <option key={option} value={option}>{option}</option>)}
         </select></label>
-        <IndicatorControls key={timeframe} id={id} settings={settings} onChange={(next) => onSettingsChange(id, next)} />
+        <IndicatorControls key={timeframe} id={id} settings={settings} onChange={updateSettings} />
       </div>
       <div ref={container} className="chart-canvas" aria-hidden="true" />
     </section>
   )
-}
+})
 
 export function App() {
   const [from, setFrom] = useState(DEFAULT_RANGE.from)
@@ -238,10 +256,8 @@ export function App() {
   const [uiWorkspace, setUiWorkspace] = useUiValue(sessions.activeId, 'workspace', workspace, validWorkspace)
   const { chartCount, timeframes, indicators: indicatorSettings, statisticsScope, journalScope } = uiWorkspace
   const setChartCount = (chartCount: number) => setUiWorkspace((w) => ({ ...w, chartCount }))
-  const setTimeframes = (update: (v: Timeframe[]) => Timeframe[]) => setUiWorkspace((w) => ({ ...w, timeframes: update(w.timeframes) }))
-  const setIndicatorSettings = (update: (v: WorkspaceSettings['indicators']) => WorkspaceSettings['indicators']) => setUiWorkspace((w) => ({ ...w, indicators: update(w.indicators) }))
-  const setStatisticsScope = (statisticsScope: AnalyticsScope) => setUiWorkspace((w) => ({ ...w, statisticsScope }))
-  const setJournalScope = (journalScope: AnalyticsScope) => setUiWorkspace((w) => ({ ...w, journalScope }))
+  const setStatisticsScope = useCallback((statisticsScope: AnalyticsScope) => setUiWorkspace((w) => ({ ...w, statisticsScope })), [setUiWorkspace])
+  const setJournalScope = useCallback((journalScope: AnalyticsScope) => setUiWorkspace((w) => ({ ...w, journalScope })), [setUiWorkspace])
   const synchronizer = useMemo(() => {
     const sync = new ChartSynchronizer(bounds)
     sync.restore(readUi(sessions.activeId, 'workspace', workspace, validWorkspace).viewport)
@@ -308,12 +324,18 @@ export function App() {
     replay.restart()
   }
 
-  function changeTimeframe(id: number, timeframe: Timeframe) {
+  const changeTimeframe = useCallback((id: number, timeframe: Timeframe) => {
     synchronizer.deactivate()
-    setIndicatorSettings((current) => current.map((settings, index) => index === id && !settings[timeframe]
-      ? { ...settings, [timeframe]: indicatorPreset(timeframe) } : settings))
-    setTimeframes((current) => current.map((value, index) => index === id ? timeframe : value))
-  }
+    setUiWorkspace((w) => ({ ...w,
+      timeframes: w.timeframes.map((value, index) => index === id ? timeframe : value),
+      indicators: w.indicators.map((settings, index) => index === id && !settings[timeframe]
+        ? { ...settings, [timeframe]: indicatorPreset(timeframe) } : settings),
+    }))
+  }, [synchronizer, setUiWorkspace])
+  const changeSettings = useCallback((id: number, next: IndicatorSettings) => {
+    synchronizer.deactivate()
+    setUiWorkspace((w) => ({ ...w, indicators: w.indicators.map((value, index) => index === id ? { ...value, [w.timeframes[id]]: next } : value) }))
+  }, [synchronizer, setUiWorkspace])
 
   const replayStartError = !Number.isFinite(startMs) || startMs < Date.parse(tradingFrom) || startMs >= Date.parse(requestedRange.to)
   const todayUtc = new Date().toISOString().slice(0, 10)
@@ -360,10 +382,7 @@ export function App() {
         <div className="chart-stack" style={{ gridTemplateRows: `repeat(${chartCount}, minmax(auto, 1fr))` }}>
           {timeframes.slice(0, chartCount).map((timeframe, id) => <ChartPane key={id} id={id} timeframe={timeframe}
             sessionId={sessions.activeId} positions={trading.state.positions} source={history?.bid ?? EMPTY_CANDLES} count={replay.count} synchronizer={synchronizer} onTimeframeChange={changeTimeframe}
-            settings={indicatorSettings[id][timeframe]!} onSettingsChange={(chartId, next) => {
-              synchronizer.deactivate()
-              setIndicatorSettings((current) => current.map((value, index) => index === chartId ? { ...value, [timeframe]: next } : value))
-            }} />)}
+            settings={indicatorSettings[id][timeframe]!} onSettingsChange={changeSettings} />)}
         </div>
         {status === 'loading' && <div className="chart-message" role="status">Loading EURUSD bid/ask history · {loadProgress.completed} / {loadProgress.total} chunks complete…</div>}
         {status === 'error' && <div className="chart-message" role="alert"><p>{error}</p><button type="button" onClick={() => setRequestedRange({ ...requestedRange })}>Retry</button></div>}

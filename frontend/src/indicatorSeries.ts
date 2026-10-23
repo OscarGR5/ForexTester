@@ -1,3 +1,4 @@
+import { performanceStart, performanceEnd, performanceCount } from './replayPerformance.js'
 import { LineSeries, LineStyle, type IChartApi, type ISeriesApi, type WhitespaceData, type UTCTimestamp } from 'lightweight-charts'
 import { calculateIndicators, type ChartCandle, type IndicatorLine, type IndicatorSettings } from './indicators'
 import { IchimokuCloudPrimitive } from './ichimokuCloud'
@@ -17,16 +18,25 @@ export class IndicatorSeries {
   private lines = new Map<LineKey, ManagedLine>()
   private cloud: IchimokuCloudPrimitive | null = null
   private processed = 0
-  private cloudData: import('./indicators').CloudPoint[] = []
+  private lastCandle: ChartCandle | undefined
+  private lastSettings: IndicatorSettings | null = null
+  private lastTimeframe: Timeframe | null = null
   constructor(private chart: IChartApi) {}
 
   update(candles: readonly ChartCandle[], settings: IndicatorSettings, timeframe: Timeframe, replace: boolean): number {
+    const horizon = settings.ichimoku.enabled && candles.length ? settings.ichimoku.displacement : 0
+    if (!replace && this.processed === candles.length && this.lastCandle === candles.at(-1) &&
+      this.lastSettings === settings && this.lastTimeframe === timeframe) return horizon
     const dirty = replace ? 0 : Math.max(0, this.processed - 1)
-    const lookback = Math.max(settings.bollinger.length, settings.bollinger2.length,
-      settings.stochastic.length + settings.stochastic.smoothK + settings.stochastic.smoothD,
-      settings.ichimoku.tenkan, settings.ichimoku.kijun, settings.ichimoku.spanB)
-    const begin = Math.max(0, dirty - lookback - settings.ichimoku.displacement * 2)
+    const lookback = Math.max(settings.bollinger.enabled ? settings.bollinger.length : 0,
+      settings.bollinger2.enabled ? settings.bollinger2.length : 0,
+      settings.stochastic.enabled ? settings.stochastic.length + settings.stochastic.smoothK + settings.stochastic.smoothD : 0,
+      settings.ichimoku.enabled ? Math.max(settings.ichimoku.tenkan, settings.ichimoku.kijun, settings.ichimoku.spanB) : 0)
+    const begin = Math.max(0, dirty - lookback - (settings.ichimoku.enabled ? settings.ichimoku.displacement * 2 : 0))
+    const calculation = performanceStart()
     const data = calculateIndicators(candles.slice(begin), settings, timeframe)
+    performanceEnd('indicators.calculate', calculation)
+    const rendering = performanceStart()
     const cutoff = candles[dirty]?.time ?? 0
     const enabled: LineKey[] = [
       ...[settings.bollinger, settings.bollinger2].flatMap((group, index): LineKey[] => {
@@ -81,14 +91,14 @@ export class IndicatorSeries {
       const lineCutoff = key === 'chikou' ? candles[Math.max(0, dirty - settings.ichimoku.displacement)]?.time ?? 0 : cutoff
       this.syncLine(line, points.filter((point) => point.time >= lineCutoff), replace, lineCutoff)
     }
-    if (replace) this.cloudData = []
-    while (this.cloudData.length && this.cloudData.at(-1)!.time >= cutoff) this.cloudData.pop()
-    for (const point of data.cloud) if (point.time >= cutoff) this.cloudData.push(point)
-    this.cloud?.setData(this.cloudData)
+    performanceEnd('indicators.series', rendering)
+    const cloudStart = performanceStart()
+    this.cloud?.updateTail(data.cloud.filter((point) => point.time >= cutoff), cutoff, replace)
+    performanceEnd('cloud.update', cloudStart)
     this.processed = candles.length
-    const last = candles.at(-1)?.time
+    this.lastCandle = candles.at(-1); this.lastSettings = settings; this.lastTimeframe = timeframe
     // Reserve the entire projected horizon, including before the first span is warm.
-    return settings.ichimoku.enabled && last !== undefined ? settings.ichimoku.displacement : 0
+    return horizon
   }
 
   private syncLine(line: ManagedLine, tail: RenderLine, replace: boolean, cutoff: number): void {
@@ -96,16 +106,19 @@ export class IndicatorSeries {
     if (!replace && !previous.length && !tail.length) return
     let start = previous.length
     while (start > 0 && previous[start - 1].time >= cutoff) start--
-    const stable = !replace && tail.length >= previous.length - start &&
-      previous.slice(start).every((point, index) => point.time === tail[index].time)
-    if (!stable || previous.length === 0) {
+    let stable = !replace && tail.length >= previous.length - start
+    for (let index = start; stable && index < previous.length; index++) stable = previous[index].time === tail[index - start].time
+    if (!stable) {
       line.data = replace ? tail : [...previous.slice(0, start), ...tail]
+      performanceCount(replace ? 'indicators.replace' : 'indicators.realign')
+      performanceCount('indicators.setData')
       line.series.setData(line.data)
       return
     }
     for (let index = 0; index < tail.length; index++) {
       const point = tail[index], old = previous[start + index]
       if (!old || ('value' in old ? old.value : undefined) !== ('value' in point ? point.value : undefined)) {
+        performanceCount('indicators.update')
         line.series.update(point, start + index < previous.length - 1)
       }
     }

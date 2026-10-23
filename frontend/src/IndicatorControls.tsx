@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react'
+import { memo, useEffect, useId, useState } from 'react'
 import { validateIndicatorSettings, type IndicatorSettings } from './indicators'
 
 const FIELDS = {
@@ -22,7 +22,7 @@ function Parameter({ label, ariaLabel, value, fractional, onChange }: { label: s
       if (valid) onChange(next)
     }} />{invalid && <span id={errorId} className="parameter-error">{fractional ? 'Use > 0 to 100.' : 'Use 1–10000, whole numbers.'} Last valid value is applied.</span>}</label>
 }
-export function IndicatorControls({ id, settings, onChange }: { id: number; settings: IndicatorSettings; onChange: (settings: IndicatorSettings) => void }) {
+export const IndicatorControls = memo(function IndicatorControls({ id, settings, onChange }: { id: number; settings: IndicatorSettings; onChange: (settings: IndicatorSettings) => void }) {
   const update = (next: IndicatorSettings) => { if (!validateIndicatorSettings(next)) onChange(next) }
   return <details className="indicator-controls"><summary>Indicators</summary>
     <div className="indicator-options" aria-label={`Chart ${id + 1} indicators`}>
@@ -43,4 +43,4 @@ export function IndicatorControls({ id, settings, onChange }: { id: number; sett
       </fieldset>)}
     </div>
   </details>
-}
+})

@@ -1,3 +1,4 @@
+import { performanceStart, performanceEnd, performanceCount } from './replayPerformance.js'
 import type { Hydration } from './sessionTypes'
 import { createEquityLedger, recordEquity, type EquityLedger } from './equity'
 import type { CommissionConfig } from './commissions'
@@ -17,6 +18,7 @@ export function useTrading(history: HistoryResponse | null, replay: ReplayClock,
     current = restored && session.history !== history ? { history, epoch: replay.epoch, processed: restored.checkpoint.executionCursor, state: restored.checkpoint.trading, equity: restored.ledger, actionVersion: session.actionVersion + 1 } : { history, epoch: replay.epoch, processed: replay.active ? replay.startIndex ?? 0 : 0, state: createTradingState(replay.epoch, session.state.account, session.state.commission), equity: createEquityLedger(session.state.account.referenceBalance), actionVersion: session.actionVersion + 1 }
   }
   if (history && current.processed < replay.revealed) {
+    const processing = performanceStart()
     let state = current.state
     let equity = current.equity
     // React may combine many timer ticks into one render. Process the entire
@@ -27,6 +29,8 @@ export function useTrading(history: HistoryResponse | null, replay: ReplayClock,
       state = observeCandle(state, bid, asks.get(bid.timestamp))
       equity = recordEquity(equity, previous, state)
     }
+    performanceCount('execution.observations', replay.revealed - Math.max(current.processed, replay.startIndex ?? 0))
+    performanceEnd('execution.equity', processing)
     current = { ...current, processed: replay.revealed, state, equity }
   }
   // Pure adjustment before children render, as with the replay dataset reset.

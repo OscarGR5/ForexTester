@@ -22,3 +22,30 @@ it('draws both crossover colors through the public primitive lifecycle and relea
   expect(fillColors).toHaveLength(2)
   expect(requestUpdate).toHaveBeenCalledTimes(1)
 })
+
+it('updates only the cloud tail and requests no redraw for identical projected values', () => {
+  const primitive = new IchimokuCloudPrimitive(), requestUpdate = vi.fn()
+  primitive.attached({ chart: {}, series: {}, requestUpdate } as unknown as SeriesAttachedParameter)
+  const points = Array.from({ length: 1000 }, (_, i) => ({ time: i as UTCTimestamp, a: i % 7, b: i % 11 }))
+  primitive.updateTail(points, 0, true)
+  expect(requestUpdate).toHaveBeenCalledTimes(1)
+  primitive.updateTail(points.slice(990), 990, false)
+  expect(requestUpdate).toHaveBeenCalledTimes(1)
+  primitive.updateTail([{ ...points[999], a: 99 }], 999, false)
+  expect(requestUpdate).toHaveBeenCalledTimes(2)
+  primitive.updateTail([], 0, true)
+  expect(requestUpdate).toHaveBeenCalledTimes(3)
+  primitive.updateTail([], 0, true)
+  expect(requestUpdate).toHaveBeenCalledTimes(3)
+})
+
+it('limits cloud coordinate conversion to the visible history and its adjacent strips', () => {
+  const primitive = new IchimokuCloudPrimitive()
+  const convert = vi.fn((time: number) => time - 500)
+  const context = { save() {}, restore() {}, beginPath() {}, rect() {}, clip() {}, moveTo() {}, lineTo() {}, closePath() {}, fill() {} }
+  primitive.attached({ chart: { timeScale: () => ({ getVisibleRange: () => ({ from: 500, to: 510 }), timeToCoordinate: convert }) },
+    series: { priceToCoordinate: (price: number) => price }, requestUpdate() {} } as unknown as SeriesAttachedParameter)
+  primitive.setData(Array.from({ length: 10000 }, (_, i) => ({ time: i as UTCTimestamp, a: 1, b: 2 })))
+  primitive.paneViews()[0].renderer()!.draw({ useMediaCoordinateSpace: (draw: (scope: unknown) => void) => draw({ context, mediaSize: { width: 200, height: 100 } }) } as unknown as Parameters<IPrimitivePaneRenderer['draw']>[0])
+  expect(convert.mock.calls.map(([time]) => time)).toEqual(Array.from({ length: 13 }, (_, i) => 499 + i))
+})

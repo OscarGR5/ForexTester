@@ -50,3 +50,36 @@ describe('causal batched replay and equity under StrictMode',()=>{
   finally {vi.useRealTimers()}
  })
 })
+
+it('keeps same-candle stops, weekend gap fills, setup grouping and missing-ask equity identical at every speed', async () => {
+ const shifted:HistoryResponse={...history,
+  bid:history.bid.map((bar,i)=>({...bar,timestamp:bar.timestamp+(i>=60?172800000:0),low:i===11?1.097:1.0995,
+   ...(i===60?{open:1.1078,high:1.1088,low:1.1073,close:1.1078}:{})})),
+  ask:history.ask.flatMap((bar,i)=>i===30||i===59?[]:[{...bar,timestamp:bar.timestamp+(i>=60?172800000:0),low:1.0997,high:i===11?1.104:bar.high,
+   ...(i===60?{open:1.108,high:1.109,low:1.1075,close:1.108}:{})}])}
+ async function simulate(speed:1|10|100) {
+  let replay!:ReturnType<typeof useReplay>,trading!:ReturnType<typeof useTrading>
+  function Harness(){replay=useReplay(shifted.bid,10);trading=useTrading(shifted,replay);return null}
+  const root=createRoot(document.createElement('div'))
+  try {
+   await act(async()=>root.render(<StrictMode><Harness/></StrictMode>))
+   await act(async()=>trading.configureCommission({roundTripUsdPerLot:7}))
+   await act(async()=>replay.start())
+   await act(async()=>trading.enter('sell',.1,1.102))
+   await act(async()=>trading.enter('sell',.2,1.106,trading.state.pending[0].setupId))
+   await act(async()=>replay.setSpeed(speed));await act(async()=>replay.play())
+   for(let i=0;i<Math.ceil(201/speed);i++)await act(async()=>vi.advanceTimersByTime(250))
+   const points=equityObservations(trading.equity)
+   expect(trading.state.closed.map(p=>p.exitPrice)).toEqual([1.102,1.108])
+   expect(trading.state.closed[0].entryTime).toBe(trading.state.closed[0].exitTime)
+   expect(trading.state.closed[1].exitTime).toBe(shifted.bid[60].timestamp)
+   expect(trading.state.setups).toHaveLength(1)
+   expect(points).toHaveLength(202);expect(points.filter(p=>p.equityUsd===null)).toHaveLength(2)
+   expect(points.find(p=>p.timestamp===shifted.bid[60].timestamp)!.clockGap).toBe(true)
+   return {state:trading.state,points,drawdown:trading.equity.maxDrawdownUsd}
+  } finally {await act(async()=>root.unmount())}
+ }
+ vi.useFakeTimers({toFake:['setInterval','clearInterval']})
+ try {const normal=await simulate(1);expect(await simulate(10)).toEqual(normal);expect(await simulate(100)).toEqual(normal)}
+ finally {vi.useRealTimers()}
+})

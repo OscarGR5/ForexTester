@@ -1,3 +1,4 @@
+import { performanceStart, performanceEnd, performanceCount } from './replayPerformance.js'
 import type { CandlestickData, IChartApi, ISeriesApi, LogicalRange, MouseEventParams, UTCTimestamp } from 'lightweight-charts'
 import { TIMEFRAME_MS, type Timeframe } from './history.js'
 
@@ -38,6 +39,7 @@ interface Entry {
   projectedBars: number
   setting: boolean
   pending: LogicalRange | null
+  crosshair?: { time: number; price: number } | null
   onRange: (range: LogicalRange | null) => void
   onCrosshair: (param: MouseEventParams) => void
 }
@@ -48,6 +50,7 @@ export class ChartSynchronizer {
   private viewport: UtcRange | null = null
   private applyingRange = false
   private applyingCrosshair = false
+  private pointer: { id: number; time: number | null; x?: number; y?: number; pane?: number } | null = null
   private activeId: number | null = null
   private activeUntil = 0
 
@@ -77,6 +80,7 @@ export class ChartSynchronizer {
       this.viewport = { from: bounds.to - width, to: bounds.to }
     }
     for (const id of this.entries.keys()) this.refresh(id)
+    this.refreshCrosshair()
   }
 
   update(id: number, candles: readonly CandlestickData<UTCTimestamp>[], timeframe: Timeframe,
@@ -84,8 +88,16 @@ export class ChartSynchronizer {
     const entry = this.entries.get(id)
     if (!entry) return
     entry.setting = true
+    // A visible crosshair makes the library hit-test and rebuild every series'
+    // coordinates on each update. Clear it within the synchronous batch and
+    // restore the current pointer after data/viewport installation, before paint.
+    if (this.pointer || entry.crosshair) {
+      performanceCount('sync.crosshair.batchClear')
+      entry.chart.clearCrosshairPosition()
+      entry.crosshair = null
+    }
     try {
-      if (dirty === 0) { entry.times = []; entry.byTime.clear() }
+      if (dirty === 0) { entry.times = []; entry.byTime.clear(); entry.crosshair = undefined }
       for (let index = dirty; index < candles.length; index++) {
         const candle = candles[index]
         entry.times[index] = candle.time
@@ -94,11 +106,14 @@ export class ChartSynchronizer {
       entry.step = TIMEFRAME_MS[timeframe] / 1000
       entry.projectedBars = applyData() ?? 0
       if (!this.viewport && entry.times.length > 0) this.initializeViewport(entry)
-      if (this.viewport && entry.times.length > 0) this.applyViewport(entry, this.viewport)
+      // Ordinary replay installs every pane first. advance() applies the new
+      // shared UTC viewport once, rather than applying the previous viewport here.
+      if (dirty === 0 && this.viewport && entry.times.length > 0) this.applyViewport(entry, this.viewport)
       entry.pending = entry.chart.timeScale().getVisibleLogicalRange()
     } finally {
       entry.setting = false
     }
+    if (dirty === 0) this.refreshCrosshair()
   }
 
   private initializeViewport(entry: Entry): void {
@@ -141,7 +156,10 @@ export class ChartSynchronizer {
     return () => {
       chart.timeScale().unsubscribeVisibleLogicalRangeChange(entry.onRange)
       chart.unsubscribeCrosshairMove(entry.onCrosshair)
-      if (this.entries.get(id) === entry) this.entries.delete(id)
+      if (this.entries.get(id) === entry) {
+        this.entries.delete(id)
+        if (this.pointer?.id === id) { this.pointer = null; this.publishCrosshair(id, null) }
+      }
     }
   }
 
@@ -175,6 +193,8 @@ export class ChartSynchronizer {
   }
 
   private applyViewport(target: Entry, viewport: UtcRange): void {
+    const started = performanceStart()
+    performanceCount('sync.request')
     const lastIndex = target.times.length - 1
     if (lastIndex === 0) {
       target.chart.timeScale().fitContent()
@@ -193,26 +213,65 @@ export class ChartSynchronizer {
     if (current && Math.abs(current.from - from) < 0.001 && Math.abs(current.to - projectedTo) < 0.001) return
     target.setting = true
     try {
+      performanceCount('sync.setRange')
       target.chart.timeScale().setVisibleLogicalRange({ from, to: projectedTo })
       // The library may clamp the requested range at a history edge. Suppress
       // the range it actually applied when its change callback arrives.
       target.pending = target.chart.timeScale().getVisibleLogicalRange()
     } finally {
       target.setting = false
+      performanceEnd('sync.apply', started)
     }
   }
 
   private onCrosshair(id: number, param: MouseEventParams): void {
     if (this.applyingCrosshair) return
+    if (param.sourceEvent) {
+      this.pointer = { id, time: typeof param.time === 'number' ? param.time : null, x: param.point?.x, y: param.point?.y, pane: param.paneIndex }
+      const source = this.entries.get(id)
+      if (source) source.crosshair = undefined
+      this.publishCrosshair(id, this.pointer.time)
+    } else if (this.pointer?.id === id && !param.point) {
+      this.pointer = null
+      this.publishCrosshair(id, null)
+    }
+  }
+
+  private refreshCrosshair(): void {
+    const pointer = this.pointer
+    if (!pointer) return
+    const source = this.entries.get(pointer.id)
+    if (!source) { this.pointer = null; return }
+    const time = pointer.x === undefined ? pointer.time : source.chart.timeScale().coordinateToTime(pointer.x)
+    if (typeof time === 'number' && pointer.y !== undefined) {
+      const series = source.chart.panes()[pointer.pane ?? 0]?.getSeries()[0]
+      const price = series?.coordinateToPrice(pointer.y)
+      if (price !== null && price !== undefined && (source.crosshair?.time !== time || source.crosshair.price !== price)) {
+        performanceCount('sync.crosshair.restore')
+        source.chart.setCrosshairPosition(price, time as UTCTimestamp, series!)
+        source.crosshair = { time, price }
+      }
+    }
+    this.publishCrosshair(pointer.id, typeof time === 'number' ? time : null)
+  }
+
+  private publishCrosshair(id: number, utc: number | null): void {
     this.applyingCrosshair = true
     try {
       for (const [targetId, target] of this.entries) {
         if (targetId === id) continue
-        const utc = typeof param.time === 'number' ? param.time : null
         const bucket = utc === null ? null : Math.floor(utc / target.step) * target.step
         const candle = bucket === null ? undefined : target.byTime.get(bucket)
-        if (candle) target.chart.setCrosshairPosition(candle.close, candle.time, target.series)
-        else target.chart.clearCrosshairPosition()
+        if (candle) {
+          if (target.crosshair?.time === candle.time && target.crosshair.price === candle.close) continue
+          target.crosshair = { time: candle.time, price: candle.close }
+          performanceCount('sync.crosshair.set')
+          target.chart.setCrosshairPosition(candle.close, candle.time, target.series)
+        } else if (target.crosshair !== null) {
+          target.crosshair = null
+          performanceCount('sync.crosshair.clear')
+          target.chart.clearCrosshairPosition()
+        }
       }
     } finally {
       this.applyingCrosshair = false
