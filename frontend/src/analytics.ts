@@ -92,7 +92,7 @@ export interface RealizedPoint {
 
 // Exit order in state is the deterministic engine event order. Preserve that
 // order for simultaneous exits; never collapse them into one timestamp bucket.
-export function realizedPerformance(closed: readonly ClosedTrade[], referenceBalance: number) {
+export function realizedPerformance(closed: readonly Observation[], referenceBalance: number) {
   const ordered = closed.map((trade, index) => ({ trade, index }))
     .sort((a, b) => a.trade.exitTime - b.trade.exitTime || a.index - b.index)
   let cumulativeNetPnlUsd = 0

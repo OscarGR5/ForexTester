@@ -16,10 +16,18 @@ interface ManagedLine { series: ISeriesApi<'Line'>; data: RenderLine }
 export class IndicatorSeries {
   private lines = new Map<LineKey, ManagedLine>()
   private cloud: IchimokuCloudPrimitive | null = null
+  private processed = 0
+  private cloudData: import('./indicators').CloudPoint[] = []
   constructor(private chart: IChartApi) {}
 
   update(candles: readonly ChartCandle[], settings: IndicatorSettings, timeframe: Timeframe, replace: boolean): number {
-    const data = calculateIndicators(candles, settings, timeframe)
+    const dirty = replace ? 0 : Math.max(0, this.processed - 1)
+    const lookback = Math.max(settings.bollinger.length, settings.bollinger2.length,
+      settings.stochastic.length + settings.stochastic.smoothK + settings.stochastic.smoothD,
+      settings.ichimoku.tenkan, settings.ichimoku.kijun, settings.ichimoku.spanB)
+    const begin = Math.max(0, dirty - lookback - settings.ichimoku.displacement * 2)
+    const data = calculateIndicators(candles.slice(begin), settings, timeframe)
+    const cutoff = candles[dirty]?.time ?? 0
     const enabled: LineKey[] = [
       ...[settings.bollinger, settings.bollinger2].flatMap((group, index): LineKey[] => {
         if (!group.enabled) return []
@@ -70,27 +78,38 @@ export class IndicatorSeries {
         }
         points = [...byTime.values()].sort((a, b) => a.time - b.time)
       }
-      this.syncLine(line, points, replace)
+      const lineCutoff = key === 'chikou' ? candles[Math.max(0, dirty - settings.ichimoku.displacement)]?.time ?? 0 : cutoff
+      this.syncLine(line, points.filter((point) => point.time >= lineCutoff), replace, lineCutoff)
     }
-    this.cloud?.setData(data.cloud)
+    if (replace) this.cloudData = []
+    while (this.cloudData.length && this.cloudData.at(-1)!.time >= cutoff) this.cloudData.pop()
+    for (const point of data.cloud) if (point.time >= cutoff) this.cloudData.push(point)
+    this.cloud?.setData(this.cloudData)
+    this.processed = candles.length
     const last = candles.at(-1)?.time
     // Reserve the entire projected horizon, including before the first span is warm.
     return settings.ichimoku.enabled && last !== undefined ? settings.ichimoku.displacement : 0
   }
 
-  private syncLine(line: ManagedLine, next: RenderLine, replace: boolean): void {
+  private syncLine(line: ManagedLine, tail: RenderLine, replace: boolean, cutoff: number): void {
     const previous = line.data
-    // A revealed gap can relocate projected timestamps. Replace then, or when
-    // settings/replay/history change; ordinary partial candle ticks update tails.
-    const stableTimes = next.length >= previous.length && previous.every((point, index) => point.time === next[index].time)
-    if (replace || !stableTimes || previous.length === 0) line.series.setData(next)
-    else for (let index = 0; index < next.length; index++) {
-      const old = previous[index], point = next[index]
-      const oldValue = old && 'value' in old ? old.value : undefined
-      const value = 'value' in point ? point.value : undefined
-      if (!old || oldValue !== value) line.series.update(point, index < previous.length - 1)
+    if (!replace && !previous.length && !tail.length) return
+    let start = previous.length
+    while (start > 0 && previous[start - 1].time >= cutoff) start--
+    const stable = !replace && tail.length >= previous.length - start &&
+      previous.slice(start).every((point, index) => point.time === tail[index].time)
+    if (!stable || previous.length === 0) {
+      line.data = replace ? tail : [...previous.slice(0, start), ...tail]
+      line.series.setData(line.data)
+      return
     }
-    line.data = next
+    for (let index = 0; index < tail.length; index++) {
+      const point = tail[index], old = previous[start + index]
+      if (!old || ('value' in old ? old.value : undefined) !== ('value' in point ? point.value : undefined)) {
+        line.series.update(point, start + index < previous.length - 1)
+      }
+    }
+    previous.splice(start, previous.length - start, ...tail)
   }
   dispose(): void {
     const span = this.lines.get('spanA')

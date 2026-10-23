@@ -186,3 +186,14 @@ button:disabled { opacity: 0.45; cursor: default; }
   .drawdown-chart { min-height: 120px; }
   .journal-table-scroll:has(.setup-detail) .setup-detail { max-width: 300px; }
 }
+
+.replay-controls label { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; color: #b2b5be; font-size: 0.85rem; max-width: 100%; }
+.replay-controls input, .replay-controls select { min-height: 36px; max-width: 100%; padding: 4px 8px; border: 1px solid #354250; border-radius: 4px; background: #171e28; color: #e5eaf0; color-scheme: dark; }
+.equity-performance h2 { margin: 0; font-size: 1.05rem; }
+.equity-performance h3 { margin: 20px 0 10px; }
+.equity-cash-toggle { display: flex; align-items: center; gap: 8px; margin: 12px 0; font-size: 0.85rem; }
+.cash-curve { fill: none; stroke: #ffcc80; stroke-width: 1; stroke-dasharray: 5 3; vector-effect: non-scaling-stroke; }
+@media (max-width: 600px) {
+  .replay-controls input, .replay-controls select { font-size: 16px; }
+  .equity-performance .realized-chart text { font-size: 11px; }
+}

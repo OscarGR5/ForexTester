@@ -66,13 +66,17 @@ export class ChartSynchronizer {
   }
 
   update(id: number, candles: readonly CandlestickData<UTCTimestamp>[], timeframe: Timeframe,
-    applyData: () => number | void): void {
+    applyData: () => number | void, dirty = 0): void {
     const entry = this.entries.get(id)
     if (!entry) return
     entry.setting = true
     try {
-      entry.times = candles.map((candle) => candle.time as number)
-      entry.byTime = new Map(candles.map((candle) => [candle.time as number, candle]))
+      if (dirty === 0) { entry.times = []; entry.byTime.clear() }
+      for (let index = dirty; index < candles.length; index++) {
+        const candle = candles[index]
+        entry.times[index] = candle.time
+        entry.byTime.set(candle.time, candle)
+      }
       entry.step = TIMEFRAME_MS[timeframe] / 1000
       entry.projectedBars = applyData() ?? 0
       if (!this.viewport && entry.times.length > 0) this.initializeViewport(entry)

@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from 'react'
+import { memo, Fragment, useMemo, useState } from 'react'
 import { completedObservations, executedPositions, isClosed, journalSetups, netR, performanceStats, positionStatus, realizedPerformance, type AnalyticsScope } from './analytics'
 import { downloadJournalCsv } from './journalCsv'
 import { RealizedChart } from './RealizedChart'
@@ -30,7 +30,7 @@ function PositionDetails({ position }: { position: Position }) {
   </article>
 }
 
-export function TradingJournal({ state, onUpdateSetup }: { state: TradingState; onUpdateSetup: (id: string, metadata: SetupMetadata) => void }) {
+function TradingJournalView({ state, onUpdateSetup }: { state: TradingState; onUpdateSetup: (id: string, metadata: SetupMetadata) => void }) {
   const [scope, setScope] = useState<AnalyticsScope>('setups')
   const [view, setView] = useState<AnalyticsScope>('setups')
   const [expanded, setExpanded] = useState<string | null>(null)
@@ -38,7 +38,7 @@ export function TradingJournal({ state, onUpdateSetup }: { state: TradingState; 
   const positions = useMemo(() => executedPositions(state), [state.positions, state.closed])
   const observations = useMemo(() => scope === 'setups' ? completedObservations(rows) : state.closed, [scope, rows, state.closed])
   const stats = useMemo(() => performanceStats(observations, state.account.referenceBalance), [observations, state.account.referenceBalance])
-  const performance = useMemo(() => realizedPerformance(state.closed, state.account.referenceBalance), [state.closed, state.account.referenceBalance])
+  const performance = useMemo(() => realizedPerformance(observations, state.account.referenceBalance), [observations, state.account.referenceBalance])
   const kpis = [
     [scope === 'setups' ? 'Completed setups' : 'Closed positions', String(stats.count)], ['Net realized USD', money(stats.netPnlUsd)],
     ['Gross realized USD', money(stats.grossPnlUsd)], ['Commissions USD', money(stats.totalCommissionUsd)],
@@ -50,7 +50,7 @@ export function TradingJournal({ state, onUpdateSetup }: { state: TradingState; 
     <div className="journal-heading"><h2>Trading Journal</h2><button type="button" disabled={!positions.length} onClick={() => downloadJournalCsv(state)}>Export Journal CSV</button></div>
     <p className="session-notice">Session only · Not permanently saved. Restart, history reload, and page refresh clear trades, setups, and notes.</p>
     <section aria-label="Performance statistics">
-      <div className="journal-controls"><h3>Performance</h3><label>Statistics scope<select aria-label="Statistics scope" value={scope} onChange={(event) => setScope(event.target.value as AnalyticsScope)}>
+      <div className="journal-controls"><h3>Performance by setup / position</h3><label>Statistics scope<select aria-label="Statistics scope" value={scope} onChange={(event) => setScope(event.target.value as AnalyticsScope)}>
         <option value="setups">Completed setups</option><option value="positions">Closed positions</option>
       </select></label></div>
       {!stats.count && <p className="journal-empty">No {scope === 'setups' ? 'completed setups' : 'closed positions'} yet. Pending and open entries do not count.</p>}
@@ -67,7 +67,7 @@ export function TradingJournal({ state, onUpdateSetup }: { state: TradingState; 
         <p className="journal-help">Net winners ÷ all completed observations gives win rate. Exactly zero is a non-winner. Average loser includes strictly negative outcomes only. Profit factor = positive net PnL ÷ absolute negative net PnL. R uses original gross SL risk; setup R uses combined risk, not an average of position R. R statistics include {stats.validRCount} valid denominators. Setup holding duration runs from earliest entry to final exit.</p>
       </details>
     </section>
-    <RealizedChart performance={performance} />
+    <RealizedChart performance={performance} scope={scope} />
     <div className="journal-controls"><h3>Journal records</h3><label>Journal view<select aria-label="Journal view" value={view} onChange={(event) => setView(event.target.value as AnalyticsScope)}>
       <option value="setups">Setup view</option><option value="positions">Position view</option>
     </select></label></div>
@@ -113,3 +113,9 @@ export function TradingJournal({ state, onUpdateSetup }: { state: TradingState; 
     </details>
   </section>
 }
+
+// Price-only observations do not rebuild the journal or its tables.
+export const TradingJournal = memo(TradingJournalView, (previous, next) =>
+  previous.onUpdateSetup === next.onUpdateSetup &&
+  (['session', 'account', 'setups', 'pending', 'positions', 'closed', 'rejected', 'cancelled'] as const)
+    .every((key) => previous.state[key] === next.state[key]))

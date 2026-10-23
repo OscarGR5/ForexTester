@@ -1,4 +1,4 @@
-import { getHistoricalRates, type ConfigJsonItem, type JsonItem } from 'dukascopy-node'
+import { getHistoricalRates, instrumentMetaData, type ConfigJsonItem, type JsonItem } from 'dukascopy-node'
 import { fileURLToPath } from 'node:url'
 
 export interface Candle {
@@ -47,7 +47,9 @@ function normalizeCandles(items: JsonItem[], from: number, to: number): Candle[]
 }
 
 export async function loadHistory(from: string, to: string, fetchRates: RatesFetcher = getHistoricalRates): Promise<HistoryResponse> {
-  const dates = { from: new Date(`${from}T00:00:00.000Z`), to: new Date(`${to}T00:00:00.000Z`) }
+  const first = Date.parse(instrumentMetaData.eurusd.startDayForMinuteCandles)
+  if (Date.parse(to) <= first) return { symbol: 'EURUSD', resolution: 'M1', from, to, bid: [], ask: [] }
+  const dates = { from: new Date(Math.max(Date.parse(from), first)), to: new Date(`${to}T00:00:00.000Z`) }
   const baseConfig: ConfigJsonItem = {
     instrument: 'eurusd',
     dates,

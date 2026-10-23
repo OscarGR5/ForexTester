@@ -218,8 +218,8 @@ export function observeCandle(state: TradingState, bid: Candle, ask?: Candle): T
   const quote: Quote = { bid: validCandle(bid, timestamp) ? bid : null, ask: validCandle(ask, timestamp) ? ask : null }
   const synchronized = quote.bid !== null && quote.ask !== null
   const positions: Position[] = []
-  const closed = [...state.closed]
-  const rejected = [...state.rejected]
+  const closed: ClosedTrade[] = []
+  const rejected: RejectedEntry[] = []
   for (let position of state.positions) {
     if (state.observedTimestamp !== null && timestamp > state.observedTimestamp + 60_000) {
       position = warn(position, { from: state.observedTimestamp + 60_000, to: timestamp - 60_000,
@@ -278,8 +278,8 @@ export function observeCandle(state: TradingState, bid: Candle, ask?: Candle): T
   return { ...state, observedTimestamp: timestamp, quote,
     pending: pending.length === state.pending.length ? state.pending : pending,
     positions: surviving.length === state.positions.length && surviving.every((position, index) => position === state.positions[index]) ? state.positions : surviving,
-    closed: closed.length === state.closed.length ? state.closed : closed,
-    rejected: rejected.length === state.rejected.length ? state.rejected : rejected }
+    closed: closed.length ? [...state.closed, ...closed] : state.closed,
+    rejected: rejected.length ? [...state.rejected, ...rejected] : state.rejected }
 }
 
 // Keep full precision in state; round only when formatting for display.

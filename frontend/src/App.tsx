@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { CandlestickSeries, ColorType, LineStyle, createChart, type CandlestickData, type IChartApi, type IPriceLine, type ISeriesApi, type Time, type UTCTimestamp } from 'lightweight-charts'
+import { CandlestickSeries, ColorType, LineStyle, createChart, type IChartApi, type IPriceLine, type ISeriesApi, type Time } from 'lightweight-charts'
 import { ChartSynchronizer } from './chartSync'
 import { useReplay } from './useReplay'
 import { accountRiskError } from './risk'
@@ -10,15 +10,20 @@ import { TradingJournal } from './TradingJournal'
 import { IndicatorControls } from './IndicatorControls'
 import { IndicatorSeries } from './indicatorSeries'
 import { indicatorPreset, type IndicatorSettings } from './indicators'
-import { fetchHistory, TIMEFRAMES, toBidChartCandles, validateDateRange, type DateRange, type HistoryResponse, type Timeframe } from './history'
+import { HistoryLoader, ichimokuWarmup, replayStartIndex, type LoadProgress, type LoadedHistory } from './historyLoader'
+import { ReplayBars } from './replayBars'
+import { EquityChart } from './EquityChart'
+import { TIMEFRAMES, type Candle, validateDateRange, type DateRange, type Timeframe } from './history'
 
+const EMPTY_CANDLES: readonly Candle[] = []
 const DEFAULT_RANGE: DateRange = { from: '2024-01-09', to: '2024-01-10' }
 const DEFAULT_TIMEFRAMES: Timeframe[] = ['M1', 'M5', 'H1']
 
 interface ChartPaneProps {
   id: number
   timeframe: Timeframe
-  candles: CandlestickData<UTCTimestamp>[]
+  source: readonly Candle[]
+  count: number
   synchronizer: ChartSynchronizer
   positions: Position[]
   settings: IndicatorSettings
@@ -26,7 +31,7 @@ interface ChartPaneProps {
   onTimeframeChange: (id: number, timeframe: Timeframe) => void
 }
 
-function ChartPane({ id, timeframe, candles, synchronizer, onTimeframeChange, settings, onSettingsChange, positions }: ChartPaneProps) {
+function ChartPane({ id, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions }: ChartPaneProps) {
   const container = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
@@ -34,7 +39,7 @@ function ChartPane({ id, timeframe, candles, synchronizer, onTimeframeChange, se
   const stopLines = useRef(new Map<string, IPriceLine>())
   const previousSettings = useRef<IndicatorSettings | null>(null)
   const unregisterRef = useRef<(() => void) | null>(null)
-  const previous = useRef<{ candles: typeof candles; timeframe: Timeframe; synchronizer: ChartSynchronizer } | null>(null)
+  const previous = useRef<{ source: readonly Candle[]; count: number; bars: ReplayBars; timeframe: Timeframe; synchronizer: ChartSynchronizer } | null>(null)
 
   useLayoutEffect(() => {
     if (!container.current) return
@@ -112,18 +117,21 @@ function ChartPane({ id, timeframe, candles, synchronizer, onTimeframeChange, se
     const series = seriesRef.current!
     const last = previous.current
     const replace = !last || last.synchronizer !== synchronizer || last.timeframe !== timeframe ||
-      candles.length < last.candles.length || last.candles.length === 0
+      source !== last.source || count < last.count || last.count === 0
+    const bars = replace ? new ReplayBars(timeframe) : last.bars
+    const dirty = bars.advance(source, count)
+    const candles = bars.candles
     synchronizer.update(id, candles, timeframe, () => {
       if (replace) series.setData(candles)
       else {
         // Revisit the old tail: it may be a newly completed higher-timeframe bucket.
-        for (let index = last.candles.length - 1; index < candles.length; index++) series.update(candles[index])
+        for (let index = dirty; index < candles.length; index++) series.update(candles[index])
       }
       return indicatorsRef.current!.update(candles, settings, timeframe, replace || previousSettings.current !== settings)
-    })
+    }, replace ? 0 : dirty)
     previousSettings.current = settings
-    previous.current = { candles, timeframe, synchronizer }
-  }, [id, candles, synchronizer, timeframe, settings])
+    previous.current = { source, count, bars, timeframe, synchronizer }
+  }, [id, source, count, synchronizer, timeframe, settings])
 
   useLayoutEffect(() => {
     const series = seriesRef.current!
@@ -165,7 +173,7 @@ export function App() {
   const [from, setFrom] = useState(DEFAULT_RANGE.from)
   const [to, setTo] = useState(DEFAULT_RANGE.to)
   const [requestedRange, setRequestedRange] = useState<DateRange>(DEFAULT_RANGE)
-  const [history, setHistory] = useState<HistoryResponse | null>(null)
+  const [history, setHistory] = useState<LoadedHistory | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [error, setError] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
@@ -173,17 +181,21 @@ export function App() {
   const [timeframes, setTimeframes] = useState<Timeframe[]>(DEFAULT_TIMEFRAMES)
   const [indicatorSettings, setIndicatorSettings] = useState<Partial<Record<Timeframe, IndicatorSettings>>[]>(() =>
     DEFAULT_TIMEFRAMES.map((timeframe) => ({ [timeframe]: indicatorPreset(timeframe) })))
-  const replay = useReplay(history?.bid ?? null)
+  const [loader] = useState(() => new HistoryLoader())
+  const [loadProgress, setLoadProgress] = useState<LoadProgress>({ completed: 0, total: 0 })
+  const [replayStart, setReplayStart] = useState('')
+  const tradingFrom = history?.tradingFrom ?? requestedRange.from
+  const startMs = Date.parse(`${replayStart || `${tradingFrom}T00:00`}:00Z`)
+  const startIndex = useMemo(() => replayStartIndex(history?.bid ?? [], startMs), [history, startMs])
+  const replay = useReplay(history?.bid ?? null, startIndex)
   const trading = useTrading(history, replay)
-  const bounds = useMemo(() => replay.visible.length ? {
-    from: replay.visible[0].timestamp / 1000,
-    to: replay.visible[replay.visible.length - 1].timestamp / 1000,
-  } : undefined, [replay.visible])
+  const bounds = useMemo(() => history?.bid.length && replay.count ? {
+    from: history.bid[0].timestamp / 1000,
+    to: history.bid[replay.count - 1].timestamp / 1000,
+  } : undefined, [history, replay.count])
+  const warmup = useMemo(() => ichimokuWarmup(history?.bid ?? [], startMs), [history, startMs])
   // A new session resets the viewport and subscriptions, while panes retain their chart instances.
   const synchronizer = useMemo(() => new ChartSynchronizer(bounds), [history, replay.epoch])
-  const candles = useMemo(() => Object.fromEntries(TIMEFRAMES.map((timeframe) =>
-    [timeframe, toBidChartCandles({ bid: replay.visible }, timeframe)])) as Record<Timeframe, CandlestickData<UTCTimestamp>[]>, [replay.visible])
-
   useLayoutEffect(() => { synchronizer.advance(bounds) }, [synchronizer, bounds])
 
   useEffect(() => {
@@ -192,7 +204,8 @@ export function App() {
     setHistory(null)
     setStatus('loading')
     setError(null)
-    fetchHistory(requestedRange, controller.signal)
+    setReplayStart('')
+    loader.load(requestedRange, controller.signal, (value) => { if (active) setLoadProgress(value) })
       .then((result) => {
         if (!active) return
         setHistory(result)
@@ -207,7 +220,7 @@ export function App() {
       active = false
       controller.abort()
     }
-  }, [requestedRange])
+  }, [requestedRange, loader])
 
   function loadData(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -225,6 +238,7 @@ export function App() {
     setTimeframes((current) => current.map((value, index) => index === id ? timeframe : value))
   }
 
+  const replayStartError = !Number.isFinite(startMs) || startMs < Date.parse(tradingFrom) || startMs >= Date.parse(requestedRange.to)
   const todayUtc = new Date().toISOString().slice(0, 10)
 
   return (
@@ -241,35 +255,45 @@ export function App() {
           <button type="submit">Load Data</button>
         </div>
         <div className="replay-controls" role="group" aria-label="Market replay">
-          <button type="button" disabled={!replay.canStart || !!accountRiskError(trading.state.account)} onClick={replay.start}>Start Replay</button>
+          <button type="button" disabled={!replay.canStart || replayStartError || !!accountRiskError(trading.state.account)} onClick={() => replay.start()}>Start Replay</button>
           <button type="button" disabled={!replay.canPlay} onClick={replay.play}>Play</button>
           <button type="button" disabled={!replay.canPause} onClick={replay.pause}>Pause</button>
           <button type="button" disabled={!replay.canNext} onClick={replay.next}>Next Candle</button>
           <button type="button" disabled={!replay.canRestart} onClick={replay.restart}>Restart</button>
+          <label>Replay speed <select aria-label="Replay speed" value={replay.speed} onChange={(event) => replay.setSpeed(Number(event.target.value) as 1 | 10 | 100)}>
+            {[1, 10, 100].map((speed) => <option key={speed} value={speed}>{speed}×</option>)}
+          </select></label>
+          <label>Replay start (UTC) <input aria-label="Replay start (UTC)" type="datetime-local" disabled={replay.active || !history}
+            min={`${tradingFrom}T00:00`} max={`${requestedRange.to}T00:00`} value={replayStart || `${tradingFrom}T00:00`}
+            onChange={(event) => setReplayStart(event.target.value)} /></label>
           <span className="replay-status" role="status" aria-label="Replay status">{replay.status}</span>
           <time className="replay-clock" dateTime={replay.timestamp === null ? undefined : new Date(replay.timestamp).toISOString()}>
             {replay.timestamp === null ? 'Simulation clock: awaiting replay (UTC)' : `${new Date(replay.timestamp).toISOString().slice(0, 16).replace('T', ' ')} UTC`}
           </time>
-          <span className="replay-progress" aria-label="Replay progress">{replay.revealed} / {replay.total} candles</span>
+          <span className="replay-progress" aria-label="Replay progress">{replay.active ? replay.revealed - replay.startIndex : 0} / {Math.max(0, replay.total - (replay.active ? replay.startIndex : startIndex))} candles</span>
         </div>
       </form>
+      {history && <p className="chart-note">30-day pre-roll stays visible for indicators. Replay begins at the first available M1 candle at or after the chosen UTC start; earlier candles are context only.</p>}
+      {history && !warmup.ready && <p className="coverage-warning" role="status">H4 Ichimoku warm-up incomplete: {warmup.count} prior H4 observations; {warmup.required} needed for the default displaced cloud at replay start.</p>}
+      {history && replayStartError && <p className="form-error" role="alert">Choose a replay start within the requested trading interval.</p>}
       {formError && <p className="form-error" role="alert">{formError}</p>}
       <div className="chart-workspace" aria-label="EURUSD bid chart workspace">
         <div className="chart-stack" style={{ gridTemplateRows: `repeat(${chartCount}, minmax(auto, 1fr))` }}>
           {timeframes.slice(0, chartCount).map((timeframe, id) => <ChartPane key={id} id={id} timeframe={timeframe}
-            positions={trading.state.positions} candles={candles[timeframe]} synchronizer={synchronizer} onTimeframeChange={changeTimeframe}
+            positions={trading.state.positions} source={history?.bid ?? EMPTY_CANDLES} count={replay.count} synchronizer={synchronizer} onTimeframeChange={changeTimeframe}
             settings={indicatorSettings[id][timeframe]!} onSettingsChange={(chartId, next) => {
               synchronizer.deactivate()
               setIndicatorSettings((current) => current.map((value, index) => index === chartId ? { ...value, [timeframe]: next } : value))
             }} />)}
         </div>
-        {status === 'loading' && <div className="chart-message" role="status">Loading EURUSD M1 bid candles…</div>}
+        {status === 'loading' && <div className="chart-message" role="status">Loading EURUSD bid/ask history · {loadProgress.completed} / {loadProgress.total} chunks complete…</div>}
         {status === 'error' && <div className="chart-message" role="alert"><p>{error}</p><button type="button" onClick={() => setRequestedRange({ ...requestedRange })}>Retry</button></div>}
-        {status === 'ready' && history?.bid.length === 0 && <div className="chart-message" role="status">No bid candles are available for this period.</div>}
+        {status === 'ready' && history && startIndex >= history.bid.length && <div className="chart-message" role="status">No bid candles are available at or after the chosen replay start within this trading period.</div>}
       </div>
       <TradingPanel onConfigureCommission={trading.configureCommission} onConfigure={trading.configure} state={trading.state} permission={trading.permission} onEntry={trading.enter} onCancel={trading.cancel} onClose={trading.close} onModifyStop={trading.modifyStop} />
       <TradingJournal key={trading.state.session} state={trading.state} onUpdateSetup={trading.updateSetup} />
-      <p className="chart-note">UTC dates · Start inclusive · End exclusive · Up to 7 completed days</p>
+      <EquityChart ledger={trading.equity} referenceBalance={trading.state.account.referenceBalance} />
+      <p className="chart-note">UTC dates · Start inclusive · End exclusive · Up to 90 completed days</p>
     </main>
   )
 }
