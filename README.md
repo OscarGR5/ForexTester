@@ -36,7 +36,9 @@ npm run dev:backend
 npm run dev:frontend
 ```
 
-Open the URL printed by Vite, normally http://127.0.0.1:5173. The API health check is at http://127.0.0.1:3001/api/health.
+Open the URL printed by Vite, normally http://127.0.0.1:5173. The API health check is at http://127.0.0.1:3001/api/health. Keep both servers running: Vite forwards same-origin `/api` requests to the backend at `http://127.0.0.1:3001`.
+
+The chart automatically loads EURUSD M1 bid candles for January 9, 2024 (inclusive) through January 10, 2024 (exclusive). Use **Start date** and **End date**, then **Load Data**, to choose another period. Dates are UTC, and the end date must be no later than the current UTC date. Each request covers at most seven completed days. The chart supports zoom, horizontal scrolling, and a crosshair; it fits each loaded period on screen and resizes with the window.
 
 ## Development commands
 
@@ -78,4 +80,4 @@ To run a live integration check, start the backend and run the `curl` command ab
 
 ## Current status
 
-The React/Vite frontend displays a dark application shell and chart workspace placeholder. The Node.js backend exposes `GET /api/health` and `GET /api/history`. Charting, indicators, replay, trading, and statistics features listed above are not implemented yet. The approved future stack includes TradingView Lightweight Charts and `technicalindicators`; those packages are deferred until those features are built.
+The React/Vite frontend displays one historical EURUSD M1 bid candlestick chart using TradingView Lightweight Charts. The Node.js backend exposes `GET /api/health` and `GET /api/history`. The chart preserves market gaps and does not hide future candles; replay will handle that later. Additional timeframes and charts, indicators, replay, trading, and statistics features listed above are not implemented yet. The approved future stack includes `technicalindicators`; that package is deferred until indicators are built.
