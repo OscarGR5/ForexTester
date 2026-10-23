@@ -24,7 +24,7 @@ export function App() {
       layout: {
         background: { type: ColorType.Solid, color: '#171e28' },
         textColor: '#a7b3c1',
-        attributionLogo: false,
+        attributionLogo: true,
       },
       grid: {
         vertLines: { color: '#26313d' },
