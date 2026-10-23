@@ -2,7 +2,7 @@ import type { CommissionConfig } from './commissions'
 import type { AccountRisk, EntrySizing } from './risk'
 import { useMemo, useState } from 'react'
 import type { HistoryResponse } from './history'
-import { cancelEntry, configureAccount, configureCommission, createTradingState, observeCandle, modifyStop, requestClose, requestEntry, type Direction, type TradingPermission, type TradingState } from './trading'
+import { cancelEntry, configureAccount, configureCommission, createTradingState, observeCandle, modifyStop, requestClose, requestEntry, updateSetupMetadata, type SetupMetadata, type Direction, type TradingPermission, type TradingState } from './trading'
 
 interface ReplayClock { epoch: number; revealed: number; active: boolean; playing: boolean; complete: boolean }
 interface Session { history: HistoryResponse | null; epoch: number; processed: number; state: TradingState }
@@ -35,7 +35,8 @@ export function useTrading(history: HistoryResponse | null, replay: ReplayClock)
   return {
     state: current.state,
     permission,
-    enter: (direction: Direction, sizing: EntrySizing, stopPrice: number) => update((state) => requestEntry(state, direction, sizing, stopPrice, permission)),
+    enter: (direction: Direction, sizing: EntrySizing, stopPrice: number, setupId: string | null = null) => update((state) => requestEntry(state, direction, sizing, stopPrice, permission, setupId)),
+    updateSetup: (id: string, metadata: SetupMetadata) => update((state) => updateSetupMetadata(state, id, metadata)),
     configure: (account: AccountRisk) => update((state) => configureAccount(state, account, permission)),
     configureCommission: (commission: CommissionConfig) => update((state) => configureCommission(state, commission, permission)),
     modifyStop: (id: string, price: number) => update((state) => modifyStop(state, id, price, permission)),

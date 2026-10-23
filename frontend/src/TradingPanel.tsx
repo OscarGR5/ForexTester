@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { commissionConfigError, perSideCommissionUsd, type CommissionConfig } from './commissions'
 import { accountRiskError, plannedRisk, riskBudget, sizeFromRisk, validRiskPercent, type AccountRisk, type EntrySizing } from './risk'
-import { combinedRisk, entryRequestError, canRequestOrder, formatTradingNumber as number, grossPnl, markPosition, realizedSummary, stopLossEstimates, tradingTime, validLots, validStopPrice, stopModificationError, type PendingEntry, type Position, type Direction, type TradingPermission, type TradingState } from './trading'
+import { combinedRisk, entryRequestError, canRequestOrder, formatTradingNumber as number, grossPnl, markPosition, realizedSummary, setupAssignmentError, stopLossEstimates, tradingTime, validLots, validStopPrice, stopModificationError, type PendingEntry, type Position, type Direction, type TradingPermission, type TradingState } from './trading'
 
 interface Props {
   state: TradingState
   permission: TradingPermission
-  onEntry: (direction: Direction, sizing: EntrySizing, stopPrice: number) => void
+  onEntry: (direction: Direction, sizing: EntrySizing, stopPrice: number, setupId: string | null) => void
   onConfigure: (account: AccountRisk) => void
   onConfigureCommission: (commission: CommissionConfig) => void
   onCancel: (id: string) => void
@@ -45,6 +45,10 @@ function StopEditor({ state, position, permission, onModify }: { state: TradingS
 }
 
 export function TradingPanel({ state, permission, onEntry, onConfigure, onConfigureCommission, onCancel, onClose, onModifyStop }: Props) {
+  const [selection, setSelection] = useState<{ session: number; id: string | null }>({ session: state.session, id: null })
+  const activeSetupIds = new Set([...state.pending, ...state.positions].map((entry) => entry.setupId))
+  const eligibleSetups = state.setups.filter((setup) => activeSetupIds.has(setup.id) && !setupAssignmentError(state, setup.direction, setup.id))
+  const selectedSetupId = selection.session === state.session && eligibleSetups.some((setup) => setup.id === selection.id) ? selection.id : null
   const [commissionError, setCommissionError] = useState<string | null>(null)
   const summary = realizedSummary(state.closed)
   const [mode, setMode] = useState<'risk' | 'manual'>('risk')
@@ -96,6 +100,11 @@ export function TradingPanel({ state, permission, onEntry, onConfigure, onConfig
     </fieldset>
     {accountError && <p className="form-error" role="alert">{accountError}</p>}
     <div className="trading-controls">
+      <label>Setup<select aria-label="Setup assignment" value={selectedSetupId ?? ''}
+        onChange={(event) => setSelection({ session: state.session, id: event.target.value || null })}>
+        <option value="">New setup</option>
+        {eligibleSetups.map((setup) => <option key={setup.id} value={setup.id}>Add entry to {setup.id} · {setup.direction === 'buy' ? 'Buy' : 'Sell'}{setup.title ? ` · ${setup.title}` : ''}</option>)}
+      </select></label>
       <label>Sizing mode<select aria-label="Sizing mode" value={mode} onChange={(event) => setMode(event.target.value as 'risk' | 'manual')}>
         <option value="risk">Risk %</option><option value="manual">Manual Lots</option>
       </select></label>
@@ -105,8 +114,8 @@ export function TradingPanel({ state, permission, onEntry, onConfigure, onConfig
         aria-describedby={entryError ? 'entry-error' : undefined} onChange={(event) => setVolume(event.target.value)} /></label>}
       <label>SL price<input type="number" min="0" step="0.00001" required value={stop} aria-invalid={!validStop}
         aria-describedby={entryError ? 'entry-error' : undefined} onBlur={() => { if (validStop) setStop(number(stopPrice, 5)) }} onChange={(event) => setStop(event.target.value)} /></label>
-      <button type="button" disabled={!canOrder || !!entryError || slots >= 2} onClick={() => onEntry('buy', sizing, stopPrice)}>Buy</button>
-      <button type="button" disabled={!canOrder || !!entryError || slots >= 2} onClick={() => onEntry('sell', sizing, stopPrice)}>Sell</button>
+      <button type="button" disabled={!canOrder || !!entryError || slots >= 2 || !!setupAssignmentError(state, 'buy', selectedSetupId)} onClick={() => onEntry('buy', sizing, stopPrice, selectedSetupId)}>Buy</button>
+      <button type="button" disabled={!canOrder || !!entryError || slots >= 2 || !!setupAssignmentError(state, 'sell', selectedSetupId)} onClick={() => onEntry('sell', sizing, stopPrice, selectedSetupId)}>Sell</button>
       <span className="trading-slots">{slots} / 2 position slots</span>
     </div>
     {entryError && <p id="entry-error" className="form-error">{entryError}</p>}
@@ -128,13 +137,14 @@ export function TradingPanel({ state, permission, onEntry, onConfigure, onConfig
       <section aria-label="Pending orders"><h3>Pending orders ({state.pending.length})</h3>
         {!state.pending.length ? <p>No pending entries.</p> : <ul>{state.pending.map((order) => <li key={order.id} data-order-id={order.id}>
           <strong>Pending entry · {order.direction === 'buy' ? 'Buy' : 'Sell'} · {order.mode === 'risk' ? `${order.requestedRiskPercent}% risk · $${number(order.requestedRiskUsd!, 2)} USD allocation` : `${order.lots} lots`}</strong>
-          <span>ID {order.id} · SL {number(order.stopPrice, 5)}</span>
+          <span>ID {order.id} · Setup {order.setupId} · SL {number(order.stopPrice, 5)}</span>
           <span>Requested {tradingTime(order.requestedAt)}</span>
           <PendingManualRisk order={order} state={state} />
           <button type="button" aria-label={`Cancel entry ${order.id}`} onClick={() => onCancel(order.id)}>Cancel</button>
         </li>)}</ul>}
         {state.rejected.length > 0 && <><h3>Rejected orders ({state.rejected.length})</h3><ul>{state.rejected.map((order) => <li key={order.id} data-rejected-id={order.id}>
           <strong>Rejected {order.direction === 'buy' ? 'Buy' : 'Sell'} · ID {order.id} · {order.mode === 'risk' ? `${order.requestedRiskPercent}% risk · $${number(order.requestedRiskUsd!, 2)} USD allocation` : `${order.lots} lots`}</strong>
+          <span>Setup {order.setupId}</span>
           <span>{tradingTime(order.rejectedAt)} · {order.reason}</span>
         </li>)}</ul></>}
       </section>
@@ -146,7 +156,7 @@ export function TradingPanel({ state, permission, onEntry, onConfigure, onConfig
           const pendingClose = position.closeRequestedAt !== null
           return <li key={position.id} data-position-id={position.id}>
             <strong>{pendingClose ? 'Pending close' : 'Open position'} · {position.direction === 'buy' ? 'Buy' : 'Sell'} · {position.lots} lots</strong>
-            <span>ID {position.id} · SL {number(position.stopPrice, 5)}</span>
+            <span>ID {position.id} · Setup {position.setupId} · SL {number(position.stopPrice, 5)}</span>
             <span>Entry {tradingTime(position.entryTime)} @ {number(position.entryPrice, 5)}</span>
             <span>Original planned risk ${number(position.initialRiskUsd, 2)} USD ({number(position.initialRiskPercent, 2)}%) · Current planned risk ${number(plannedRisk(position), 2)} USD</span>
             <span>Current {mark ? number(mark.price, 5) : 'unavailable'} · Unrealized {mark ? `${number(mark.pips, 1)} pips · $${number(mark.usd, 2)} gross` : 'PnL unavailable'}</span>
@@ -166,7 +176,7 @@ export function TradingPanel({ state, permission, onEntry, onConfigure, onConfig
           const pnl = grossPnl(trade, trade.exitPrice)
           return <li key={trade.id} data-trade-id={trade.id}>
             <strong>Closed position · {trade.direction === 'buy' ? 'Buy' : 'Sell'} · {trade.lots} lots</strong>
-            <span>ID {trade.id} · SL {number(trade.stopPrice, 5)}</span>
+            <span>ID {trade.id} · Setup {trade.setupId} · SL {number(trade.stopPrice, 5)}</span>
             <span>Entry {tradingTime(trade.entryTime)} @ {number(trade.entryPrice, 5)}</span>
             <span>Exit {tradingTime(trade.exitTime)} @ {number(trade.exitPrice, 5)}</span>
             <span>{trade.exitReason === 'stop_loss' ? `Stop loss · ${trade.stopFillType === 'gap_open' ? 'gap-through opening fill' : 'level fill'}` : 'Manual exit'} · Triggering M1 candle timestamp; intraminute time unknown.</span>
