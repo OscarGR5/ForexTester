@@ -69,3 +69,6 @@ button:disabled { opacity: 0.45; cursor: default; }
 .chart-pane:has(.indicator-controls[open]) { min-height: 510px; }
 .chart-pane:has(.indicator-controls input[aria-label$='Stochastic']:checked) { min-height: 360px; }
 .chart-pane:has(.indicator-controls[open] input[aria-label$='Stochastic']:checked) { min-height: 570px; }
+
+.indicator-source { margin: 6px 0; color: #a7b3c1; font-size: 0.75rem; }
+.indicator-options .indicator-visibility { display: inline-flex; gap: 4px; margin-right: 8px; }

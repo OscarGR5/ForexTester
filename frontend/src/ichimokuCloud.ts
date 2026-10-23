@@ -1,7 +1,7 @@
 import type { IChartApi, IPrimitivePaneRenderer, IPrimitivePaneView, ISeriesApi, ISeriesPrimitive, SeriesAttachedParameter } from 'lightweight-charts'
 import type { CloudPoint } from './indicators'
 
-export const CLOUD_COLORS = { bullish: 'rgba(74, 169, 154, 0.22)', bearish: 'rgba(210, 125, 130, 0.22)' }
+export const CLOUD_COLORS = { bullish: 'rgba(76, 86, 106, 0.35)', bearish: 'rgba(178, 181, 190, 0.28)' }
 export interface CloudVertex { x: number; a: number; b: number }
 export interface CloudPolygon { bullish: boolean; vertices: { x: number; y: number }[] }
 // Split each strip at the exact linear intersection, avoiding crossed polygons

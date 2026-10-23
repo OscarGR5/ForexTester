@@ -3,10 +3,11 @@ import { validateIndicatorSettings, type IndicatorSettings } from './indicators'
 
 const FIELDS = {
   bollinger: [['length', 'Length'], ['stdDev', 'Std. deviation']],
+  bollinger2: [['length', 'Length'], ['stdDev', 'Std. deviation']],
   stochastic: [['length', '%K length'], ['smoothK', '%K smoothing'], ['smoothD', '%D smoothing']],
   ichimoku: [['tenkan', 'Tenkan'], ['kijun', 'Kijun'], ['spanB', 'Span B'], ['displacement', 'Displacement']],
 } as const
-const NAMES = { bollinger: 'Bollinger Bands', stochastic: 'Stochastic', ichimoku: 'Ichimoku' }
+const NAMES = { bollinger: 'BB #1', bollinger2: 'BB #2', stochastic: 'Stochastic', ichimoku: 'Ichimoku' }
 function Parameter({ label, ariaLabel, value, fractional, onChange }: { label: string; ariaLabel: string; value: number; fractional: boolean; onChange: (value: number) => void }) {
   const errorId = useId()
   const [draft, setDraft] = useState(String(value))
@@ -28,9 +29,17 @@ export function IndicatorControls({ id, settings, onChange }: { id: number; sett
       {(Object.keys(FIELDS) as (keyof typeof FIELDS)[]).map((group) => <fieldset key={group}>
         <legend><label><input type="checkbox" checked={settings[group].enabled} aria-label={`Chart ${id + 1} ${NAMES[group]}`}
           onChange={(event) => update({ ...settings, [group]: { ...settings[group], enabled: event.target.checked } })} />{NAMES[group]}</label></legend>
-        {FIELDS[group].map(([key, label]) => <Parameter key={key} label={label} ariaLabel={`Chart ${id + 1} ${label}`}
+        {FIELDS[group].map(([key, label]) => <Parameter key={key} label={label} ariaLabel={`Chart ${id + 1} ${group === 'bollinger' || group === 'bollinger2' ? `${NAMES[group]} ` : ''}${label}`}
           value={(settings[group] as unknown as Record<string, number>)[key]} fractional={key === 'stdDev'}
           onChange={(value) => update({ ...settings, [group]: { ...settings[group], [key]: value } })} />)}
+        {(group === 'bollinger' || group === 'bollinger2') && <>
+          <p className="indicator-source">Source: Close · Basis: SMA</p>
+          {(['basisVisible', 'upperVisible', 'lowerVisible'] as const).map((key) => <label key={key} className="indicator-visibility">
+            <input type="checkbox" checked={settings[group][key]} aria-label={`Chart ${id + 1} ${NAMES[group]} ${key === 'basisVisible' ? 'Basis' : key === 'upperVisible' ? 'Upper' : 'Lower'}`}
+              onChange={(event) => update({ ...settings, [group]: { ...settings[group], [key]: event.target.checked } })} />
+            {key === 'basisVisible' ? 'Basis' : key === 'upperVisible' ? 'Upper' : 'Lower'}
+          </label>)}
+        </>}
       </fieldset>)}
     </div>
   </details>

@@ -13,7 +13,7 @@ ForexTester is a personal, browser-based forex backtesting application for Linux
 - Support multiple simultaneous positions, each with independent stop-loss (SL) and take-profit (TP) levels.
 - Provide controls to replay a backtest.
 - Show performance statistics and trade history when a backtest finishes.
-- Base chart appearance and indicator styling on TradingView references to be supplied later.
+- Use a TradingView-inspired dark chart template and indicator styling.
 - Run as a browser-based application compatible with Linux.
 
 ## Prerequisites
@@ -65,21 +65,26 @@ Chart instances remain alive while replay advances or timeframes change. The cur
 
 Replay inherits the historical-data limitations below: EURUSD bid charts only, provider gaps and availability, completed UTC days, and at most seven days per request. It does not include tick replay, orders, positions, SL/TP execution, performance statistics, journaling, or replay persistence.
 
+## Chart appearance
+
+The TradingView-inspired template uses a dark navy canvas, white bull bodies, blue bear bodies, white borders/wicks, hidden grid lines, light gray scale text, a light pane separator, and subtle dashed gray crosshairs. TradingView attribution remains enabled. The toolbar and vertically stacked 1 / 2 / 3 chart layouts retain their existing behavior. Styling is an approximation of the approved reference summary, with further fine-tuning possible.
+
 ## Technical indicators
 
 Open **Indicators** in a chart's toolbar, check an indicator, and edit its numeric fields. Valid changes apply immediately. All indicators start disabled. Each chart has independent settings, retained when switching between one, two, and three charts during the current session. Settings also survive date reloads, but are not saved across page refreshes. Uncheck an indicator to remove its lines, pane, and drawing resources.
 
 | Indicator | Initial parameters | Display |
 | --- | --- | --- |
-| Bollinger Bands | Close length 20; standard deviation multiplier 2 | Upper, middle SMA, and lower lines over price |
-| Slow Stochastic | %K length 14; %K SMA smoothing 3; %D SMA smoothing 3 | Separate resizable pane below price, 0–100 scale, reference levels 20 and 80 |
-| Ichimoku | Tenkan 9; Kijun 26; Span B 52; displacement 26 | Five lines over price with translucent bullish/bearish cloud |
+| BB #1 | Close length 20; standard deviation multiplier 2; SMA basis | White upper/lower lines and visible blue basis over price |
+| BB #2 | Close length 20; standard deviation multiplier 1; SMA basis | White upper/lower lines; blue basis hidden by default |
+| Slow Stochastic | %K length 30; %K SMA smoothing 10; %D SMA smoothing 10 | Separate resizable pane below price, 0–100 scale, blue %K, orange %D, reference levels 80 and 40 (no 50 line) |
+| Ichimoku | Tenkan 9; Kijun 26; Span B 52; displacement 26 | Light blue Tenkan, green Kijun, yellow-lime Chikou, gray leading spans and translucent gray-blue/gray cloud |
 
-Periods, smoothing, and displacement accept whole numbers from 1 to 10000. Bollinger's multiplier accepts positive decimals up to 100. Invalid edits show an error and leave the last valid setting applied. The indicator appearance is provisional pending the project lead's TradingView references. Temporary line and cloud colors are centralized in `frontend/src/indicatorSeries.ts` and `frontend/src/ichimokuCloud.ts`.
+Periods, smoothing, and displacement accept whole numbers from 1 to 10000. Bollinger's multiplier accepts positive decimals up to 100. Invalid edits show an error and leave the last valid setting applied. Both Bollinger overlays can coexist, with independent lengths, multipliers, and Basis/Upper/Lower visibility controls per chart. Source is fixed to close and basis MA to SMA. The TradingView-inspired appearance remains provisional; color fine-tuning may follow. Temporary line and cloud colors are centralized in `frontend/src/indicatorSeries.ts` and `frontend/src/ichimokuCloud.ts`.
 
 Calculations use `technicalindicators` 3.1.0 independently of chart rendering. Bollinger Bands use the population standard deviation. Slow Stochastic first calculates raw %K from rolling highs/lows, smooths it with an SMA, then smooths slow %K with another SMA for %D. A flat high/low window makes raw %K undefined; it is omitted and smoothing restarts. The package's Ichimoku helper delays all components until its longest lookback, so the application uses its rolling Highest/Lowest calculations to calculate each component as soon as its own window is available.
 
-There are no filled or invented warm-up values. Default Bollinger Bands need 20 available chart candles. Stochastic %K first appears at candle 16 and %D at candle 18. Ichimoku Tenkan needs 9 candles, Kijun and Span A need 26, and Span B and the paired cloud need 52. Chikou plots known closes 26 candle positions earlier, skipping positions before the loaded history. Missing minutes and closures remain missing.
+There are no filled or invented warm-up values. Default Bollinger Bands need 20 available chart candles. Stochastic %K first appears at candle 39 and %D at candle 48. Ichimoku Tenkan needs 9 candles, Kijun and Span A need 26, and Span B and the paired cloud need 52. Chikou plots known closes 26 candle positions earlier, skipping positions before the loaded history. Missing minutes and closures remain missing.
 
 Ichimoku Span A is the average of Tenkan and Kijun; Span B is the midpoint of the 52-period high/low. They plot 26 candle positions ahead. Within known history, displacement follows actual candle positions across gaps. Beyond the revealed edge, timestamps extend by the selected timeframe interval, using whitespace time slots without OHLC data. As a gap becomes known, projected timestamps are realigned to the newly revealed candle positions. Cloud fill is split at interpolated Span A/B intersections so its color changes at the crossover. The chart reserves room for the projected horizon at the current edge; synchronized crosshairs still require a real price candle.
 
