@@ -52,7 +52,7 @@ export function useReplay(source: readonly Candle[] | null) {
     canPlay: canAdvance && !current.playing,
     canPause: current.playing,
     canNext: canAdvance && !current.playing,
-    canRestart: active && (current.index! > 0 || current.playing),
+    canRestart: active,
     start: restart,
     restart,
     play: () => { if (canAdvance) setSession((previous) => ({ ...previous, playing: true })) },

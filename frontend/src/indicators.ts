@@ -20,6 +20,17 @@ export function defaultIndicatorSettings(): IndicatorSettings {
     ichimoku: { enabled: false, tenkan: 9, kijun: 26, spanB: 52, displacement: 26 },
   }
 }
+export function indicatorPreset(timeframe: Timeframe): IndicatorSettings {
+  const settings = defaultIndicatorSettings()
+  if (timeframe === 'M5' || timeframe === 'M15') {
+    settings.bollinger.enabled = true
+    settings.bollinger2.enabled = true
+    settings.stochastic.enabled = true
+  } else if (timeframe === 'H1' || timeframe === 'H4') {
+    settings.ichimoku.enabled = true
+  }
+  return settings
+}
 export function validateIndicatorSettings(settings: IndicatorSettings): string | null {
   for (const [name, group] of Object.entries(settings)) {
     for (const [key, value] of Object.entries(group)) {

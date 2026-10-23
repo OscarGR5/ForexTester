@@ -63,7 +63,38 @@ During replay, chart data is built only from the revealed M1 prefix. Each M1 can
 
 Chart instances remain alive while replay advances or timeframes change. The current series candle is updated and new buckets are appended. The synchronized view follows the latest revealed data when viewing the replay edge. Scrolling back preserves an older view while playback continues; navigating back to the edge resumes following. Zooming, scrolling, and crosshairs have access only to revealed prices. Different candle spacing and minimum zoom limits can still produce slightly different views on coarse timeframes, especially early in replay when only one bucket exists.
 
-Replay inherits the historical-data limitations below: EURUSD bid charts only, provider gaps and availability, completed UTC days, and at most seven days per request. It does not include tick replay, orders, positions, SL/TP execution, performance statistics, journaling, or replay persistence.
+Replay inherits the historical-data limitations below: EURUSD bid charts only, provider gaps and availability, completed UTC days, and at most seven days per request. Simulated market entries and manual exits use this same clock, as described below. Tick replay, automatic SL/TP execution, performance statistics, journaling, and replay persistence are not implemented.
+
+## Simulated trading
+
+The **Simulated trading** panel accepts a positive, finite position volume in standard FX lots, initially **0.01**. One EURUSD lot represents **100,000 EUR** of base-currency exposure. Choose **Buy** or **Sell** while replay is active and paused. Trading is disabled in the full-history viewer, during playback, and at the final candle. There must be a later M1 bid candle available to advance to; the application does not look ahead for future quote availability.
+
+At most **two position slots** can be in use. Pending entries and open positions both consume slots, including positions with a pending close. Each entry keeps its own volume. **Cancel** removes an unfilled entry and releases its slot. **Close** queues a manual exit; duplicate close requests are disabled. Pending entries can be cancelled during playback or after history ends. Entry, open, pending-close, and closed states are labeled separately.
+
+Each revealed M1 OHLC bar is treated as an observed, completed candle for trading decisions, although its replay timestamp is the candle’s opening timestamp. An order requested after observing candle N can execute only at a later available M1 opening, never inside candle N. **Next Candle** or **Play** advances the shared clock and processes pending orders chronologically, including all intervening bars when React batches several clock updates. Visual zoom, scrolling, crosshairs, timeframes, and layouts never control execution.
+
+Execution uses historical EURUSD prices, with both bid and ask candles required at exactly the same timestamp:
+
+| Action | Fill price |
+| --- | --- |
+| Buy entry | Ask open |
+| Sell entry | Bid open |
+| Close Buy | Bid open |
+| Close Sell | Ask open |
+
+Multiple queued orders fill independently at that opening. High, low, and close never select an execution price. Missing minutes and weekend/overnight gaps advance directly to the next available bid candle. If its ask is missing or has a different timestamp, orders remain pending until a later synchronized quote appears. Ask-only timestamps do not advance the bid replay clock. Prices are never invented or interpolated.
+
+Open positions show their entry time/price, direction, volume, current closing-side price, and unrealized PnL. Buys are valued at the revealed **bid close** and sells at the revealed **ask close**. The current observed candle must have synchronized bid and ask data; otherwise current price and PnL show **unavailable**, without carrying a stale valuation forward. Closed trades show their actual entry and exit prices/times and realized PnL.
+
+For EURUSD, **1 pip = 0.0001**. Signed price difference is exit or current price minus entry for buys, and entry minus exit or current price for sells. **Pips = signed difference / 0.0001**; **gross USD PnL = signed difference × 100,000 × lots**. For example, a 0.01-lot buy at 1.10020 closed at bid 1.10120 yields 10.0 pips and $1.00 gross. All PnL is **gross, before commissions, swaps, and financing**, not net PnL or account equity.
+
+Calculations retain JavaScript number precision. Display values use fixed decimal rounding: **5 decimals for prices, 1 for pips, 2 for USD**. Volumes retain the entered numeric value, and values that round to zero display without a minus sign. All timestamps are UTC to the minute.
+
+**Restart**, including at the first replay candle, clears pending entries, open positions, and closed trades. Loading a dataset also clears all trading records and returns to the full-history viewer. Timeframe/layout changes preserve positions and pending orders. At the final candle, remaining positions are labeled **open at end of available history**. Unfilled entries or close requests stay pending. No position is force-closed and no exit price is assumed.
+
+Trading state is session-only, in memory. The pure TypeScript engine in `frontend/src/trading.ts` owns execution rules and transitions; `useTrading.ts` consumes the existing replay clock and processes every newly revealed bid candle with its matching ask. Chart components do not own trading state. IDs are deterministic and unique within and across replay sessions on the current page. Automated tests use local fixtures and controlled timers, with no live-data dependency.
+
+Current limitations: EURUSD only; M1 candle replay, with no intraminute or tick-price assumptions. **Automatic SL/TP, commissions, swaps, financing, risk-based sizing, margin/leverage simulation, account balances/equity, equity curves, full performance statistics, strategy signals, and persistence are not implemented.** The historical-data backend and its seven-day request limit are unchanged.
 
 ## Chart appearance
 
@@ -71,7 +102,15 @@ The TradingView-inspired template uses a dark navy canvas, white bull bodies, bl
 
 ## Technical indicators
 
-Open **Indicators** in a chart's toolbar, check an indicator, and edit its numeric fields. Valid changes apply immediately. All indicators start disabled. Each chart has independent settings, retained when switching between one, two, and three charts during the current session. Settings also survive date reloads, but are not saved across page refreshes. Uncheck an indicator to remove its lines, pane, and drawing resources.
+Open **Indicators** in a chart's toolbar, check an indicator, and edit its numeric fields. Valid changes apply immediately. Each chart initializes a timeframe with its automatic preset on first selection:
+
+| Timeframe | Enabled indicators |
+| --- | --- |
+| M1 | None |
+| M5, M15 | BB #1 (20/2), BB #2 (20/1), slow Stochastic (30/10/10) |
+| H1, H4 | Ichimoku (9/26/52/26) |
+
+Each chart remembers separate settings for every visited timeframe. Returning to a timeframe restores its manual edits, including enabled indicators, numeric parameters, and line visibility. New panes use their selected timeframe’s preset. Users can enable any indicator on any timeframe. Settings survive layout changes, replay restarts, and date reloads within the session. They are not saved across page refreshes. Styling and line visibility defaults remain as listed below. Indicator changes do not reset replay or request more history. Uncheck an indicator to remove its lines, pane, and drawing resources.
 
 | Indicator | Initial parameters | Display |
 | --- | --- | --- |
@@ -132,4 +171,4 @@ To run a live integration check, start the backend and run the `curl` command ab
 
 ## Current status
 
-The React/Vite frontend displays one to three synchronized historical EURUSD bid candlestick charts using TradingView Lightweight Charts. The Node.js backend exposes `GET /api/health` and `GET /api/history`. Charts preserve market gaps. The full-history viewer remains available until replay starts; manual replay then progressively reveals M1 data with synchronized partial higher-timeframe candles. Bollinger Bands, slow Stochastic, and Ichimoku Cloud are available independently on each chart, including during replay. Trading, SL/TP execution, statistics, and journaling are not implemented yet.
+The React/Vite frontend displays one to three synchronized historical EURUSD bid candlestick charts using TradingView Lightweight Charts. The Node.js backend exposes `GET /api/health` and `GET /api/history`. Charts preserve market gaps. The full-history viewer remains available until replay starts; manual replay then progressively reveals M1 data with synchronized partial higher-timeframe candles. Bollinger Bands, slow Stochastic, and Ichimoku Cloud are available independently on each chart, including during replay. Automatic indicator presets and simulated market orders are available. Automatic SL/TP execution, statistics, and journaling are not implemented yet.
