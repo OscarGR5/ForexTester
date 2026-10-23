@@ -28,8 +28,14 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 600; }
 .layout-controls label:last-of-type { border-radius: 0 4px 4px 0; }
 .layout-controls input { accent-color: #75c4b5; }
 button { min-height: 34px; padding: 5px 12px; border: 1px solid #4d6d79; border-radius: 4px; background: #2a4955; color: #f2f7f8; cursor: pointer; }
-button:hover { background: #355c69; }
+button:hover:not(:disabled) { background: #355c69; }
 button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #85c8d4; outline-offset: 2px; }
+button:disabled { opacity: 0.45; cursor: default; }
+.replay-controls { display: flex; flex: 1 0 100%; flex-wrap: wrap; align-items: center; gap: 8px; }
+.replay-controls button { font-size: 0.85rem; }
+.replay-status { min-width: 66px; color: #75c4b5; font-size: 0.85rem; }
+.replay-clock, .replay-progress { color: #a7b3c1; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+.replay-progress { margin-left: auto; }
 .form-error { margin: 0; color: #e2a2a6; font-size: 0.85rem; }
 
 .chart-workspace { position: relative; flex: 1; min-height: 0; overflow: auto; border: 1px solid #354250; border-radius: 6px; background: #171e28; }

@@ -46,6 +46,25 @@ All timeframes come from the loaded M1 bid candles in the browser. Aggregated ca
 
 Zooming and horizontal scrolling synchronize the visible UTC period across displayed charts. The crosshair follows the corresponding existing candle bucket when one is available. Synchronization maps each chart's view through candle timestamps rather than matching candle indexes. Around gaps and on very coarse timeframes, the view can differ slightly because each chart has its own candle spacing and Lightweight Charts limits its zoom. A crosshair is cleared on a chart if its corresponding bucket has no candle. Charts do not create candles in missing periods.
 
+## Market replay
+
+The initial chart view shows the full loaded history. Choose **Start Replay** to hide that history and enter replay paused at the first available M1 bid candle. The toolbar shows the simulation timestamp in UTC, status (**Ready**, **Playing**, **Paused**, or **Complete**), and revealed/total M1 candle count.
+
+- **Play** advances one available M1 candle every 250 ms.
+- **Pause** freezes the revealed market state.
+- **Next Candle** advances exactly one available M1 candle while paused.
+- **Restart** returns the current dataset to its first candle, paused.
+
+Playback stops automatically at the final candle and shows **Complete**. Controls are disabled when their actions are unavailable. A dataset containing one candle is complete immediately on starting replay. There is no speed selector or saved replay session.
+
+All charts share one simulation clock, regardless of their timeframes or the number of charts displayed. Timeframe and layout changes preserve the clock, playing/paused state, and revealed history. Loading a historical period clears the session and returns to the full-history viewer; start a new replay explicitly. Editing date inputs alone does not load data or reset replay. Missing M1 minutes and weekend closures are skipped directly, without synthetic candles or waiting through the missing period.
+
+During replay, chart data is built only from the revealed M1 prefix. Each M1 candle is revealed as a whole OHLC bar at its candle-open timestamp; this is candle replay, not a reconstruction of intraminute ticks. M5, M15, H1, and H4 buckets use UTC boundaries and evolve using only those revealed bars. At 10:32 UTC, for example, the current H1 candle starts at 10:00 and the current H4 candle at 08:00; neither can use M1 data later than 10:32. Buckets at the beginning or end of a loaded period may also be incomplete.
+
+Chart instances remain alive while replay advances or timeframes change. The current series candle is updated and new buckets are appended. The synchronized view follows the latest revealed data when viewing the replay edge. Scrolling back preserves an older view while playback continues; navigating back to the edge resumes following. Zooming, scrolling, and crosshairs have access only to revealed prices. Different candle spacing and minimum zoom limits can still produce slightly different views on coarse timeframes, especially early in replay when only one bucket exists.
+
+Replay inherits the historical-data limitations below: EURUSD bid charts only, provider gaps and availability, completed UTC days, and at most seven days per request. It does not include tick replay, orders, positions, SL/TP execution, indicators, performance statistics, journaling, or replay persistence.
+
 ## Development commands
 
 ```sh
@@ -82,8 +101,8 @@ Response shape (candles shortened for display):
 
 The library's filesystem cache is enabled at `.cache/dukascopy/` in the repository root. It stores provider responses by instrument, side, and day. Repeating a completed historical request reads those files instead of downloading the same data again. The directory is Git-ignored and can be deleted to force a fresh download. A WAF token, if acquired, is also stored there.
 
-To run a live integration check, start the backend and run the `curl` command above. Confirm that both `bid` and `ask` contain candles. The automated `npm test` suite uses mocked provider responses and needs no network access. Dukascopy availability, data gaps, and rate limits are outside the application's control. If Dukascopy presents a WAF challenge, `dukascopy-node` needs Chromium. Install its browser helper with `npx dukascopy-node --install-browser`, or set `DUKASCOPY_CHROME_PATH` to an existing Chromium or Chrome executable before starting the backend. If the browser is unavailable during a challenge, the API returns HTTP 502.
+To run a live integration check, start the backend and run the `curl` command above. Confirm that both `bid` and `ask` contain candles. The automated `npm test` suite uses deterministic fixtures, mocked provider responses, and controlled replay timers; it needs no network access. Dukascopy availability, data gaps, and rate limits are outside the application's control. If Dukascopy presents a WAF challenge, `dukascopy-node` needs Chromium. Install its browser helper with `npx dukascopy-node --install-browser`, or set `DUKASCOPY_CHROME_PATH` to an existing Chromium or Chrome executable before starting the backend. If the browser is unavailable during a challenge, the API returns HTTP 502.
 
 ## Current status
 
-The React/Vite frontend displays one to three synchronized historical EURUSD bid candlestick charts using TradingView Lightweight Charts. The Node.js backend exposes `GET /api/health` and `GET /api/history`. Charts preserve market gaps and do not hide future candles; replay will handle that later. Indicators, replay, trading, and statistics features listed above are not implemented yet. The approved future stack includes `technicalindicators`; that package is deferred until indicators are built.
+The React/Vite frontend displays one to three synchronized historical EURUSD bid candlestick charts using TradingView Lightweight Charts. The Node.js backend exposes `GET /api/health` and `GET /api/history`. Charts preserve market gaps. The full-history viewer remains available until replay starts; manual replay then progressively reveals M1 data with synchronized partial higher-timeframe candles. Indicators, trading, SL/TP execution, statistics, and journaling are not implemented yet. The approved future stack includes `technicalindicators`; that package is deferred until indicators are built.

@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { CandlestickSeries, ColorType, createChart, type CandlestickData, type Time, type UTCTimestamp } from 'lightweight-charts'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { CandlestickSeries, ColorType, createChart, type CandlestickData, type IChartApi, type ISeriesApi, type Time, type UTCTimestamp } from 'lightweight-charts'
 import { ChartSynchronizer } from './chartSync'
+import { useReplay } from './useReplay'
 import { fetchHistory, TIMEFRAMES, toBidChartCandles, validateDateRange, type DateRange, type HistoryResponse, type Timeframe } from './history'
 
 const DEFAULT_RANGE: DateRange = { from: '2024-01-09', to: '2024-01-10' }
@@ -16,8 +17,12 @@ interface ChartPaneProps {
 
 function ChartPane({ id, timeframe, candles, synchronizer, onTimeframeChange }: ChartPaneProps) {
   const container = useRef<HTMLDivElement>(null)
+  const chartRef = useRef<IChartApi | null>(null)
+  const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
+  const unregisterRef = useRef<(() => void) | null>(null)
+  const previous = useRef<{ candles: typeof candles; timeframe: Timeframe; synchronizer: ChartSynchronizer } | null>(null)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!container.current) return
     const chart = createChart(container.current, {
       autoSize: true,
@@ -44,8 +49,24 @@ function ChartPane({ id, timeframe, candles, synchronizer, onTimeframeChange }: 
       wickUpColor: '#4aa99a', wickDownColor: '#d27d82',
       priceFormat: { type: 'price', precision: 5, minMove: 0.00001 },
     })
-    series.setData(candles)
-    const unregister = synchronizer.register(id, chart, series, candles, timeframe)
+    chartRef.current = chart
+    seriesRef.current = series
+    return () => {
+      unregisterRef.current?.()
+      unregisterRef.current = null
+      chart.remove()
+      chartRef.current = null
+      seriesRef.current = null
+      previous.current = null
+    }
+  }, [id])
+
+  useLayoutEffect(() => {
+    const chart = chartRef.current!
+    const series = seriesRef.current!
+    // Register once per session; live data changes update the existing entry.
+    const unregister = synchronizer.register(id, chart, series, [], 'M1')
+    unregisterRef.current = unregister
     let firstFrame = 0
     let secondFrame = 0
     if (typeof requestAnimationFrame === 'function') {
@@ -56,9 +77,26 @@ function ChartPane({ id, timeframe, candles, synchronizer, onTimeframeChange }: 
     return () => {
       if (firstFrame) cancelAnimationFrame(firstFrame)
       if (secondFrame) cancelAnimationFrame(secondFrame)
-      unregister()
-      chart.remove()
+      if (unregisterRef.current === unregister) {
+        unregister()
+        unregisterRef.current = null
+      }
     }
+  }, [id, synchronizer])
+
+  useLayoutEffect(() => {
+    const series = seriesRef.current!
+    const last = previous.current
+    const replace = !last || last.synchronizer !== synchronizer || last.timeframe !== timeframe ||
+      candles.length < last.candles.length || last.candles.length === 0
+    synchronizer.update(id, candles, timeframe, () => {
+      if (replace) series.setData(candles)
+      else {
+        // Revisit the old tail: it may be a newly completed higher-timeframe bucket.
+        for (let index = last.candles.length - 1; index < candles.length; index++) series.update(candles[index])
+      }
+    })
+    previous.current = { candles, timeframe, synchronizer }
   }, [id, candles, synchronizer, timeframe])
 
   return (
@@ -88,11 +126,17 @@ export function App() {
   const [formError, setFormError] = useState<string | null>(null)
   const [chartCount, setChartCount] = useState(1)
   const [timeframes, setTimeframes] = useState<Timeframe[]>(DEFAULT_TIMEFRAMES)
-  const synchronizer = useMemo(() => new ChartSynchronizer(history?.bid.length ? {
-    from: history.bid[0].timestamp / 1000,
-    to: history.bid[history.bid.length - 1].timestamp / 1000,
-  } : undefined), [history])
-  const candles = useMemo(() => Object.fromEntries(TIMEFRAMES.map((timeframe) => [timeframe, history ? toBidChartCandles(history, timeframe) : []])) as Record<Timeframe, CandlestickData<UTCTimestamp>[]>, [history])
+  const replay = useReplay(history?.bid ?? null)
+  const bounds = useMemo(() => replay.visible.length ? {
+    from: replay.visible[0].timestamp / 1000,
+    to: replay.visible[replay.visible.length - 1].timestamp / 1000,
+  } : undefined, [replay.visible])
+  // A new session resets the viewport and subscriptions, while panes retain their chart instances.
+  const synchronizer = useMemo(() => new ChartSynchronizer(bounds), [history, replay.epoch])
+  const candles = useMemo(() => Object.fromEntries(TIMEFRAMES.map((timeframe) =>
+    [timeframe, toBidChartCandles({ bid: replay.visible }, timeframe)])) as Record<Timeframe, CandlestickData<UTCTimestamp>[]>, [replay.visible])
+
+  useLayoutEffect(() => { synchronizer.advance(bounds) }, [synchronizer, bounds])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -145,6 +189,18 @@ export function App() {
           <label>Start date <input aria-label="Start date" type="date" value={from} max={todayUtc} onChange={(event) => { setFrom(event.target.value); setFormError(null) }} /></label>
           <label>End date <input aria-label="End date" type="date" value={to} max={todayUtc} onChange={(event) => { setTo(event.target.value); setFormError(null) }} /></label>
           <button type="submit">Load Data</button>
+        </div>
+        <div className="replay-controls" role="group" aria-label="Market replay">
+          <button type="button" disabled={!replay.canStart} onClick={replay.start}>Start Replay</button>
+          <button type="button" disabled={!replay.canPlay} onClick={replay.play}>Play</button>
+          <button type="button" disabled={!replay.canPause} onClick={replay.pause}>Pause</button>
+          <button type="button" disabled={!replay.canNext} onClick={replay.next}>Next Candle</button>
+          <button type="button" disabled={!replay.canRestart} onClick={replay.restart}>Restart</button>
+          <span className="replay-status" role="status" aria-label="Replay status">{replay.status}</span>
+          <time className="replay-clock" dateTime={replay.timestamp === null ? undefined : new Date(replay.timestamp).toISOString()}>
+            {replay.timestamp === null ? 'Simulation clock: awaiting replay (UTC)' : `${new Date(replay.timestamp).toISOString().slice(0, 16).replace('T', ' ')} UTC`}
+          </time>
+          <span className="replay-progress" aria-label="Replay progress">{replay.revealed} / {replay.total} candles</span>
         </div>
       </form>
       {formError && <p className="form-error" role="alert">{formError}</p>}

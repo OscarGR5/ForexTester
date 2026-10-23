@@ -49,7 +49,45 @@ export class ChartSynchronizer {
   private activeId: number | null = null
   private activeUntil = 0
 
-  constructor(private readonly bounds?: UtcRange) {}
+  private following = true
+
+  constructor(private bounds?: UtcRange) {}
+
+  // Called after every pane has installed this frame's revealed data.
+  advance(bounds?: UtcRange): void {
+    const previous = this.bounds
+    this.bounds = bounds
+    if (this.following && this.viewport && bounds && previous && bounds.to > previous.to) {
+      const width = this.viewport.to - this.viewport.from || 3600
+      this.viewport = { from: bounds.to - width, to: bounds.to }
+    }
+    for (const id of this.entries.keys()) this.refresh(id)
+  }
+
+  update(id: number, candles: readonly CandlestickData<UTCTimestamp>[], timeframe: Timeframe,
+    applyData: () => void): void {
+    const entry = this.entries.get(id)
+    if (!entry) return
+    entry.setting = true
+    try {
+      entry.times = candles.map((candle) => candle.time as number)
+      entry.byTime = new Map(candles.map((candle) => [candle.time as number, candle]))
+      entry.step = TIMEFRAME_MS[timeframe] / 1000
+      applyData()
+      if (!this.viewport && entry.times.length > 0) this.initializeViewport(entry)
+      if (this.viewport && entry.times.length > 0) this.applyViewport(entry, this.viewport)
+      entry.pending = entry.chart.timeScale().getVisibleLogicalRange()
+    } finally {
+      entry.setting = false
+    }
+  }
+
+  private initializeViewport(entry: Entry): void {
+    entry.chart.timeScale().fitContent()
+    const bounds = this.bounds ?? { from: entry.times[0], to: entry.times[entry.times.length - 1] }
+    // A single revealed candle starts with a one-hour following window.
+    this.viewport = bounds.from === bounds.to ? { from: bounds.from - 3600, to: bounds.to } : bounds
+  }
 
   activate(id: number): void {
     this.activeId = id
@@ -75,8 +113,7 @@ export class ChartSynchronizer {
       onCrosshair: (param) => this.onCrosshair(id, param),
     }
     if (entry.times.length > 0 && !this.viewport) {
-      chart.timeScale().fitContent()
-      this.viewport = this.bounds ?? { from: entry.times[0], to: entry.times[entry.times.length - 1] }
+      this.initializeViewport(entry)
     }
     this.entries.set(id, entry)
     chart.timeScale().subscribeVisibleLogicalRangeChange(entry.onRange)
@@ -106,6 +143,7 @@ export class ChartSynchronizer {
     const to = Math.max(first, Math.min(last, toUtc))
     if (from >= to) return
     this.viewport = { from, to }
+    this.following = to >= last - source.step
     this.applyingRange = true
     try {
       for (const [targetId, target] of this.entries) {
