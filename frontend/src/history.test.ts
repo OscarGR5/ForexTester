@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { fetchHistory, parseHistory, toBidChartCandles, validateDateRange } from './history'
+import { aggregateBidCandles, fetchHistory, parseHistory, TIMEFRAMES, toBidChartCandles, validateDateRange, type Candle } from './history'
 
 const range = { from: '2024-01-09', to: '2024-01-10' }
 const bid = { timestamp: 1704758400000, open: 1.09497, high: 1.09504, low: 1.09492, close: 1.09501 }
@@ -9,6 +9,39 @@ const response = { symbol: 'EURUSD', resolution: 'M1', ...range, bid: [bid], ask
 afterEach(() => vi.unstubAllGlobals())
 
 describe('historical chart data', () => {
+  it('aggregates every supported timeframe on UTC boundaries with first open and last close', () => {
+    const base = Date.UTC(2024, 0, 9)
+    const minute = (offset: number, open: number, high: number, low: number, close: number): Candle =>
+      ({ timestamp: base + offset * 60_000, open, high, low, close })
+    const source = [minute(2, 1.1, 1.3, 1.0, 1.2), minute(4, 1.2, 1.4, 1.1, 1.3),
+      minute(5, 1.3, 1.5, 1.2, 1.4), minute(15, 1.4, 1.6, 1.3, 1.5),
+      minute(60, 1.5, 1.7, 1.4, 1.6), minute(240, 1.6, 1.8, 1.5, 1.7)]
+    const buckets = { M1: [2, 4, 5, 15, 60, 240], M5: [0, 5, 15, 60, 240],
+      M15: [0, 15, 60, 240], H1: [0, 60, 240], H4: [0, 240] }
+    for (const timeframe of TIMEFRAMES) {
+      expect(aggregateBidCandles(source, timeframe).map((candle) => (candle.timestamp - base) / 60_000)).toEqual(buckets[timeframe])
+    }
+    expect(aggregateBidCandles(source, 'M5')[0]).toEqual(minute(0, 1.1, 1.4, 1.0, 1.3))
+    expect(aggregateBidCandles(source, 'H4')[0]).toEqual(minute(0, 1.1, 1.7, 1.0, 1.6))
+    expect(source[0].timestamp).toBe(base + 120_000)
+  })
+
+  it('keeps sparse and partial buckets, including day and H4 UTC boundaries', () => {
+    const start = Date.UTC(2024, 0, 9, 3, 59)
+    const source = [
+      { timestamp: start, open: 1, high: 2, low: 1, close: 1.5 },
+      { timestamp: start + 2 * 60_000, open: 1.5, high: 3, low: 1, close: 2 },
+      { timestamp: start + 21 * 60_000, open: 2, high: 4, low: 2, close: 3 },
+    ]
+    expect(aggregateBidCandles(source, 'H4').map((candle) => candle.timestamp)).toEqual([
+      Date.UTC(2024, 0, 9), Date.UTC(2024, 0, 9, 4),
+    ])
+    expect(aggregateBidCandles(source, 'M5').map((candle) => candle.timestamp)).toEqual([
+      Date.UTC(2024, 0, 9, 3, 55), Date.UTC(2024, 0, 9, 4), Date.UTC(2024, 0, 9, 4, 20),
+    ])
+    expect(aggregateBidCandles([], 'M15')).toEqual([])
+  })
+
   it('converts milliseconds to UTC seconds and maps only bid OHLC values', () => {
     const history = parseHistory(response, range)
     expect(history.ask).toEqual([ask])
