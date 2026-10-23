@@ -104,7 +104,7 @@ export function parseHistory(value: unknown, range: DateRange): HistoryResponse 
   }
 }
 
-export function toBidChartCandles(history: HistoryResponse, timeframe: Timeframe = 'M1'): CandlestickData<UTCTimestamp>[] {
+export function toBidChartCandles(history: { bid: readonly Candle[] }, timeframe: Timeframe = 'M1'): CandlestickData<UTCTimestamp>[] {
   return aggregateBidCandles(history.bid, timeframe).map(({ timestamp, open, high, low, close }) => ({
     time: (timestamp / 1000) as UTCTimestamp,
     open, high, low, close,
