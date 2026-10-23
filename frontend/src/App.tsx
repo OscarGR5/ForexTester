@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent }
 import { CandlestickSeries, ColorType, LineStyle, createChart, type CandlestickData, type IChartApi, type IPriceLine, type ISeriesApi, type Time, type UTCTimestamp } from 'lightweight-charts'
 import { ChartSynchronizer } from './chartSync'
 import { useReplay } from './useReplay'
+import { accountRiskError } from './risk'
 import type { Position } from './trading'
 import { useTrading } from './useTrading'
 import { TradingPanel } from './TradingPanel'
@@ -239,7 +240,7 @@ export function App() {
           <button type="submit">Load Data</button>
         </div>
         <div className="replay-controls" role="group" aria-label="Market replay">
-          <button type="button" disabled={!replay.canStart} onClick={replay.start}>Start Replay</button>
+          <button type="button" disabled={!replay.canStart || !!accountRiskError(trading.state.account)} onClick={replay.start}>Start Replay</button>
           <button type="button" disabled={!replay.canPlay} onClick={replay.play}>Play</button>
           <button type="button" disabled={!replay.canPause} onClick={replay.pause}>Pause</button>
           <button type="button" disabled={!replay.canNext} onClick={replay.next}>Next Candle</button>
@@ -265,7 +266,7 @@ export function App() {
         {status === 'error' && <div className="chart-message" role="alert"><p>{error}</p><button type="button" onClick={() => setRequestedRange({ ...requestedRange })}>Retry</button></div>}
         {status === 'ready' && history?.bid.length === 0 && <div className="chart-message" role="status">No bid candles are available for this period.</div>}
       </div>
-      <TradingPanel state={trading.state} permission={trading.permission} onEntry={trading.enter} onCancel={trading.cancel} onClose={trading.close} onModifyStop={trading.modifyStop} />
+      <TradingPanel onConfigure={trading.configure} state={trading.state} permission={trading.permission} onEntry={trading.enter} onCancel={trading.cancel} onClose={trading.close} onModifyStop={trading.modifyStop} />
       <p className="chart-note">UTC dates · Start inclusive · End exclusive · Up to 7 completed days</p>
     </main>
   )

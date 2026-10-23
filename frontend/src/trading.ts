@@ -1,10 +1,14 @@
 import type { Candle } from './history'
+import { accountRiskError, DEFAULT_ACCOUNT_RISK, exceedsRisk, plannedRisk, riskBudget, sizeFromRisk, validRiskPercent, type AccountRisk, type EntrySizing } from './risk'
 
 export type Direction = 'buy' | 'sell'
 export interface PendingEntry {
   id: string
   direction: Direction
-  lots: number
+  lots: number | null
+  mode: 'risk' | 'manual'
+  requestedRiskPercent: number | null
+  requestedRiskUsd: number | null
   stopPrice: number
   requestedAt: number
 }
@@ -13,6 +17,10 @@ export interface StopModification { oldPrice: number; newPrice: number; timestam
 // market closures because candle history cannot establish what happened there.
 export interface CoverageWarning { from: number; to: number; side: 'bid' | 'ask'; reason: 'missing_quote' | 'clock_gap' }
 export interface Position extends PendingEntry {
+  lots: number
+  initialRiskUsd: number
+  initialRiskPercent: number
+  referenceBalance: number
   entryTime: number
   entryPrice: number
   closeRequestedAt: number | null
@@ -29,6 +37,7 @@ export interface ClosedTrade extends Position {
 export interface RejectedEntry extends PendingEntry { rejectedAt: number; reason: string }
 export interface Quote { bid: Candle | null; ask: Candle | null }
 export interface TradingState {
+  account: AccountRisk
   session: number
   nextId: number
   observedTimestamp: number | null
@@ -40,8 +49,8 @@ export interface TradingState {
 }
 export interface TradingPermission { active: boolean; playing: boolean; hasFuture: boolean }
 
-export function createTradingState(session = 0): TradingState {
-  return { session, nextId: 1, observedTimestamp: null, quote: null, pending: [], positions: [], closed: [], rejected: [] }
+export function createTradingState(session = 0, account: AccountRisk = DEFAULT_ACCOUNT_RISK): TradingState {
+  return { account: { ...account }, session, nextId: 1, observedTimestamp: null, quote: null, pending: [], positions: [], closed: [], rejected: [] }
 }
 
 export function validLots(lots: number): boolean {
@@ -53,10 +62,38 @@ export function canRequestOrder(permission: TradingPermission): boolean {
   return permission.active && !permission.playing && permission.hasFuture
 }
 
-export function requestEntry(state: TradingState, direction: Direction, lots: number, stopPrice: number, permission: TradingPermission): TradingState {
-  if (!canRequestOrder(permission) || state.observedTimestamp === null || !validLots(lots) || !validStopPrice(stopPrice) ||
+export function combinedRisk(state: TradingState) {
+  const openUsd = state.positions.reduce((sum, position) => sum + plannedRisk(position), 0)
+  const reservedUsd = state.pending.reduce((sum, order) => sum + (order.requestedRiskUsd ?? 0), 0)
+  const maximumUsd = riskBudget(state.account.referenceBalance, state.account.maxRiskPercent)
+  return { openUsd, reservedUsd, maximumUsd, usedUsd: openUsd + reservedUsd,
+    remainingUsd: Math.max(0, maximumUsd - openUsd - reservedUsd) }
+}
+
+export function configureAccount(state: TradingState, account: AccountRisk, permission: TradingPermission): TradingState {
+  if (permission.active || state.positions.length || state.pending.length) return state
+  return { ...state, account: { ...account } }
+}
+
+export function entryRequestError(state: TradingState, sizing: EntrySizing, stopPrice: number): string | null {
+  const configurationError = accountRiskError(state.account)
+  if (configurationError) return configurationError
+  if (!validStopPrice(stopPrice)) return 'Enter a required positive, finite SL price.'
+  if (typeof sizing === 'number') return validLots(sizing) ? null : 'Enter a positive, finite volume in lots.'
+  if (!validRiskPercent(sizing.riskPercent)) return 'Risk per entry must be greater than 0 and at most 100%.'
+  const budget = riskBudget(state.account.referenceBalance, sizing.riskPercent)
+  if (exceedsRisk(budget, combinedRisk(state).remainingUsd)) return 'Requested allocation exceeds the remaining combined risk budget.'
+  return null
+}
+
+export function requestEntry(state: TradingState, direction: Direction, sizing: EntrySizing, stopPrice: number, permission: TradingPermission): TradingState {
+  if (!canRequestOrder(permission) || state.observedTimestamp === null || entryRequestError(state, sizing, stopPrice) ||
     state.pending.length + state.positions.length >= 2) return state
-  const order: PendingEntry = { id: `${state.session}-${state.nextId}`, direction, lots, stopPrice, requestedAt: state.observedTimestamp }
+  const riskPercent = typeof sizing === 'number' ? null : sizing.riskPercent
+  const order: PendingEntry = { id: `${state.session}-${state.nextId}`, direction,
+    mode: typeof sizing === 'number' ? 'manual' : 'risk', lots: typeof sizing === 'number' ? sizing : null,
+    requestedRiskPercent: riskPercent, requestedRiskUsd: riskPercent === null ? null : riskBudget(state.account.referenceBalance, riskPercent),
+    stopPrice, requestedAt: state.observedTimestamp }
   return { ...state, nextId: state.nextId + 1, pending: [...state.pending, order] }
 }
 
@@ -82,6 +119,9 @@ export function stopModificationError(state: TradingState, position: Position, p
   if (position.direction === 'buy' ? price >= candle.close : price <= candle.close) {
     return `SL must be ${position.direction === 'buy' ? 'below' : 'above'} current ${side} close ${formatTradingNumber(candle.close, 5)}.`
   }
+  const exposure = combinedRisk(state)
+  const updated = exposure.usedUsd - plannedRisk(position) + plannedRisk({ ...position, stopPrice: price })
+  if (exceedsRisk(updated, exposure.maximumUsd)) return 'SL change exceeds the combined risk cap, including pending allocations.'
   return null
 }
 
@@ -131,14 +171,29 @@ export function observeCandle(state: TradingState, bid: Candle, ask?: Candle): T
     } else positions.push(position)
   }
   const pending: PendingEntry[] = []
+  let reservedUsd = state.pending.reduce((sum, order) => sum + (order.requestedRiskUsd ?? 0), 0)
   for (const order of state.pending) {
     if (synchronized && timestamp > order.requestedAt) {
+      reservedUsd -= order.requestedRiskUsd ?? 0
       const entryPrice = order.direction === 'buy' ? quote.ask!.open : quote.bid!.open
       if (order.direction === 'buy' ? order.stopPrice >= entryPrice : order.stopPrice <= entryPrice) {
         rejected.push({ ...order, rejectedAt: timestamp,
           reason: `SL ${formatTradingNumber(order.stopPrice, 5)} must be ${order.direction === 'buy' ? 'below' : 'above'} actual entry ${formatTradingNumber(entryPrice, 5)}.` })
-      } else positions.push({ ...order, entryTime: timestamp, entryPrice, closeRequestedAt: null,
-        stopEffectiveAfter: order.requestedAt, stopModifications: [], coverageWarnings: [] })
+      } else {
+        const lots = order.mode === 'risk' ? sizeFromRisk(order.requestedRiskUsd!, entryPrice, order.stopPrice) : order.lots
+        const initialRiskUsd = lots === null ? Infinity : plannedRisk({ ...order, entryPrice, lots })
+        const usedUsd = positions.reduce((sum, position) => sum + plannedRisk(position), 0) + reservedUsd
+        const maximumUsd = riskBudget(state.account.referenceBalance, state.account.maxRiskPercent)
+        const reason = lots === null || !validLots(lots)
+          ? 'Calculated volume is below 0.01 lots or cannot be represented safely. Entry rejected.'
+          : !Number.isFinite(initialRiskUsd) ? 'Actual planned risk cannot be represented safely. Entry rejected.'
+          : exceedsRisk(usedUsd + initialRiskUsd, maximumUsd) ? 'Actual entry risk exceeds the combined risk cap, including pending allocations.' : null
+        if (reason) rejected.push({ ...order, rejectedAt: timestamp, reason })
+        else positions.push({ ...order, lots: lots!, initialRiskUsd,
+          initialRiskPercent: initialRiskUsd / state.account.referenceBalance * 100, referenceBalance: state.account.referenceBalance,
+          entryTime: timestamp, entryPrice, closeRequestedAt: null,
+          stopEffectiveAfter: order.requestedAt, stopModifications: [], coverageWarnings: [] })
+      }
     } else pending.push(order)
   }
   const surviving: Position[] = []
