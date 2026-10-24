@@ -1,3 +1,4 @@
+import { historyCandles } from '../../frontend/src/history.js'
 import { open, mkdir, readFile, readdir, rename, unlink, lstat, realpath } from 'node:fs/promises'
 import { resolve, join, dirname, isAbsolute, relative } from 'node:path'
 import { homedir } from 'node:os'
@@ -267,7 +268,7 @@ export class SessionStorage {
     }
     const newPoints = suffix.slice(oldCount - from)
     const ledger = restoreEquity(newPoints, record.checkpoint.equity, record.checkpoint.trading.account.referenceBalance, initial)
-    for (const [index, point] of newPoints.entries()) if (history.bid[record.checkpoint.replay.startIndex + oldCount + index]?.timestamp !== point.timestamp) throw corrupt()
+    for (const [index, point] of newPoints.entries()) if (historyCandles(history)[record.checkpoint.replay.startIndex + oldCount + index]?.timestamp !== point.timestamp) throw corrupt()
     if (ledger.tail && ledger.tail.point.timestamp !== record.checkpoint.replay.timestamp) throw corrupt()
     for (const chunk of changed) {
       if (!record.chunkHashes.includes(chunk.hash)) throw new StorageFailure(400, 'Unreferenced equity chunk.')
@@ -307,7 +308,7 @@ export class SessionStorage {
         const points = chunks.flatMap((chunk) => chunk.points)
         const ledger = restoreEquity(points, record.checkpoint.equity, record.checkpoint.trading.account.referenceBalance)
         validateHistoryCheckpoint(record, history)
-        if (points.some((point, index) => point.timestamp !== history.bid[record.checkpoint.replay.startIndex + index]?.timestamp) || (ledger.tail && ledger.tail.point.timestamp !== record.checkpoint.replay.timestamp)) throw corrupt()
+        if (points.some((point, index) => point.timestamp !== historyCandles(history)[record.checkpoint.replay.startIndex + index]?.timestamp) || (ledger.tail && ledger.tail.point.timestamp !== record.checkpoint.replay.timestamp)) throw corrupt()
         live.add(`checkpoints/${manifest.hash}.json`)
         live.add(`history/${record.historyId}.json.gz`)
         for (const hash of record.chunkHashes) live.add(`equity/${hash}.json.gz`)

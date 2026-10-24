@@ -1,6 +1,8 @@
 import { chromium } from 'playwright-core'
 import { createServer } from 'vite'
 import { createApp } from '../backend/src/app'
+import { HistoryService } from '../backend/src/history'
+import { FixtureDatabento } from '../tests/databentoFixture'
 import { SessionStorage } from '../backend/src/sessionStorage'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -8,7 +10,7 @@ import { join } from 'node:path'
 import assert from 'node:assert/strict'
 
 const directory = await mkdtemp(join(tmpdir(), 'forextester-startup-'))
-const api = createApp(async () => { throw Error('Unexpected history download') }, undefined, new SessionStorage({ directory }))
+const api = createApp(new HistoryService(new FixtureDatabento()), undefined, new SessionStorage({ directory }))
 await new Promise<void>(resolve => api.listen(0, '127.0.0.1', resolve))
 const port = (api.address() as { port: number }).port
 const vite = await createServer({ configFile: false, root: 'frontend', cacheDir: join(directory, 'vite'),

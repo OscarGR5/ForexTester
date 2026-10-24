@@ -1,3 +1,4 @@
+import { historyCandles } from './history.js'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { accountRiskError } from './risk'
 import { commissionConfigError } from './commissions'
@@ -81,7 +82,7 @@ export function useSessionPersistence(options: Options) {
         target.cacheAttempted = true
       }
       const record = await store.save({ id: target.id, name: target.name, createdAt: target.createdAt,
-        range: { from: current.history.tradingFrom, to: current.history.to }, historyId: target.historyId!, totalCandles: current.history.bid.length }, snapshot, target.record)
+        range: { from: current.history.tradingFrom, to: current.history.to }, historyId: target.historyId!, totalCandles: historyCandles(current.history).length }, snapshot, target.record)
       target.record = record
       setSavedAt(record.savedAt); setSaveStatus(latest.current.snapshot === snapshot && target.name === record.name ? 'Saved' : 'Saving'); setError(null)
       channel.current?.postMessage({ id: record.id, revision: record.revision })
@@ -167,7 +168,7 @@ export function useSessionPersistence(options: Options) {
     await queue.current?.flush()
   }
   async function switchWorkspace(id: string | null, range?: DateRange, repair = false) {
-    if (switching.current || busyRef.current || !initialized) return
+    if (switching.current || busyRef.current || !initialized) return false
     switching.current = true; setBusy(true)
     latest.current.pause()
     let recovering = false
@@ -196,10 +197,11 @@ export function useSessionPersistence(options: Options) {
       }
       setRepairTarget(null); setRepairProgress(null)
       ready.current = true; setAwaitingChoice(false); conflicted.current = false; setConflict(false); setError(null); setSaveStatus(id ? 'Saved' : 'Saving')
+      return true
     } catch (reason) {
       if (id && recovering && repairableHistory(reason)) setRepairTarget({ id, name: sessions.find((record) => record.id === id)?.name ?? 'Saved session' })
       else if (!repair && recovering) setRepairTarget(null)
-      report(reason)
+      report(reason); return false
     }
     finally { busyRef.current = false; switching.current = false; setBusy(false) }
   }

@@ -43,27 +43,16 @@ async function harness() {
   await act(async () => root.render(<Harness />)); await waitFor(() => sessions.initialized)
   return { record, history, download, restore, get sessions() { return sessions } }
 }
-it.each(['missing', 'corrupt'])('offers explicit repair for %s history, reports chunk progress and restores only on request', async (kind) => {
+it.each(['missing', 'corrupt'])('requires original legacy data for %s history and never invokes a provider', async kind => {
   const h = await harness(), path = join(disk.directory, 'history', `${h.record.historyId}.json.gz`)
   if (kind === 'missing') await rm(path); else await writeFile(path, 'corrupt')
   await click('Resume session'); await waitFor(() => !!h.sessions.repairTarget)
-  expect(h.download).not.toHaveBeenCalled(); expect(h.restore).not.toHaveBeenCalled()
-  expect(button('Repair historical data')).toBeTruthy()
-  h.download.mockImplementation(async (_range, progress) => { progress?.({ completed: 2, total: 3 }); return h.history })
-  await click('Repair historical data'); await waitFor(() => h.restore.mock.calls.length === 1)
-  expect(h.restore.mock.calls[0][0].checkpoint).toEqual(h.record.checkpoint)
-  expect(h.sessions.repairTarget).toBeNull(); expect(h.sessions.error).toBeNull()
-})
-it('keeps repair available after mismatched prices, with a backup/retry message and no state installation', async () => {
-  const h = await harness(); await rm(join(disk.directory, 'history', `${h.record.historyId}.json.gz`))
-  await click('Resume session'); await waitFor(() => !!h.sessions.repairTarget)
-  const changed = structuredClone(h.history); changed.ask[0].close += .00001
-  h.download.mockResolvedValue(changed)
   await click('Repair historical data'); await waitFor(() => !h.sessions.busy)
-  expect(h.sessions.error).toContain('different historical data'); expect(h.sessions.error).toContain('backup')
-  expect(h.sessions.conflict).toBe(false); expect(h.sessions.repairTarget?.id).toBe(h.record.id); expect(h.restore).not.toHaveBeenCalled()
-  h.download.mockResolvedValue(h.history)
-  await click('Repair historical data'); await waitFor(() => h.restore.mock.calls.length === 1)
+  expect(h.sessions.error).toContain('original Dukascopy provider dataset')
+  expect(h.download).not.toHaveBeenCalled(); expect(h.restore).not.toHaveBeenCalled()
+  await store.cacheHistory(h.record.historyId, h.history)
+  await click('Resume session'); await waitFor(() => h.restore.mock.calls.length === 1)
+  expect(h.restore.mock.calls[0][0].checkpoint).toEqual(h.record.checkpoint)
 })
 it('does not offer repair or download when the backend is temporarily unavailable', async () => {
   const h = await harness()
@@ -91,7 +80,8 @@ it('repairs history for an already open session before flushing its pending chec
   // save. Explicit repair must fix the shared object before retrying the flush.
   await click('Resume session'); await waitFor(() => !!h.sessions.repairTarget)
   expect(h.download).not.toHaveBeenCalled()
-  await click('Repair historical data'); await waitFor(() => h.restore.mock.calls.length === 2 && !h.sessions.busy)
+  await store.cacheHistory(h.record.historyId, h.history)
+  await click('Resume session'); await waitFor(() => h.restore.mock.calls.length === 2 && !h.sessions.busy)
   expect(h.restore.mock.calls[1][0].checkpoint).toEqual(h.record.checkpoint)
   expect(h.sessions.error).toBeNull()
 })

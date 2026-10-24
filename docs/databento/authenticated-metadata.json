@@ -1,0 +1,52 @@
+{
+  "checkedAt": "2026-10-24T15:51:36.990Z",
+  "authenticated": true,
+  "availability": {
+    "start": "2010-06-06T00:00:00.000000000Z",
+    "end": "2026-10-24T07:51:37.487625000Z"
+  },
+  "paidRequests": 0,
+  "creditsSpentUsd": 0,
+  "creditBalanceUsd": 121.35,
+  "creditBalanceEvidence": "User-provided portal balance; expiry unverified",
+  "queries": [
+    {
+      "from": "2024-01-09",
+      "to": "2024-01-11",
+      "contracts": [
+        {
+          "from": "2024-01-09",
+          "to": "2024-01-11",
+          "instrumentId": 156627,
+          "rawSymbol": "6EH4"
+        }
+      ],
+      "estimatedUsd": 0.00993013382
+    },
+    {
+      "from": "2023-12-02",
+      "to": "2024-03-31",
+      "contracts": [
+        {
+          "from": "2023-12-02",
+          "to": "2023-12-18",
+          "instrumentId": 306787,
+          "rawSymbol": "6EZ3"
+        },
+        {
+          "from": "2023-12-18",
+          "to": "2024-03-18",
+          "instrumentId": 156627,
+          "rawSymbol": "6EH4"
+        },
+        {
+          "from": "2024-03-18",
+          "to": "2024-03-31",
+          "instrumentId": 131197,
+          "rawSymbol": "6EM4"
+        }
+      ],
+      "estimatedUsd": 0.402984544635
+    }
+  ]
+}

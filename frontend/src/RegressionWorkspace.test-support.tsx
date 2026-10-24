@@ -1,3 +1,4 @@
+import { historyCandles } from './history'
 // Regression composition for Tasks 1–19. Exercises current production chart,
 // replay, trading, journal and persistence components with the former controls.
 // The production three-phase application is covered separately in workflow tests.
@@ -44,14 +45,14 @@ export function RegressionWorkspace() {
   const skipHistoryLoad = useRef(false)
   const tradingFrom = history?.tradingFrom ?? requestedRange.from
   const startMs = Date.parse(`${replayStart || `${tradingFrom}T00:00`}:00Z`)
-  const startIndex = useMemo(() => replayStartIndex(history?.bid ?? [], startMs), [history, startMs])
-  const replay = useReplay(history?.bid ?? null, startIndex, hydration ? { replay: hydration.checkpoint.replay, epoch: hydration.checkpoint.trading.session } : null)
+  const startIndex = useMemo(() => replayStartIndex(history ? historyCandles(history) : [], startMs), [history, startMs])
+  const replay = useReplay(history ? historyCandles(history) : null, startIndex, hydration ? { replay: hydration.checkpoint.replay, epoch: hydration.checkpoint.trading.session } : null)
   const trading = useTrading(history, replay, hydration)
-  const bounds = useMemo(() => history?.bid.length && replay.count ? {
-    from: history.bid[0].timestamp / 1000,
-    to: history.bid[replay.count - 1].timestamp / 1000,
+  const bounds = useMemo(() => (history ? historyCandles(history).length : 0) && replay.count ? {
+    from: historyCandles(history!)[0].timestamp / 1000,
+    to: historyCandles(history!)[replay.count - 1].timestamp / 1000,
   } : undefined, [history, replay.count])
-  const warmup = useMemo(() => ichimokuWarmup(history?.bid ?? [], startMs), [history, startMs])
+  const warmup = useMemo(() => ichimokuWarmup(history ? historyCandles(history) : [], startMs), [history, startMs])
   const workspace = useMemo<WorkspaceSettings>(() => defaultWorkspace(), [])
   const snapshot = useMemo<SessionSnapshot | null>(() => history ? ({ ledger: trading.equity, checkpoint: {
     replay: { started: replay.active, index: replay.active ? replay.count - 1 : null, timestamp: replay.timestamp,
@@ -201,12 +202,12 @@ export function RegressionWorkspace() {
       <div className="chart-workspace" aria-label="EURUSD bid chart workspace">
         <div className="chart-stack" style={{ gridTemplateRows: `repeat(${chartCount}, minmax(auto, 1fr))` }}>
           {timeframes.slice(0, chartCount).map((timeframe, id) => <ChartPane placement={null} onPick={() => {}} key={id} id={id} timeframe={timeframe}
-            sessionId={sessions.activeId} positions={trading.state.positions} source={history?.bid ?? EMPTY_CANDLES} count={replay.count} synchronizer={synchronizer} onTimeframeChange={changeTimeframe}
+            sessionId={sessions.activeId} positions={trading.state.positions} source={history ? historyCandles(history) : EMPTY_CANDLES} count={replay.count} synchronizer={synchronizer} onTimeframeChange={changeTimeframe}
             settings={indicatorSettings[id][timeframe]!} onSettingsChange={changeSettings} />)}
         </div>
         {status === 'loading' && <div className="chart-message" role="status">Loading EURUSD bid/ask history · {loadProgress.completed} / {loadProgress.total} chunks complete…</div>}
         {status === 'error' && <div className="chart-message" role="alert"><p>{error}</p><button type="button" onClick={() => setRequestedRange({ ...requestedRange })}>Retry</button></div>}
-        {status === 'ready' && history && startIndex >= history.bid.length && <div className="chart-message" role="status">No bid candles are available at or after the chosen replay start within this trading period.</div>}
+        {status === 'ready' && history && startIndex >= historyCandles(history).length && <div className="chart-message" role="status">No bid candles are available at or after the chosen replay start within this trading period.</div>}
       </div>
       <TradingPanel sessionId={sessions.activeId} onConfigureCommission={trading.configureCommission} onConfigure={trading.configure} state={trading.state} permission={trading.permission} onEntry={trading.enter} onCancel={trading.cancel} onClose={trading.close} onModifyStop={trading.modifyStop} />
       <TradingJournal sessionId={sessions.activeId} key={`${sessions.activeId}-${trading.state.session}`} state={trading.state} onUpdateSetup={trading.updateSetup} scope={statisticsScope} view={journalScope} onScopeChange={setStatisticsScope} onViewChange={setJournalScope} />

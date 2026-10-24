@@ -1,3 +1,4 @@
+import { historyCandles, isSinglePrice } from './history.js'
 import { StorageApiError, fingerprintMismatch, type StorageCode, type CleanupPreview, type CleanupResult } from './storageProtocol.js'
 import { historyRequestBody } from './historyRequestBody.js'
 import type { EquityPoint } from './equity.js'
@@ -30,7 +31,7 @@ export class DiskSessionStore {
     if (response.ok) return
     const code = response.headers.get('X-Storage-Error-Code') as StorageCode | null
     if (!['HISTORY_MISSING', 'HISTORY_CORRUPT'].includes(code ?? '')) throw new StorageApiError(code ?? 'STORAGE_UNAVAILABLE', 'Could not verify historical data on disk. Check the local backend and retry Save now.')
-    const body = typeof Worker !== 'undefined' && history.bid.length + history.ask.length > 8192 ? await historyRequestBody(history) : history
+    const body = typeof Worker !== 'undefined' && historyCandles(history).length + (isSinglePrice(history) ? 0 : history.ask.length) > 8192 ? await historyRequestBody(history) : history
     await this.call(`/history/${id}`, 'PUT', body)
   }
   previewCleanup() { return this.call<CleanupPreview>('/cleanup') }
@@ -38,9 +39,10 @@ export class DiskSessionStore {
   async repairHistory(id: string, download: (range: SessionRecord['range']) => Promise<LoadedHistory>) {
     const { record } = await this.call<{ record: SessionRecord }>(`/sessions/${id}`)
     await validateRecord(record)
+    if (record.symbol === 'EURUSD') throw new StorageApiError('HISTORY_MISSING', 'The original Dukascopy provider dataset is required. Restore its history object from backup; Databento cannot regenerate it.')
     const history = validatedHistory(await download(record.range))
     if (await historyFingerprint(history) !== record.historyId) throw fingerprintMismatch()
-    const body = typeof Worker !== 'undefined' && history.bid.length + history.ask.length > 8192 ? await historyRequestBody(history) : history
+    const body = typeof Worker !== 'undefined' && historyCandles(history).length + (isSinglePrice(history) ? 0 : history.ask.length) > 8192 ? await historyRequestBody(history) : history
     await this.call(`/history/${record.historyId}`, 'PUT', body)
   }
   async save(base: Pick<SessionRecord, 'id' | 'name' | 'createdAt' | 'range' | 'historyId' | 'totalCandles'>,
@@ -58,7 +60,7 @@ export class DiskSessionStore {
       hashes[index] = hash; changed.push({ sessionId: base.id, index, points, hash })
     }
     const record: SessionRecord = { ...base, name: base.name.trim(), savedAt: new Date().toISOString(), schemaVersion: RECORD_VERSION,
-      symbol: 'EURUSD', revision: (previous?.revision ?? 0) + 1,
+      symbol: checkpoint.trading.symbol ?? 'EURUSD', revision: (previous?.revision ?? 0) + 1,
       status: checkpoint.replay.complete ? 'complete' : checkpoint.replay.playing ? 'in-progress' : 'paused',
       completedSetups: checkpoint.trading.setups.filter((setup) => checkpoint.trading.closed.some((p) => p.setupId === setup.id) && ![...checkpoint.trading.pending, ...checkpoint.trading.positions].some((p) => p.setupId === setup.id)).length,
       checkpoint: { ...checkpoint, lifecycle: lifecycleOf(checkpoint) }, chunkHashes: hashes, digest: '' }
@@ -81,7 +83,7 @@ export class DiskSessionStore {
     const history = validatedHistory(await this.call<LoadedHistory>(`/history/${record.historyId}`))
     if (await historyFingerprint(history) !== record.historyId) throw new StorageApiError('HISTORY_CORRUPT', 'Historical data failed fingerprint verification. Repair historical data to resume.')
     validateHistoryCheckpoint(record, history)
-    if (points.some((point, index) => point.timestamp !== history.bid[record.checkpoint.replay.startIndex + index]?.timestamp) || (ledger.tail && ledger.tail.point.timestamp !== record.checkpoint.replay.timestamp)) throw corrupt()
+    if (points.some((point, index) => point.timestamp !== historyCandles(history)[record.checkpoint.replay.startIndex + index]?.timestamp) || (ledger.tail && ledger.tail.point.timestamp !== record.checkpoint.replay.timestamp)) throw corrupt()
     return { record, checkpoint: record.checkpoint, ledger, history, cacheWarning: null }
   }
   async migrationReceipt(id: string) { return this.call<{ digest: string; revision: number; targetId: string } | null>(`/sessions/${id}/migration`) }

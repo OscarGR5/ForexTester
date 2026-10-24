@@ -1,7 +1,8 @@
 // Deterministic offline fixtures shared by persistence tests and measurements.
 import { createEquityLedger, recordEquity, type EquityLedger } from './equity.js'
 import { defaultIndicatorSettings } from './indicators.js'
-import type { LoadedHistory } from './historyLoader.js'
+import type { LegacyHistoryResponse } from './history.js'
+type LoadedHistory = LegacyHistoryResponse & { tradingFrom: string }
 import { createTradingState, observeCandle, type TradingState } from './trading.js'
 import { equitySummary, type SessionSnapshot } from './sessionTypes.js'
 export const FIXTURE_START = Date.UTC(2024, 0, 1)

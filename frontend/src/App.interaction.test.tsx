@@ -90,9 +90,14 @@ beforeEach(async () => {
   vi.stubGlobal('fetch', (path: string, options?: RequestInit) => {
     if (path.startsWith('/api/storage')) return disk.fetch(path, options)
     const params = new URL(path, 'http://test.local').searchParams
-    if (params.get('from')! < history.from) return Promise.resolve(new Response(JSON.stringify({
-      ...history, from: params.get('from'), to: params.get('to'), bid: [], ask: [],
-    })))
+    if (params.get('from')! < history.from) {
+      // The cache-only loader reads the full pre-roll range in one call.
+      // Existing execution fixtures contain trading bars only.
+      const tradingFrom = new Date(Date.parse(params.get('from')!) + 30 * 86400000).toISOString().slice(0,10)
+      const adjusted = new URL(path,'http://test.local'); adjusted.searchParams.set('from', tradingFrom)
+      return request(adjusted.pathname + adjusted.search, options).then(async response => response.ok
+        ? new Response(JSON.stringify({ ...await response.json(), from: params.get('from') })) : response)
+    }
     return request(path, options)
   })
 })
@@ -1437,7 +1442,7 @@ describe('warm-up context and selected replay start', () => {
       const params = new URL(path, 'http://test.local').searchParams
       const from = params.get('from')!, to = params.get('to')!
       const warm = Date.parse(from) < Date.UTC(2024, 0, 9)
-      const bid = warm ? [{ ...history.bid[0], timestamp: Date.parse(from) }] : history.bid
+      const bid = warm ? [0,5,10,15,20].map(days => ({ ...history.bid[0], timestamp: Date.parse(from) + days * 86400000 })).concat(history.bid) : history.bid
       return new Response(JSON.stringify({ ...history, from, to, bid, ask: bid.map(bar => ({ ...bar, open: bar.open + 0.0002, high: bar.high + 0.0002, low: bar.low + 0.0002, close: bar.close + 0.0002 })) }))
     })
     await act(async () => root.render(<StrictMode><App /></StrictMode>))

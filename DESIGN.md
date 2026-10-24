@@ -135,6 +135,8 @@ The trading dock groups sizing, setup assignment, Buy/Sell, slot count, and exec
 
 Session management opens in a native dialog positioned at the right on desktop and inset 8px on mobile. Results statistics are unboxed; charts and tables follow their section headings and explanatory text.
 
+Setup's paid-download confirmation uses a centered native modal, inset and vertically scrollable on mobile without horizontal overflow. Initial focus goes to the title so long content starts at the top. Existing slate surfaces and Inter frame the requested dates, native missing-range details, and large amber tabular USD estimate before acknowledgement and actions. Explain the internal reservation separately from actual billing and state that billing can vary. Approval requires acknowledgement; expiry, blockers, and submission retain real disabled states with explicit messages. Keep Cancel and Approve actions explicit, with the estimated amount repeated in approval and full-width stacked buttons on mobile.
+
 ## Do's and Don'ts
 
 - Do preserve chart space and keep trading controls compact.

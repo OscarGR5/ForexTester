@@ -1,74 +1,55 @@
 import { createServer, type Server } from 'node:http'
 import { SessionStorage } from './sessionStorage.js'
-import { sessionApi } from './sessionApi.js'
-import { loadHistory, type RatesFetcher } from './history.js'
+import { readJson, sessionApi } from './sessionApi.js'
+import { HistoryService } from './history.js'
+import { DataError, day } from './databento.js'
 
-import { historyCoverage, classifyHistoryError, historyErrorDetails, verifiedDate } from './historyCoverage.js'
-
-const MAX_HISTORY_DAYS = 7 // Per-chunk provider safety limit; the frontend coordinates longer intervals.
-
-function parseUtcDate(value: string | null): number | null {
-  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null
-  const timestamp = Date.parse(`${value}T00:00:00.000Z`)
-  return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0, 10) === value
-    ? timestamp
-    : null
-}
-
-export function createApp(fetchRates?: RatesFetcher, now: () => Date = () => new Date(), storage = new SessionStorage()): Server {
-  let providerHealth: { status: string; code?: string; error?: string; action?: string } = { status: 'unknown' }
-  let lastVerifiedAvailableDate: string | null = null
+export function createApp(history = new HistoryService(), now: () => Date = () => new Date(), storage = new SessionStorage()): Server {
   const server = createServer(async (request, response) => {
     response.setHeader('Content-Type', 'application/json; charset=utf-8')
-
+    response.setHeader('Cache-Control', 'no-store')
+    response.setHeader('X-Content-Type-Options', 'nosniff')
     if (await sessionApi(request, response, storage)) return
-
-    if (request.method === 'GET' && request.url === '/api/health') {
-      response.writeHead(200)
-      response.end(JSON.stringify({ status: 'ok' }))
-      return
-    }
-
     const url = new URL(request.url ?? '/', 'http://localhost')
-    if (request.method === 'GET' && url.pathname === '/api/history/coverage') {
-      response.end(JSON.stringify({ ...historyCoverage(now()), lastVerifiedAvailableDate, providerHealth }))
-      return
-    }
-    if (request.method === 'GET' && url.pathname === '/api/history') {
-      const symbol = url.searchParams.get('symbol')
-      const from = url.searchParams.get('from')
-      const to = url.searchParams.get('to')
-      const fromMs = parseUtcDate(from)
-      const toMs = parseUtcDate(to)
-      const todayUtc = Date.parse(`${now().toISOString().slice(0, 10)}T00:00:00.000Z`)
-
-      if (symbol !== 'EURUSD' || fromMs === null || toMs === null || fromMs >= toMs ||
-        toMs > todayUtc || (toMs - fromMs) / 86_400_000 > MAX_HISTORY_DAYS) {
-        response.writeHead(400)
-        response.end(JSON.stringify({ code: 'INVALID_HISTORY_RANGE', title: 'Invalid historical date range', error: 'Use symbol=EURUSD and a valid completed UTC date range of 1 to 7 days (from inclusive, to exclusive).' }))
-        return
+    try {
+      const host = request.headers.host, origin = request.headers.origin
+      if (!host || !/^(127\.0\.0\.1|localhost)(:\d+)?$/.test(host) || origin && origin !== `http://${host}` || request.headers['sec-fetch-site'] === 'cross-site') throw new DataError('LOCAL_ACCESS_REQUIRED', 'Same-origin localhost access required.', 403)
+      if (request.method === 'GET' && url.pathname === '/api/health') { response.end(JSON.stringify({ status: 'ok' })); return }
+      if (request.method === 'GET' && url.pathname === '/api/history/coverage') {
+        const cached = await history.cachedBounds()
+        if (cached) {
+          response.end(JSON.stringify({ symbol: '6E', resolution: 'M1', source: 'Databento', cachedFrom: cached.from, cachedTo: cached.to, cachedDates: cached.cachedDates,
+            providerEarliestTimestamp: null, earliestSelectableDate: null,
+            latestEligibleDate: day(now().getTime() - 86400000), maximumCalendarDays: 90, latestBoundaryProvisional: false,
+            lastVerifiedAvailableDate: null, providerHealth: { status: 'cache-validated' }, timezone: 'UTC' })); return
+        }
+        const range = await history.client.availability()
+        const startDay = Date.parse(range.start) > Date.parse(range.start.slice(0, 10)) ? Date.parse(range.start.slice(0, 10)) + 86400000 : Date.parse(range.start.slice(0, 10))
+        const end = Math.min(Date.parse(range.end.slice(0, 10)), Date.parse(day(now().getTime())))
+        response.end(JSON.stringify({ symbol: '6E', resolution: 'M1', source: 'Databento', providerEarliestTimestamp: range.start,
+          earliestSelectableDate: day(startDay + 30 * 86400000), latestEligibleDate: day(end - 86400000), maximumCalendarDays: 90,
+          latestBoundaryProvisional: false, lastVerifiedAvailableDate: null, providerHealth: { status: 'metadata-verified' }, timezone: 'UTC' })); return
       }
-
-      try {
-        const history = await loadHistory(from!, to!, fetchRates)
-        const verified = verifiedDate(history)
-        if (verified && (!lastVerifiedAvailableDate || verified > lastVerifiedAvailableDate)) lastVerifiedAvailableDate = verified
-        providerHealth = { status: verified ? 'ready' : 'no-observations' }
-        response.writeHead(200)
-        response.end(JSON.stringify(history))
-      } catch (error) {
-        const diagnostic = classifyHistoryError(error)
-        console.error('Historical data retrieval failed:', { from, to, code: diagnostic.code, causes: historyErrorDetails(error) })
-        if (diagnostic.retryAfterMs !== undefined) response.setHeader('Retry-After', String(Math.ceil(diagnostic.retryAfterMs / 1000)))
-        response.writeHead(diagnostic.code === 'PROVIDER_RATE_LIMIT' ? 429 : 502)
-        providerHealth = { status: 'error', ...diagnostic }
-        response.end(JSON.stringify(diagnostic))
+      if (request.method === 'GET' && ['/api/history', '/api/history/estimate'].includes(url.pathname)) {
+        if (url.searchParams.get('symbol') !== '6E') throw new DataError('LEGACY_DATASET_REQUIRED', 'Legacy sessions require their original stored provider dataset. Databento cannot regenerate or substitute it.', 409)
+        const from = url.searchParams.get('from') ?? '', to = url.searchParams.get('to') ?? ''
+        const result = url.pathname.endsWith('/estimate') ? await history.estimate(from, to) : await history.readCached(from, to)
+        response.end(JSON.stringify(result)); return
       }
-      return
+      if (request.method === 'POST' && url.pathname === '/api/history/download') {
+        if (origin !== `http://${host}`) throw new DataError('LOCAL_ACCESS_REQUIRED', 'Same-origin Origin header required for spending confirmation.', 403)
+        const body = await readJson(request, 4096)
+        if (typeof body.quoteId !== 'string') throw new DataError('INVALID_QUOTE', 'A current quote is required.')
+        const result = await history.confirm(body.quoteId, body.confirm === true)
+        response.end(JSON.stringify(result)); return
+      }
+      response.writeHead(404); response.end(JSON.stringify({ error: 'Not found' }))
+    } catch (error) {
+      // Never log upstream errors, request bodies, headers, or credentials.
+      const diagnostic = error instanceof DataError ? error : new DataError('HISTORY_FAILURE', 'Historical operation failed. Check local cache access and backend configuration. No automatic retry.', 503)
+      response.writeHead(diagnostic.status)
+      response.end(JSON.stringify({ code: diagnostic.code, title: diagnostic.code === 'DATABENTO_CONFIGURATION' ? 'Databento configuration required' : 'Historical data unavailable', error: diagnostic.message }))
     }
-
-    response.writeHead(404)
-    response.end(JSON.stringify({ error: 'Not found' }))
   })
   server.on('close', () => { void storage.close().catch(() => {}) })
   return server

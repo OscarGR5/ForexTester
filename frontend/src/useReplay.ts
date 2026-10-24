@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import type { Candle } from './history'
+import { useEffect, useMemo, useState } from 'react'
+import { rolloverIndex, type Candle } from './history'
 import type { ReplayCheckpoint } from './sessionTypes'
 
 export const REPLAY_INTERVAL_MS = 250
@@ -23,8 +23,12 @@ export function useReplay(source: readonly Candle[] | null, initialIndex = 0, re
 
   const total = source?.length ?? 0
   const active = current.index !== null
+  const boundaryStart = active ? current.startIndex : initialIndex
+  const boundary = useMemo(() => source ? rolloverIndex(source, boundaryStart) : total, [source, boundaryStart, total])
+  const last = Math.min(total, boundary) - 1
+  const blocked = active && current.index === last && boundary < total
   const complete = active && current.index === total - 1
-  const canAdvance = active && !complete
+  const canAdvance = active && !complete && !blocked
   const speed = current.speed
   const setSpeed = (speed: 1 | 10 | 100) => setSession((previous) => ({ ...previous, speed }))
   const count = active ? current.index! + 1 : total
@@ -34,12 +38,12 @@ export function useReplay(source: readonly Candle[] | null, initialIndex = 0, re
     const timer = setInterval(() => {
       setSession((previous) => {
         if (previous.source !== source || !previous.playing || previous.index === null) return previous
-        const index = Math.min(previous.index + speed, total - 1)
-        return { ...previous, index, playing: index < total - 1 }
+        const index = Math.min(previous.index + speed, last)
+        return { ...previous, index, playing: index < last }
       })
     }, REPLAY_INTERVAL_MS)
     return () => clearInterval(timer)
-  }, [source, total, current.playing, speed])
+  }, [source, total, current.playing, speed, last])
 
   function restart() {
     const startIndex = active ? current.startIndex : initialIndex
@@ -50,10 +54,10 @@ export function useReplay(source: readonly Candle[] | null, initialIndex = 0, re
   return {
     // Lazy compatibility view: production charts consume source/count directly.
     get visible() { return source ? (active ? source.slice(0, count) : source) : [] },
-    count, source, startIndex: current.startIndex, speed, setSpeed, total, active, complete, playing: current.playing, epoch: current.epoch,
+    count, source, blocked, startIndex: current.startIndex, speed, setSpeed, total, active, complete, playing: current.playing, epoch: current.epoch,
     revealed: active ? current.index! + 1 : 0,
     timestamp: active ? source![current.index!].timestamp : null,
-    status: !active ? 'Ready' : complete ? 'Complete' : current.playing ? 'Playing' : 'Paused',
+    status: !active ? 'Ready' : blocked ? 'Rollover blocked' : complete ? 'Complete' : current.playing ? 'Playing' : 'Paused',
     canStart: total > 0 && initialIndex < total && !active,
     canPlay: canAdvance && !current.playing,
     canPause: current.playing,
@@ -65,7 +69,7 @@ export function useReplay(source: readonly Candle[] | null, initialIndex = 0, re
     pause: () => setSession((previous) => ({ ...previous, playing: false })),
     next: () => {
       if (!canAdvance || current.playing) return
-      setSession((previous) => ({ ...previous, index: Math.min(previous.index! + 1, total - 1) }))
+      setSession((previous) => ({ ...previous, index: Math.min(previous.index! + 1, last) }))
     },
   }
 }

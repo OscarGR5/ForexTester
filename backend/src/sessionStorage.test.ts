@@ -1,3 +1,4 @@
+import { historyCandles } from '../../frontend/src/history.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { readdir, readFile, writeFile, stat } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -112,7 +113,7 @@ describe('durable storage and integrity', () => {
     const { saved, sim } = await fixture(90 * 1440, 90 * 1440 - 1)
     const restored = await client.recover(saved.id)
     expect(restored.ledger.count).toBe(129600); expect(restored.checkpoint.equity).toEqual(sim.snapshot().checkpoint.equity)
-    expect(restored.history.bid).toHaveLength(129600); expect(saved.chunkHashes).toHaveLength(127)
+    expect(historyCandles(restored.history)).toHaveLength(129600); expect(saved.chunkHashes).toHaveLength(127)
   }, 20000)
 })
 describe('narrow localhost API', () => {

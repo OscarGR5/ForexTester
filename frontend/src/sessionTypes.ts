@@ -45,7 +45,7 @@ export interface SessionRecord {
   createdAt: string
   savedAt: string
   schemaVersion: number
-  symbol: 'EURUSD'
+  symbol: 'EURUSD' | '6E'
   range: DateRange
   historyId: string
   revision: number

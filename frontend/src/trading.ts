@@ -4,7 +4,7 @@ import { accountRiskError, DEFAULT_ACCOUNT_RISK, exceedsRisk, plannedRisk, riskB
 
 export type Direction = 'buy' | 'sell'
 export interface SetupMetadata { title: string; tag: string; notes: string }
-export interface TradingSetup extends SetupMetadata { id: string; symbol: 'EURUSD'; direction: Direction }
+export interface TradingSetup extends SetupMetadata { id: string; symbol: 'EURUSD' | '6E'; direction: Direction }
 export type SetupStatus = 'pending' | 'open' | 'partially closed' | 'completed' | 'rejected/cancelled'
 export interface PendingEntry {
   id: string
@@ -20,7 +20,7 @@ export interface PendingEntry {
 export interface StopModification { oldPrice: number; newPrice: number; timestamp: number }
 // Inclusive M1 timestamps without usable stop-side observations. Gaps include
 // market closures because candle history cannot establish what happened there.
-export interface CoverageWarning { from: number; to: number; side: 'bid' | 'ask'; reason: 'missing_quote' | 'clock_gap' }
+export interface CoverageWarning { from: number; to: number; side: 'bid' | 'ask' | 'trade'; reason: 'missing_quote' | 'clock_gap' }
 export interface Position extends PendingEntry {
   lots: number
   initialStopPrice: number
@@ -48,8 +48,17 @@ export interface ClosedTrade extends Position {
 }
 export interface RejectedEntry extends PendingEntry { rejectedAt: number; reason: string }
 export interface CancelledEntry extends PendingEntry { cancelledAt: number }
-export interface Quote { bid: Candle | null; ask: Candle | null }
+export type Quote = { bid: Candle | null; ask: Candle | null } | { priceModel: 'single'; trade: Candle | null; bid?: never; ask?: never }
+export function quoteCandle(quote: Quote | null, side: 'bid' | 'ask' | 'trade'): Candle | null {
+  return quote && 'priceModel' in quote ? quote.trade : quote && side !== 'trade' ? quote[side] : null
+}
+export function observedPrice(quote: Quote | null, direction: Direction): number | null {
+  if (!quote) return null
+  if ('priceModel' in quote) return quote.trade?.close ?? null
+  return quote.bid && quote.ask ? quote[direction === 'buy' ? 'ask' : 'bid']!.close : null
+}
 export interface TradingState {
+  symbol?: 'EURUSD' | '6E'
   account: AccountRisk
   commission: CommissionConfig
   session: number
@@ -153,7 +162,7 @@ export function requestEntry(state: TradingState, direction: Direction, sizing: 
     stopPrice, requestedAt: state.observedTimestamp }
   return { ...state, nextId: state.nextId + 1, pending: [...state.pending, order],
     nextSetupId: state.nextSetupId + (selectedSetupId === null ? 1 : 0),
-    setups: selectedSetupId === null ? [...state.setups, { id: setupId, symbol: 'EURUSD', direction, title: '', tag: '', notes: '' }] : state.setups }
+    setups: selectedSetupId === null ? [...state.setups, { id: setupId, symbol: state.symbol ?? 'EURUSD', direction, title: '', tag: '', notes: '' }] : state.setups }
 }
 
 export function cancelEntry(state: TradingState, id: string): TradingState {
@@ -174,8 +183,8 @@ export function requestClose(state: TradingState, id: string, permission: Tradin
 export function stopModificationError(state: TradingState, position: Position, price: number, permission: TradingPermission): string | null {
   if (!canRequestOrder(permission)) return 'SL changes require paused replay with another candle available.'
   if (!validStopPrice(price)) return 'Enter a positive, finite SL price.'
-  const side = position.direction === 'buy' ? 'bid' : 'ask'
-  const candle = state.quote?.[side]
+  const side = state.symbol === '6E' ? 'trade' : position.direction === 'buy' ? 'bid' : 'ask'
+  const candle = quoteCandle(state.quote, side)
   if (!candle) return `Cannot change SL: current ${side} closing quote is unavailable.`
   if (position.direction === 'buy' ? price >= candle.close : price <= candle.close) {
     return `SL must be ${position.direction === 'buy' ? 'below' : 'above'} current ${side} close ${formatTradingNumber(candle.close, 5)}.`
@@ -212,22 +221,28 @@ function warn(position: Position, warning: CoverageWarning): Position {
 
 // Only newly revealed candles reach this pure transition. Never inspect future
 // history. Entries use opens; stop exits use the triggering side's open and range.
-export function observeCandle(state: TradingState, bid: Candle, ask?: Candle): TradingState {
+export function observeCandle(state: TradingState, bid: Candle, ask?: Candle, priceModel: 'bid-ask' | 'single' = 'bid-ask'): TradingState {
+  if (priceModel === 'single' && state.quote && 'priceModel' in state.quote && state.quote.trade) {
+    const previousId = (state.quote.trade as Candle & { instrumentId?: number }).instrumentId
+    const nextId = (bid as Candle & { instrumentId?: number }).instrumentId
+    if (previousId !== undefined && nextId !== previousId) throw new Error('Replay blocked at contract rollover; no execution was applied.')
+  }
   const timestamp = bid.timestamp
   if (state.observedTimestamp !== null && timestamp <= state.observedTimestamp) return state
-  const quote: Quote = { bid: validCandle(bid, timestamp) ? bid : null, ask: validCandle(ask, timestamp) ? ask : null }
-  const synchronized = quote.bid !== null && quote.ask !== null
+  const quote: Quote = priceModel === 'single' ? { priceModel: 'single', trade: validCandle(bid, timestamp) ? bid : null }
+    : { bid: validCandle(bid, timestamp) ? bid : null, ask: validCandle(ask, timestamp) ? ask : null }
+  const synchronized = priceModel === 'single' ? quoteCandle(quote, 'trade') !== null : quoteCandle(quote, 'bid') !== null && quoteCandle(quote, 'ask') !== null
   const positions: Position[] = []
   const closed: ClosedTrade[] = []
   const rejected: RejectedEntry[] = []
   for (let position of state.positions) {
     if (state.observedTimestamp !== null && timestamp > state.observedTimestamp + 60_000) {
       position = warn(position, { from: state.observedTimestamp + 60_000, to: timestamp - 60_000,
-        side: position.direction === 'buy' ? 'bid' : 'ask', reason: 'clock_gap' })
+        side: priceModel === 'single' ? 'trade' : position.direction === 'buy' ? 'bid' : 'ask', reason: 'clock_gap' })
     }
     // A synchronized manual exit at the opening precedes intrabar stops.
     if (synchronized && position.closeRequestedAt !== null && timestamp > position.closeRequestedAt) {
-      closed.push(closePosition(position, timestamp, position.direction === 'buy' ? quote.bid!.open : quote.ask!.open, 'manual', null))
+      closed.push(closePosition(position, timestamp, quoteCandle(quote, position.direction === 'buy' ? 'bid' : 'ask')!.open, 'manual', null))
     } else positions.push(position)
   }
   const pending: PendingEntry[] = []
@@ -235,7 +250,7 @@ export function observeCandle(state: TradingState, bid: Candle, ask?: Candle): T
   for (const order of state.pending) {
     if (synchronized && timestamp > order.requestedAt) {
       reservedUsd -= order.requestedRiskUsd ?? 0
-      const entryPrice = order.direction === 'buy' ? quote.ask!.open : quote.bid!.open
+      const entryPrice = quoteCandle(quote, order.direction === 'buy' ? 'ask' : 'bid')!.open
       if (order.direction === 'buy' ? order.stopPrice >= entryPrice : order.stopPrice <= entryPrice) {
         rejected.push({ ...order, rejectedAt: timestamp,
           reason: `SL ${formatTradingNumber(order.stopPrice, 5)} must be ${order.direction === 'buy' ? 'below' : 'above'} actual entry ${formatTradingNumber(entryPrice, 5)}.` })
@@ -261,9 +276,9 @@ export function observeCandle(state: TradingState, bid: Candle, ask?: Candle): T
   const surviving: Position[] = []
   for (let position of positions) {
     const side = position.direction === 'buy' ? 'bid' : 'ask'
-    const candle = quote[side]
+    const candle = quoteCandle(quote, side)
     if (!candle) {
-      position = warn(position, { from: timestamp, to: timestamp, side, reason: 'missing_quote' })
+      position = warn(position, { from: timestamp, to: timestamp, side: priceModel === 'single' ? 'trade' : side, reason: 'missing_quote' })
     } else if (timestamp > position.stopEffectiveAfter) {
       const gap = position.direction === 'buy' ? candle.open < position.stopPrice : candle.open > position.stopPrice
       const touched = position.direction === 'buy' ? candle.low <= position.stopPrice : candle.high >= position.stopPrice
@@ -275,7 +290,7 @@ export function observeCandle(state: TradingState, bid: Candle, ask?: Candle): T
     surviving.push(position)
   }
   // Quote-only observations preserve record identities for journal/curve memoization.
-  return { ...state, observedTimestamp: timestamp, quote,
+  return { ...state, ...(priceModel === 'single' ? { symbol: '6E' as const } : {}), observedTimestamp: timestamp, quote,
     pending: pending.length === state.pending.length ? state.pending : pending,
     positions: surviving.length === state.positions.length && surviving.every((position, index) => position === state.positions[index]) ? state.positions : surviving,
     closed: closed.length ? [...state.closed, ...closed] : state.closed,
@@ -311,8 +326,10 @@ export function stopLossEstimates(position: Position) {
 }
 
 export function markPosition(position: Position, quote: Quote | null) {
-  if (!quote?.bid || !quote.ask) return null
-  const price = position.direction === 'buy' ? quote.bid.close : quote.ask.close
+  if (!quote || !('priceModel' in quote) && (!quote.bid || !quote.ask)) return null
+  const bar = quoteCandle(quote, position.direction === 'buy' ? 'bid' : 'ask')
+  if (!bar) return null
+  const price = bar.close
   const gross = grossPnl(position, price)
   const estimatedExitCommissionUsd = perSideCommissionUsd(position.lots, position.commission)
   return { price, ...gross, estimatedExitCommissionUsd,

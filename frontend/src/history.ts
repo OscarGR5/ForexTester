@@ -8,13 +8,32 @@ export interface Candle {
   close: number
 }
 
-export interface HistoryResponse {
+export interface LegacyHistoryResponse {
   symbol: 'EURUSD'
   resolution: 'M1'
   from: string
   to: string
   bid: Candle[]
   ask: Candle[]
+}
+
+export interface ContractInterval { from: string; to: string; instrumentId: number; rawSymbol: string }
+export interface TradeCandle extends Candle { volume: string; instrumentId: number }
+export interface SinglePriceHistory {
+  priceModel: 'single'; source: 'databento'; symbol: '6E'; dataset: 'GLBX.MDP3'; schema: 'ohlcv-1m'
+  continuousSymbol: '6E.v.0'; stypeIn: 'continuous'; normalizationVersion: 1
+  resolution: 'M1'; from: string; to: string
+  contracts: ContractInterval[]; candles: TradeCandle[]
+}
+export type HistoryResponse = LegacyHistoryResponse | SinglePriceHistory
+export function isSinglePrice(history: HistoryResponse): history is SinglePriceHistory { return 'priceModel' in history && history.priceModel === 'single' }
+export function historyCandles(history: HistoryResponse): Candle[] { return isSinglePrice(history) ? history.candles : history.bid }
+export function historyLabel(history: HistoryResponse | null): string { return history && !isSinglePrice(history) ? 'EURUSD · Dukascopy · legacy bid/ask' : '6E — Euro FX Futures · Databento · trade prices' }
+export function rolloverIndex(candles: readonly Candle[], start: number): number {
+  const first = (candles[start] as TradeCandle | undefined)?.instrumentId
+  if (first === undefined) return candles.length
+  const index = candles.findIndex((bar, index) => index > start && (bar as TradeCandle).instrumentId !== first)
+  return index < 0 ? candles.length : index
 }
 
 export interface DateRange {
@@ -43,12 +62,15 @@ export function aggregateBidCandles(candles: readonly Candle[], timeframe: Timef
   for (const candle of candles) {
     const timestamp = Math.floor(candle.timestamp / width) * width
     const previous = aggregated[aggregated.length - 1]
-    if (previous?.timestamp === timestamp) {
+    if (previous && Math.floor(previous.timestamp / width) * width === timestamp && (previous as Partial<TradeCandle>).instrumentId === (candle as Partial<TradeCandle>).instrumentId) {
       previous.high = Math.max(previous.high, candle.high)
       previous.low = Math.min(previous.low, candle.low)
       previous.close = candle.close
     } else {
-      aggregated.push({ timestamp, open: candle.open, high: candle.high, low: candle.low, close: candle.close })
+      // Keep contract segments separate, even when a switch falls inside a coarse bucket.
+      const time = previous && Math.floor(previous.timestamp / width) * width === timestamp ? candle.timestamp : timestamp
+      aggregated.push({ timestamp: time, open: candle.open, high: candle.high, low: candle.low, close: candle.close,
+        ...('instrumentId' in candle ? { instrumentId: candle.instrumentId } : {}) })
     }
   }
   return aggregated
@@ -75,7 +97,7 @@ export function validateDateRange({ from, to }: DateRange, todayUtc = new Date()
   return null
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
@@ -98,28 +120,47 @@ function parseCandles(value: unknown, fromMs: number, toMs: number): Candle[] {
 }
 
 export function parseHistory(value: unknown, range: DateRange): HistoryResponse {
-  if (!isRecord(value) || value.symbol !== 'EURUSD' || value.resolution !== 'M1' ||
-    value.from !== range.from || value.to !== range.to) {
-    throw new Error('Historical data has an unexpected response format.')
+  if (!isRecord(value) || value.resolution !== 'M1' || value.from !== range.from || value.to !== range.to ||
+    utcDate(range.from) === null || utcDate(range.to) === null || range.from >= range.to) throw new Error('Historical data has an unexpected response format.')
+  const fromMs = utcDate(range.from)!, toMs = utcDate(range.to)!
+  if (value.priceModel === 'single') {
+    if (value.source !== 'databento' || value.symbol !== '6E' || value.dataset !== 'GLBX.MDP3' || value.schema !== 'ohlcv-1m' ||
+      value.continuousSymbol !== '6E.v.0' || value.stypeIn !== 'continuous' || value.normalizationVersion !== 1 ||
+      'bid' in value || 'ask' in value || !Array.isArray(value.contracts) || !value.contracts.length) throw new Error('Invalid Databento history identity.')
+    let boundary = range.from
+    const contracts = value.contracts.map((item: unknown): ContractInterval => {
+      if (!isRecord(item) || typeof item.from !== 'string' || typeof item.to !== 'string' || utcDate(item.from) === null || utcDate(item.to) === null ||
+        item.from !== boundary || item.from >= item.to || item.to > range.to || typeof item.instrumentId !== 'number' || !Number.isSafeInteger(item.instrumentId) || item.instrumentId <= 0 ||
+        typeof item.rawSymbol !== 'string' || !/^6E[FGHJKMNQUVXZ]\d{1,2}$/.test(item.rawSymbol)) throw new Error('Invalid or incomplete contract mapping.')
+      boundary = item.to
+      return { from: item.from, to: item.to, instrumentId: item.instrumentId, rawSymbol: item.rawSymbol }
+    })
+    if (boundary !== range.to) throw new Error('Incomplete contract mapping.')
+    const base = parseCandles(value.candles, fromMs, toMs)
+    const candles = base.map((bar, index): TradeCandle => {
+      const item = (value.candles as Record<string, unknown>[])[index]
+      const contract = contracts.find(c => bar.timestamp >= Date.parse(c.from) && bar.timestamp < Date.parse(c.to))
+      if (typeof item.volume !== 'string' || !/^(0|[1-9]\d*)$/.test(item.volume) || BigInt(item.volume) > 18446744073709551615n ||
+        item.volume === '0' || item.instrumentId !== contract?.instrumentId) throw new Error('Invalid trade volume or contract identity.')
+      return { ...bar, volume: item.volume, instrumentId: contract!.instrumentId }
+    })
+    return { priceModel: 'single', source: 'databento', symbol: '6E', dataset: 'GLBX.MDP3', schema: 'ohlcv-1m', continuousSymbol: '6E.v.0',
+      stypeIn: 'continuous', normalizationVersion: 1, resolution: 'M1', from: range.from, to: range.to, contracts, candles }
   }
-  const fromMs = utcDate(range.from)!
-  const toMs = utcDate(range.to)!
-  return {
-    symbol: 'EURUSD', resolution: 'M1', from: range.from, to: range.to,
-    bid: parseCandles(value.bid, fromMs, toMs),
-    ask: parseCandles(value.ask, fromMs, toMs),
-  }
+  if (value.symbol !== 'EURUSD' || 'priceModel' in value || 'source' in value || 'candles' in value) throw new Error('Invalid legacy history identity.')
+  return { symbol: 'EURUSD', resolution: 'M1', from: range.from, to: range.to,
+    bid: parseCandles(value.bid, fromMs, toMs), ask: parseCandles(value.ask, fromMs, toMs) }
 }
 
-export function toBidChartCandles(history: { bid: readonly Candle[] }, timeframe: Timeframe = 'M1'): CandlestickData<UTCTimestamp>[] {
-  return aggregateBidCandles(history.bid, timeframe).map(({ timestamp, open, high, low, close }) => ({
+export function toBidChartCandles(history: HistoryResponse | { bid: readonly Candle[] }, timeframe: Timeframe = 'M1'): CandlestickData<UTCTimestamp>[] {
+  return aggregateBidCandles('symbol' in history ? historyCandles(history) : history.bid, timeframe).map(({ timestamp, open, high, low, close }) => ({
     time: (timestamp / 1000) as UTCTimestamp,
     open, high, low, close,
   }))
 }
 
 export async function fetchHistory(range: DateRange, signal?: AbortSignal): Promise<HistoryResponse> {
-  const params = new URLSearchParams({ symbol: 'EURUSD', from: range.from, to: range.to })
+  const params = new URLSearchParams({ symbol: '6E', from: range.from, to: range.to })
   let response: Response
   try { response = await fetch(`/api/history?${params}`, { signal }) }
   catch {
