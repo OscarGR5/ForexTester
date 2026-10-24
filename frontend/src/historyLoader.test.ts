@@ -111,3 +111,34 @@ describe('90 completed UTC days and warm-up chunks', () => {
     expect(replayStartIndex([...candles,bar(start+60_000)],start)).toBe(78)
   })
 })
+
+it('pins provider and normalization across pre-roll and trading chunks and partitions retry caches',async()=>{
+ const { NORMALIZATION_VERSION }=await import('./history')
+ const download=vi.fn(async(range:DateRange,_signal?:AbortSignal,provider?:import('./history').HistoryProvider):Promise<HistoryResponse>=>({
+  ...response(range),provenance:{version:2 as const,provider:provider!,normalizationVersion:NORMALIZATION_VERSION}
+ }))
+ const loader=new HistoryLoader(download),range={from:'2024-01-09',to:'2024-01-10'},signal=new AbortController().signal
+ const duka=await loader.load(range,signal,()=>{},'dukascopy'),fxcm=await loader.load(range,signal,()=>{},'fxcm')
+ expect(duka.provenance?.provider).toBe('dukascopy');expect(fxcm.provenance?.provider).toBe('fxcm');expect(download).toHaveBeenCalledTimes(12)
+ expect(download.mock.calls.slice(0,6).every(call=>call[2]==='dukascopy')).toBe(true);expect(download.mock.calls.slice(6).every(call=>call[2]==='fxcm')).toBe(true)
+ await loader.load(range,signal,()=>{},'fxcm');expect(download).toHaveBeenCalledTimes(12)
+})
+it('rejects a different provider or normalization in any pre-roll response',async()=>{
+ for(const provenance of [{version:2,provider:'dukascopy',normalizationVersion:'m1-bid-ask-v1'},{version:2,provider:'fxcm',normalizationVersion:'unknown'}]){
+  const loader=new HistoryLoader(async range=>({...response(range),provenance} as HistoryResponse))
+  await expect(loader.load({from:'2024-01-09',to:'2024-01-10'},new AbortController().signal,()=>{},'fxcm')).rejects.toThrow()
+ }
+})
+it('retries interrupted FXCM loading with the original provider and reuses only completed validated chunks',async()=>{
+ const { NORMALIZATION_VERSION }=await import('./history')
+ let fail=true
+ const download=vi.fn(async(range:DateRange,_signal?:AbortSignal,provider?:import('./history').HistoryProvider):Promise<HistoryResponse>=>{
+  if(fail&&range.from==='2023-12-17')throw new HistoryRequestError('Archive not yet published','FXCM_UNPUBLISHED')
+  return {...response(range),provenance:{version:2 as const,provider:provider!,normalizationVersion:NORMALIZATION_VERSION}}
+ })
+ const loader=new HistoryLoader(download),range={from:'2024-01-09',to:'2024-01-10'},signal=new AbortController().signal
+ await expect(loader.load(range,signal,()=>{},'fxcm')).rejects.toMatchObject({code:'FXCM_UNPUBLISHED'})
+ fail=false;await loader.load(range,signal,()=>{},'fxcm')
+ expect(download.mock.calls.every(call=>call[2]==='fxcm')).toBe(true)
+ expect(download.mock.calls.filter(call=>call[0].from==='2023-12-10')).toHaveLength(1)
+})

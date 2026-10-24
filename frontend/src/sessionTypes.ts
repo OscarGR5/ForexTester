@@ -1,12 +1,13 @@
 import type { AnalyticsScope } from './analytics.js'
 import type { UtcRange } from './chartSync.js'
 import type { EquityLedger } from './equity.js'
-import type { DateRange, Timeframe } from './history.js'
+import type { DateRange, Timeframe, ProviderProvenance } from './history.js'
 import type { IndicatorSettings } from './indicatorSettings.js'
 import type { TradingState } from './trading.js'
 
 export const STORAGE_VERSION = 1 // IndexedDB structure is unchanged.
-export const RECORD_VERSION = 2
+export const RECORD_VERSION = 2 // Legacy lifecycle records keep this format.
+export const PROVIDER_RECORD_VERSION = 3
 export type Lifecycle = 'setup' | 'trading' | 'finished'
 export function lifecycleOf(checkpoint: SessionCheckpoint): Lifecycle {
   return checkpoint.lifecycle ?? (checkpoint.replay.complete ? 'finished' : checkpoint.replay.started ? 'trading' : 'setup')
@@ -48,6 +49,7 @@ export interface SessionRecord {
   symbol: 'EURUSD'
   range: DateRange
   historyId: string
+  provenance?: ProviderProvenance
   revision: number
   status: 'paused' | 'complete' | 'in-progress'
   completedSetups: number

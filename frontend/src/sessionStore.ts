@@ -1,7 +1,7 @@
 import type { EquityPoint } from './equity.js'
 import type { LoadedHistory } from './historyLoader.js'
 import { corrupt, equitySuffix, historyFingerprint, recordDigest, restoreEquity, sha256, validateHistoryCheckpoint, validatedHistory, validateRecord } from './sessionCodec.js'
-import { EQUITY_CHUNK_SIZE, STORAGE_VERSION, RECORD_VERSION, lifecycleOf, type Hydration, type SessionRecord, type SessionSnapshot } from './sessionTypes.js'
+import { EQUITY_CHUNK_SIZE, STORAGE_VERSION, RECORD_VERSION, PROVIDER_RECORD_VERSION, lifecycleOf, type Hydration, type SessionRecord, type SessionSnapshot } from './sessionTypes.js'
 
 export const DATABASE_NAME = 'forextester-sessions'
 export class RevisionConflict extends Error {
@@ -73,7 +73,7 @@ export class SessionStore {
     try { tx.objectStore('history').put({ id, history }) } catch (error) { tx.abort(); await done.catch(() => {}); throw error }
     await done
   }
-  async save(base: Pick<SessionRecord, 'id' | 'name' | 'createdAt' | 'range' | 'historyId' | 'totalCandles'>,
+  async save(base: Pick<SessionRecord, 'id' | 'name' | 'createdAt' | 'range' | 'historyId' | 'totalCandles' | 'provenance'>,
     snapshot: SessionSnapshot, previous: SessionRecord | null): Promise<SessionRecord> {
     const { checkpoint, ledger } = snapshot
     const reset = !previous || previous.checkpoint.trading.session !== checkpoint.trading.session || ledger.count < previous.checkpoint.equity.count
@@ -87,7 +87,7 @@ export class SessionStore {
       const index = (from + offset) / EQUITY_CHUNK_SIZE
       hashes[index] = hash; changed.push({ sessionId: base.id, index, points, hash })
     }
-    const record: SessionRecord = { ...base, name: base.name.trim(), savedAt: new Date().toISOString(), schemaVersion: RECORD_VERSION,
+    const record: SessionRecord = { ...base, name: base.name.trim(), savedAt: new Date().toISOString(), schemaVersion: base.provenance ? PROVIDER_RECORD_VERSION : RECORD_VERSION,
       symbol: 'EURUSD', revision: (previous?.revision ?? 0) + 1,
       status: checkpoint.replay.complete ? 'complete' : checkpoint.replay.playing ? 'in-progress' : 'paused',
       completedSetups: checkpoint.trading.setups.filter((setup) => checkpoint.trading.closed.some((p) => p.setupId === setup.id) && ![...checkpoint.trading.pending, ...checkpoint.trading.positions].some((p) => p.setupId === setup.id)).length,
@@ -102,6 +102,10 @@ export class SessionStore {
       const existing = read.result as SessionRecord | undefined
       if ((existing?.revision ?? 0) !== (previous?.revision ?? 0)) { conflict = true; tx.abort(); return }
       try {
+        if (existing && (record.historyId !== existing.historyId || record.createdAt !== existing.createdAt ||
+          record.provenance?.provider !== existing.provenance?.provider || record.provenance?.normalizationVersion !== existing.provenance?.normalizationVersion)) {
+          throw new Error('A session cannot change its dataset or creation time.')
+        }
         if (reset) equity.delete(chunkRange(base.id))
         for (const chunk of changed) equity.put(chunk)
         sessions.put(record)
@@ -149,7 +153,7 @@ export class SessionStore {
     try { await done } catch (error) { if (conflict) throw new RevisionConflict(); throw writeError ?? error }
   }
   async delete(id: string, revision: number) { await this.replaceOrDelete(id, revision, null) }
-  async recover(id: string, download: (range: SessionRecord['range']) => Promise<LoadedHistory>): Promise<Hydration & { history: LoadedHistory; cacheWarning: string | null }> {
+  async recover(id: string, download: (range: SessionRecord['range'], provider?: import('./history.js').HistoryProvider) => Promise<LoadedHistory>): Promise<Hydration & { history: LoadedHistory; cacheWarning: string | null }> {
     // Read checkpoint and its chunks in ONE snapshot transaction. A concurrent
     // writer must not make a valid checkpoint look corrupt during recovery.
     const db = await this.open(), tx = db.transaction(['sessions', 'equity', 'history'], 'readonly'), done = committed(tx)
@@ -181,7 +185,7 @@ export class SessionStore {
       } catch { /* Invalid cache can be recovered only with matching redownloaded data. */ }
     }
     if (!history) {
-      history = validatedHistory(await download(record.range))
+      history = validatedHistory(await (record.provenance ? download(record.range, record.provenance.provider) : download(record.range)))
       if (await historyFingerprint(history) !== record.historyId) throw new Error('Historical-data conflict: recovered bid/ask candles differ from this session’s saved fingerprint. Recovery stopped; original trades were kept. Retry with the original dataset.')
       // Replace a damaged cache only after verifying against the saved identity.
       const write = db.transaction('history', 'readwrite'), writeDone = committed(write)

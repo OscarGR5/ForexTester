@@ -1,3 +1,5 @@
+import { gzipSync } from 'node:zlib'
+import { FxcmHistory } from './fxcm.js'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -16,8 +18,8 @@ const candle = (timestamp: number, open: number): JsonItem => ({
   timestamp, open, high: open + 0.0002, low: open - 0.0002, close: open + 0.0001,
 })
 
-async function request(path: string, fetchRates?: RatesFetcher) {
-  server = createApp(fetchRates, now).listen(0, '127.0.0.1')
+async function request(path: string, fetchRates?: RatesFetcher, fxcm?: FxcmHistory) {
+  server = createApp(fetchRates, now, undefined, fxcm).listen(0, '127.0.0.1')
   await once(server, 'listening')
   const address = server.address()
   if (!address || typeof address === 'string') throw new Error('Missing server address')
@@ -148,4 +150,27 @@ describe('history endpoint', () => {
     const response = await request(path, async () => [{ ...candle(first, 1.09), high: 1.0 }])
     expect(response.status).toBe(502)
   })
+})
+
+it.each(['/api/history?provider=unknown', '/api/history/coverage?provider=unknown', '/api/history/coverage?provider='])('rejects an unknown explicit provider at %s', async path => {
+ const rates=vi.fn(async()=>[]),response=await request(path,rates)
+ expect(response.status).toBe(400);expect(await response.json()).toMatchObject({code:'UNKNOWN_PROVIDER'});expect(rates).not.toHaveBeenCalled()
+})
+it('explicit Dukascopy adds versioned provenance while omitted provider retains the original response',async()=>{
+ const response=await request('/api/history?symbol=EURUSD&from=2024-01-09&to=2024-01-10&provider=dukascopy',async()=>[])
+ expect(await response.json()).toMatchObject({provenance:{version:2,provider:'dukascopy',normalizationVersion:'m1-bid-ask-v1'}})
+})
+it('routes explicit FXCM without Dukascopy retrieval and isolates observed coverage',async()=>{
+ const rates=vi.fn(async()=>[]),compressed=gzipSync('DateTime,BidOpen,BidHigh,BidLow,BidClose,AskOpen,AskHigh,AskLow,AskClose\n01/09/2024 00:00:00.000,1.1,1.2,1,1.1,1.11,1.21,1.01,1.11\n')
+ const fxcm=new FxcmHistory(vi.fn(async()=>new Response(compressed)))
+ const response=await request('/api/history?symbol=EURUSD&from=2024-01-09&to=2024-01-10&provider=fxcm',rates,fxcm)
+ expect(response.status).toBe(200);expect(await response.json()).toMatchObject({provenance:{provider:'fxcm'}});expect(rates).not.toHaveBeenCalled()
+ const origin=`http://127.0.0.1:${(server!.address() as {port:number}).port}`
+ const coverage=await (await fetch(origin+'/api/history/coverage?provider=fxcm')).json()
+ expect(coverage).toMatchObject({provider:'fxcm',lastVerifiedAvailableDate:'2024-01-09',latestBoundaryProvisional:true,providerHealth:{status:'ready'}})
+ expect((await (await fetch(origin+'/api/history/coverage')).json()).lastVerifiedAvailableDate).toBeNull()
+})
+it('returns FXCM-specific missing archive advice without browser installation instructions',async()=>{
+ const response=await request('/api/history?symbol=EURUSD&from=2024-01-09&to=2024-01-10&provider=fxcm',undefined,new FxcmHistory(vi.fn(async()=>new Response('',{status:404}))))
+ expect(response.status).toBe(502);const body=await response.json();expect(body.code).toBe('FXCM_MISSING');expect(JSON.stringify(body)).not.toMatch(/browser|dukascopy|install/i)
 })

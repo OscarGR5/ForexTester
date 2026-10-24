@@ -19,12 +19,14 @@ import { TradingJournal } from './TradingJournal'
 import { indicatorPreset, type IndicatorSettings } from './indicators'
 import { HistoryLoader, ichimokuWarmup, replayStartIndex, type LoadProgress, type LoadedHistory } from './historyLoader'
 import { EquityChart } from './EquityChart'
-import { HistoryRequestError, type Candle, type DateRange, type Timeframe } from './history'
+import { HistoryRequestError, providerLabel, type HistoryProvider, type Candle, type DateRange, type Timeframe } from './history'
 
 const EMPTY_CANDLES: readonly Candle[] = []
 const DEFAULT_RANGE: DateRange = { from: '2024-01-09', to: '2024-01-10' }
 
 export function App() {
+  const [provider, setProvider] = useState<HistoryProvider>('dukascopy')
+  const coverageGeneration = useRef(0)
   const [from, setFrom] = useState(DEFAULT_RANGE.from)
   const [to, setTo] = useState(DEFAULT_RANGE.to)
   const [requestedRange, setRequestedRange] = useState<DateRange>(DEFAULT_RANGE)
@@ -65,17 +67,17 @@ export function App() {
   } }) : null, [lifecycle, history, trading.state, trading.equity, trading.executionCursor, replay.active, replay.count, replay.timestamp, replay.startIndex, replay.speed, replay.complete, replay.playing, startIndex, startMs, workspace])
   const sessions = useSessionPersistence({ history, snapshot, actionVersion: trading.actionVersion, pause: replay.pause,
     captureViewport: () => synchronizer.snapshot(),
-    download: (range, progress) => new HistoryLoader().load(range, new AbortController().signal, progress ?? setLoadProgress),
+    download: (range, progress, savedProvider) => new HistoryLoader().load(range, new AbortController().signal, progress ?? setLoadProgress, savedProvider),
     restore: (saved, source) => {
       loadGeneration.current++; loadAbort.current?.abort(); setDraft(null); setManage(false); setLifecycle(lifecycleOf(saved.checkpoint)); setResultSection('summary')
-      setHydration(saved); setHistory(source); setRequestedRange(saved.record.range)
+      setProvider(source.provenance?.provider ?? 'dukascopy'); setHydration(saved); setHistory(source); setRequestedRange(saved.record.range)
       setFrom(saved.record.range.from); setTo(saved.record.range.to)
       setReplayStart(new Date(saved.checkpoint.replay.startTimestamp).toISOString().slice(0, 16))
       setStatus('ready'); setError(null); setFormError(null)
     },
     fresh: (range) => {
       loadGeneration.current++; loadAbort.current?.abort(); setDraft(null); setLifecycle('setup'); setStatus('idle'); setReplayStart(''); setManage(false)
-      setHydration(null); setHistory(null); setRequestedRange({ ...range }); setFrom(range.from); setTo(range.to)
+      setProvider('dukascopy'); setHydration(null); setHistory(null); setRequestedRange({ ...range }); setFrom(range.from); setTo(range.to)
     },
   })
 
@@ -109,10 +111,21 @@ export function App() {
   }, [sessions.activeId, synchronizer])
 
   async function refreshCoverage() {
-    try { const response = await fetch('/api/history/coverage'); if (!response.ok) throw Error(); const value = await response.json(); if (!value.earliestSelectableDate) throw Error(); setCoverage(value); setCoverageError(false) }
-    catch { setCoverageError(true) }
+    const generation = ++coverageGeneration.current
+    try { const response = await fetch(`/api/history/coverage?provider=${provider}`); if (!response.ok) throw Error(); const value = await response.json(); if (!value.earliestSelectableDate || (value.provider && value.provider !== provider)) throw Error(); if (generation === coverageGeneration.current) { setCoverage(value); setCoverageError(false) } }
+    catch { if (generation === coverageGeneration.current) setCoverageError(true) }
   }
-  useEffect(() => { void refreshCoverage(); return () => { loadAbort.current?.abort(); loadGeneration.current++ } }, [])
+  useEffect(() => { setCoverage(null); void refreshCoverage(); return () => { coverageGeneration.current++ } }, [provider])
+  useEffect(() => () => { loadAbort.current?.abort(); loadGeneration.current++ }, [])
+  async function changeProvider(next: HistoryProvider) {
+    if (next === provider) return
+    loadGeneration.current++; loadAbort.current?.abort()
+    // A loaded setup may already have an autosaved checkpoint. Keep its saved
+    // dataset immutable and open a fresh session before selecting another provider.
+    if ((history || sessions.hasSavedDataset) && !await sessions.fresh({ from, to })) return
+    setProvider(next); setHistory(null); setHydration(null); setStatus('idle'); setError(null); setHistoryFailure(null); setFormError(null)
+    coverageGeneration.current++; setCoverage(null)
+  }
   useEffect(() => { if (replay.playing) setDraft(null) }, [replay.playing])
   useEffect(() => {
     const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') { setDraft(null); setManage(false) } }
@@ -129,7 +142,7 @@ export function App() {
     const controller = new AbortController(); loadAbort.current = controller
     setStatus('loading'); setError(null); setHistoryFailure(null); setHistory(null); setHydration(null); setRequestedRange(selected.range)
     try {
-      const result = await loader.load(selected.range, controller.signal, setLoadProgress)
+      const result = await loader.load(selected.range, controller.signal, setLoadProgress, provider)
       if (generation !== loadGeneration.current) return
       setHistory(result); setStatus('ready'); void refreshCoverage()
     } catch (reason) {
@@ -192,6 +205,8 @@ export function App() {
         <label className="backtest-name">Backtest name<input maxLength={200} aria-label="Backtest name" value={sessions.name} onChange={e=>sessions.editName(e.target.value)}/></label>
         <form onSubmit={loadData} className="setup-grid">
           <section><h3>Historical period <span>EURUSD · M1 · UTC</span></h3>
+            <label className="provider-field">Historical data provider<select aria-label="Historical data provider" value={provider} onChange={e=>void changeProvider(e.target.value as HistoryProvider)}><option value="dukascopy">Dukascopy</option><option value="fxcm">FXCM</option></select></label>
+            {provider === 'fxcm' && <p className="chart-note">Personal use only. Weekly archives normally publish on Mondays. Indicative prices and spreads may differ from your broker’s execution.</p>}
             {coverage ? <div className="coverage-summary"><p>Earliest advertised M1: <strong>{coverage.providerEarliestTimestamp.replace('T',' ').replace('.000Z',' UTC')}</strong></p><p>Latest eligible date: <strong>{coverage.latestEligibleDate}</strong> · provisional</p><small>Eligible dates are not proof of uploaded observations. {coverage.lastVerifiedAvailableDate ? `Bid/ask observations verified through ${coverage.lastVerifiedAvailableDate} on this backend.` : 'No observations verified on this backend yet.'}</small></div> : <p role="status">{coverageError ? 'Historical coverage could not be read.' : 'Reading historical coverage…'} <button type="button" onClick={()=>void refreshCoverage()}>Retry coverage</button></p>}
             <div className="period-fields"><label>From<input aria-label="From" type="date" min={coverage?.earliestSelectableDate} max={coverage?.latestEligibleDate} value={from} disabled={status === 'loading'} onChange={e=>{setFrom(e.target.value);setFormError(null)}}/></label>
               <label>Through <span>(inclusive)</span><input aria-label="Through" type="date" min={from || coverage?.earliestSelectableDate} max={coverage?.latestEligibleDate} value={shiftDate(to,-1)} disabled={status === 'loading'} onChange={e=>{setTo(shiftDate(e.target.value,1));setFormError(null)}}/></label></div>
@@ -203,8 +218,8 @@ export function App() {
             {status === 'loading' && <div role="status"><progress max={loadProgress.total || 1} value={loadProgress.completed}/><p>{loadProgress.completed} / {loadProgress.total} chunks downloaded</p></div>}
             {status === 'error' && <div className="load-error" role="alert"><strong>{historyFailure?.title ?? 'Historical data unavailable'}</strong><p>{error}</p>
               {historyFailure?.retryAfterMs !== undefined && <p>The provider requested a wait of at least {Math.ceil(historyFailure.retryAfterMs / 1000)} seconds before another attempt. A retry may still fail.</p>}
-              {(!historyFailure || historyFailure.code.startsWith('BROWSER_')) && <details><summary>Provider setup / troubleshooting</summary><p>Run <code>npx dukascopy-node --install-browser</code> from the project directory. Linux library installation with <code>--with-deps</code> needs administrator review. An installed browser may be selected with <code>DUKASCOPY_CHROME_PATH</code>. See README for sandbox and network diagnostics.</p></details>}</div>}
-            {status === 'ready' && history && <p className="data-ready" role="status">Loaded {history.bid.length.toLocaleString()} bid and {history.ask.length.toLocaleString()} ask observations, including indicator pre-roll.</p>}
+              {provider === 'dukascopy' && (!historyFailure || historyFailure.code.startsWith('BROWSER_')) && <details><summary>Provider setup / troubleshooting</summary><p>Run <code>npx dukascopy-node --install-browser</code> from the project directory. Linux library installation with <code>--with-deps</code> needs administrator review. An installed browser may be selected with <code>DUKASCOPY_CHROME_PATH</code>. See README for sandbox and network diagnostics.</p></details>}</div>}
+            {status === 'ready' && history && <p className="data-ready" role="status">Loaded {providerLabel(history.provenance?.provider)}: {history.bid.length.toLocaleString()} bid and {history.ask.length.toLocaleString()} ask observations, including indicator pre-roll.</p>}
           </section>
           <section><h3>Account <span>USD</span></h3><div className="account-fields">
             <label>Starting balance (USD)<input aria-label="Starting balance (USD)" type="number" min="0" step="any" value={trading.state.account.referenceBalance || ''} onChange={e=>trading.configure({...trading.state.account,referenceBalance:Number(e.target.value)})}/></label>
@@ -217,10 +232,10 @@ export function App() {
           {history && replayStartError && <p className="form-error">Choose a replay start within the loaded interval.</p>}
           {history && startIndex >= history.bid.length && <p className="form-error">No bid observations at or after the replay start.</p>}
           {accountRiskError(trading.state.account) && <p className="form-error">{accountRiskError(trading.state.account)}</p>}
-        </div><button className="primary-action" disabled={status !== 'ready' || !replay.canStart || replayStartError || !!accountRiskError(trading.state.account) || from !== requestedRange.from || to !== requestedRange.to} onClick={()=>{setDraft(null);setLifecycle('trading');replay.start()}}>Start backtest</button></footer>
+        </div><button className="primary-action" disabled={status !== 'ready' || !replay.canStart || replayStartError || !!accountRiskError(trading.state.account) || from !== requestedRange.from || to !== requestedRange.to || provider !== (history?.provenance?.provider ?? 'dukascopy')} onClick={()=>{setDraft(null);setLifecycle('trading');replay.start()}}>Start backtest</button></footer>
       </section>}
       {lifecycle === 'trading' && <>
-        <div className="replay-strip" role="group" aria-label="Market replay"><strong>EURUSD</strong><time className="replay-clock">{replay.timestamp === null ? 'Awaiting replay' : new Date(replay.timestamp).toISOString().slice(0,16).replace('T',' ') + ' UTC'}</time>
+        <div className="replay-strip" role="group" aria-label="Market replay"><strong>EURUSD · {providerLabel(history?.provenance?.provider)}</strong><time className="replay-clock">{replay.timestamp === null ? 'Awaiting replay' : new Date(replay.timestamp).toISOString().slice(0,16).replace('T',' ') + ' UTC'}</time>
           <button disabled={!replay.canPlay} onClick={()=>{setDraft(null);replay.play()}}>Play</button><button disabled={!replay.canPause} onClick={replay.pause}>Pause</button><button disabled={!replay.canNext} onClick={()=>{setDraft(null);replay.next()}}>Next Candle</button>
           <label>Speed<select aria-label="Replay speed" value={replay.speed} onChange={e=>replay.setSpeed(Number(e.target.value) as 1|10|100)}>{[1,10,100].map(s=><option key={s} value={s}>{s}×</option>)}</select></label>
           {chartLayout}<span aria-label="Replay status" className="replay-status">{replay.status}</span><span className="replay-progress" aria-label="Replay progress">{replay.revealed-replay.startIndex} / {replay.total-replay.startIndex} candles</span><button onClick={()=>void finish()}>{replay.complete ? 'Review Results' : 'Finish backtest'}</button>
@@ -229,7 +244,7 @@ export function App() {
           {timeframes.slice(0,chartCount).map((timeframe,id)=><ChartPane key={id} id={id} timeframe={timeframe} sessionId={sessions.activeId} positions={trading.state.positions} source={history?.bid ?? EMPTY_CANDLES} count={replay.count} synchronizer={synchronizer} onTimeframeChange={changeTimeframe} settings={indicatorSettings[id][timeframe]!} onSettingsChange={changeSettings} placement={draft} onPick={pickStop}/>)}</div></div>
         <TradingDock key={`${sessions.activeId}-${trading.state.session}`} trading={trading} draft={draft} setDraft={setDraft}/>
       </>}
-      {lifecycle === 'finished' && <section className="results-workspace" aria-label="Backtest results"><div className="results-heading"><h2>Backtest results</h2><button onClick={sessions.save}>Save now</button></div>
+      {lifecycle === 'finished' && <section className="results-workspace" aria-label="Backtest results"><div className="results-heading"><h2>Backtest results <small>· {providerLabel(history?.provenance?.provider)}</small></h2><button onClick={sessions.save}>Save now</button></div>
         <p className="results-disclosure">{trading.state.positions.length} positions remain open · {trading.state.pending.length} entries pending. Account PnL includes open equity; journal statistics use completed trades. No exits were created when finishing.</p>
         <nav className="results-navigation" aria-label="Results sections">{([['summary','Overview'],['journal','Journal'],['equity','Equity & drawdown']] as const).map(([key,label])=><button key={key} aria-pressed={resultSection === key} onClick={()=>setResultSection(key)}>{label}</button>)}</nav>
         {resultSection !== 'equity' && <TradingJournal section={resultSection} sessionId={sessions.activeId} key={`${sessions.activeId}-${trading.state.session}`} state={trading.state} onUpdateSetup={trading.updateSetup} scope={statisticsScope} view={journalScope} onScopeChange={setStatisticsScope} onViewChange={setJournalScope}/>}

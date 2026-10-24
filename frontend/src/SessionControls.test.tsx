@@ -9,7 +9,7 @@ it('keeps corrupt metadata visible and explicitly deletable without rendering ob
     repairTarget: null, repairProgress: null, repair: vi.fn(), cleanupPreview: null, cleanupResult: null, previewCleanup: vi.fn(), cleanup: vi.fn(),
     diskErrors: [], legacySessions: [], storageLocation: '/tmp/test-storage', migrationWarning: null, migrate: vi.fn(), retry: vi.fn(),
     name: 'Untitled backtest', savedAt: null, saveStatus: 'Error', error: 'Saved session is corrupt', cacheWarning: null,
-    conflict: false, busy: false, initialized: true, awaitingChoice: true, activeId: null,
+    conflict: false, busy: false, initialized: true, awaitingChoice: true, activeId: null, hasSavedDataset: false,
     flush: vi.fn(), editName: vi.fn(), rename: vi.fn(), remove: vi.fn(), resume: vi.fn(), fresh: vi.fn(), save: vi.fn(),
   }
   const html = renderToStaticMarkup(<SessionControls sessions={sessions} range={{ from: '2024-01-01', to: '2024-01-02' }} timestamp={null} />)

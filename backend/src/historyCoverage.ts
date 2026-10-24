@@ -1,10 +1,11 @@
+import { FxcmError } from './fxcm.js'
 import { instrumentMetaData } from 'dukascopy-node'
 import type { HistoryResponse } from './history.js'
 
-export function historyCoverage(now = new Date()) {
-  const first = new Date(instrumentMetaData.eurusd.startDayForMinuteCandles).toISOString()
+export function historyCoverage(now = new Date(), provider: 'dukascopy' | 'fxcm' = 'dukascopy') {
+  const first = new Date(provider === 'fxcm' ? '2012-01-01T00:00:00.000Z' : instrumentMetaData.eurusd.startDayForMinuteCandles).toISOString()
   const today = Date.parse(now.toISOString().slice(0, 10))
-  return { symbol: 'EURUSD', resolution: 'M1', providerEarliestTimestamp: first,
+  return { provider, ...(provider === 'fxcm' ? { publication: 'Weekly, normally Mondays; archive observations must be verified.' } : {}), symbol: 'EURUSD', resolution: 'M1', providerEarliestTimestamp: first,
     earliestSelectableDate: first.slice(0, 10), latestEligibleDate: new Date(today - 86400000).toISOString().slice(0, 10),
     latestBoundaryProvisional: true, maximumCalendarDays: 90, timezone: 'UTC' }
 }
@@ -39,6 +40,7 @@ export function historyErrorDetails(error: unknown) {
 }
 
 export function classifyHistoryError(error: unknown): { code: string; title: string; error: string; action: string; retryAfterMs?: number } {
+  if (error instanceof FxcmError) return { code: error.code, title: error.code === 'FXCM_UNPUBLISHED' ? 'FXCM week not published' : error.code === 'FXCM_MISSING' ? 'FXCM archive unavailable' : error.code === 'FXCM_INVALID' ? 'Invalid FXCM archive' : 'FXCM connection unavailable', error: error.message, action: 'The selected interval was not loaded. Completed validated archives remain cached.' }
   const chain = errorChain(error)
   const message = chain.map(item => typeof item.message === 'string' ? item.message : '').join('\n')
   const details = historyErrorDetails(error)

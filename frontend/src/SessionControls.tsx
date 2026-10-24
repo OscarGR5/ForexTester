@@ -1,3 +1,4 @@
+import { providerLabel } from './history'
 import { useState } from 'react'
 import type { SessionRecord } from './sessionTypes'
 import type { useSessionPersistence } from './useSessionPersistence'
@@ -13,7 +14,7 @@ function SavedSession({ record, sessions }: { record: SessionRecord; sessions: S
   const [name, setName] = useState(typeof record.name === 'string' ? record.name : 'Unreadable session')
   return <li className="saved-session">
     <div className="saved-session-info"><strong>{readable(record.name, 'Unreadable session')}</strong>
-      <span>{readable(record.range?.from, 'Unknown range')} → {readable(record.range?.to, 'Unknown range')} UTC · {readable(record.status, 'Unknown status')}</span>
+      <span>{providerLabel(record.provenance?.provider)} · {readable(record.range?.from, 'Unknown range')} → {readable(record.range?.to, 'Unknown range')} UTC · {readable(record.status, 'Unknown status')}</span>
       <span>Saved {record.savedAt ? time(record.savedAt) : 'Unknown'} · {progress} / {available} candles · {count(record.completedSetups) ?? 'Unknown'} completed setups</span>
     </div>
     <div className="session-actions">

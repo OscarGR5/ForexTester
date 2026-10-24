@@ -3,7 +3,7 @@ import { historyRequestBody } from './historyRequestBody.js'
 import type { EquityPoint } from './equity.js'
 import type { LoadedHistory } from './historyLoader.js'
 import { corrupt, equitySuffix, historyFingerprint, recordDigest, restoreEquity, sha256, validateHistoryCheckpoint, validatedHistory, validateRecord } from './sessionCodec.js'
-import { EQUITY_CHUNK_SIZE, RECORD_VERSION, lifecycleOf, type Hydration, type SessionRecord, type SessionSnapshot } from './sessionTypes.js'
+import { EQUITY_CHUNK_SIZE, RECORD_VERSION, PROVIDER_RECORD_VERSION, lifecycleOf, type Hydration, type SessionRecord, type SessionSnapshot } from './sessionTypes.js'
 import { RevisionConflict, SessionStore } from './sessionStore.js'
 
 export class DiskSessionStore {
@@ -35,15 +35,15 @@ export class DiskSessionStore {
   }
   previewCleanup() { return this.call<CleanupPreview>('/cleanup') }
   cleanup() { return this.call<CleanupResult>('/cleanup', 'POST', { confirm: true }) }
-  async repairHistory(id: string, download: (range: SessionRecord['range']) => Promise<LoadedHistory>) {
+  async repairHistory(id: string, download: (range: SessionRecord['range'], provider?: import('./history.js').HistoryProvider) => Promise<LoadedHistory>) {
     const { record } = await this.call<{ record: SessionRecord }>(`/sessions/${id}`)
     await validateRecord(record)
-    const history = validatedHistory(await download(record.range))
+    const history = validatedHistory(await (record.provenance ? download(record.range, record.provenance.provider) : download(record.range)))
     if (await historyFingerprint(history) !== record.historyId) throw fingerprintMismatch()
     const body = typeof Worker !== 'undefined' && history.bid.length + history.ask.length > 8192 ? await historyRequestBody(history) : history
     await this.call(`/history/${record.historyId}`, 'PUT', body)
   }
-  async save(base: Pick<SessionRecord, 'id' | 'name' | 'createdAt' | 'range' | 'historyId' | 'totalCandles'>,
+  async save(base: Pick<SessionRecord, 'id' | 'name' | 'createdAt' | 'range' | 'historyId' | 'totalCandles' | 'provenance'>,
     snapshot: SessionSnapshot, previous: SessionRecord | null): Promise<SessionRecord> {
     const { checkpoint, ledger } = snapshot
     const reset = !previous || previous.checkpoint.trading.session !== checkpoint.trading.session || ledger.count < previous.checkpoint.equity.count
@@ -57,7 +57,7 @@ export class DiskSessionStore {
       const index = (from + offset) / EQUITY_CHUNK_SIZE
       hashes[index] = hash; changed.push({ sessionId: base.id, index, points, hash })
     }
-    const record: SessionRecord = { ...base, name: base.name.trim(), savedAt: new Date().toISOString(), schemaVersion: RECORD_VERSION,
+    const record: SessionRecord = { ...base, name: base.name.trim(), savedAt: new Date().toISOString(), schemaVersion: base.provenance ? PROVIDER_RECORD_VERSION : RECORD_VERSION,
       symbol: 'EURUSD', revision: (previous?.revision ?? 0) + 1,
       status: checkpoint.replay.complete ? 'complete' : checkpoint.replay.playing ? 'in-progress' : 'paused',
       completedSetups: checkpoint.trading.setups.filter((setup) => checkpoint.trading.closed.some((p) => p.setupId === setup.id) && ![...checkpoint.trading.pending, ...checkpoint.trading.positions].some((p) => p.setupId === setup.id)).length,
@@ -85,7 +85,7 @@ export class DiskSessionStore {
     return { record, checkpoint: record.checkpoint, ledger, history, cacheWarning: null }
   }
   async migrationReceipt(id: string) { return this.call<{ digest: string; revision: number; targetId: string } | null>(`/sessions/${id}/migration`) }
-  async migrate(legacy: SessionStore, id: string, download: (range: SessionRecord['range']) => Promise<LoadedHistory>, asCopy = false) {
+  async migrate(legacy: SessionStore, id: string, download: (range: SessionRecord['range'], provider?: import('./history.js').HistoryProvider) => Promise<LoadedHistory>, asCopy = false) {
     const source = await legacy.recover(id, download)
     const receipt = await this.migrationReceipt(id)
     if (!asCopy && receipt && receipt.digest !== source.record.digest) throw new Error('Migration conflict: this browser copy changed after import. Keep both versions; import as a separate session.')

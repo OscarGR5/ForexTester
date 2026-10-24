@@ -2,10 +2,10 @@ import { accountRiskError, exceedsRisk } from './risk.js'
 import { commissionConfigError, perSideCommissionUsd } from './commissions.js'
 import { combinedRisk, grossPnl, type TradingState } from './trading.js'
 import { createEquityLedger, type EquityLedger, type EquityPoint } from './equity.js'
-import { parseHistory, TIMEFRAMES, validateDateRange } from './history.js'
+import { parseHistory, parseProvenance, TIMEFRAMES, validateDateRange } from './history.js'
 import { PREROLL_DAYS, replayStartIndex, type LoadedHistory } from './historyLoader.js'
 import { defaultIndicatorSettings, validateIndicatorSettings } from './indicatorSettings.js'
-import { RECORD_VERSION, type EquitySummary, type SessionRecord } from './sessionTypes.js'
+import { RECORD_VERSION, PROVIDER_RECORD_VERSION, type EquitySummary, type SessionRecord } from './sessionTypes.js'
 
 export const corrupt = () => new Error('Saved session is corrupt or incomplete. The original data was kept. Retry recovery or explicitly delete this session.')
 function requireValid(value: unknown): asserts value { if (!value) throw corrupt() }
@@ -33,7 +33,8 @@ export function validatedHistory(value: LoadedHistory): LoadedHistory {
 // Explicit little-endian IEEE-754 numbers, side lengths and UTC range form the
 // canonical identity. Both independent sides, including gaps, participate.
 export async function historyFingerprint(history: LoadedHistory): Promise<string> {
-  const prefix = new TextEncoder().encode(`EURUSD/M1/v1/${history.from}/${history.tradingFrom}/${history.to}/`)
+  const identity = history.provenance ? `v2/${history.provenance.provider}/${history.provenance.normalizationVersion}` : 'v1'
+  const prefix = new TextEncoder().encode(`EURUSD/M1/${identity}/${history.from}/${history.tradingFrom}/${history.to}/`)
   const buffer = new ArrayBuffer(prefix.length + 16 + (history.bid.length + history.ask.length) * 40)
   new Uint8Array(buffer).set(prefix)
   const view = new DataView(buffer)
@@ -104,7 +105,7 @@ function validateTrading(state: TradingState) {
 }
 
 export async function validateRecord(record: SessionRecord): Promise<void> {
-  if (![1, RECORD_VERSION].includes(record?.schemaVersion)) throw new Error(`Unsupported saved-session schema version: ${record?.schemaVersion ?? 'missing'}. Data was kept; use a compatible application version.`)
+  if (![1, RECORD_VERSION, PROVIDER_RECORD_VERSION].includes(record?.schemaVersion)) throw new Error(`Unsupported saved-session schema version: ${record?.schemaVersion ?? 'missing'}. Data was kept; use a compatible application version.`)
   try {
     requireValid(text(record.id) && record.id.length > 0 && text(record.name) && record.name.trim().length > 0 && record.symbol === 'EURUSD' &&
       text(record.createdAt) && new Date(record.createdAt).toISOString() === record.createdAt && text(record.savedAt) && new Date(record.savedAt).toISOString() === record.savedAt && record.savedAt >= record.createdAt &&
@@ -112,8 +113,9 @@ export async function validateRecord(record: SessionRecord): Promise<void> {
     requireValid(['paused', 'complete', 'in-progress'].includes(record.status) && integer(record.totalCandles) && integer(record.completedSetups))
     requireValid(Array.isArray(record.chunkHashes) && record.chunkHashes.every((hash) => /^[a-f0-9]{64}$/.test(hash)))
     requireValid(await recordDigest(record) === record.digest)
+    requireValid(record.schemaVersion === PROVIDER_RECORD_VERSION ? !!parseProvenance(record.provenance) : record.provenance === undefined)
     const { replay, trading, equity, executionCursor, workspace } = record.checkpoint
-    if (record.schemaVersion === RECORD_VERSION) {
+    if (record.schemaVersion >= RECORD_VERSION) {
       const lifecycle = record.checkpoint.lifecycle
       requireValid(['setup', 'trading', 'finished'].includes(lifecycle!))
       requireValid(lifecycle === 'setup' ? !replay.started : replay.started)
@@ -151,6 +153,7 @@ export async function validateRecord(record: SessionRecord): Promise<void> {
 }
 
 export function validateHistoryCheckpoint(record: SessionRecord, history: LoadedHistory) {
+  requireValid(record.provenance?.provider === history.provenance?.provider && record.provenance?.normalizationVersion === history.provenance?.normalizationVersion && record.provenance?.version === history.provenance?.version)
   const { replay, trading } = record.checkpoint
   requireValid(history.tradingFrom === record.range.from && history.to === record.range.to && history.bid.length === record.totalCandles)
   requireValid(replay.startIndex === replayStartIndex(history.bid, replay.startTimestamp))

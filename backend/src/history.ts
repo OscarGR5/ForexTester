@@ -18,6 +18,7 @@ export interface HistoryResponse {
   to: string
   bid: Candle[]
   ask: Candle[]
+  provenance?: import('../../frontend/src/history.js').ProviderProvenance
 }
 
 export type RatesFetcher = (config: ConfigJsonItem) => Promise<JsonItem[]>

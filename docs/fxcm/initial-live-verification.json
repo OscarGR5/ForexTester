@@ -1,0 +1,264 @@
+{
+  "date": "2026-10-24T14:38:37.746Z",
+  "sandbox": true,
+  "freshIsolatedCacheAndStorage": true,
+  "requests": [
+    {
+      "from": "2023-12-17",
+      "to": "2023-12-24",
+      "provider": "fxcm",
+      "status": 200,
+      "bid": 7188,
+      "ask": 7188
+    },
+    {
+      "from": "2023-12-10",
+      "to": "2023-12-17",
+      "provider": "fxcm",
+      "status": 200,
+      "bid": 7179,
+      "ask": 7179
+    },
+    {
+      "from": "2023-12-24",
+      "to": "2023-12-31",
+      "provider": "fxcm",
+      "status": 200,
+      "bid": 5415,
+      "ask": 5415
+    },
+    {
+      "from": "2024-01-07",
+      "to": "2024-01-09",
+      "provider": "fxcm",
+      "status": 200,
+      "bid": 1547,
+      "ask": 1547
+    },
+    {
+      "from": "2024-01-09",
+      "to": "2024-01-10",
+      "provider": "fxcm",
+      "status": 200,
+      "bid": 1438,
+      "ask": 1438
+    },
+    {
+      "from": "2023-12-31",
+      "to": "2024-01-07",
+      "provider": "fxcm",
+      "status": 200,
+      "bid": 5356,
+      "ask": 5356
+    },
+    {
+      "from": "2026-08-25",
+      "to": "2026-09-01",
+      "provider": "fxcm",
+      "status": 200,
+      "bid": 7183,
+      "ask": 7183
+    },
+    {
+      "from": "2026-08-18",
+      "to": "2026-08-25",
+      "provider": "fxcm",
+      "status": 200,
+      "bid": 7176,
+      "ask": 7176
+    },
+    {
+      "from": "2026-09-01",
+      "to": "2026-09-08",
+      "provider": "fxcm",
+      "status": 200,
+      "bid": 7158,
+      "ask": 7158
+    },
+    {
+      "from": "2026-09-15",
+      "to": "2026-09-17",
+      "provider": "fxcm",
+      "status": 200,
+      "bid": 2870,
+      "ask": 2870
+    },
+    {
+      "from": "2026-09-08",
+      "to": "2026-09-15",
+      "provider": "fxcm",
+      "status": 200,
+      "bid": 7168,
+      "ask": 7168
+    },
+    {
+      "from": "2026-09-24",
+      "to": "2026-09-25",
+      "provider": "fxcm",
+      "status": 200,
+      "bid": 1438,
+      "ask": 1438
+    },
+    {
+      "from": "2026-09-17",
+      "to": "2026-09-24",
+      "provider": "fxcm",
+      "status": 200,
+      "bid": 7190,
+      "ask": 7190
+    },
+    {
+      "from": "2026-06-04",
+      "to": "2026-06-11",
+      "provider": "fxcm",
+      "status": 502,
+      "error": "No FXCM archive was found for a required trading week within the bounded filename search. Select another period or retry later. No fallback was used."
+    },
+    {
+      "from": "2026-05-28",
+      "to": "2026-06-04",
+      "provider": "fxcm",
+      "status": 502,
+      "error": "No FXCM archive was found for a required trading week within the bounded filename search. Select another period or retry later. No fallback was used."
+    }
+  ],
+  "results": [
+    {
+      "label": "january",
+      "direction": "buy",
+      "entryTime": 1704758460000,
+      "price": 1.09504,
+      "side": "ask.open"
+    },
+    {
+      "label": "january",
+      "direction": "sell",
+      "entryTime": 1704758520000,
+      "price": 1.09497,
+      "side": "bid.open"
+    },
+    {
+      "label": "january",
+      "from": "2024-01-09",
+      "through": "2024-01-09",
+      "loadMs": 730,
+      "bid": 28123,
+      "ask": 28123,
+      "tradingObservations": 1438,
+      "archives": [
+        {
+          "file": "2023/50.csv.gz",
+          "sha256": "82ba611eb595238270f2de768ded4d0b9b5a7a6576ffe8f81ca9285f5aa63422",
+          "first": 1702245600000,
+          "last": 1702677540000,
+          "retrievedAt": "2026-10-24T14:38:26.831Z"
+        },
+        {
+          "file": "2023/51.csv.gz",
+          "sha256": "2b3bfe0235edcb7be80fcc5d06d2c126fe85b123bb9457b3ba568aad7acbba1e",
+          "first": 1702850400000,
+          "last": 1703282340000,
+          "retrievedAt": "2026-10-24T14:38:26.844Z"
+        },
+        {
+          "file": "2023/52.csv.gz",
+          "sha256": "32755b7f9b2895ca8b00a7a232e96164c9762d5d593a81269426708d280c3d47",
+          "first": 1703455200000,
+          "last": 1703887140000,
+          "retrievedAt": "2026-10-24T14:38:27.093Z"
+        },
+        {
+          "file": "2023/53.csv.gz",
+          "sha256": "e17aa33539c33587329f5eb8fbbb7ab10cf5ca8f5085fc0f5bcdd9b9fde0d9e4",
+          "first": 1704060480000,
+          "last": 1704491880000,
+          "retrievedAt": "2026-10-24T14:38:27.359Z"
+        },
+        {
+          "file": "2024/2.csv.gz",
+          "sha256": "5c4b8445cc721593c79a28967b447b83efde97eeedcb0b4aae99ecf5419fbb70",
+          "first": 1704665280000,
+          "last": 1705096740000,
+          "retrievedAt": "2026-10-24T14:38:27.197Z"
+        }
+      ],
+      "historyId": "119e490233d5ac03ac46dfe0d5e6c1d2e927782294ef2d7548b41b8a4a50e92e",
+      "originalDigest": "b24ccc5862af690748baf6a1b51ab82fbfd434d9ace93afdbe8561db87f3042a",
+      "restoreWithoutDownload": true,
+      "checkpointPreserved": true
+    },
+    {
+      "label": "september",
+      "direction": "buy",
+      "entryTime": 1789603260000,
+      "price": 1.14684,
+      "side": "ask.open"
+    },
+    {
+      "label": "september",
+      "direction": "sell",
+      "entryTime": 1789603320000,
+      "price": 1.14696,
+      "side": "bid.open"
+    },
+    {
+      "label": "september",
+      "from": "2026-09-17",
+      "through": "2026-09-24",
+      "loadMs": 703,
+      "bid": 40183,
+      "ask": 40183,
+      "tradingObservations": 8628,
+      "archives": [
+        {
+          "file": "2026/33.csv.gz",
+          "sha256": "c1cbc100a7abf7e28913e47ad34da5eb11992d6201853be00a7989d3bb4cea2e",
+          "first": 1786914180000,
+          "last": 1787345880000,
+          "retrievedAt": "2026-10-24T14:38:32.207Z"
+        },
+        {
+          "file": "2026/34.csv.gz",
+          "sha256": "41d57aa28984a0729a03fce3c8410cab78e85ebf0664fb3add018c505e579295",
+          "first": 1787518980000,
+          "last": 1787950740000,
+          "retrievedAt": "2026-10-24T14:38:32.058Z"
+        },
+        {
+          "file": "2026/35.csv.gz",
+          "sha256": "11488b19699edb6e1caa661332aec834c3bed4df1ea4a8a0ed4e973998729937",
+          "first": 1788123840000,
+          "last": 1788555540000,
+          "retrievedAt": "2026-10-24T14:38:32.058Z"
+        },
+        {
+          "file": "2026/36.csv.gz",
+          "sha256": "0e66e8f1c26e6b4d287401be5eeb01efdce554fd5362e4ea5c8fcd0297780969",
+          "first": 1788728700000,
+          "last": 1789160280000,
+          "retrievedAt": "2026-10-24T14:38:32.247Z"
+        },
+        {
+          "file": "2026/37.csv.gz",
+          "sha256": "021e5e1f66e7989539698b4536eb8d3cc433fb35edb9d514b697ca07f4cefe19",
+          "first": 1789333380000,
+          "last": 1789765080000,
+          "retrievedAt": "2026-10-24T14:38:32.381Z"
+        },
+        {
+          "file": "2026/38.csv.gz",
+          "sha256": "07021ee534800582e1edfab40e890243e0775370a8add4641fd9c5509067118a",
+          "first": 1789938180000,
+          "last": 1790369940000,
+          "retrievedAt": "2026-10-24T14:38:32.440Z"
+        }
+      ],
+      "historyId": "283b4f057e0a381cbb1803a5bed182ae9b6b08b33bf58bad4492bd9ecc5ad001",
+      "originalDigest": "2f98ea0d8a47f9e68237b18599b2acbb68d79866912ad822cd1b909b45eeda8f",
+      "restoreWithoutDownload": true,
+      "checkpointPreserved": true
+    }
+  ],
+  "errors": [],
+  "failure": "ForexTester\nUntitled backtest Not started\nSessions / settings\nSet up a backtest\n\nConfigure your account, load a historical period, then start replay.\n\nBacktest name\nHistorical period EURUSD · M1 · UTC\nHistorical data provider\nDukascopy\nFXCM\n\nPersonal use only. Weekly archives normally publish on Mondays. Indicative prices and spreads may differ from your broker’s execution.\n\nEarliest advertised M1: 2012-01-01 00:00:00 UTC\n\nLatest eligible date: 2026-10-23 · provisional\n\nEligible dates are not proof of uploaded observations. Bid/ask observations verified through 2026-09-24 on this backend.\nFrom\nThrough (inclusive)\n7 days\n30 days\n90 days\n90 calendar days · maximum 90\n\nAll dates and replay times use UTC. Select historical years directly in the date fields.\n\nRetry historical data\nFXCM archive unavailable\n\nNo FXCM archive was found for a required trading week within the bounded filename search. Select another period or retry later. No fallback was used. The selected interval was not loaded. Completed validated archives remain cached. Chunk 2/18 (2026-06-04 to 2026-06-11 UTC) failed. Retry to complete the interval.\n\nAccount USD\nStarting balance (USD)\nMaximum combined risk (%)\nRound-trip commission ($ / standard lot)\nReplay start (UTC)\n\nAccount settings lock when you start. Commission is split between entry and exit.\n\nCharts\n1\n2\n3\nStart backtest\n\n1 !== 0\n"
+}

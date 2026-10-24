@@ -1,4 +1,4 @@
-import { aggregateBidCandles, fetchHistory, HistoryRequestError, parseHistory, validateDateRange, type Candle, type DateRange, type HistoryResponse } from './history.js'
+import { aggregateBidCandles, fetchHistory, HistoryRequestError, parseHistory, validateDateRange, NORMALIZATION_VERSION, type HistoryProvider, type ProviderProvenance, type Candle, type DateRange, type HistoryResponse } from './history.js'
 
 const DAY = 86_400_000
 const date = (ms: number) => new Date(ms).toISOString().slice(0, 10)
@@ -33,7 +33,7 @@ export class HistoryLoader {
   private cache = new Map<string, HistoryResponse>()
   constructor(private download = fetchHistory) {}
 
-  async load(range: DateRange, signal: AbortSignal, progress: (value: LoadProgress) => void): Promise<LoadedHistory> {
+  async load(range: DateRange, signal: AbortSignal, progress: (value: LoadProgress) => void, provider?: HistoryProvider): Promise<LoadedHistory> {
     const error = validateDateRange(range)
     if (error) throw new Error(error)
     const warmup = { from: date(Date.parse(range.from) - PREROLL_DAYS * DAY), to: range.from }
@@ -44,11 +44,12 @@ export class HistoryLoader {
     const worker = async () => {
       while (next < chunks.length && !failed) {
         signal.throwIfAborted()
-        const index = next++, chunk = chunks[index], key = `${chunk.from}/${chunk.to}`
+        const index = next++, chunk = chunks[index], key = `${provider ?? 'legacy-dukascopy'}/${NORMALIZATION_VERSION}/${chunk.from}/${chunk.to}`
         try {
           let result = this.cache.get(key)
           if (!result) {
-            result = parseHistory(await this.download(chunk, signal), chunk)
+            result = parseHistory(await this.download(chunk, signal, provider), chunk)
+            if ((provider && result.provenance?.provider !== provider) || (!provider && result.provenance && result.provenance.provider !== 'dukascopy')) throw new Error('Historical response does not match the selected provider.')
             signal.throwIfAborted()
             // fetchHistory validates every response, including range and independent sides.
             this.cache.set(key, result)
@@ -68,7 +69,9 @@ export class HistoryLoader {
     await Promise.all([worker(), worker()])
     signal.throwIfAborted()
     if (failed) throw failed
-    return { symbol: 'EURUSD', resolution: 'M1', from: warmup.from, to: range.to, tradingFrom: range.from,
+    const provenance: ProviderProvenance | undefined = provider ? { version: 2, provider, normalizationVersion: NORMALIZATION_VERSION,
+      ...(provider === 'fxcm' ? { sources: [...new Map(results.flatMap(r => r.provenance?.sources ?? []).map(source => [source.file, source])).values()].sort((a, b) => a.first - b.first) } : {}) } : undefined
+    return { ...(provenance ? { provenance } : {}), symbol: 'EURUSD', resolution: 'M1', from: warmup.from, to: range.to, tradingFrom: range.from,
       bid: mergeCandles(results.map((result) => result.bid)), ask: mergeCandles(results.map((result) => result.ask)) }
   }
 }

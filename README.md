@@ -558,3 +558,9 @@ REPRESENTATIVE=1 node --import tsx scripts/task20-viewport-browser.mts
 
 These scripts use temporary, isolated session directories and sandboxed Chromium.
 The live scripts require provider access; fixture results are not a substitute.
+
+### FXCM historical data
+
+Setup defaults to Dukascopy. Select FXCM explicitly for a new personal-use backtest; switching provider clears loaded readiness and preserves an already saved dataset in its own session. FXCM weekly M1 archives normally publish on Mondays. Eligible dates remain provisional until observations are loaded. Missing or invalid archives fail the selected interval, with no fallback or interpolated prices. FXCM prices and spreads are indicative and may differ from your broker’s execution.
+
+Saved backtests always restore their own verified bid/ask observations. Legacy schema-1/schema-2 history and fingerprints remain compatible; new datasets bind provider and normalization to their identity. See [FXCM implementation](docs/fxcm/implementation.md) and [verification evidence and limitations](docs/fxcm/verification.md).

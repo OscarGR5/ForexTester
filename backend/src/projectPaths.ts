@@ -36,7 +36,7 @@ async function canonicalDestination(path: string): Promise<string> {
     return join(await canonicalDestination(parent), path.slice(parent.length + (parent.endsWith(sep) ? 0 : 1)))
   }
 }
-export async function providerCachePaths(env = process.env, home = homedir()) {
+export async function providerCachePaths(env = process.env, home = homedir(), name: 'dukascopy' | 'fxcm' = 'dukascopy') {
   const root = cacheDirectory(env, home)
   // Resolve existing ancestors before mkdir, so a symlink cannot create cache
   // directories inside the repository before it is rejected.
@@ -46,7 +46,7 @@ export async function providerCachePaths(env = process.env, home = homedir()) {
   const overlaps = (a: string, b: string) => { const r = relative(a, b); return !r || !(r === '..' || r.startsWith(`..${sep}`) || isAbsolute(r)) }
   if (overlaps(durable, canonical) || overlaps(canonical, durable)) throw new Error('Provider cache and durable session storage must use separate directories.')
   await mkdir(root, { recursive: true, mode: 0o700 })
-  const provider = join(root, 'dukascopy')
+  const provider = join(root, name)
   await mkdir(provider, { recursive: true, mode: 0o700 })
   const info = await lstat(provider)
   if (!info.isDirectory() || info.isSymbolicLink()) throw new Error('Provider cache directory must not be a symlink.')

@@ -1,0 +1,25 @@
+{
+  "tests": {
+    "command": "npm test -- --reporter=dot --maxWorkers=2",
+    "filesPassed": 40,
+    "testsPassed": 563,
+    "seconds": 33.82
+  },
+  "typecheck": "passed",
+  "build": "passed",
+  "diffCheck": "passed",
+  "financialAlgorithmFilesChanged": false,
+  "legacySchemasVerified": [
+    1,
+    2
+  ],
+  "newProviderSchema": 3,
+  "v1GoldenFingerprint": "8ffffddbe24baab6cb285bfb51b3df93e9a50faa09cc2c4c767902fa9fd74a04",
+  "requiredLiveScenarios": "passed",
+  "maximum120DayThroughput": "unverified; missing 2026 archives and invalid 2024 archive",
+  "warnings": [
+    "Existing Vite bundle-size advisory",
+    "Existing React act warnings in workflow tests",
+    "Default-concurrency suite had a computational test timeout; complete two-worker rerun passed"
+  ]
+}

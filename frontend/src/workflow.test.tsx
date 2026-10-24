@@ -8,6 +8,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { createChart, type CandlestickData, type UTCTimestamp } from 'lightweight-charts'
 import { App } from './App'
+import { NORMALIZATION_VERSION } from './history'
 import { selectedRange, shiftDate, accountPnl } from './workflow'
 import { historyCoverage } from '../../backend/src/historyCoverage'
 import { SessionStore } from './sessionStore'
@@ -65,10 +66,10 @@ beforeEach(async()=>{
  Object.assign(globalThis,{IS_REACT_ACT_ENVIRONMENT:true});vi.spyOn(window,'confirm').mockReturnValue(true);vi.clearAllMocks()
  vi.stubGlobal('fetch',async(path:string,options?:RequestInit)=>{
   if(path.startsWith('/api/storage'))return disk.fetch(path,options)
-  if(path==='/api/history/coverage')return new Response(JSON.stringify(coverage))
+  if(path.startsWith('/api/history/coverage'))return new Response(JSON.stringify({...coverage,provider:new URL(path,'http://local').searchParams.get('provider')??'dukascopy'}))
   historyCalls++;if(failHistory)return new Response(JSON.stringify({code:'BROWSER_UNAVAILABLE',error:"Historical data is unavailable because the data provider's browser component could not start.",action:'Run npx dukascopy-node --install-browser.'}),{status:502})
   const params=new URL(path,'http://local').searchParams,from=params.get('from')!,to=params.get('to')!
-  return new Response(JSON.stringify({symbol:'EURUSD',resolution:'M1',from,to,bid:bid.filter(b=>b.timestamp>=Date.parse(from)&&b.timestamp<Date.parse(to)),ask:bid.filter(b=>b.timestamp>=Date.parse(from)&&b.timestamp<Date.parse(to)&&(!missingAsk||b.timestamp!==beginning+3*60000)).map(b=>({...b,open:b.open+.0002,close:b.close+.0002,high:b.high+.0002,low:b.low+.0002}))}))
+  return new Response(JSON.stringify({symbol:'EURUSD',resolution:'M1',from,to,provenance:{version:2,provider:params.get('provider')??'dukascopy',normalizationVersion:NORMALIZATION_VERSION},bid:bid.filter(b=>b.timestamp>=Date.parse(from)&&b.timestamp<Date.parse(to)),ask:bid.filter(b=>b.timestamp>=Date.parse(from)&&b.timestamp<Date.parse(to)&&(!missingAsk||b.timestamp!==beginning+3*60000)).map(b=>({...b,open:b.open+.0002,close:b.close+.0002,high:b.high+.0002,low:b.low+.0002}))}))
  })
  host=document.createElement('div');document.body.append(host);root=createRoot(host)
 })
@@ -229,4 +230,36 @@ it('keeps production chart candles behind the clock and offers explicit review a
  for(let i=1;i<12;i++)await click('Next Candle')
  expect(candlestick().at(-1).time).toBe((beginning+11*60000)/1000);expect(host.querySelector('.phase-trading')).toBeTruthy();expect(button('Buy').disabled).toBe(true)
  await click('Review Results');await until(()=>host.querySelector('.phase-finished'));expect(host.querySelector('.trading-journal')).toBeTruthy()
+})
+it('defaults to Dukascopy and requires a fresh load when explicitly switching provider, preserving the saved dataset',async()=>{
+ await mount();expect(host.querySelector<HTMLSelectElement>('[aria-label="Historical data provider"]')!.value).toBe('dukascopy')
+ await load();await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
+ const original=(await disk.storage.list()).sessions[0];expect(original.provenance?.provider).toBe('dukascopy')
+ const calls=historyCalls
+ await select('Historical data provider','fxcm');await until(()=>host.querySelector<HTMLSelectElement>('[aria-label="Historical data provider"]')!.value==='fxcm'&&!button('Load historical data').disabled)
+ expect(button('Start backtest').disabled).toBe(true);expect(host.querySelector('.data-ready')).toBeNull();expect(historyCalls).toBe(calls)
+ expect((await disk.storage.get(original.id)).historyId).toBe(original.historyId)
+ await load();await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
+ const rows=(await disk.storage.list()).sessions;expect(rows).toHaveLength(2);expect(rows.map(r=>r.provenance?.provider).sort()).toEqual(['dukascopy','fxcm'])
+ await click('Start backtest');expect(host.querySelector('.replay-strip')?.textContent).toContain('FXCM')
+ await click('Finish backtest');await until(()=>host.querySelector('.results-heading'));expect(host.querySelector('.results-heading')?.textContent).toContain('FXCM')
+ await click('Sessions / settings');await click('Resume / Manage sessions');expect(host.querySelector('.saved-session-info')?.textContent).toContain('FXCM')
+ await click('New session');await until(()=>host.querySelector<HTMLSelectElement>('[aria-label="Historical data provider"]')?.value==='dukascopy');expect(button('Start backtest').disabled).toBe(true)
+})
+it('rejects results from an interrupted previous-provider load after switching',async()=>{
+ await mount();const underlying=globalThis.fetch;let release!:()=>void
+ const gate=new Promise<void>(resolve=>{release=resolve});let hold=true
+ vi.stubGlobal('fetch',async(path:string,options?:RequestInit)=>{if(hold&&path.startsWith('/api/history?'))await gate;return underlying(path,options)})
+ await click('Load historical data');expect(host.textContent).toContain('chunks downloaded')
+ await select('Historical data provider','fxcm');await until(()=>!button('Load historical data').disabled)
+ hold=false;await act(async()=>{release();await delay(20)})
+ expect(host.querySelector('.data-ready')).toBeNull();expect(button('Start backtest').disabled).toBe(true)
+ await load();expect(button('Start backtest').disabled).toBe(false)
+})
+it.each(['FXCM_MISSING','FXCM_UNPUBLISHED','FXCM_INVALID','FXCM_NETWORK'])('keeps %s errors specific to FXCM with no browser setup advice',async(code)=>{
+ await mount();await select('Historical data provider','fxcm');await until(()=>!button('Load historical data').disabled)
+ const underlying=globalThis.fetch
+ vi.stubGlobal('fetch',async(path:string,options?:RequestInit)=>path.startsWith('/api/history?')?new Response(JSON.stringify({code,title:'FXCM archive unavailable',error:'FXCM selected week is unavailable.',action:'Retry after publication.'}),{status:502}):underlying(path,options))
+ await click('Load historical data');await until(()=>host.querySelector('.load-error'))
+ expect(host.textContent).toContain('FXCM selected week is unavailable');expect(host.querySelector('.load-error')?.textContent).not.toMatch(/install|browser|dukascopy/i);expect(button('Start backtest').disabled).toBe(true)
 })

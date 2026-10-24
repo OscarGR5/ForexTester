@@ -17,7 +17,7 @@ interface Options {
   actionVersion: number
   pause: () => void
   captureViewport: () => SessionSnapshot['checkpoint']['workspace']['viewport']
-  download: (range: DateRange, progress?: (value: LoadProgress) => void) => Promise<LoadedHistory>
+  download: (range: DateRange, progress?: (value: LoadProgress) => void, provider?: import('./history').HistoryProvider) => Promise<LoadedHistory>
   restore: (hydration: Hydration, history: LoadedHistory) => void
   fresh: (range: DateRange) => void
 }
@@ -81,6 +81,7 @@ export function useSessionPersistence(options: Options) {
         target.cacheAttempted = true
       }
       const record = await store.save({ id: target.id, name: target.name, createdAt: target.createdAt,
+        ...(current.history.provenance ? { provenance: current.history.provenance } : {}),
         range: { from: current.history.tradingFrom, to: current.history.to }, historyId: target.historyId!, totalCandles: current.history.bid.length }, snapshot, target.record)
       target.record = record
       setSavedAt(record.savedAt); setSaveStatus(latest.current.snapshot === snapshot && target.name === record.name ? 'Saved' : 'Saving'); setError(null)
@@ -175,7 +176,7 @@ export function useSessionPersistence(options: Options) {
       if (id && repair) {
         busyRef.current = true
         setRepairProgress({ completed: 0, total: 0 })
-        await store.repairHistory(id, (range) => latest.current.download(range, setRepairProgress))
+        await store.repairHistory(id, (range, provider) => latest.current.download(range, setRepairProgress, provider))
         busyRef.current = false
       }
       // A stale tab must be able to reload the authoritative version. Its
@@ -196,6 +197,7 @@ export function useSessionPersistence(options: Options) {
       }
       setRepairTarget(null); setRepairProgress(null)
       ready.current = true; setAwaitingChoice(false); conflicted.current = false; setConflict(false); setError(null); setSaveStatus(id ? 'Saved' : 'Saving')
+      return true
     } catch (reason) {
       if (id && recovering && repairableHistory(reason)) setRepairTarget({ id, name: sessions.find((record) => record.id === id)?.name ?? 'Saved session' })
       else if (!repair && recovering) setRepairTarget(null)
@@ -254,13 +256,13 @@ export function useSessionPersistence(options: Options) {
     try {
       if (!conflicted.current) await flush()
       busyRef.current = true
-      const result = await store.migrate(legacyStore, id, (range) => latest.current.download(range), asCopy)
+      const result = await store.migrate(legacyStore, id, (range, provider) => latest.current.download(range, undefined, provider), asCopy)
       if (validWorkspace(result.checkpoint.workspace)) writeUi(result.record.id, 'workspace', result.checkpoint.workspace)
       await refresh(); await discoverLegacy(); setError(null)
     } catch (reason) { report(reason) }
     finally { busyRef.current = false; setBusy(false) }
   }
   return { repairTarget, repairProgress, repair: () => repairTarget && switchWorkspace(repairTarget.id, undefined, true), cleanupPreview, cleanupResult, previewCleanup, cleanup, sessions, diskErrors, legacySessions, storageLocation, migrationWarning, migrate, retry: () => { void initialize() }, name, savedAt, saveStatus, error, cacheWarning, conflict, busy, initialized, awaitingChoice,
-    flush, activeId: active.current?.id ?? null, editName, rename, remove, resume: (id: string) => switchWorkspace(id),
+    flush, hasSavedDataset: !!active.current?.record, activeId: active.current?.id ?? null, editName, rename, remove, resume: (id: string) => switchWorkspace(id),
     fresh: (range?: DateRange) => switchWorkspace(null, range), save: () => { if (active.current) active.current.cacheAttempted = false; void flush().catch(report) } }
 }

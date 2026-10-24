@@ -1,0 +1,190 @@
+{
+  "verified": false,
+  "ms": 1510,
+  "error": "Error: {\"code\":\"FXCM_INVALID\",\"title\":\"Invalid FXCM archive\",\"error\":\"FXCM returned an invalid archive. No historical dataset was installed.\",\"action\":\"The selected interval was not loaded. Completed validated archives remain cached.\"} Chunk 14/18 (2024-03-05 to 2024-03-12 UTC) failed. Retry to complete the interval.",
+  "chunks": [
+    {
+      "from": "2023-12-17",
+      "to": "2023-12-24",
+      "ms": 238,
+      "bid": 7188,
+      "ask": 7188
+    },
+    {
+      "from": "2023-12-10",
+      "to": "2023-12-17",
+      "ms": 263,
+      "bid": 7179,
+      "ask": 7179
+    },
+    {
+      "from": "2023-12-24",
+      "to": "2023-12-31",
+      "ms": 108,
+      "bid": 5415,
+      "ask": 5415
+    },
+    {
+      "from": "2024-01-07",
+      "to": "2024-01-09",
+      "ms": 99,
+      "bid": 1547,
+      "ask": 1547
+    },
+    {
+      "from": "2024-01-09",
+      "to": "2024-01-16",
+      "ms": 72,
+      "bid": 7169,
+      "ask": 7169
+    },
+    {
+      "from": "2023-12-31",
+      "to": "2024-01-07",
+      "ms": 307,
+      "bid": 5356,
+      "ask": 5356
+    },
+    {
+      "from": "2024-01-16",
+      "to": "2024-01-23",
+      "ms": 139,
+      "bid": 7186,
+      "ask": 7186
+    },
+    {
+      "from": "2024-01-23",
+      "to": "2024-01-30",
+      "ms": 217,
+      "bid": 7179,
+      "ask": 7179
+    },
+    {
+      "from": "2024-01-30",
+      "to": "2024-02-06",
+      "ms": 228,
+      "bid": 7180,
+      "ask": 7180
+    },
+    {
+      "from": "2024-02-06",
+      "to": "2024-02-13",
+      "ms": 241,
+      "bid": 7180,
+      "ask": 7180
+    },
+    {
+      "from": "2024-02-13",
+      "to": "2024-02-20",
+      "ms": 227,
+      "bid": 7179,
+      "ask": 7179
+    },
+    {
+      "from": "2024-02-20",
+      "to": "2024-02-27",
+      "ms": 195,
+      "bid": 7174,
+      "ask": 7174
+    },
+    {
+      "from": "2024-02-27",
+      "to": "2024-03-05",
+      "ms": 236,
+      "bid": 7187,
+      "ask": 7187
+    }
+  ],
+  "network": [
+    {
+      "file": "2023/51.csv.gz",
+      "status": 200,
+      "ms": 71,
+      "bytes": 99344
+    },
+    {
+      "file": "2023/50.csv.gz",
+      "status": 200,
+      "ms": 79,
+      "bytes": 101658
+    },
+    {
+      "file": "2024/1.csv.gz",
+      "status": 404,
+      "ms": 35,
+      "bytes": 0
+    },
+    {
+      "file": "2023/52.csv.gz",
+      "status": 200,
+      "ms": 45,
+      "bytes": 73807
+    },
+    {
+      "file": "2024/2.csv.gz",
+      "status": 200,
+      "ms": 77,
+      "bytes": 99947
+    },
+    {
+      "file": "2024/3.csv.gz",
+      "status": 200,
+      "ms": 29,
+      "bytes": 98873
+    },
+    {
+      "file": "2023/53.csv.gz",
+      "status": 200,
+      "ms": 23,
+      "bytes": 76091
+    },
+    {
+      "file": "2024/4.csv.gz",
+      "status": 200,
+      "ms": 77,
+      "bytes": 98853
+    },
+    {
+      "file": "2024/5.csv.gz",
+      "status": 200,
+      "ms": 57,
+      "bytes": 99907
+    },
+    {
+      "file": "2024/6.csv.gz",
+      "status": 200,
+      "ms": 70,
+      "bytes": 95669
+    },
+    {
+      "file": "2024/7.csv.gz",
+      "status": 200,
+      "ms": 94,
+      "bytes": 94413
+    },
+    {
+      "file": "2024/8.csv.gz",
+      "status": 200,
+      "ms": 59,
+      "bytes": 94376
+    },
+    {
+      "file": "2024/9.csv.gz",
+      "status": 200,
+      "ms": 52,
+      "bytes": 94425
+    },
+    {
+      "file": "2024/10.csv.gz",
+      "status": 200,
+      "ms": 77,
+      "bytes": 93877
+    },
+    {
+      "file": "2024/11.csv.gz",
+      "status": 200,
+      "ms": 64,
+      "bytes": 91510
+    }
+  ]
+}

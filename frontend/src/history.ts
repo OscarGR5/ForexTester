@@ -1,5 +1,33 @@
 import type { CandlestickData, UTCTimestamp } from 'lightweight-charts'
 
+export type HistoryProvider = 'dukascopy' | 'fxcm'
+export const NORMALIZATION_VERSION = 'm1-bid-ask-v1'
+export interface ArchiveSource {
+  file: string
+  sha256: string
+  first: number
+  last: number
+  retrievedAt: string
+}
+export interface ProviderProvenance {
+  version: 2
+  provider: HistoryProvider
+  normalizationVersion: typeof NORMALIZATION_VERSION
+  sources?: ArchiveSource[]
+}
+export const providerLabel = (provider?: HistoryProvider) => provider === 'fxcm' ? 'FXCM' : 'Dukascopy'
+export function parseProvenance(value: unknown): ProviderProvenance | undefined {
+  if (value === undefined) return undefined // Legacy history retains its v1 identity.
+  if (!isRecord(value) || value.version !== 2 || !['dukascopy', 'fxcm'].includes(String(value.provider)) || value.normalizationVersion !== NORMALIZATION_VERSION)
+    throw new Error('Historical provider provenance is invalid.')
+  if (value.sources !== undefined && (!Array.isArray(value.sources) || value.sources.length > 100 || value.sources.some((source: unknown) =>
+    !isRecord(source) || typeof source.file !== 'string' || !/^\d{4}\/(?:[1-9]|[1-4]\d|5[0-3])\.csv\.gz$/.test(source.file) ||
+    typeof source.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(source.sha256) || !Number.isSafeInteger(source.first) || !Number.isSafeInteger(source.last) || Number(source.first) > Number(source.last) ||
+    typeof source.retrievedAt !== 'string' || !Number.isFinite(Date.parse(source.retrievedAt))))) throw new Error('Historical archive provenance is invalid.')
+  return { version: 2, provider: value.provider as HistoryProvider, normalizationVersion: NORMALIZATION_VERSION,
+    ...(value.sources === undefined ? {} : { sources: value.sources as ArchiveSource[] }) }
+}
+
 export interface Candle {
   timestamp: number
   open: number
@@ -15,6 +43,7 @@ export interface HistoryResponse {
   to: string
   bid: Candle[]
   ask: Candle[]
+  provenance?: ProviderProvenance
 }
 
 export interface DateRange {
@@ -104,10 +133,13 @@ export function parseHistory(value: unknown, range: DateRange): HistoryResponse 
   }
   const fromMs = utcDate(range.from)!
   const toMs = utcDate(range.to)!
+  const provenance = parseProvenance(value.provenance)
+  const bid = parseCandles(value.bid, fromMs, toMs), ask = parseCandles(value.ask, fromMs, toMs)
+  if (provenance?.provider === 'fxcm' && (bid.length !== ask.length || bid.some((bar, i) => bar.timestamp !== ask[i].timestamp || (['open', 'high', 'low', 'close'] as const).some(key => bar[key] > ask[i][key])))) throw new Error('FXCM history requires both original bid/ask sides.')
   return {
     symbol: 'EURUSD', resolution: 'M1', from: range.from, to: range.to,
-    bid: parseCandles(value.bid, fromMs, toMs),
-    ask: parseCandles(value.ask, fromMs, toMs),
+    ...(provenance ? { provenance } : {}),
+    bid, ask,
   }
 }
 
@@ -118,8 +150,9 @@ export function toBidChartCandles(history: { bid: readonly Candle[] }, timeframe
   }))
 }
 
-export async function fetchHistory(range: DateRange, signal?: AbortSignal): Promise<HistoryResponse> {
+export async function fetchHistory(range: DateRange, signal?: AbortSignal, provider?: HistoryProvider): Promise<HistoryResponse> {
   const params = new URLSearchParams({ symbol: 'EURUSD', from: range.from, to: range.to })
+  if (provider) params.set('provider', provider)
   let response: Response
   try { response = await fetch(`/api/history?${params}`, { signal }) }
   catch {
@@ -135,5 +168,7 @@ export async function fetchHistory(range: DateRange, signal?: AbortSignal): Prom
     throw new HistoryRequestError(message, isRecord(body) && typeof body.code === 'string' ? body.code : 'HISTORY_UNAVAILABLE',
       isRecord(body) && typeof body.title === 'string' ? body.title : 'Historical data unavailable', retryAfterMs)
   }
-  return parseHistory(body, range)
+  const history = parseHistory(body, range)
+  if (provider && history.provenance?.provider !== provider) throw new Error('Historical response does not match the selected provider.')
+  return history
 }
