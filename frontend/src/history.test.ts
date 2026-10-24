@@ -17,7 +17,7 @@ describe('historical chart data', () => {
       minute(5, 1.3, 1.5, 1.2, 1.4), minute(15, 1.4, 1.6, 1.3, 1.5),
       minute(60, 1.5, 1.7, 1.4, 1.6), minute(240, 1.6, 1.8, 1.5, 1.7)]
     const buckets = { M1: [2, 4, 5, 15, 60, 240], M5: [0, 5, 15, 60, 240],
-      M15: [0, 15, 60, 240], H1: [0, 60, 240], H4: [0, 240] }
+      M15: [0, 15, 60, 240], H1: [0, 60, 240], H4: [0, 240], D1: [0] }
     for (const timeframe of TIMEFRAMES) {
       expect(aggregateBidCandles(source, timeframe).map((candle) => (candle.timestamp - base) / 60_000)).toEqual(buckets[timeframe])
     }

@@ -1,7 +1,7 @@
 import { observedPrice, quoteCandle } from './trading'
 import { useState } from 'react'
 import type { useTrading } from './useTrading'
-import { canRequestOrder, entryRequestError, setupAssignmentError, stopModificationError, markPosition, combinedRisk, type Direction, type TradingState } from './trading'
+import { activeSetupId, canRequestOrder, entryRequestError, automaticSetupError, stopModificationError, markPosition, combinedRisk, type Direction, type TradingState } from './trading'
 import { plannedRisk, sizeFromRisk, type EntrySizing } from './risk'
 export interface StopDraft { direction: Direction; sizing: EntrySizing; setupId: string | null; positionId?: string; slot: number; price: number | null }
 export function draftEstimate(state: TradingState, draft: StopDraft) {
@@ -16,16 +16,15 @@ export function draftEstimate(state: TradingState, draft: StopDraft) {
   const lots = position?.lots ?? (typeof draft.sizing === 'number' ? draft.sizing : sizeFromRisk(state.account.referenceBalance * draft.sizing.riskPercent / 100, price, stop))
   const risk = lots === null ? null : plannedRisk({ direction: draft.direction, lots, entryPrice: position?.entryPrice ?? price, stopPrice: stop })
   const error = position ? stopModificationError(state, position, stop, { active: true, playing: false, hasFuture: true })
-    : entryRequestError(state, draft.sizing, stop) ?? setupAssignmentError(state, draft.direction, draft.setupId) ??
+    : entryRequestError(state, draft.sizing, stop) ?? automaticSetupError(state, draft.direction, draft.setupId) ??
       (!lots ? 'The selected risk rounds below the minimum lot size.' : risk! > combinedRisk(state).remainingUsd + 1e-7 ? 'Estimated risk exceeds the remaining combined risk budget.' : null)
   return { error, lots, risk }
 }
 export function TradingDock({ trading, draft, setDraft }: { trading: ReturnType<typeof useTrading>; draft: StopDraft | null; setDraft: (draft: StopDraft | null) => void }) {
   const { state, permission } = trading
-  const [mode, setMode] = useState('risk'), [risk, setRisk] = useState('1'), [lots, setLots] = useState('0.01'), [setup, setSetup] = useState('')
+  const [mode, setMode] = useState('risk'), [risk, setRisk] = useState('1'), [lots, setLots] = useState('0.01')
   const canOrder = canRequestOrder(permission), slots = state.pending.length + state.positions.length
-  const eligible = state.setups.filter(s => [...state.pending, ...state.positions].some(p => p.setupId === s.id) && !setupAssignmentError(state, s.direction, s.id))
-  const setupId = eligible.some(s=>s.id === setup) ? setup : null
+  const setupId = activeSetupId(state)
   const estimate = draft ? draftEstimate(state, draft) : null
   const begin = (direction: Direction) => setDraft({ direction, sizing: mode === 'risk' ? { mode: 'risk', riskPercent: Number(risk) } : Number(lots), setupId, slot: slots + 1, price: null })
   return <section className="trading-dock" aria-label="Simulated trading">
@@ -33,9 +32,9 @@ export function TradingDock({ trading, draft, setDraft }: { trading: ReturnType<
     <div className="dock-controls">
       <label>Sizing mode<select aria-label="Sizing mode" value={mode} onChange={e=>setMode(e.target.value)} disabled={!!draft}><option value="risk">Risk %</option><option value="manual">Manual lots</option></select></label>
       {mode === 'risk' ? <label>Risk per entry (%)<input aria-label="Risk per entry (%)" type="number" step="any" value={risk} onChange={e=>setRisk(e.target.value)} disabled={!!draft}/></label> : <label>Volume (lots)<input type="number" step="any" value={lots} onChange={e=>setLots(e.target.value)} disabled={!!draft}/></label>}
-      <label>Setup<select aria-label="Setup assignment" value={setupId ?? ''} onChange={e=>setSetup(e.target.value)} disabled={!!draft}><option value="">New setup</option>{eligible.map(s=><option key={s.id} value={s.id}>Add to {s.id} · {s.direction}</option>)}</select></label>
-      <button className="buy-button" disabled={!canOrder || slots >= 2 || !!setupAssignmentError(state,'buy',setupId)} onClick={()=>begin('buy')}>Buy</button>
-      <button className="sell-button" disabled={!canOrder || slots >= 2 || !!setupAssignmentError(state,'sell',setupId)} onClick={()=>begin('sell')}>Sell</button>
+
+      <button className="buy-button" disabled={!canOrder || slots >= 2 || !!automaticSetupError(state,'buy',setupId)} onClick={()=>begin('buy')}>Buy</button>
+      <button className="sell-button" disabled={!canOrder || slots >= 2 || !!automaticSetupError(state,'sell',setupId)} onClick={()=>begin('sell')}>Sell</button>
       <span>{slots} / 2 slots</span>
       <span className="trading-message">{permission.playing ? 'Pause to trade' : !permission.hasFuture ? 'End of history; positions remain open' : state.symbol === '6E' ? 'Entries fill at the next eligible M1 opening' : 'Entries fill at the next synchronized M1 opening'}</span>
     </div>
@@ -45,7 +44,7 @@ export function TradingDock({ trading, draft, setDraft }: { trading: ReturnType<
       <button disabled={!canOrder || !!estimate?.error} onClick={()=>{
         if (!draft.price || !canOrder || draftEstimate(state,draft).error) return
         if (draft.positionId) trading.modifyStop(draft.positionId,draft.price)
-        else trading.enter(draft.direction,draft.sizing,draft.price,draft.setupId)
+        else trading.enterAutomatic(draft.direction,draft.sizing,draft.price)
         setDraft(null)
       }}>{draft.positionId ? 'Confirm SL change' : 'Confirm order'}</button>
       <button onClick={()=>setDraft(null)}>Cancel placement</button>

@@ -24,7 +24,7 @@ export function indicatorPreset(timeframe: Timeframe): IndicatorSettings {
     settings.bollinger.enabled = true
     settings.bollinger2.enabled = true
     settings.stochastic.enabled = true
-  } else if (timeframe === 'H1' || timeframe === 'H4') {
+  } else if (timeframe === 'H1' || timeframe === 'H4' || timeframe === 'D1') {
     settings.ichimoku.enabled = true
   }
   return settings

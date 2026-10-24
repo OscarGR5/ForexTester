@@ -1,3 +1,6 @@
+import { canRequestOrder, stopModificationError } from './trading'
+import { plannedRisk } from './risk'
+import type { StopPreview } from './useStopDrag'
 import { HistoryTimeline } from './HistoryTimeline'
 import { automaticReplayStart, cachedPreset, formatUtcDate, rangeCoverage, type CacheCalendar } from './cacheCalendar'
 import { quoteHistory, downloadHistory, type HistoryQuote } from './databentoHistory'
@@ -41,6 +44,8 @@ export function App() {
   const [history, setHistory] = useState<LoadedHistory | null>(null)
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
   const [lifecycle, setLifecycle] = useState<Lifecycle>('setup')
+  const [stopPreview, setStopPreview] = useState<StopPreview | null>(null)
+  const [stopError, setStopError] = useState<string | null>(null)
   const [draft, setDraft] = useState<StopDraft | null>(null)
   const [manage, setManage] = useState(false)
   const [finishing, setFinishing] = useState(false)
@@ -104,26 +109,28 @@ export function App() {
     },
   })
 
-  const [uiWorkspace, setUiWorkspace] = useUiValue(sessions.activeId, 'workspace', workspace, validWorkspace)
+  const [uiWorkspace, setUiWorkspace] = useUiValue(sessions.activeId, 'workspace', hydration?.checkpoint.workspace ?? workspace, validWorkspace)
+  const uiWorkspaceRef = useRef(uiWorkspace)
+  useLayoutEffect(() => { uiWorkspaceRef.current = uiWorkspace }, [uiWorkspace])
   const { chartCount, timeframes, indicators: indicatorSettings, statisticsScope, journalScope } = uiWorkspace
   const setChartCount = (chartCount: number) => setUiWorkspace((w) => ({ ...w, chartCount }))
   const setStatisticsScope = useCallback((statisticsScope: AnalyticsScope) => setUiWorkspace((w) => ({ ...w, statisticsScope })), [setUiWorkspace])
   const setJournalScope = useCallback((journalScope: AnalyticsScope) => setUiWorkspace((w) => ({ ...w, journalScope })), [setUiWorkspace])
   const synchronizer = useMemo(() => {
     const sync = new ChartSynchronizer(bounds)
-    sync.restore(readUi(sessions.activeId, 'workspace', workspace, validWorkspace).viewport)
+    sync.restore(readUi(sessions.activeId, 'workspace', hydration?.checkpoint.workspace ?? workspace, validWorkspace).viewport)
     return sync
   }, [history, replay.epoch, sessions.activeId])
   useLayoutEffect(() => { synchronizer.advance(bounds) }, [synchronizer, bounds])
   useEffect(() => {
     if (!sessions.activeId) return
     const persist = () => {
-      const stored = readUi(sessions.activeId, 'workspace', workspace, validWorkspace)
+      const stored = readUi(sessions.activeId, 'workspace', uiWorkspaceRef.current, validWorkspace)
       const viewport = synchronizer.snapshot()
       if (JSON.stringify(viewport) !== JSON.stringify(stored.viewport)) writeUi(sessions.activeId, 'workspace', { ...stored, viewport })
     }
     let timer: ReturnType<typeof setTimeout> | null = null
-    synchronizer.onViewportChange = () => { if (!timer) timer = setTimeout(() => { timer = null; persist() }, 250) }
+    synchronizer.onViewportChange = () => { if (!timer) timer = setTimeout(() => { timer = null; persist(); void sessions.flush().catch(() => {}) }, 250) }
     const scroll = () => writeUi(sessions.activeId, 'scrollY', Math.max(0, Math.min(1000000, window.scrollY)))
     const hidden = () => { persist(); scroll() }
     window.addEventListener('pagehide', hidden); document.addEventListener('visibilitychange', hidden)
@@ -317,8 +324,21 @@ export function App() {
         </div>
         {replay.blocked && <p className="coverage-warning" role="alert">Replay blocked at contract rollover. No positions, stops or pending orders were executed across the boundary. Finish this backtest or select a replay start after the rollover. A carry/roll policy requires project-lead approval.</p>}
         {history && isSinglePrice(history) && <details className="chart-note"><summary>Contract mappings and rollover events</summary>{history.contracts.map(c=><p key={c.from}>{c.from} to {c.to} (exclusive): {c.rawSymbol} · instrument {c.instrumentId}</p>)}</details>}
-        <div className="chart-workspace" aria-label={`${history?.symbol ?? '6E'} chart workspace`}><div className="chart-stack" style={{gridTemplateRows:`repeat(${chartCount}, minmax(0, 1fr))`}}>
-          {timeframes.slice(0,chartCount).map((timeframe,id)=><ChartPane key={id} instrument={history?.symbol ?? '6E'} id={id} timeframe={timeframe} sessionId={sessions.activeId} positions={trading.state.positions} source={chartSource} count={Math.max(0, replay.count - chartOffset)} synchronizer={synchronizer} onTimeframeChange={changeTimeframe} settings={indicatorSettings[id][timeframe]!} onSettingsChange={changeSettings} placement={draft} onPick={pickStop}/>)}</div></div>
+        <div className="chart-workspace" aria-label={`${history?.symbol ?? '6E'} chart workspace`}><div className={`chart-stack charts-${chartCount}`}>
+          {timeframes.slice(0,chartCount).map((timeframe,id)=><ChartPane key={id} instrument={history?.symbol ?? '6E'} id={id} timeframe={timeframe} sessionId={sessions.activeId} positions={trading.state.positions} stopInteraction={{ enabled: canRequestOrder(trading.permission) && !draft,
+            preview: stopPreview, onPreview: setStopPreview, onCommit: (positionId, price) => {
+              const position = trading.state.positions.find(p => p.id === positionId)
+              const error = position ? stopModificationError(trading.state, position, price, trading.permission) : 'Position is no longer open.'
+              setStopError(error)
+              if (!error) trading.modifyStop(positionId, price)
+              return error
+            } }} source={chartSource} count={Math.max(0, replay.count - chartOffset)} synchronizer={synchronizer} onTimeframeChange={changeTimeframe} settings={indicatorSettings[id][timeframe]!} onSettingsChange={changeSettings} placement={draft} onPick={pickStop}/>)}</div></div>
+        {stopPreview && (() => {
+          const position = trading.state.positions.find(p => p.id === stopPreview.id)
+          const error = position ? stopModificationError(trading.state, position, stopPreview.price, trading.permission) : 'Position is no longer open.'
+          return <p className={`stop-drag-status${error ? ' form-error' : ''}`} role="status">{stopPreview.id} · SL {stopPreview.price.toFixed(5)} · {error ?? `Risk $${plannedRisk({ ...position!, stopPrice: stopPreview.price }).toFixed(2)} · Effective after the current M1 candle. Release to apply; Escape to cancel.`}</p>
+        })()}
+        {stopError && <p className="stop-drag-status form-error" role="alert">{stopError}<button onClick={() => setStopError(null)}>Dismiss</button></p>}
         <TradingDock key={`${sessions.activeId}-${trading.state.session}`} trading={trading} draft={draft} setDraft={setDraft}/>
       </>}
       {lifecycle === 'finished' && <section className="results-workspace" aria-label="Backtest results"><div className="results-heading"><h2>Backtest results</h2><button onClick={sessions.save}>Save now</button></div>

@@ -80,7 +80,11 @@ export function useSessionPersistence(options: Options) {
         const history = validatedHistory(current.history)
         target.historyId = await historyFingerprint(history); target.history = current.history; target.cacheAttempted = false
       }
-      const snapshot = current.snapshot
+      const presentation = readUi(target.id, 'workspace', target.record?.checkpoint.workspace ?? current.snapshot.checkpoint.workspace, validWorkspace)
+      const captured = current.captureViewport()
+      const snapshot: SessionSnapshot = { ...current.snapshot, checkpoint: { ...current.snapshot.checkpoint,
+        workspace: { ...presentation, viewport: captured?.range ? captured : presentation.viewport },
+      } }
       // Publish validated history before a checkpoint can reference it.
       if (!target.cacheAttempted) {
         await store.cacheHistory(target.historyId!, current.history)
@@ -89,7 +93,7 @@ export function useSessionPersistence(options: Options) {
       const record = await store.save({ id: target.id, name: target.name, createdAt: target.createdAt,
         range: { from: current.history.tradingFrom, to: current.history.to }, historyId: target.historyId!, totalCandles: historyCandles(current.history).length }, snapshot, target.record)
       target.record = record
-      setSavedAt(record.savedAt); setSaveStatus(latest.current.snapshot === snapshot && target.name === record.name ? 'Saved' : 'Saving'); setError(null)
+      setSavedAt(record.savedAt); setSaveStatus(latest.current.snapshot === current.snapshot && target.name === record.name ? 'Saved' : 'Saving'); setError(null)
       channel.current?.postMessage({ id: record.id, revision: record.revision })
       await refresh()
 
@@ -195,6 +199,7 @@ export function useSessionPersistence(options: Options) {
         const { record } = result
         active.current = { id: record.id, name: record.name, createdAt: record.createdAt, record, history: result.history, historyId: record.historyId, cacheAttempted: true }
         setName(record.name); setSavedAt(record.savedAt); setCacheWarning(result.cacheWarning)
+        writeUi(record.id, 'workspace', readUi(record.id, 'workspace', result.checkpoint.workspace, validWorkspace))
         latest.current.restore(result, result.history)
       } else {
         const presentation = readUi(active.current?.id ?? null, 'workspace', defaultWorkspace(), validWorkspace)

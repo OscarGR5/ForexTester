@@ -109,7 +109,7 @@ Setup uses a 28px heading; Results uses 26px. The app name and Setup section tit
 
 ## Layout
 
-The shell fills `100dvh`, with a compact header and phase-specific content. Desktop Trading gives remaining height to one, two, or three vertically stacked charts, with a replay strip above and a trading dock below. Chart panes have no outer card border or rounded corners; narrow 4px gaps separate them. Pane toolbars are 32px high.
+The shell fills `100dvh`, with a compact header and phase-specific content. Desktop Trading gives remaining height to one chart, two equal columns, or a large left chart beside two stacked right charts. A replay strip sits above and the trading dock stays below. At 900px and below, panes stack inside a scrolling chart workspace, with at least 300px per pane. Chart panes have no outer card border or rounded corners; narrow 4px gaps separate them. Pane toolbars reserve 32px for controls and a second row for indicator readiness.
 
 Setup is centered at a maximum 1080px width, with 36px 32px padding. Its vertical hierarchy is Historical period, Trading account, then collapsed Advanced settings. Dates, the daily history timeline, presets, and readiness lead the first viewport; account and advanced controls follow in a scrolling form. The Start backtest footer remains visible outside that scroll area. Results uses 28px padding, flat statistic groups, and section dividers. Results scrolls independently of the header.
 
@@ -133,7 +133,7 @@ Setup's responsive daily timeline uses two labeled range handles, explicit From 
 
 Results navigation uses three labeled buttons with `aria-pressed`; the active button has the action surface and focus-color border. Chart layout uses native radio inputs. Indicator settings expand as a bounded overlay attached to the pane toolbar.
 
-The trading dock groups sizing, setup assignment, Buy/Sell, slot count, and execution context. Stop placement adds a labeled review area with estimate, confirm, cancel, and keyboard price entry. Open and pending positions remain compact inline records. Preserve these explicit actions and status labels.
+The trading dock groups sizing, Buy/Sell, slot count, and execution context. Entries automatically join the single active setup, with at most two same-direction submissions before it resolves. Stop placement adds a labeled review area with estimate, confirm, cancel, and keyboard price entry. Open and pending positions remain compact inline records. Preserve these explicit actions and status labels. Existing stops also support vertical dragging within a 7px hit target while paused. Overlapping stops open a position-ID chooser; hold the chosen button and drag. Show draft price and risk without saving, commit on valid release, and cancel on Escape or pointer cancellation. Keep Modify SL and keyboard price entry available.
 
 Session management opens in a native dialog positioned at the right on desktop and inset 8px on mobile. Results statistics are unboxed; charts and tables follow their section headings and explanatory text.
 

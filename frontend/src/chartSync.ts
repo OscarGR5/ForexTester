@@ -30,6 +30,28 @@ export function utcToLogical(times: readonly number[], utc: number, stepSeconds:
   return low + (utc - times[low]) / (times[high] - times[low])
 }
 
+export interface ChartView {
+  range: UtcRange | null
+  following: boolean
+  logical?: { from: number; to: number }
+  step?: number
+}
+// The top-level fields are the legacy fallback. New saves include each pane.
+export interface ViewportState extends ChartView { charts?: Record<string, ChartView> }
+export function validViewportState(value: unknown): value is ViewportState {
+  const valid = (v: unknown): v is ChartView => {
+    const view = v as ChartView
+    const range = (r: UtcRange | null) => r === null || !!r && Number.isFinite(r.from) && Number.isFinite(r.to) && r.from < r.to
+    return !!view && typeof view.following === 'boolean' && range(view.range) &&
+      (view.logical === undefined || view.logical !== null && range(view.logical)) &&
+      (view.step === undefined || Number.isFinite(view.step) && view.step > 0)
+  }
+  if (!valid(value)) return false
+  const charts = (value as ViewportState).charts
+  return charts === undefined || !!charts && !Array.isArray(charts) && typeof charts === 'object' &&
+    Object.entries(charts).every(([id, view]) => /^[0-2]$/.test(id) && valid(view))
+}
+
 interface Entry {
   chart: IChartApi
   series: ISeriesApi<'Candlestick'>
@@ -47,238 +69,193 @@ interface Entry {
 export class ChartSynchronizer {
   onViewportChange?: () => void
   private entries = new Map<number, Entry>()
-  private viewport: UtcRange | null = null
-  private applyingRange = false
+  private views = new Map<number, ChartView>()
+  private legacy: ChartView | null = null
   private applyingCrosshair = false
+  private suspended = false
   private pointer: { id: number; time: number | null; x?: number; y?: number; pane?: number } | null = null
   private activeId: number | null = null
   private activeUntil = 0
-
-  private following = true
-
   constructor(private bounds?: UtcRange) {}
 
-  snapshot(): { range: UtcRange | null; following: boolean } {
-    return { range: this.viewport ? { ...this.viewport } : null, following: this.following }
+  snapshot(): ViewportState {
+    const first = this.views.get(0) ?? this.legacy ?? { range: null, following: true }
+    return structuredClone({ range: first.range, following: first.following, charts: Object.fromEntries(this.views) })
   }
-
-  restore(view: { range: UtcRange | null; following: boolean } | null): void {
-    if (!view) return
-    const width = view.range ? view.range.to - view.range.from : 0
-    this.viewport = view.following && view.range && this.bounds
-      ? { from: this.bounds.to - width, to: this.bounds.to } : view.range
-    this.following = view.following
+  restore(view: ViewportState | null): void {
+    if (!view || !validViewportState(view)) return
+    this.legacy = view.charts === undefined ? { range: view.range, following: view.following } : null
+    this.views = new Map(Object.entries(view.charts ?? {}).map(([id, state]) => [Number(id), structuredClone(state)]))
     for (const id of this.entries.keys()) this.refresh(id)
   }
-
-  // Called after every pane has installed this frame's revealed data.
   advance(bounds?: UtcRange): void {
-    const previous = this.bounds
     this.bounds = bounds
-    if (this.following && this.viewport && bounds && previous && bounds.to > previous.to) {
-      const width = this.viewport.to - this.viewport.from || 3600
-      this.viewport = { from: bounds.to - width, to: bounds.to }
-    }
     for (const id of this.entries.keys()) this.refresh(id)
     this.refreshCrosshair()
   }
-
   update(id: number, candles: readonly CandlestickData<UTCTimestamp>[], timeframe: Timeframe,
     applyData: () => number | void, dirty = 0): void {
     const entry = this.entries.get(id)
     if (!entry) return
     entry.setting = true
-    // A visible crosshair makes the library hit-test and rebuild every series'
-    // coordinates on each update. Clear it within the synchronous batch and
-    // restore the current pointer after data/viewport installation, before paint.
     if (this.pointer || entry.crosshair) {
       performanceCount('sync.crosshair.batchClear')
-      entry.chart.clearCrosshairPosition()
-      entry.crosshair = null
+      this.applyingCrosshair = true
+      try { entry.chart.clearCrosshairPosition(); entry.crosshair = null } finally { this.applyingCrosshair = false }
     }
     try {
       if (dirty === 0) { entry.times = []; entry.byTime.clear(); entry.crosshair = undefined }
       for (let index = dirty; index < candles.length; index++) {
         const candle = candles[index]
-        entry.times[index] = candle.time
-        entry.byTime.set(candle.time, candle)
+        entry.times[index] = candle.time; entry.byTime.set(candle.time, candle)
       }
       entry.step = TIMEFRAME_MS[timeframe] / 1000
       entry.projectedBars = applyData() ?? 0
-      if (!this.viewport && entry.times.length > 0) this.initializeViewport(entry)
-      // Ordinary replay installs every pane first. advance() applies the new
-      // shared UTC viewport once, rather than applying the previous viewport here.
-      if (dirty === 0 && this.viewport && entry.times.length > 0) this.applyViewport(entry, this.viewport)
+      this.ensureView(id, entry)
+      this.applyViewport(id, entry)
       entry.pending = entry.chart.timeScale().getVisibleLogicalRange()
-    } finally {
-      entry.setting = false
-    }
+    } finally { entry.setting = false }
     if (dirty === 0) this.refreshCrosshair()
   }
-
-  private initializeViewport(entry: Entry): void {
-    const last = entry.times[entry.times.length - 1]
-    const to = this.bounds?.to ?? last
-    // The first populated chart sets the shared UTC horizon. Count observed
-    // candles, rather than elapsed time, so weekends do not shrink the view.
-    // Keep the full pre-roll installed for indicators and manual navigation.
-    const first = entry.times[Math.max(0, entry.times.length - 200)]
-    const width = last - first || 199 * entry.step
-    this.viewport = { from: to - width, to }
+  private ensureView(id: number, entry: Entry): void {
+    if (this.views.has(id) || !entry.times.length) return
+    if (this.legacy?.range) { this.views.set(id, structuredClone(this.legacy)); return }
+    const last = entry.times.length - 1
+    const from = Math.max(0, last - 199), to = Math.max(1, last + entry.projectedBars)
+    this.views.set(id, { range: { from: logicalToUtc(entry.times, from, entry.step), to: logicalToUtc(entry.times, to, entry.step) },
+      logical: { from, to }, step: entry.step, following: true })
   }
-
-  activate(id: number): void {
-    this.activeId = id
-    this.activeUntil = Date.now() + 1500
-  }
-
-  deactivate(): void {
-    this.activeId = null
-  }
-
+  activate(id: number): void { this.activeId = id; this.activeUntil = Date.now() + 1500 }
+  deactivate(): void { this.activeId = null }
   refresh(id: number): void {
     const entry = this.entries.get(id)
-    if (entry && this.viewport && entry.times.length > 0) this.applyViewport(entry, this.viewport)
+    if (entry) { this.ensureView(id, entry); this.applyViewport(id, entry) }
   }
-
   register(id: number, chart: IChartApi, series: ISeriesApi<'Candlestick'>,
     candles: readonly CandlestickData<UTCTimestamp>[], timeframe: Timeframe): () => void {
     const entry: Entry = {
-      chart, series, times: candles.map((candle) => candle.time as number),
-      byTime: new Map(candles.map((candle) => [candle.time as number, candle])),
+      chart, series, times: candles.map(c => c.time as number), byTime: new Map(candles.map(c => [c.time as number, c])),
       step: TIMEFRAME_MS[timeframe] / 1000, projectedBars: 0, setting: false, pending: null,
-      onRange: (range) => this.onRange(id, range),
-      onCrosshair: (param) => this.onCrosshair(id, param),
-    }
-    if (entry.times.length > 0 && !this.viewport) {
-      this.initializeViewport(entry)
+      onRange: range => this.onRange(id, range), onCrosshair: param => this.onCrosshair(id, param),
     }
     this.entries.set(id, entry)
     chart.timeScale().subscribeVisibleLogicalRangeChange(entry.onRange)
     chart.subscribeCrosshairMove(entry.onCrosshair)
-    if (this.viewport && candles.length > 0) this.applyViewport(entry, this.viewport)
+    this.refresh(id)
     return () => {
-      chart.timeScale().unsubscribeVisibleLogicalRangeChange(entry.onRange)
-      chart.unsubscribeCrosshairMove(entry.onCrosshair)
+      chart.timeScale().unsubscribeVisibleLogicalRangeChange(entry.onRange); chart.unsubscribeCrosshairMove(entry.onCrosshair)
       if (this.entries.get(id) === entry) {
         this.entries.delete(id)
-        if (this.pointer?.id === id) { this.pointer = null; this.publishCrosshair(id, null) }
+        if (this.pointer?.id === id) { this.pointer = null; this.publishCrosshair(id, null, null) }
       }
     }
   }
-
+  private recordRange(id: number, entry: Entry, range: { from: number; to: number }): void {
+    this.views.set(id, { range: { from: logicalToUtc(entry.times, range.from, entry.step), to: logicalToUtc(entry.times, range.to, entry.step) },
+      logical: { ...range }, step: entry.step, following: range.to >= entry.times.length - 1 + entry.projectedBars - 0.05 })
+  }
   private onRange(id: number, range: LogicalRange | null): void {
-    const source = this.entries.get(id)
-    if (!source || !range || source.times.length === 0 || this.applyingRange || source.setting) return
-    if (source.pending) {
-      const pending = source.pending
-      source.pending = null
+    const entry = this.entries.get(id)
+    if (!entry || !range || !entry.times.length || entry.setting) return
+    if (entry.pending) {
+      const pending = entry.pending; entry.pending = null
       if (Math.abs(range.from - pending.from) < 0.001 && Math.abs(range.to - pending.to) < 0.001) return
     }
     if (this.activeId !== id || Date.now() > this.activeUntil) return
-    const first = this.bounds?.from ?? source.times[0]
-    const last = this.bounds?.to ?? source.times[source.times.length - 1]
-    const fromUtc = this.bounds && range.from <= 0 ? first : logicalToUtc(source.times, range.from, source.step)
-    const toUtc = this.bounds && range.to >= source.times.length - 1 ? last : logicalToUtc(source.times, range.to, source.step)
-    const from = Math.max(first, Math.min(last, fromUtc))
-    const to = Math.max(first, Math.min(last, toUtc))
-    if (from >= to) return
-    this.viewport = { from, to }
-    this.following = to >= last - source.step
-    this.onViewportChange?.()
-    this.applyingRange = true
-    try {
-      for (const [targetId, target] of this.entries) {
-        if (targetId !== id && target.times.length > 0) this.applyViewport(target, this.viewport)
-      }
-    } finally {
-      this.applyingRange = false
-    }
+    this.recordRange(id, entry, range); this.onViewportChange?.()
   }
-
-  private applyViewport(target: Entry, viewport: UtcRange): void {
-    const started = performanceStart()
-    performanceCount('sync.request')
-    const lastIndex = target.times.length - 1
-    if (lastIndex === 0) {
-      target.chart.timeScale().fitContent()
-      return
-    }
-    const requestedFrom = utcToLogical(target.times, viewport.from, target.step)
-    const requestedTo = utcToLogical(target.times, viewport.to, target.step)
-    // Keep the requested span while shifting it onto existing candle positions.
-    // UTC times inside the final bucket map beyond its opening logical index.
-    const width = Math.min(lastIndex, requestedTo - requestedFrom)
-    const to = Math.max(width, Math.min(lastIndex, requestedTo))
-    const from = to - width
-    const projectedTo = to + (viewport.to >= target.times[lastIndex] ? target.projectedBars : 0)
-    if (from >= to) return
-    const current = target.chart.timeScale().getVisibleLogicalRange()
-    if (current && Math.abs(current.from - from) < 0.001 && Math.abs(current.to - projectedTo) < 0.001) return
-    target.setting = true
-    try {
-      performanceCount('sync.setRange')
-      target.chart.timeScale().setVisibleLogicalRange({ from, to: projectedTo })
-      // The library may clamp the requested range at a history edge. Suppress
-      // the range it actually applied when its change callback arrives.
-      target.pending = target.chart.timeScale().getVisibleLogicalRange()
-    } finally {
-      target.setting = false
-      performanceEnd('sync.apply', started)
-    }
+  // Public time-scale API: the right logical edge never depends on pointer X.
+  wheel(id: number, delta: number): void {
+    const entry = this.entries.get(id), range = entry?.chart.timeScale().getVisibleLogicalRange()
+    if (!entry || !range || !Number.isFinite(delta) || !delta || entry.times.length < 2) return
+    const available = entry.times.length - 1 + entry.projectedBars
+    const width = Math.max(Math.min(5, available), Math.min(available, (range.to - range.from) * Math.exp(Math.max(-1, Math.min(1, delta * 0.002)))))
+    const to = Math.min(available, Math.max(width, range.to)), next = { from: Math.max(0, to - width), to }
+    this.activate(id); entry.setting = true
+    try { entry.chart.timeScale().setVisibleLogicalRange(next); entry.pending = entry.chart.timeScale().getVisibleLogicalRange() }
+    finally { entry.setting = false }
+    this.recordRange(id, entry, entry.pending ?? next); this.onViewportChange?.(); this.refreshCrosshair()
   }
-
+  private applyViewport(id: number, entry: Entry): void {
+    const view = this.views.get(id), last = entry.times.length - 1
+    if (!view?.range || last < 0) return
+    if (last === 0 && !entry.projectedBars) { entry.chart.timeScale().fitContent(); return }
+    const started = performanceStart(); performanceCount('sync.request')
+    const sameStep = view.step === entry.step && view.logical
+    const width = Math.max(1, Math.min(last + entry.projectedBars,
+      sameStep ? view.logical!.to - view.logical!.from : utcToLogical(entry.times, view.range.to, entry.step) - utcToLogical(entry.times, view.range.from, entry.step)))
+    const to = view.following ? last + entry.projectedBars : Math.max(width, Math.min(last + entry.projectedBars,
+      sameStep ? view.logical!.to : utcToLogical(entry.times, view.range.to, entry.step)))
+    const next = { from: Math.max(0, to - width), to }
+    const current = entry.chart.timeScale().getVisibleLogicalRange()
+    if (!current || Math.abs(current.from - next.from) > 0.001 || Math.abs(current.to - next.to) > 0.001) {
+      const setting = entry.setting; entry.setting = true
+      try {
+        performanceCount('sync.setRange'); entry.chart.timeScale().setVisibleLogicalRange(next)
+        entry.pending = entry.chart.timeScale().getVisibleLogicalRange()
+      } finally { entry.setting = setting }
+    }
+    const following = view.following
+    this.recordRange(id, entry, next); this.views.get(id)!.following = following
+    performanceEnd('sync.apply', started)
+  }
+  suspendCrosshair(suspended: boolean): void {
+    this.suspended = suspended; this.pointer = null
+    this.applyingCrosshair = true
+    try { for (const entry of this.entries.values()) { entry.chart.clearCrosshairPosition(); entry.crosshair = null } }
+    finally { this.applyingCrosshair = false }
+  }
   private onCrosshair(id: number, param: MouseEventParams): void {
-    if (this.applyingCrosshair) return
+    if (this.applyingCrosshair || this.suspended) return
     if (param.sourceEvent) {
       this.pointer = { id, time: typeof param.time === 'number' ? param.time : null, x: param.point?.x, y: param.point?.y, pane: param.paneIndex }
       const source = this.entries.get(id)
       if (source) source.crosshair = undefined
-      this.publishCrosshair(id, this.pointer.time)
+      const price = this.pointerPrice()
+      this.publishCrosshair(id, this.pointer.time, price)
     } else if (this.pointer?.id === id && !param.point) {
-      this.pointer = null
-      this.publishCrosshair(id, null)
+      this.pointer = null; this.publishCrosshair(id, null, null)
     }
   }
-
+  private pointerPrice(): number | null {
+    const p = this.pointer, source = p && this.entries.get(p.id)
+    if (!p || !source || p.y === undefined) return null
+    const series = (p.pane ?? 0) === 0 ? source.series : source.chart.panes()[p.pane!]?.getSeries()[0]
+    return series?.coordinateToPrice(p.y) ?? null
+  }
   private refreshCrosshair(): void {
-    const pointer = this.pointer
-    if (!pointer) return
-    const source = this.entries.get(pointer.id)
+    const p = this.pointer
+    if (!p || this.suspended) return
+    const source = this.entries.get(p.id)
     if (!source) { this.pointer = null; return }
-    const time = pointer.x === undefined ? pointer.time : source.chart.timeScale().coordinateToTime(pointer.x)
-    if (typeof time === 'number' && pointer.y !== undefined) {
-      const series = source.chart.panes()[pointer.pane ?? 0]?.getSeries()[0]
-      const price = series?.coordinateToPrice(pointer.y)
-      if (price !== null && price !== undefined && (source.crosshair?.time !== time || source.crosshair.price !== price)) {
-        performanceCount('sync.crosshair.restore')
-        source.chart.setCrosshairPosition(price, time as UTCTimestamp, series!)
-        source.crosshair = { time, price }
+    const time = p.x === undefined ? p.time : source.chart.timeScale().coordinateToTime(p.x)
+    const price = this.pointerPrice()
+    this.applyingCrosshair = true
+    try {
+      if (typeof time === 'number' && price !== null) {
+        const series = (p.pane ?? 0) === 0 ? source.series : source.chart.panes()[p.pane!]?.getSeries()[0]
+        if (series) { source.chart.setCrosshairPosition(price, time as UTCTimestamp, series); source.crosshair = { time, price } }
       }
-    }
-    this.publishCrosshair(pointer.id, typeof time === 'number' ? time : null)
+    } finally { this.applyingCrosshair = false }
+    this.publishCrosshair(p.id, typeof time === 'number' ? time : null, price)
   }
-
-  private publishCrosshair(id: number, utc: number | null): void {
+  private publishCrosshair(id: number, utc: number | null, price: number | null): void {
     this.applyingCrosshair = true
     try {
       for (const [targetId, target] of this.entries) {
         if (targetId === id) continue
         const bucket = utc === null ? null : Math.floor(utc / target.step) * target.step
         const candle = bucket === null ? undefined : target.byTime.get(bucket)
-        if (candle) {
-          if (target.crosshair?.time === candle.time && target.crosshair.price === candle.close) continue
-          target.crosshair = { time: candle.time, price: candle.close }
-          performanceCount('sync.crosshair.set')
-          target.chart.setCrosshairPosition(candle.close, candle.time, target.series)
+        const pane = this.pointer?.pane ?? 0
+        const series = pane === 0 ? target.series : target.chart.panes()[pane]?.getSeries()[0]
+        if (candle && series && price !== null && Number.isFinite(price)) {
+          if (target.crosshair?.time === candle.time && target.crosshair.price === price) continue
+          target.crosshair = { time: candle.time, price }; performanceCount('sync.crosshair.set')
+          target.chart.setCrosshairPosition(price, candle.time, series)
         } else if (target.crosshair !== null) {
-          target.crosshair = null
-          performanceCount('sync.crosshair.clear')
-          target.chart.clearCrosshairPosition()
+          target.crosshair = null; performanceCount('sync.crosshair.clear'); target.chart.clearCrosshairPosition()
         }
       }
-    } finally {
-      this.applyingCrosshair = false
-    }
+    } finally { this.applyingCrosshair = false }
   }
 }

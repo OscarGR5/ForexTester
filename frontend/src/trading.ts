@@ -344,3 +344,27 @@ export function formatTradingNumber(value: number, digits: number): string {
 export function tradingTime(timestamp: number): string {
   return `${new Date(timestamp).toISOString().slice(0, 16).replace('T', ' ')} UTC`
 }
+
+// Historical setup records are never regrouped. Only new submissions use this policy.
+export function activeSetupId(state: TradingState): string | null {
+  return [...state.pending, ...state.positions][0]?.setupId ?? null
+}
+export function automaticSetupError(state: TradingState, direction: Direction, setupId: string | null): string | null {
+  const active = [...new Set([...state.pending, ...state.positions].map(p => p.setupId))]
+  if (active.length > 1) return 'Resolve the existing concurrent setups before submitting another entry.'
+  const current = active[0] ?? null
+  if (setupId !== null && setupId !== current) return 'Only the active setup can accept an entry.'
+  if (!current) return null
+  const setup = state.setups.find(item => item.id === current)
+  if (!setup) return 'Active setup does not exist in this session.'
+  if (setup.direction !== direction) return 'The entry direction must match the active setup.'
+  const submitted = [...state.pending, ...state.positions, ...state.closed, ...state.cancelled, ...state.rejected]
+    .filter(entry => entry.setupId === current).length
+  if (submitted >= 2) return 'The active setup has used both submitted entry slots. Resolve it before starting another setup.'
+  return null
+}
+
+export function requestAutomaticEntry(state: TradingState, direction: Direction, sizing: EntrySizing, stopPrice: number, permission: TradingPermission): TradingState {
+  if (automaticSetupError(state, direction, activeSetupId(state))) return state
+  return requestEntry(state, direction, sizing, stopPrice, permission, activeSetupId(state))
+}

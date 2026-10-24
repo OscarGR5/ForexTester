@@ -18,7 +18,7 @@ import { sessionHistory, sessionSimulation } from './sessionFixtures'
 import { createEquityLedger } from './equity'
 import { lifecycleOf } from './sessionTypes'
 vi.mock('lightweight-charts', () => ({
-  CandlestickSeries: {}, LineSeries: {}, LineStyle: { Dashed: 2, Dotted: 1 }, ColorType: { Solid: 'solid' },
+  CrosshairMode: { Normal: 0 }, CandlestickSeries: {}, LineSeries: {}, LineStyle: { Dashed: 2, Dotted: 1 }, ColorType: { Solid: 'solid' },
   createChart: vi.fn(() => {
     let range = { from: 0, to: 2 }
     const scale = { getVisibleLogicalRange: () => range, fitContent: vi.fn(),
@@ -29,7 +29,7 @@ vi.mock('lightweight-charts', () => ({
     let autoScale = true, priceRange = { from: 1.09, to: 1.11 }
     const priceScale = { applyOptions: vi.fn((next: { autoScale?: boolean }) => { if (typeof next.autoScale === 'boolean') autoScale = next.autoScale }), options: () => ({ autoScale }), getVisibleRange: () => priceRange, setVisibleRange: vi.fn((next: typeof priceRange) => { priceRange = next }) }
     return {
-      setData: vi.fn((next: typeof values) => { values = next.map((candle) => ({ ...candle })) }),
+      applyOptions: vi.fn(), setData: vi.fn((next: typeof values) => { values = next.map((candle) => ({ ...candle })) }),
       update: vi.fn((candle: typeof values[number], historical = false) => {
         if (historical) {
           const index = values.findIndex((value) => value.time === candle.time)
@@ -166,8 +166,8 @@ it('cancels drafts on Escape, play, restart and session switch without submittin
 it('maintains independent stops and setup grouping, changes stop history, executes one stop and one manual close',async()=>{
  await start();await order('Buy',1.099);await click('Next Candle')
  const first=host.querySelector('[data-position-id]')!.getAttribute('data-position-id')!
- const setupOption=host.querySelector<HTMLSelectElement>('[aria-label="Setup assignment"]')!.options[1].value
- await select('Setup assignment',setupOption);await order('Buy',1.098);await click('Next Candle')
+ expect(host.querySelector('[aria-label="Setup assignment"]')).toBeNull()
+ await order('Buy',1.098);await click('Next Candle')
  expect(host.querySelectorAll('[data-position-id]').length).toBe(2);expect(button('Buy').disabled).toBe(true)
  await click(`Modify SL ${first}`);await pick(1.0995);expect(host.querySelector(`[data-position-id="${first}"]`)!.textContent).toContain('1.09900')
  await click('Confirm SL change');await click('Next Candle');await click('Next Candle');await click('Next Candle')
@@ -231,7 +231,7 @@ it('keeps production chart candles behind the clock and offers explicit review a
  await start();const candlestick=()=>vi.mocked(chart().addSeries).mock.results[0].value.data()
  expect(candlestick().at(-1).time).toBe(beginning/1000)
  for(let i=1;i<12;i++)await click('Next Candle')
- expect(candlestick().at(-1).time).toBe((beginning+11*60000)/1000);expect(host.querySelector('.phase-trading')).toBeTruthy();expect(button('Buy').disabled).toBe(true)
+ expect(candlestick().at(-1).time).toBe(beginning/1000);expect(candlestick().at(-1).close).toBe(bid.at(-1)!.close);expect(host.querySelector('.phase-trading')).toBeTruthy();expect(button('Buy').disabled).toBe(true)
  await click('Review Results');await until(()=>host.querySelector('.phase-finished'));expect(host.querySelector('.trading-journal')).toBeTruthy()
 })
 
@@ -352,6 +352,9 @@ it('restores a selected checkpoint and retains the ordinary management dialog in
  await mount();expect(host.querySelectorAll('.startup-selection .saved-session')).toHaveLength(1)
  await click('Resume backtest');await until(()=>host.querySelector('.phase-trading'))
  expect(host.querySelector('.replay-clock')?.textContent).toContain('2024-01-01 00:05 UTC')
+ const timeframe=host.querySelector<HTMLSelectElement>('[aria-label="Chart 1 timeframe"]')!
+ expect(timeframe.value).toBe('M1');expect(timeframe.selectedOptions[0].textContent).toBe('M1 (legacy)')
+ await select('Chart 1 timeframe','D1');expect([...timeframe.options].map(o=>o.value)).toEqual(['M5','M15','H1','H4','D1'])
  await click('Sessions / settings');expect(host.querySelector('dialog.management-dialog')).not.toBeNull()
  await click('Save now');await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
  const restored = (await disk.storage.list()).sessions[0]

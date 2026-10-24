@@ -1,0 +1,18 @@
+{
+  "unit": {
+    "command": "npm test",
+    "files": 46,
+    "passed": 573,
+    "failed": 0
+  },
+  "typecheck": "passed",
+  "build": "passed; existing 500 kB chunk advisory (557.60 kB minified client JS)",
+  "diffCheck": "passed",
+  "designScan": {
+    "newFindings": 0,
+    "existingFindings": [
+      "Pinned Inter font",
+      "Existing cache-timeline rollover marker border"
+    ]
+  }
+}

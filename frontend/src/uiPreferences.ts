@@ -1,10 +1,11 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react'
+import { validViewportState } from './chartSync'
 import { TIMEFRAMES } from './history'
 import { defaultIndicatorSettings, indicatorPreset, validateIndicatorSettings } from './indicators'
 import type { WorkspaceSettings } from './sessionTypes'
 
-export const defaultWorkspace = (): WorkspaceSettings => ({ chartCount: 1, timeframes: ['M1', 'M5', 'H1'],
-  indicators: [{ M1: indicatorPreset('M1') }, { M5: indicatorPreset('M5') }, { H1: indicatorPreset('H1') }], statisticsScope: 'setups', journalScope: 'setups', viewport: null })
+export const defaultWorkspace = (): WorkspaceSettings => ({ chartCount: 1, timeframes: ['H1', 'M5', 'H4'],
+  indicators: [{ H1: indicatorPreset('H1') }, { M5: indicatorPreset('M5') }, { H4: indicatorPreset('H4') }], statisticsScope: 'setups', journalScope: 'setups', viewport: null })
 export const UI_PREFIX = 'forextester:ui:v1:'
 export const uiKey = (id: string) => `${UI_PREFIX}${id}`
 export function validWorkspace(value: unknown): value is WorkspaceSettings {
@@ -21,8 +22,7 @@ export function validWorkspace(value: unknown): value is WorkspaceSettings {
         }
       }
     }
-    return w.viewport === null || !!w.viewport && typeof w.viewport.following === 'boolean' && (w.viewport.range === null ||
-      Number.isFinite(w.viewport.range.from) && Number.isFinite(w.viewport.range.to) && w.viewport.range.from < w.viewport.range.to)
+    return w.viewport === null || validViewportState(w.viewport)
   } catch { return false }
 }
 function readEnvelope(id: string): Record<string, unknown> {

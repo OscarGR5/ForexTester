@@ -1,6 +1,6 @@
 import { verifyReplayWorkspace } from './chart-replay-verification'
 // Requires the existing verification-only playwright-core and a Chromium installation.
-import { chromium } from 'playwright-core'
+const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ?? 'playwright-core')
 import { createServer } from 'vite'
 import { spawn } from 'node:child_process'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
@@ -29,7 +29,7 @@ try {
   direct.on('pageerror', e => errors.push(e.message))
   await direct.goto(origin + '/task19-benchmark.html')
   if (!process.env.APP_ONLY) for (const days of [2, 90]) for (const [scenario, timeframes, batch, late] of [
-    ['A', ['M1'], 1, false], ['B', ['M5', 'H1'], 10, false], ['C', ['M5', 'M15', 'H4'], 100, false], ['D', ['M5', 'M15', 'H4'], 100, true],
+    ['A', ['M1'], 1, false], ['B', ['M5', 'H1'], 10, false], ['C', ['M5', 'M15', 'H4'], 100, false], ['D', ['M5', 'M15', 'H4'], 100, true], ['E', ['D1', 'H1', 'M5'], 100, true],
   ] as const) {
     if (process.env.SCENARIO && process.env.SCENARIO !== scenario || process.env.DAYS && Number(process.env.DAYS) !== days) continue
     // Keep the real browser pointer inside the first price pane as it mounts.
