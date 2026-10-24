@@ -48,11 +48,12 @@ export class HistoryRequestError extends Error {
   }
 }
 
-export const TIMEFRAMES = ['M1', 'M5', 'M15', 'H1', 'H4'] as const
+export const TIMEFRAMES = ['M1', 'M5', 'M15', 'H1', 'H4', 'D1'] as const
+export const VISIBLE_TIMEFRAMES = ['M5', 'M15', 'H1', 'H4', 'D1'] as const
 export type Timeframe = typeof TIMEFRAMES[number]
 
 export const TIMEFRAME_MS: Record<Timeframe, number> = {
-  M1: 60_000, M5: 300_000, M15: 900_000, H1: 3_600_000, H4: 14_400_000,
+  M1: 60_000, M5: 300_000, M15: 900_000, H1: 3_600_000, H4: 14_400_000, D1: 86_400_000,
 }
 
 export function aggregateBidCandles(candles: readonly Candle[], timeframe: Timeframe): Candle[] {

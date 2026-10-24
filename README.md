@@ -1,6 +1,6 @@
 # ForexTester
 
-Personal strategy research using CME **6E Euro FX futures** trade prices from Databento. New backtests use `GLBX.MDP3`, `ohlcv-1m`, `6E.v.0`, input symbology `continuous`. The app keeps the Setup → Trading → Results workflow, one to three synchronized charts, indicators, manual replay, two independent positions, journal, statistics and durable local sessions.
+Personal strategy research using CME **6E Euro FX futures** trade prices from Databento. New backtests use `GLBX.MDP3`, `ohlcv-1m`, `6E.v.0`, input symbology `continuous`. The app keeps the Setup → Trading → Results workflow, one to three independently navigable charts with synchronized free crosshairs, indicators, manual replay, two independent positions, journal, statistics and durable local sessions.
 
 These are simplified research fills with hypothetical forex-style sizing applied to futures-derived prices. They do not represent accurate EUR/USD CFD execution or exchange-accurate futures contracts.
 
@@ -73,7 +73,7 @@ There are two independently managed entry/position slots. Stops can be placed on
 
 Hypothetical forex-style sizing retains **1 lot = 100,000 EUR**, a pip convention of `0.0001`, and gross USD PnL = signed price difference × 100,000 × lots. Risk sizing uses the fixed configured reference balance and a combined gross planned-risk cap. This is not futures contract sizing. Gaps can exceed planned losses. Commission is configurable USD per hypothetical standard lot, split evenly between entry and exit; risk sizing excludes fees. No fabricated spread, margin, slippage beyond adverse gap-open handling, swaps or financing is modeled.
 
-Indicators and higher timeframe candles use only the revealed M1 prefix. Replay supports paused single stepping and 1×/10×/100× batches. Chart presets, independently configured indicators and synchronized viewport/crosshair behavior are retained. Results preserve the distinction between realized journal statistics and account PnL including open equity. Finishing creates no forced exits.
+Indicators and higher timeframe candles use only the revealed M1 prefix. Replay supports paused single stepping and 1×/10×/100× batches. Charts offer M5, M15, H1, H4 and D1, start on H1, and retain legacy saved M1 selections. Each pane retains its own zoom, UTC range, replay-follow state and price scale. Wheel zoom anchors to the right edge. D1 aggregates only revealed M1 observations on UTC day boundaries; its Ichimoku preset reports incomplete warm-up until 78 daily candles are completed. The standard pre-roll and H4-based session start do not change. Paused replay permits dragging existing stops, with Modify SL and keyboard entry as alternatives. New entries automatically form one setup of up to two same-direction submissions; historical setup records retain their original grouping. Results preserve the distinction between realized journal statistics and account PnL including open equity. Finishing creates no forced exits.
 
 ## Durable sessions and legacy history
 

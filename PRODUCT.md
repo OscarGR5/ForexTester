@@ -7,6 +7,6 @@ Personal discretionary strategy research for the project lead using CME 6E futur
 ## Core workflow
 Choose a UTC historical period from the validated daily cache timeline or cache-based 7-, 30-, and 90-day presets, which include coverage for the 30-day indicator pre-roll. Review readiness, configure the account, then use one Start backtest action to load the selected data and open a paused replay at the earliest eligible minute with 78 completed H4 candles from the same contract. Missing data requires explicit paid-download consent before proceeding. Restoring a saved session preserves its replay timestamp without recomputing the start.
 
-Place manual orders with chart-selected independent stops, finish and review results.
+Place up to two same-direction entries in one automatically assigned setup, manage independent stops with dragging or keyboard entry, then finish and review results. Navigate each chart independently; crosshairs synchronize UTC time and pointer price. D1 is an analysis view and reports incomplete Ichimoku warm-up honestly.
 ## Constraints
 Dark trading terminal. Chart dominates. No automated strategies, signals, take-profit orders, broker integration or unapproved financial formula changes. No fabricated spread or prices; stop replay at contract rollover. Preserve durable sessions, historical fingerprints, local chart preferences and no-lookahead behavior.

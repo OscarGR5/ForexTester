@@ -1,3 +1,4 @@
+import { validViewportState } from './chartSync.js'
 import { accountRiskError, exceedsRisk } from './risk.js'
 import { commissionConfigError, perSideCommissionUsd } from './commissions.js'
 import { combinedRisk, grossPnl, type TradingState } from './trading.js'
@@ -150,7 +151,7 @@ export async function validateRecord(record: SessionRecord): Promise<void> {
       }
     })
     const viewport = workspace.viewport
-    if (viewport) requireValid(typeof viewport.following === 'boolean' && (viewport.range === null || finite(viewport.range.from) && finite(viewport.range.to) && viewport.range.from < viewport.range.to))
+    if (viewport) requireValid(validViewportState(viewport))
   } catch (error) { if (error instanceof Error && error.message === corrupt().message) throw error; throw corrupt() }
 }
 

@@ -1,5 +1,6 @@
+import { useStopDrag, type StopInteraction } from './useStopDrag'
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { CandlestickSeries, ColorType, LineStyle, createChart, type IChartApi, type IPriceLine, type ISeriesApi, type Time, type MouseEventParams } from 'lightweight-charts'
+import { CandlestickSeries, CrosshairMode, ColorType, LineStyle, createChart, type IChartApi, type IPriceLine, type ISeriesApi, type Time, type MouseEventParams } from 'lightweight-charts'
 import { ChartTimeSlots } from './chartTimeSlots'
 import { performanceStart, performanceEnd, performanceCount, performanceValue } from './replayPerformance'
 import { readUi, validPriceView, writeUi, type PriceView } from './uiPreferences'
@@ -9,7 +10,7 @@ import { IndicatorSeries } from './indicatorSeries'
 import type { IndicatorSettings } from './indicators'
 import { ReplayBars } from './replayBars'
 import { indicatorWarmupRequirement } from './indicatorSettings'
-import { TIMEFRAMES, type Timeframe, type Candle } from './history'
+import { VISIBLE_TIMEFRAMES, type Timeframe, type Candle } from './history'
 import type { Position } from './trading'
 import type { StopDraft } from './TradingDock'
 
@@ -21,6 +22,7 @@ interface ChartPaneProps {
   source: readonly Candle[]
   count: number
   synchronizer: ChartSynchronizer
+  stopInteraction?: StopInteraction
   positions: Position[]
   placement: StopDraft | null
   onPick: (price: number) => void
@@ -29,7 +31,7 @@ interface ChartPaneProps {
   onTimeframeChange: (id: number, timeframe: Timeframe) => void
 }
 
-export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, placement, onPick }: ChartPaneProps) {
+export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, placement, onPick, stopInteraction }: ChartPaneProps) {
   const [readiness, setReadiness] = useState('')
   const container = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
@@ -37,10 +39,13 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, se
   const timeSlots = useRef<ChartTimeSlots | null>(null)
   const updateSettings = useCallback((next: IndicatorSettings) => onSettingsChange(id, next), [id, onSettingsChange])
   const indicatorsRef = useRef<IndicatorSeries | null>(null)
+  const savePriceRef = useRef<(() => void) | null>(null)
   const stopLines = useRef(new Map<string, IPriceLine>())
   const previousSettings = useRef<IndicatorSettings | null>(null)
   const unregisterRef = useRef<(() => void) | null>(null)
   const previous = useRef<{ source: readonly Candle[]; count: number; bars: ReplayBars; timeframe: Timeframe; synchronizer: ChartSynchronizer } | null>(null)
+
+  const stopDrag = useStopDrag(container, chartRef, seriesRef, positions, synchronizer, stopInteraction, !!placement)
 
   useLayoutEffect(() => {
     if (!container.current) return
@@ -56,7 +61,9 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, se
         vertLines: { visible: false },
         horzLines: { visible: false },
       },
+      handleScale: { mouseWheel: false },
       crosshair: {
+        mode: CrosshairMode.Normal,
         vertLine: { color: '#9598a1', style: LineStyle.Dashed, width: 1 },
         horzLine: { color: '#9598a1', style: LineStyle.Dashed, width: 1 },
       },
@@ -79,6 +86,7 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, se
     timeSlots.current = new ChartTimeSlots(chart)
     indicatorsRef.current = new IndicatorSeries(chart)
     return () => {
+      savePriceRef.current?.()
       unregisterRef.current?.()
       unregisterRef.current = null
       indicatorsRef.current?.dispose()
@@ -92,6 +100,31 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, se
       previous.current = null
     }
   }, [id])
+
+  useEffect(() => {
+    const element = container.current
+    if (!element) return
+    const wheel = (event: WheelEvent) => {
+      if (!chartRef.current || placement || stopInteraction?.preview) return
+      const box = element.getBoundingClientRect(), chart = chartRef.current
+      if (event.clientX - box.left > chart.timeScale().width() || event.clientY - box.top >= chart.panes().reduce((height, pane) => height + pane.getHeight(), 0)) return
+      event.preventDefault(); event.stopPropagation()
+      synchronizer.wheel(id, event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? box.height : 1))
+    }
+    element.addEventListener('wheel', wheel, { passive: false, capture: true })
+    return () => element.removeEventListener('wheel', wheel, true)
+  }, [id, synchronizer, placement, stopInteraction?.preview])
+
+  useEffect(() => {
+    if (!container.current || typeof ResizeObserver === 'undefined') return
+    let frame = 0
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => synchronizer.refresh(id))
+    })
+    observer.observe(container.current)
+    return () => { observer.disconnect(); cancelAnimationFrame(frame) }
+  }, [id, synchronizer])
 
   useLayoutEffect(() => {
     const chart = chartRef.current!
@@ -159,15 +192,14 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, se
     }
     for (const position of positions) {
       const ordinal = Number(position.id.split('-').at(-1))
-      const overlapping = positions.filter((item) => item.stopPrice === position.stopPrice).map((item) => item.id)
-      const options = { price: position.stopPrice, color: ordinal % 2 ? '#ef9a9a' : '#ffcc80', lineWidth: 1 as const,
+      const options = { price: stopInteraction?.preview?.id === position.id ? stopInteraction.preview.price : position.stopPrice, color: ordinal % 2 ? '#ef9a9a' : '#ffcc80', lineWidth: 1 as const,
         lineStyle: ordinal % 2 ? LineStyle.Dashed : LineStyle.Dotted, axisLabelVisible: true,
-        title: `SL ${overlapping.join(' / ')} · ${position.stopPrice.toFixed(5)}` }
+        title: '' }
       const line = stopLines.current.get(position.id)
       if (line) line.applyOptions(options)
       else stopLines.current.set(position.id, series.createPriceLine(options))
     }
-  }, [positions])
+  }, [positions, stopInteraction?.preview])
 
   useEffect(() => {
     const scale = seriesRef.current!.priceScale()
@@ -178,6 +210,7 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, se
       const autoScale = scale.options().autoScale
       writeUi(sessionId, `price:${id}:${timeframe}`, { autoScale, range: autoScale ? null : scale.getVisibleRange() })
     }
+    savePriceRef.current = save
     let timer: ReturnType<typeof setTimeout> | null = null
     const schedule = () => { if (!timer) timer = setTimeout(() => { timer = null; save() }, 250) }
     const element = container.current
@@ -204,23 +237,27 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, se
     const click = (event: MouseEventParams<Time>) => { const price = getPrice(event); if (placement.price === null && price !== null) onPick(price) }
     chart.applyOptions({ handleScroll: false, handleScale: false })
     chart.subscribeCrosshairMove(move); chart.subscribeClick(click)
-    return () => { chart.unsubscribeCrosshairMove(move); chart.unsubscribeClick(click); if (line) series.removePriceLine(line); chart.applyOptions({ handleScroll: true, handleScale: true }) }
+    return () => { chart.unsubscribeCrosshairMove(move); chart.unsubscribeClick(click); if (line) series.removePriceLine(line); chart.applyOptions({ handleScroll: true, handleScale: { mouseWheel: false, pinch: true, axisPressedMouseMove: true, axisDoubleClickReset: true } }) }
   }, [placement, onPick])
 
   return (
     <section className={`chart-pane${placement ? " placing-stop" : ""}`} aria-label={`Chart ${id + 1}: ${instrument} ${timeframe} ${instrument === '6E' ? 'trade prices' : 'bid'}`}
       onPointerDownCapture={() => synchronizer.activate(id)}
-      onPointerMoveCapture={(event) => { if (event.buttons) synchronizer.activate(id) }}
-      onWheelCapture={() => synchronizer.activate(id)}>
+      onPointerMoveCapture={(event) => { if (event.buttons) synchronizer.activate(id) }}>
       <div className="pane-toolbar">
         <span className="instrument"><strong>{instrument}</strong><span className="bid-label">{instrument === '6E' ? 'Trade' : 'Bid'}</span></span>
         <label>Timeframe <select aria-label={`Chart ${id + 1} timeframe`} value={timeframe}
           onChange={(event) => onTimeframeChange(id, event.target.value as Timeframe)}>
-          {TIMEFRAMES.map((option) => <option key={option} value={option}>{option}</option>)}
+          {timeframe === 'M1' && <option value="M1">M1 (legacy)</option>}
+          {VISIBLE_TIMEFRAMES.map((option) => <option key={option} value={option}>{option}</option>)}
         </select></label>
         {readiness && <span className="indicator-readiness" role="status">{readiness}</span>}
         <IndicatorControls key={timeframe} id={id} settings={settings} onChange={updateSettings} />
       </div>
+      {stopDrag.choices.length > 1 && <div className="stop-selector" role="group" aria-label="Select overlapping stop-loss">
+        <span>Hold a position button and drag vertically:</span>
+        {stopDrag.choices.map(p => <button key={p.id} onPointerDown={event => stopDrag.begin(p.id, event.nativeEvent)}>{p.id} · {p.direction} · SL {p.stopPrice.toFixed(5)}</button>)}
+      </div>}
       <div ref={container} className="chart-canvas" aria-hidden="true" />
     </section>
   )

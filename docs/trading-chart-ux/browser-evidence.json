@@ -1,0 +1,404 @@
+{
+  "isolatedSessions": "/tmp/forextester-chart-ux-WApT2G",
+  "providerRequests": 0,
+  "paidSubmissions": 0,
+  "screenshots": [
+    "docs/trading-chart-ux/1-charts-1440.png",
+    "docs/trading-chart-ux/1-charts-390.png",
+    "docs/trading-chart-ux/2-charts-1440.png",
+    "docs/trading-chart-ux/2-charts-390.png",
+    "docs/trading-chart-ux/2-charts-390-last-pane.png",
+    "docs/trading-chart-ux/3-charts-1440.png",
+    "docs/trading-chart-ux/3-charts-390.png",
+    "docs/trading-chart-ux/3-charts-390-last-pane.png",
+    "docs/trading-chart-ux/independent-zoom.png",
+    "docs/trading-chart-ux/free-crosshair.png",
+    "docs/trading-chart-ux/sl-drag-cancel-preview.png",
+    "docs/trading-chart-ux/sl-drag-2-1-preview.png",
+    "docs/trading-chart-ux/sl-drag-2-2-preview.png",
+    "docs/trading-chart-ux/invalid-sl-snapback.png",
+    "docs/trading-chart-ux/sl-drag-2-3-preview.png",
+    "docs/trading-chart-ux/d1-warmup.png",
+    "docs/trading-chart-ux/durable-restored.png",
+    "docs/trading-chart-ux/journal-setup-grouping.png"
+  ],
+  "errors": [],
+  "checks": {
+    "layout-1-1440": [
+      {
+        "x": 8,
+        "y": 124,
+        "width": 1424,
+        "height": 784
+      }
+    ],
+    "layout-1-390": [
+      {
+        "x": 0,
+        "y": 250,
+        "width": 390,
+        "height": 402
+      }
+    ],
+    "layout-2-1440": [
+      {
+        "x": 8,
+        "y": 124,
+        "width": 710,
+        "height": 784
+      },
+      {
+        "x": 722,
+        "y": 124,
+        "width": 710,
+        "height": 784
+      }
+    ],
+    "layout-2-390": [
+      {
+        "x": 0,
+        "y": 250,
+        "width": 390,
+        "height": 772
+      },
+      {
+        "x": 0,
+        "y": 1026,
+        "width": 390,
+        "height": 772
+      }
+    ],
+    "wheel-2-charts": {
+      "before": {
+        "0": {
+          "from": 93,
+          "to": 318
+        },
+        "1": {
+          "from": 3305,
+          "to": 3504
+        }
+      },
+      "after": {
+        "0": {
+          "from": 126.26764748260246,
+          "to": 318
+        },
+        "1": {
+          "from": 3305,
+          "to": 3504
+        }
+      }
+    },
+    "layout-3-1440": [
+      {
+        "x": 8,
+        "y": 124,
+        "width": 710,
+        "height": 784
+      },
+      {
+        "x": 722,
+        "y": 124,
+        "width": 710,
+        "height": 390
+      },
+      {
+        "x": 722,
+        "y": 518,
+        "width": 710,
+        "height": 390
+      }
+    ],
+    "layout-3-390": [
+      {
+        "x": 0,
+        "y": 250,
+        "width": 390,
+        "height": 772
+      },
+      {
+        "x": 0,
+        "y": 1026,
+        "width": 390,
+        "height": 772
+      },
+      {
+        "x": 0,
+        "y": 1802,
+        "width": 390,
+        "height": 772
+      }
+    ],
+    "wheel-3-charts": {
+      "before": {
+        "0": {
+          "from": 126.26764748260246,
+          "to": 318
+        },
+        "1": {
+          "from": 3305,
+          "to": 3504
+        },
+        "2": {
+          "from": 0,
+          "to": 104
+        }
+      },
+      "after": {
+        "0": {
+          "from": 154.61646665841954,
+          "to": 318
+        },
+        "1": {
+          "from": 3305,
+          "to": 3504
+        },
+        "2": {
+          "from": 0,
+          "to": 104
+        }
+      }
+    },
+    "independentWheel": {
+      "original": {
+        "0": {
+          "from": 154.61646665841954,
+          "to": 318
+        },
+        "1": {
+          "from": 3305,
+          "to": 3504
+        }
+      },
+      "zoomed": {
+        "0": {
+          "from": 216.90098307362513,
+          "to": 318
+        },
+        "1": {
+          "from": 3305,
+          "to": 3504
+        }
+      },
+      "zoomOut": {
+        "0": {
+          "from": 199.35920459031405,
+          "to": 318
+        },
+        "1": {
+          "from": 3305,
+          "to": 3504
+        }
+      }
+    },
+    "independentPanAndManualHold": {
+      "0": {
+        "from": 170.37789390101125,
+        "to": 289.0186893106972
+      },
+      "1": {
+        "from": 3305,
+        "to": 3504
+      }
+    },
+    "crosshair": {
+      "source": {
+        "time": 1704456000,
+        "point": {
+          "x": 478,
+          "y": 415
+        },
+        "paneIndex": 0
+      },
+      "target": {
+        "price": 1.1010596698113206,
+        "time": 1704456000,
+        "y": 188.9598661141569
+      },
+      "sourcePrice": 1.1010596698113206,
+      "targetPrice": 1.1010596698113206,
+      "mode": 0,
+      "sourceScale": {
+        "from": 1.0908,
+        "to": 1.114375
+      },
+      "targetScale": {
+        "from": 1.0908,
+        "to": 1.1041426076146146
+      }
+    },
+    "invalidRelease": true,
+    "longStops": [
+      {
+        "id": "2-1",
+        "setupId": "2-S1",
+        "direction": "buy",
+        "mode": "manual",
+        "lots": 0.01,
+        "requestedRiskPercent": null,
+        "requestedRiskUsd": null,
+        "stopPrice": 1.10004,
+        "requestedAt": 1704470460000,
+        "initialStopPrice": 1.1004,
+        "commission": {
+          "roundTripUsdPerLot": 0
+        },
+        "entryCommissionUsd": 0,
+        "initialRiskUsd": 0.49999999999994493,
+        "initialRiskPercent": 0.0004999999999999449,
+        "referenceBalance": 100000,
+        "entryTime": 1704470520000,
+        "entryPrice": 1.1009,
+        "closeRequestedAt": null,
+        "stopEffectiveAfter": 1704470520000,
+        "stopModifications": [
+          {
+            "oldPrice": 1.1004,
+            "newPrice": 1.10004,
+            "timestamp": 1704470520000
+          }
+        ],
+        "coverageWarnings": []
+      },
+      {
+        "id": "2-2",
+        "setupId": "2-S1",
+        "direction": "buy",
+        "mode": "manual",
+        "lots": 0.01,
+        "requestedRiskPercent": null,
+        "requestedRiskUsd": null,
+        "stopPrice": 1.0992,
+        "requestedAt": 1704470460000,
+        "initialStopPrice": 1.1004,
+        "commission": {
+          "roundTripUsdPerLot": 0
+        },
+        "entryCommissionUsd": 0,
+        "initialRiskUsd": 0.49999999999994493,
+        "initialRiskPercent": 0.0004999999999999449,
+        "referenceBalance": 100000,
+        "entryTime": 1704470520000,
+        "entryPrice": 1.1009,
+        "closeRequestedAt": null,
+        "stopEffectiveAfter": 1704470520000,
+        "stopModifications": [
+          {
+            "oldPrice": 1.1004,
+            "newPrice": 1.0992,
+            "timestamp": 1704470520000
+          }
+        ],
+        "coverageWarnings": []
+      }
+    ],
+    "shortStop": {
+      "id": "2-3",
+      "setupId": "2-S2",
+      "direction": "sell",
+      "mode": "manual",
+      "lots": 0.01,
+      "requestedRiskPercent": null,
+      "requestedRiskUsd": null,
+      "stopPrice": 1.10407,
+      "requestedAt": 1704470640000,
+      "initialStopPrice": 1.1051,
+      "commission": {
+        "roundTripUsdPerLot": 0
+      },
+      "entryCommissionUsd": 0,
+      "initialRiskUsd": 4.999999999999893,
+      "initialRiskPercent": 0.004999999999999893,
+      "referenceBalance": 100000,
+      "entryTime": 1704470700000,
+      "entryPrice": 1.1001,
+      "closeRequestedAt": null,
+      "stopEffectiveAfter": 1704470700000,
+      "stopModifications": [
+        {
+          "oldPrice": 1.1051,
+          "newPrice": 1.10407,
+          "timestamp": 1704470700000
+        }
+      ],
+      "coverageWarnings": []
+    },
+    "d1Readiness": "Indicators warming up: 14 / 78 completed D1 candles. Continue replay or reduce the indicator periods.",
+    "backendRestart": true,
+    "durableRestore": {
+      "replayTimestamp": 1704470820000,
+      "timeframes": [
+        "D1",
+        "M5",
+        "H4"
+      ],
+      "views": {
+        "0": {
+          "from": 7.463322285976673,
+          "to": 14
+        },
+        "1": {
+          "from": 3306,
+          "to": 3505
+        }
+      },
+      "closed": 3,
+      "setups": 2
+    },
+    "journalGrouping": [
+      {
+        "setupId": "2-S1",
+        "positions": "2",
+        "status": "completed"
+      },
+      {
+        "setupId": "2-S2",
+        "positions": "1",
+        "status": "completed"
+      }
+    ],
+    "closedTrades": [
+      {
+        "id": "2-1",
+        "setupId": "2-S1",
+        "exitReason": "manual",
+        "stopModifications": [
+          {
+            "oldPrice": 1.1004,
+            "newPrice": 1.10004,
+            "timestamp": 1704470520000
+          }
+        ],
+        "netPnlUsd": -0.1500000000000945
+      },
+      {
+        "id": "2-2",
+        "setupId": "2-S1",
+        "exitReason": "manual",
+        "stopModifications": [
+          {
+            "oldPrice": 1.1004,
+            "newPrice": 1.0992,
+            "timestamp": 1704470520000
+          }
+        ],
+        "netPnlUsd": -0.1500000000000945
+      },
+      {
+        "id": "2-3",
+        "setupId": "2-S2",
+        "exitReason": "manual",
+        "stopModifications": [
+          {
+            "oldPrice": 1.1051,
+            "newPrice": 1.10407,
+            "timestamp": 1704470700000
+          }
+        ],
+        "netPnlUsd": -0.34999999999985043
+      }
+    ],
+    "cacheUnchanged": true
+  }
+}

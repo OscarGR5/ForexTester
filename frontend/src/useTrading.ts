@@ -5,7 +5,7 @@ import type { CommissionConfig } from './commissions'
 import type { AccountRisk, EntrySizing } from './risk'
 import { useCallback, useMemo, useState } from 'react'
 import { historyCandles, isSinglePrice, type HistoryResponse } from './history'
-import { cancelEntry, configureAccount, configureCommission, createTradingState, observeCandle, modifyStop, requestClose, requestEntry, updateSetupMetadata, type SetupMetadata, type Direction, type TradingPermission, type TradingState } from './trading'
+import { requestAutomaticEntry, cancelEntry, configureAccount, configureCommission, createTradingState, observeCandle, modifyStop, requestClose, requestEntry, updateSetupMetadata, type SetupMetadata, type Direction, type TradingPermission, type TradingState } from './trading'
 
 interface ReplayClock { epoch: number; revealed: number; active: boolean; playing: boolean; complete: boolean; blocked?: boolean; startIndex?: number }
 interface Session { history: HistoryResponse | null; epoch: number; processed: number; state: TradingState; equity: EquityLedger; actionVersion: number }
@@ -51,6 +51,7 @@ export function useTrading(history: HistoryResponse | null, replay: ReplayClock,
     equity: current.equity,
     state: current.state,
     permission,
+    enterAutomatic: (direction: Direction, sizing: EntrySizing, stopPrice: number) => update(state => requestAutomaticEntry(state, direction, sizing, stopPrice, permission)),
     enter: (direction: Direction, sizing: EntrySizing, stopPrice: number, setupId: string | null = null) => update((state) => requestEntry(state, direction, sizing, stopPrice, permission, setupId)),
     updateSetup,
     configure: (account: AccountRisk) => setSession((previous) => {

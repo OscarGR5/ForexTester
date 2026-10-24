@@ -1,5 +1,5 @@
 import type { AnalyticsScope } from './analytics.js'
-import type { UtcRange } from './chartSync.js'
+import type { ViewportState } from './chartSync.js'
 import type { EquityLedger } from './equity.js'
 import type { DateRange, Timeframe } from './history.js'
 import type { IndicatorSettings } from './indicatorSettings.js'
@@ -28,7 +28,7 @@ export interface WorkspaceSettings {
   indicators: Partial<Record<Timeframe, IndicatorSettings>>[]
   statisticsScope: AnalyticsScope
   journalScope: AnalyticsScope
-  viewport: { range: UtcRange | null; following: boolean } | null
+  viewport: ViewportState | null
 }
 export type EquitySummary = Omit<EquityLedger, 'tail'>
 export interface SessionCheckpoint {

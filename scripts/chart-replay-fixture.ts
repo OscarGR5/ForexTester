@@ -1,5 +1,5 @@
 import { ChartTimeSlots } from '../frontend/src/chartTimeSlots'
-import { createChart, CandlestickSeries } from 'lightweight-charts'
+import { createChart, CandlestickSeries, CrosshairMode } from 'lightweight-charts'
 import { ReplayBars } from '../frontend/src/replayBars'
 import { IndicatorSeries } from '../frontend/src/indicatorSeries'
 import { indicatorPreset } from '../frontend/src/indicators'
@@ -15,7 +15,7 @@ export async function benchmarkCharts(days: number, timeframes: Timeframe[], bat
   const synchronizer = new ChartSynchronizer(bounds(initial))
   const panes = timeframes.map((timeframe, id) => {
     const host = document.createElement('div'); document.body.append(host)
-    const chart = createChart(host, { width: 1400, height: 260, timeScale: { timeVisible: true, secondsVisible: false, fixLeftEdge: true, fixRightEdge: true }, localization: { timeFormatter: (time) => typeof time === 'number' ? new Date(time * 1000).toISOString().slice(0, 16).replace('T', ' ') + ' UTC' : String(time) } }), price = chart.addSeries(CandlestickSeries)
+    const chart = createChart(host, { width: 1400, height: 260, crosshair: { mode: CrosshairMode.Normal }, timeScale: { timeVisible: true, secondsVisible: false, fixLeftEdge: true, fixRightEdge: true }, localization: { timeFormatter: (time) => typeof time === 'number' ? new Date(time * 1000).toISOString().slice(0, 16).replace('T', ' ') + ' UTC' : String(time) } }), price = chart.addSeries(CandlestickSeries)
     return { timeframe, id, host, chart, price, bars: new ReplayBars(timeframe), slots: new ChartTimeSlots(chart), indicators: new IndicatorSeries(chart),
       settings: indicatorPreset(timeframe), unregister: synchronizer.register(id, chart, price, [], timeframe) }
   })

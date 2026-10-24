@@ -12,7 +12,7 @@ import { downsampleEquity, equityObservations } from '../frontend/src/EquityChar
 
 function chartSink() {
   const operations = { setData: 0, update: 0 }
-  const chart = { addSeries: () => ({ setData: () => operations.setData++, update: () => operations.update++,
+  const chart = { addSeries: () => ({ applyOptions() {}, setData: () => operations.setData++, update: () => operations.update++,
     attachPrimitive() {}, detachPrimitive() {}, createPriceLine() {}, priceScale: () => ({ applyOptions() {} }) }),
     panes: () => [{ setStretchFactor() {} }, { setStretchFactor() {} }], removeSeries() {} }
   return { chart: chart as unknown as IChartApi, operations }
@@ -21,7 +21,7 @@ for (const days of [1, 30, 90]) {
   const count = days * 1440
   const source = Array.from({ length: count + 800 }, (_, index) => ({ timestamp: Date.UTC(2024, 0, 1) + index * 60_000,
     open: 1.1, high: 1.101, low: 1.099, close: 1.1 + Math.sin(index) * 0.0001 }))
-  const panes = (['M1', 'M5', 'H1'] as const).map((timeframe) => {
+  const panes = (['D1', 'M5', 'H1'] as const).map((timeframe) => {
     const sink = chartSink()
     return { timeframe, bars: new ReplayBars(timeframe), indicators: new IndicatorSeries(sink.chart), sink }
   })
@@ -47,7 +47,7 @@ for (const days of [1, 30, 90]) {
   }
   const executionMs = performance.now() - execution
   const display = performance.now(), points = downsampleEquity(equityObservations(ledger), 1440), displayMs = performance.now() - display
-  console.log(JSON.stringify({ days, observations: count, initialMs,
+  console.log(JSON.stringify({ days, timeframes: panes.map(pane => pane.timeframe), observations: count, initialMs,
     batch100MeanMs: frames.reduce((a, b) => a + b) / frames.length, batch100MaxMs: Math.max(...frames),
     ordinarySetDataCalls: panes.reduce((sum, pane) => sum + pane.sink.operations.setData, 0) - beforeSets,
     executionAndEquityMs: executionMs, equityObservations: ledger.count, displayMs, displayPoints: points.length }))

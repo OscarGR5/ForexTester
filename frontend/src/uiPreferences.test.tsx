@@ -10,7 +10,7 @@ Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 beforeEach(() => localStorage.clear())
 afterEach(() => vi.restoreAllMocks())
 it('restores layout, timeframe, indicators, zoom/following state and isolates sessions', () => {
-  const settings = defaultWorkspace(); settings.chartCount = 3; settings.timeframes[0] = 'H4'; settings.indicators[0].H4 = settings.indicators[2].H1
+  const settings = defaultWorkspace(); settings.chartCount = 3; settings.timeframes[0] = 'H4'; settings.indicators[0].H4 = settings.indicators[2].H4
   settings.viewport = { range: { from: 1700000000, to: 1700003600 }, following: false }
   writeUi('one', 'workspace', settings)
   expect(readUi('one', 'workspace', defaultWorkspace(), validWorkspace)).toEqual(settings)

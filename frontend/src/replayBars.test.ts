@@ -9,7 +9,7 @@ export function fakeChart() {
  const series: {title:string;values: {time:number;value?:number}[];setData:ReturnType<typeof vi.fn>}[]=[]
  const chart={
   addSeries: (_type:unknown,options:{title:string})=>{
-   const line={title:options.title,values:[] as {time:number;value?:number}[],setData:vi.fn(),
+   const line={applyOptions:vi.fn(),title:options.title,values:[] as {time:number;value?:number}[],setData:vi.fn(),
     update(point:{time:number;value?:number},historical=false){
      const at=line.values.findIndex(p=>p.time===point.time)
      if(at>=0)line.values[at]={...point}

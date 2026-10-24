@@ -1,460 +1,117 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { CandlestickData, IChartApi, ISeriesApi, LogicalRange, MouseEventParams, UTCTimestamp } from 'lightweight-charts'
-import { ChartSynchronizer, logicalToUtc, utcToLogical } from './chartSync'
-import type { Timeframe } from './history'
-import { TIMEFRAME_MS } from './history'
-
-function candles(times: number[]): CandlestickData<UTCTimestamp>[] {
-  return times.map((time) => ({ time: time as UTCTimestamp, open: 1, high: 2, low: 0.5, close: 1.5 }))
+import { ChartSynchronizer, logicalToUtc, utcToLogical, validViewportState } from './chartSync'
+import { TIMEFRAME_MS, type Timeframe } from './history'
+const candles = (times: number[]): CandlestickData<UTCTimestamp>[] => times.map(time => ({ time: time as UTCTimestamp, open: 1, high: 2, low: 0.5, close: 1.5 }))
+function fake() {
+  let range = { from: 0, to: 10 }, onRange: (r: LogicalRange) => void, crosshair: (p: MouseEventParams) => void
+  const priceScale = { applyOptions: vi.fn() }
+  const series = { coordinateToPrice: (y: number) => 2 - y / 1000, priceScale: () => priceScale } as unknown as ISeriesApi<'Candlestick'>
+  const oscillator = { coordinateToPrice: (y: number) => y }
+  const scale = { getVisibleLogicalRange: () => range, fitContent: vi.fn(), coordinateToTime: (x: number) => x,
+    setVisibleLogicalRange: vi.fn((r: LogicalRange) => { range = r; onRange?.(r) }),
+    subscribeVisibleLogicalRangeChange: (cb: typeof onRange) => { onRange = cb }, unsubscribeVisibleLogicalRangeChange: vi.fn() }
+  const chart = { timeScale: () => scale, subscribeCrosshairMove: (cb: typeof crosshair) => { crosshair = cb }, unsubscribeCrosshairMove: vi.fn(),
+    setCrosshairPosition: vi.fn(() => crosshair?.({ time: 0 } as MouseEventParams)), clearCrosshairPosition: vi.fn(),
+    panes: () => [{ getSeries: () => [series] }, { getSeries: () => [oscillator] }] } as unknown as IChartApi
+  return { chart, series, scale, priceScale, oscillator, range: () => range,
+    pan: (r: typeof range) => { range = r; onRange(r as LogicalRange) },
+    pointer: (time?: number, y = 765.43, paneIndex = 0) => crosshair({ time, point: time === undefined ? undefined : { x: time, y }, paneIndex, sourceEvent: {} } as MouseEventParams) }
 }
+const times = (length = 100, step = 300) => Array.from({ length }, (_, i) => i * step)
+function register(sync: ChartSynchronizer, id: number, f: ReturnType<typeof fake>, tf: Timeframe = 'M5', t = times()) { return sync.register(id, f.chart, f.series, candles(t), tf) }
 
-function fakeChart(initial: LogicalRange = { from: 0, to: 4 } as LogicalRange, maxLogical?: number, minimumSpan = 0) {
-  let range = initial
-  let onRange: ((range: LogicalRange | null) => void) | undefined
-  let onCrosshair: ((param: MouseEventParams) => void) | undefined
-  const setVisibleLogicalRange = vi.fn((next: LogicalRange) => {
-    if (next.from >= next.to || (maxLogical !== undefined && (next.from < 0 || next.to > maxLogical))) {
-      throw new Error('Range exceeds available chart candles')
-    }
-    range = next.to - next.from < minimumSpan
-      ? { from: next.to - minimumSpan, to: next.to } as LogicalRange
-      : next
-    onRange?.(range)
-  })
-  const setCrosshairPosition = vi.fn(() => onCrosshair?.({ time: 0 as UTCTimestamp } as MouseEventParams))
-  const clearCrosshairPosition = vi.fn()
-  const unsubscribeRange = vi.fn(() => { onRange = undefined })
-  const unsubscribeCrosshair = vi.fn(() => { onCrosshair = undefined })
-  const chart = {
-    timeScale: () => ({ getVisibleLogicalRange: () => range, setVisibleLogicalRange, coordinateToTime: (x: number) => x as UTCTimestamp,
-      fitContent: vi.fn(), subscribeVisibleLogicalRangeChange: (handler: typeof onRange) => { onRange = handler },
-      unsubscribeVisibleLogicalRangeChange: unsubscribeRange }),
-    subscribeCrosshairMove: (handler: typeof onCrosshair) => { onCrosshair = handler },
-    unsubscribeCrosshairMove: unsubscribeCrosshair,
-    setCrosshairPosition, clearCrosshairPosition,
-  } as unknown as IChartApi
-  return { chart, setVisibleLogicalRange, setCrosshairPosition, clearCrosshairPosition,
-    unsubscribeRange, unsubscribeCrosshair, getRange: () => range,
-    emitRange: (next: LogicalRange) => { range = next; onRange?.(next) },
-    emitCrosshair: (time?: number, point?: { x: number; y: number }, paneIndex = 0) => onCrosshair?.({ time: time as UTCTimestamp | undefined, sourceEvent: {}, point, paneIndex } as MouseEventParams),
-    emitProgrammatic: (time: number) => onCrosshair?.({ time: time as UTCTimestamp, point: { x: time, y: 1 } } as MouseEventParams) }
-}
-
-const series = {} as ISeriesApi<'Candlestick'>
-
-function register(sync: ChartSynchronizer, id: number, chart: ReturnType<typeof fakeChart>, times: number[], timeframe: Timeframe) {
-  return sync.register(id, chart.chart, series, candles(times), timeframe)
-}
-
-describe('UTC chart synchronization', () => {
-  it('converts through timestamps, including market gaps and fractional viewport positions', () => {
+describe('independent chart navigation', () => {
+  it('converts UTC and logical coordinates across gaps and fractional positions', () => {
     expect(logicalToUtc([0, 300, 900], 1.5, 300)).toBe(600)
     expect(utcToLogical([0, 300, 900], 600, 300)).toBe(1.5)
     expect(logicalToUtc([0, 300, 900], -1, 300)).toBe(-300)
     expect(utcToLogical([0, 300, 900], 1200, 300)).toBe(3)
   })
-
-  it('aligns M5 and H1 by UTC period while preventing range feedback', () => {
-    const sync = new ChartSynchronizer()
-    const m5 = fakeChart({ from: 0, to: 24 } as LogicalRange)
-    const h1 = fakeChart()
-    const m5Times = Array.from({ length: 25 }, (_, index) => index * 300)
-    const stopM5 = register(sync, 0, m5, m5Times, 'M5')
-    const stopH1 = register(sync, 1, h1, [0, 3600, 7200], 'H1')
-    sync.activate(0)
-    m5.emitRange({ from: 6, to: 18 } as LogicalRange)
-    expect(h1.setVisibleLogicalRange).toHaveBeenLastCalledWith({ from: 0.5, to: 1.5 })
-    expect(m5.setVisibleLogicalRange).not.toHaveBeenCalled()
-    sync.activate(1)
-    h1.emitRange({ from: 0.25, to: 1.25 } as LogicalRange)
-    expect(m5.setVisibleLogicalRange).toHaveBeenLastCalledWith({ from: 3, to: 15 })
-    expect(m5.setVisibleLogicalRange).toHaveBeenCalledTimes(1)
-    stopM5()
-    stopH1()
-    expect(m5.unsubscribeRange).toHaveBeenCalledTimes(1)
-    expect(h1.unsubscribeCrosshair).toHaveBeenCalledTimes(1)
-    m5.emitRange({ from: 0, to: 5 } as LogicalRange)
-    expect(h1.setVisibleLogicalRange).toHaveBeenCalledTimes(2)
+  it.each([2, 3])('keeps zoom and pan local in a %i-chart layout and ignores resize callbacks', count => {
+    const sync = new ChartSynchronizer(), charts = Array.from({ length: count }, fake)
+    charts.forEach((f, id) => register(sync, id, f))
+    const before = charts.map(f => ({ ...f.range() }))
+    sync.wheel(0, -100)
+    expect(charts[0].range().to).toBe(before[0].to)
+    expect(charts[0].range().from).toBeGreaterThan(before[0].from)
+    for (let id = 1; id < count; id++) expect(charts[id].range()).toEqual(before[id])
+    sync.activate(0); charts[0].pan({ from: 5, to: 20 })
+    for (let id = 1; id < count; id++) expect(charts[id].range()).toEqual(before[id])
+    const view = sync.snapshot(); sync.deactivate(); charts[0].pan({ from: 0, to: 10 }); expect(sync.snapshot()).toEqual(view)
   })
-
-  it('keeps three different resolutions aligned and clears crosshairs where no candle exists', () => {
-    const sync = new ChartSynchronizer()
-    const m15 = fakeChart({ from: 0, to: 16 } as LogicalRange)
-    const h1 = fakeChart()
-    const h4 = fakeChart()
-    register(sync, 0, m15, Array.from({ length: 17 }, (_, index) => index * 900), 'M15')
-    register(sync, 1, h1, [0, 3600, 7200, 10800, 14400], 'H1')
-    register(sync, 2, h4, [0, 14400], 'H4')
-    sync.activate(0)
-    m15.emitRange({ from: 4, to: 12 } as LogicalRange)
-    expect(h1.setVisibleLogicalRange).toHaveBeenLastCalledWith({ from: 1, to: 3 })
-    expect(h4.setVisibleLogicalRange).toHaveBeenLastCalledWith({ from: 0.25, to: 0.75 })
-    m15.emitCrosshair(4500)
-    expect(h1.setCrosshairPosition).toHaveBeenLastCalledWith(1.5, 3600, series)
-    expect(h4.setCrosshairPosition).toHaveBeenLastCalledWith(1.5, 0, series)
-    m15.emitCrosshair()
-    expect(h1.clearCrosshairPosition).toHaveBeenCalled()
-    expect(h4.clearCrosshairPosition).toHaveBeenCalled()
+  it('anchors both zoom directions to the right edge and clamps extremes and nonfinite input', () => {
+    const sync = new ChartSynchronizer(), f = fake(); register(sync, 0, f)
+    sync.activate(0); f.pan({ from: 20, to: 80 }); sync.wheel(0, -100)
+    const zoomed = { ...f.range() }; expect(zoomed.to).toBe(80); expect(zoomed.from).toBeGreaterThan(20)
+    sync.wheel(0, 100); expect(f.range().to).toBe(80); expect(f.range().from).toBeCloseTo(20)
+    for (let i = 0; i < 20; i++) sync.wheel(0, -10000)
+    expect(f.range().to - f.range().from).toBe(5)
+    const before = { ...f.range() }; sync.wheel(0, NaN); expect(f.range()).toEqual(before)
+    for (let i = 0; i < 20; i++) sync.wheel(0, 10000)
+    expect(f.range()).toEqual({ from: 0, to: 99 })
   })
-
-  it('ignores layout and programmatic resize events, then accepts navigation from the newly active chart', () => {
-    const sync = new ChartSynchronizer()
-    const m15 = fakeChart({ from: 0, to: 16 } as LogicalRange)
-    const h4 = fakeChart()
-    register(sync, 0, m15, Array.from({ length: 17 }, (_, index) => index * 900), 'M15')
-    sync.activate(0)
-    m15.emitRange({ from: 4, to: 12 } as LogicalRange)
-    sync.deactivate()
-    register(sync, 1, h4, [0, 14400], 'H4')
-    expect(h4.setVisibleLogicalRange).toHaveBeenLastCalledWith({ from: 0.25, to: 0.75 })
-    h4.emitRange({ from: 0, to: 1 } as LogicalRange)
-    expect(m15.setVisibleLogicalRange).not.toHaveBeenCalled()
-    sync.activate(1)
-    h4.emitRange({ from: 0.2, to: 0.8 } as LogicalRange)
-    expect(m15.setVisibleLogicalRange.mock.lastCall![0].from).toBeCloseTo(3.2)
-    expect(m15.setVisibleLogicalRange.mock.lastCall![0].to).toBeCloseTo(12.8)
+  it('follows only panes still at the replay edge, preserving zoom across market gaps', () => {
+    const sync = new ChartSynchronizer(), manual = fake(), follow = fake()
+    register(sync, 0, manual); register(sync, 1, follow)
+    sync.activate(0); manual.pan({ from: 5, to: 20 }); sync.wheel(1, -100)
+    const span = follow.range().to - follow.range().from
+    const extended = [...times(), 3 * 86400]
+    sync.update(0, candles(extended), 'M5', () => 0, 100); sync.update(1, candles(extended), 'M5', () => 0, 100)
+    sync.advance({ from: 0, to: extended.at(-1)! })
+    expect(manual.range()).toEqual({ from: 5, to: 20 })
+    expect(follow.range().to).toBe(100); expect(follow.range().to - follow.range().from).toBeCloseTo(span)
   })
-
-  it('maps the last coarse candle through the final loaded M1 timestamp', () => {
-    const sync = new ChartSynchronizer({ from: 0, to: 28740 })
-    const m1 = fakeChart({ from: 0, to: 479 } as LogicalRange)
-    const h4 = fakeChart({ from: 0, to: 1 } as LogicalRange)
-    register(sync, 0, m1, Array.from({ length: 480 }, (_, index) => index * 60), 'M1')
-    register(sync, 1, h4, [0, 14400], 'H4')
-    sync.activate(1)
-    h4.emitRange({ from: 0.5, to: 1 } as LogicalRange)
-    expect(m1.setVisibleLogicalRange).toHaveBeenLastCalledWith({ from: 120, to: 479 })
+  it('round trips all panes including unmounted ones through JSON and changed replay bounds', () => {
+    const sync = new ChartSynchronizer(), a = fake(), b = fake(); register(sync, 0, a); const stop = register(sync, 1, b)
+    sync.activate(0); a.pan({ from: 2.5, to: 18.75 }); sync.wheel(1, -200); stop()
+    const saved = JSON.parse(JSON.stringify(sync.snapshot())), restored = new ChartSynchronizer({ from: 0, to: 30000 })
+    restored.restore(saved); const c = fake(), d = fake(); register(restored, 0, c); register(restored, 1, d)
+    expect(c.range()).toEqual(a.range()); expect(d.range()).toEqual(b.range())
+    const third = fake(); register(restored, 2, third, 'H4', times(400, 14400)); expect(third.range()).toEqual({ from: 200, to: 399 })
+    expect(validViewportState(saved)).toBe(true)
+    expect(validViewportState({ ...saved, charts: { 0: { ...saved.charts[0], logical: { from: 4, to: 1 } } } })).toBe(false)
   })
-
-  it('synchronizes an M1 viewport wholly inside the last H4 candle and back', () => {
-    const lastM1 = 23 * 3600 + 59 * 60
-    const sync = new ChartSynchronizer({ from: 0, to: lastM1 })
-    const m1 = fakeChart({ from: 0, to: 1439 } as LogicalRange, 1439)
-    const h4 = fakeChart({ from: 0, to: 5 } as LogicalRange, 5, 1)
-    register(sync, 0, m1, Array.from({ length: 1440 }, (_, index) => index * 60), 'M1')
-    register(sync, 1, h4, [0, 4, 8, 12, 16, 20].map((hour) => hour * 3600), 'H4')
-    m1.setVisibleLogicalRange.mockClear() // Count navigation after the initial trading window.
-
-    const previousCalls = h4.setVisibleLogicalRange.mock.calls.length
-    sync.activate(0)
-    m1.emitRange({ from: 1320, to: 1439 } as LogicalRange)
-    expect(h4.setVisibleLogicalRange).toHaveBeenCalledTimes(previousCalls + 1)
-    const applied = h4.setVisibleLogicalRange.mock.lastCall![0]
-    expect(applied.from).toBeGreaterThanOrEqual(0)
-    expect(applied.from).toBeLessThan(applied.to)
-    expect(applied.to).toBe(5)
-    expect(h4.getRange()).toEqual({ from: 4, to: 5 })
-    expect(m1.setVisibleLogicalRange).not.toHaveBeenCalled()
-
-    sync.activate(1)
-    h4.emitRange({ from: 3, to: 5 } as LogicalRange)
-    expect(m1.setVisibleLogicalRange).toHaveBeenLastCalledWith({ from: 720, to: 1439 })
+  it.each([false, true])('restores a legacy shared range with following=%s', following => {
+    const sync = new ChartSynchronizer({ from: 0, to: 29700 }); sync.restore({ range: { from: 300, to: 1500 }, following })
+    const f = fake(); register(sync, 0, f)
+    expect(f.range()).toEqual(following ? { from: 95, to: 99 } : { from: 1, to: 5 })
   })
-
-  it('updates H1 and H4 near the data end and preserves that view when a third chart joins', () => {
-    const lastM1 = 23 * 3600 + 59 * 60
-    const sync = new ChartSynchronizer({ from: 0, to: lastM1 })
-    const m1 = fakeChart({ from: 0, to: 1439 } as LogicalRange, 1439)
-    const h1 = fakeChart({ from: 0, to: 23 } as LogicalRange, 23)
-    const h4 = fakeChart({ from: 0, to: 5 } as LogicalRange, 5, 1)
-    register(sync, 0, m1, Array.from({ length: 1440 }, (_, index) => index * 60), 'M1')
-    register(sync, 1, h1, Array.from({ length: 24 }, (_, index) => index * 3600), 'H1')
-    sync.activate(0)
-    m1.emitRange({ from: 1320, to: 1439 } as LogicalRange)
-    expect(h1.setVisibleLogicalRange.mock.lastCall![0].to).toBe(23)
-
-    sync.deactivate()
-    register(sync, 2, h4, [0, 4, 8, 12, 16, 20].map((hour) => hour * 3600), 'H4')
-    expect(h4.setVisibleLogicalRange.mock.lastCall![0].to).toBe(5)
-    expect(h4.getRange()).toEqual({ from: 4, to: 5 })
-    sync.activate(2)
-    h4.emitRange({ from: 3, to: 5 } as LogicalRange)
-    expect(m1.setVisibleLogicalRange).toHaveBeenLastCalledWith({ from: 720, to: 1439 })
-    expect(h1.setVisibleLogicalRange.mock.lastCall![0].to).toBe(23)
+  it.each(['M1', 'M5', 'M15', 'H1', 'H4', 'D1'] as const)('starts %s with recent observed bars and retains permitted projection', tf => {
+    const sync = new ChartSynchronizer(), f = fake(), t = times(400, TIMEFRAME_MS[tf] / 1000)
+    register(sync, 0, f, tf, t); expect(f.range()).toEqual({ from: 200, to: 399 })
+    sync.update(0, candles(t), tf, () => 26)
+    expect(f.range().to).toBe(425)
+    sync.wheel(0, -200); expect(f.range().to).toBe(425)
   })
 })
 
-describe('synchronization during replay updates', () => {
-  it('moves the revealed bound and following viewport without re-registering or range feedback', () => {
-    const sync = new ChartSynchronizer({ from: 0, to: 28740 })
-    const m1 = fakeChart({ from: 0, to: 479 } as LogicalRange)
-    const h1 = fakeChart()
-    const h4 = fakeChart()
-    const stopM1 = register(sync, 0, m1, Array.from({ length: 480 }, (_, index) => index * 60), 'M1')
-    const stopH1 = register(sync, 1, h1, Array.from({ length: 8 }, (_, index) => index * 3600), 'H1')
-    const stopH4 = register(sync, 2, h4, [0, 14400], 'H4')
-    sync.activate(0)
-    m1.emitRange({ from: 420, to: 479 } as LogicalRange)
-    const apply = vi.fn()
-    sync.update(0, candles(Array.from({ length: 481 }, (_, index) => index * 60)), 'M1', apply)
-    sync.update(1, candles(Array.from({ length: 9 }, (_, index) => index * 3600)), 'H1', apply)
-    sync.update(2, candles([0, 14400, 28800]), 'H4', apply)
-    sync.advance({ from: 0, to: 28800 })
-    expect(apply).toHaveBeenCalledTimes(3)
-    expect(m1.getRange()).toEqual({ from: 421, to: 480 })
-    expect(h1.getRange().to).toBe(8)
-    expect(h4.getRange().to).toBe(2)
-    expect(h4.getRange().from).toBeLessThan(2)
-    // Only the two deliberate programmatic M1 moves occurred, with no callback loop.
-    expect(m1.setVisibleLogicalRange.mock.calls.length).toBeLessThanOrEqual(2)
-    expect(m1.unsubscribeRange).not.toHaveBeenCalled()
-    stopM1(); stopH1(); stopH4()
-    expect(m1.unsubscribeRange).toHaveBeenCalledTimes(1)
-    expect(h4.unsubscribeCrosshair).toHaveBeenCalledTimes(1)
+describe('free crosshair synchronization', () => {
+  it('uses pointer price across independent scales and higher timeframe buckets, with no loops', () => {
+    const sync = new ChartSynchronizer(), m5 = fake(), h1 = fake(), d1 = fake()
+    register(sync, 0, m5); register(sync, 1, h1, 'H1', times(10, 3600)); register(sync, 2, d1, 'D1', [0])
+    m5.pointer(4500)
+    expect(h1.chart.setCrosshairPosition).toHaveBeenLastCalledWith(2 - 765.43 / 1000, 3600, h1.series)
+    expect(d1.chart.setCrosshairPosition).toHaveBeenLastCalledWith(2 - 765.43 / 1000, 0, d1.series)
+    expect(m5.chart.setCrosshairPosition).not.toHaveBeenCalled(); expect(h1.priceScale.applyOptions).not.toHaveBeenCalled()
+    m5.pointer(4500, 765.44); expect(h1.chart.setCrosshairPosition).toHaveBeenLastCalledWith(2 - 765.44 / 1000, 3600, h1.series)
+    const calls = vi.mocked(h1.chart.setCrosshairPosition).mock.calls.length; m5.pointer(4500, 765.44)
+    expect(h1.chart.setCrosshairPosition).toHaveBeenCalledTimes(calls)
   })
-
-  it('keeps an intentionally older viewport as more M1 candles arrive', () => {
-    const sync = new ChartSynchronizer({ from: 0, to: 7200 })
-    const m1 = fakeChart()
-    const m5 = fakeChart()
-    register(sync, 0, m1, Array.from({ length: 121 }, (_, index) => index * 60), 'M1')
-    register(sync, 1, m5, Array.from({ length: 25 }, (_, index) => index * 300), 'M5')
-    sync.activate(0)
-    m1.emitRange({ from: 10, to: 40 } as LogicalRange)
-    sync.update(0, candles(Array.from({ length: 122 }, (_, index) => index * 60)), 'M1', () => {})
-    sync.update(1, candles(Array.from({ length: 25 }, (_, index) => index * 300)), 'M5', () => {})
-    sync.advance({ from: 0, to: 7260 })
-    expect(m1.getRange()).toEqual({ from: 10, to: 40 })
-    expect(m5.getRange()).toEqual({ from: 2, to: 8 })
+  it('clears missing, gap and unrevealed buckets and pointer exits', () => {
+    const sync = new ChartSynchronizer(), source = fake(), target = fake()
+    register(sync, 0, source, 'M5', [0, 300, 600, 900]); register(sync, 1, target, 'M5', [0, 600])
+    source.pointer(0); source.pointer(300); expect(target.chart.clearCrosshairPosition).toHaveBeenCalled()
+    source.pointer(900); expect(target.chart.setCrosshairPosition).toHaveBeenCalledTimes(1)
+    source.pointer(600); source.pointer(); expect(target.chart.clearCrosshairPosition).toHaveBeenCalledTimes(2)
   })
-
-  it('uses updated partial closes for crosshairs and never maps to an unrevealed bucket', () => {
-    const sync = new ChartSynchronizer({ from: 0, to: 120 })
-    const m1 = fakeChart()
-    const h1 = fakeChart()
-    register(sync, 0, m1, [0, 60, 120], 'M1')
-    register(sync, 1, h1, [0], 'H1')
-    sync.update(1, [{ ...candles([0])[0], high: 3, close: 2.5 }], 'H1', () => {})
-    m1.emitCrosshair(120)
-    expect(h1.setCrosshairPosition).toHaveBeenLastCalledWith(2.5, 0, series)
-    m1.emitCrosshair(3600)
-    expect(h1.clearCrosshairPosition).toHaveBeenCalled()
+  it('restores oscillator pointer price after replay updates and suspends during stop dragging', () => {
+    const sync = new ChartSynchronizer(), source = fake(), target = fake(); register(sync, 0, source); register(sync, 1, target)
+    source.pointer(300, 43.5, 1); expect(target.chart.setCrosshairPosition).toHaveBeenLastCalledWith(43.5, 300, target.oscillator)
+    sync.update(0, candles(times()), 'M5', () => 0, 99); sync.advance()
+    expect(source.chart.setCrosshairPosition).toHaveBeenLastCalledWith(43.5, 300, source.oscillator)
+    sync.suspendCrosshair(true); const calls = vi.mocked(target.chart.setCrosshairPosition).mock.calls.length
+    source.pointer(600); expect(target.chart.setCrosshairPosition).toHaveBeenCalledTimes(calls)
+    sync.suspendCrosshair(false); source.pointer(600); expect(target.chart.setCrosshairPosition).toHaveBeenCalledTimes(calls + 1)
   })
-
-  it('synchronizes M5/H1 as the latest H1 bucket starts and a third chart joins', () => {
-    const sync = new ChartSynchronizer({ from: 0, to: 10740 })
-    const m5 = fakeChart()
-    const h1 = fakeChart()
-    const h4 = fakeChart()
-    register(sync, 0, m5, Array.from({ length: 36 }, (_, index) => index * 300), 'M5')
-    register(sync, 1, h1, [0, 3600, 7200], 'H1')
-    sync.activate(0)
-    m5.emitRange({ from: 24, to: 35 } as LogicalRange)
-    sync.update(0, candles(Array.from({ length: 37 }, (_, index) => index * 300)), 'M5', () => {})
-    sync.update(1, candles([0, 3600, 7200, 10800]), 'H1', () => {})
-    sync.advance({ from: 0, to: 10800 })
-    expect(m5.getRange().to).toBe(36)
-    expect(h1.getRange().to).toBe(3)
-    sync.deactivate()
-    register(sync, 2, h4, [0], 'H4')
-    expect(h4.setVisibleLogicalRange).not.toHaveBeenCalled()
-    expect(h4.getRange()).toBeDefined()
-  })
-})
-
-describe('Ichimoku projection synchronization', () => {
-  it('reserves forward plot positions without adding prices or changing another chart horizon', () => {
-    const sync = new ChartSynchronizer({ from: 0, to: 240 })
-    const projected = fakeChart(), plain = fakeChart()
-    register(sync, 0, projected, [0, 60, 120, 180, 240], 'M1')
-    register(sync, 1, plain, [0, 60, 120, 180, 240], 'M1')
-    sync.update(0, candles([0, 60, 120, 180, 240]), 'M1', () => 2)
-    sync.update(1, candles([0, 60, 120, 180, 240]), 'M1', () => 0)
-    expect(projected.getRange()).toEqual({ from: 0, to: 6 })
-    expect(plain.getRange()).toEqual({ from: 0, to: 4 })
-    projected.emitCrosshair(300)
-    expect(plain.clearCrosshairPosition).toHaveBeenCalled()
-    expect(plain.setCrosshairPosition).not.toHaveBeenCalled()
-    sync.update(0, candles([0, 60, 120, 180, 240]), 'M1', () => 0)
-    expect(projected.getRange()).toEqual({ from: 0, to: 4 })
-  })
-})
-
-it('restores a saved horizontal zoom and following preference using public chart APIs', () => {
-  const times = Array.from({ length: 13 }, (_, i) => i * 60)
-  const original = new ChartSynchronizer({ from: 0, to: 720 }), first = fakeChart()
-  register(original, 0, first, times, 'M1')
-  original.activate(0); first.emitRange({ from: 2, to: 6 } as LogicalRange)
-  const saved = original.snapshot()
-  expect(saved).toEqual({ range: { from: 120, to: 360 }, following: false })
-  const restored = new ChartSynchronizer({ from: 0, to: 720 }), second = fakeChart()
-  restored.restore(saved); register(restored, 0, second, times, 'M1')
-  expect(second.getRange()).toEqual({ from: 2, to: 6 })
-  restored.advance({ from: 0, to: 780 })
-  expect(restored.snapshot()).toEqual(saved)
-})
-
-it('aligns a following viewport with the recovered replay edge when UI storage lags the disk checkpoint', () => {
-  const sync = new ChartSynchronizer({ from: 0, to: 1200 }), chart = fakeChart()
-  sync.restore({ range: { from: 120, to: 360 }, following: true })
-  register(sync, 0, chart, Array.from({ length: 21 }, (_, i) => i * 60), 'M1')
-  expect(sync.snapshot()).toEqual({ range: { from: 960, to: 1200 }, following: true })
-  expect(chart.getRange()).toEqual({ from: 16, to: 20 })
-})
-
-it('deduplicates identical synchronized crosshairs while retaining price changes and source handoff', () => {
-  const sync = new ChartSynchronizer(), m1 = fakeChart(), m5 = fakeChart()
-  register(sync, 0, m1, [0, 60, 120, 180, 240, 300], 'M1')
-  register(sync, 1, m5, [0, 300], 'M5')
-  m1.emitCrosshair(60); m1.emitCrosshair(120); m1.emitCrosshair(180)
-  expect(m5.setCrosshairPosition).toHaveBeenCalledTimes(1)
-  m1.emitCrosshair(300)
-  expect(m5.setCrosshairPosition).toHaveBeenCalledTimes(2)
-  sync.update(1, [candles([0])[0], { ...candles([300])[0], close: 1.7 }], 'M5', () => {}, 1)
-  m1.emitCrosshair(300)
-  expect(m5.setCrosshairPosition).toHaveBeenLastCalledWith(1.7, 300, series)
-  expect(m5.setCrosshairPosition).toHaveBeenCalledTimes(3)
-  m5.emitCrosshair(0)
-  m1.emitCrosshair(300)
-  expect(m5.setCrosshairPosition).toHaveBeenCalledTimes(4)
-  m5.clearCrosshairPosition.mockClear()
-  m1.emitCrosshair(); m1.emitCrosshair()
-  expect(m5.clearCrosshairPosition).toHaveBeenCalledTimes(1)
-})
-
-
-it('clears crosshairs during a batch and restores the source oscillator pane before paint', () => {
-  const sync = new ChartSynchronizer({ from: 0, to: 300 }), source = fakeChart(), target = fakeChart()
-  const oscillator = { coordinateToPrice: vi.fn((y: number) => y) }
-  Object.assign(source.chart, { panes: () => [{ getSeries: () => [series] }, { getSeries: () => [oscillator] }] })
-  const stop = register(sync, 0, source, [0, 300], 'M5')
-  register(sync, 1, target, [0, 60, 120, 180, 240, 300], 'M1')
-  source.emitCrosshair(300, { x: 300, y: 40 }, 1)
-  target.setCrosshairPosition.mockClear()
-  target.emitProgrammatic(120)
-  expect(source.setCrosshairPosition).not.toHaveBeenCalled()
-  sync.update(0, candles([0, 300]), 'M5', () => {
-    expect(source.clearCrosshairPosition).toHaveBeenCalled()
-  }, 1)
-  sync.advance({ from: 0, to: 300 })
-  expect(oscillator.coordinateToPrice).toHaveBeenCalledWith(40)
-  expect(source.setCrosshairPosition).toHaveBeenLastCalledWith(40, 300, oscillator)
-  stop()
-  expect(target.clearCrosshairPosition).toHaveBeenCalled()
-})
-
-
-it('does not redraw an absent crosshair during ordinary playback without a pointer over a chart', () => {
-  const sync = new ChartSynchronizer({ from: 0, to: 300 }), chart = fakeChart()
-  register(sync, 0, chart, [0, 300], 'M5')
-  sync.update(0, candles([0, 300, 600]), 'M5', () => {}, 2)
-  sync.advance({ from: 0, to: 600 })
-  expect(chart.clearCrosshairPosition).not.toHaveBeenCalled()
-  expect(chart.setCrosshairPosition).not.toHaveBeenCalled()
-})
-
-describe('initial trading viewport', () => {
-  for (const timeframe of ['M1', 'M5', 'M15', 'H1', 'H4'] as const) {
-    it(`starts ${timeframe} at up to 200 recent observed candles`, () => {
-      const step = TIMEFRAME_MS[timeframe] / 1000
-      const times = Array.from({ length: Math.floor(30 * 86400 / step) + 1 }, (_, i) => i * step)
-      // Higher timeframes can end in a partially revealed bucket.
-      const edge = times.at(-1)! + (timeframe === 'M1' ? 0 : step - 60)
-      const sync = new ChartSynchronizer({ from: 0, to: edge }), chart = fakeChart()
-      register(sync, 0, chart, times, timeframe)
-      const visible = Math.min(200, times.length)
-      expect(sync.snapshot()).toEqual({ range: { from: edge - (visible - 1) * step, to: edge }, following: true })
-      expect(chart.getRange().from).toBeCloseTo(times.length - visible)
-      expect(chart.getRange().to).toBe(times.length - 1)
-      expect(chart.getRange().to - chart.getRange().from + 1).toBeCloseTo(visible)
-    })
-  }
-
-  it('initializes on the first populated update, and does not reset on timeframe changes or remounts', () => {
-    const times = Array.from({ length: 2001 }, (_, i) => i * 60)
-    const sync = new ChartSynchronizer({ from: 0, to: 120000 }), chart = fakeChart()
-    const stop = register(sync, 0, chart, [], 'M1')
-    expect(sync.snapshot().range).toBeNull()
-    sync.update(0, candles(times), 'M1', () => {})
-    expect(chart.getRange()).toEqual({ from: 1801, to: 2000 })
-    const initial = sync.snapshot()
-    sync.update(0, candles(Array.from({ length: 401 }, (_, i) => i * 300)), 'M5', () => {})
-    expect(sync.snapshot()).toEqual(initial)
-    stop()
-    register(sync, 0, fakeChart(), times, 'M1')
-    expect(sync.snapshot()).toEqual(initial)
-  })
-
-  it('counts observed candles across a weekend rather than opening with almost no prices', () => {
-    const times = Array.from({ length: 2001 }, (_, i) => i * 60 + (i >= 1995 ? 2 * 86400 : 0))
-    const edge = times.at(-1)!, chart = fakeChart(), sync = new ChartSynchronizer({ from: 0, to: edge })
-    register(sync, 0, chart, times, 'M1')
-    expect(chart.getRange()).toEqual({ from: 1801, to: 2000 })
-    expect(sync.snapshot().range).toEqual({ from: times[1801], to: edge })
-  })
-
-  it('uses available short history and handles a single candle without an invalid range', () => {
-    for (const times of [[0], [0, 60], [0, 60, 120]]) {
-      const sync = new ChartSynchronizer({ from: 0, to: times.at(-1)! }), chart = fakeChart()
-      register(sync, 0, chart, times, 'M1')
-      expect(sync.snapshot().range!.from).toBeLessThan(sync.snapshot().range!.to)
-      expect(sync.snapshot().range!.to).toBe(times.at(-1))
-      if (times.length > 1) expect(chart.getRange()).toEqual({ from: 0, to: times.length - 1 })
-    }
-  })
-
-  for (const frames of [['M1', 'M5', 'H1'], ['M5', 'M15', 'H4'], ['H4', 'H1', 'M1']] as const) {
-    it(`shares the initial ${frames[0]} UTC horizon across ${frames.join('/')}`, () => {
-      const edge = 30 * 86400, sync = new ChartSynchronizer({ from: 0, to: edge })
-      const charts = frames.map(timeframe => {
-        const step = TIMEFRAME_MS[timeframe] / 1000
-        const times = Array.from({ length: edge / step + 1 }, (_, i) => i * step)
-        const chart = fakeChart()
-        register(sync, times.length, chart, times, timeframe)
-        return { chart, times, step }
-      })
-      const view = sync.snapshot().range!
-      for (const { chart, times, step } of charts) {
-        expect(logicalToUtc(times, chart.getRange().from, step)).toBeCloseTo(view.from)
-        expect(logicalToUtc(times, chart.getRange().to, step)).toBe(view.to)
-      }
-    })
-  }
-
-  it('keeps all pre-roll navigable and holds a manual view while replay advances', () => {
-    const times = Array.from({ length: 43201 }, (_, i) => i * 60)
-    const edge = times.at(-1)!, sync = new ChartSynchronizer({ from: 0, to: edge }), chart = fakeChart()
-    register(sync, 0, chart, times, 'M1')
-    sync.activate(0)
-    chart.emitRange({ from: 0, to: 199 } as LogicalRange)
-    expect(sync.snapshot()).toEqual({ range: { from: 0, to: 11940 }, following: false })
-    sync.update(0, candles([...times, edge + 60]), 'M1', () => {}, times.length)
-    sync.advance({ from: 0, to: edge + 60 })
-    expect(chart.getRange()).toEqual({ from: 0, to: 199 })
-  })
-
-  it('follows the revealed edge with the initial span and retains Ichimoku projection only as plot space', () => {
-    const times = Array.from({ length: 43201 }, (_, i) => i * 60)
-    const edge = times.at(-1)!, sync = new ChartSynchronizer({ from: 0, to: edge })
-    const projected = fakeChart(), plain = fakeChart()
-    register(sync, 0, projected, [], 'M1')
-    register(sync, 1, plain, [], 'M1')
-    sync.update(0, candles(times), 'M1', () => 26)
-    sync.update(1, candles(times), 'M1', () => 0)
-    expect(projected.getRange()).toEqual({ from: 43001, to: 43226 })
-    expect(plain.getRange()).toEqual({ from: 43001, to: 43200 })
-    sync.update(0, candles([...times, edge + 60]), 'M1', () => 26, times.length)
-    sync.update(1, candles([...times, edge + 60]), 'M1', () => 0, times.length)
-    sync.advance({ from: 0, to: edge + 60 })
-    expect(sync.snapshot()).toEqual({ range: { from: edge + 60 - 11940, to: edge + 60 }, following: true })
-    expect(projected.getRange()).toEqual({ from: 43002, to: 43227 })
-    expect(plain.getRange()).toEqual({ from: 43002, to: 43201 })
-  })
-
-  for (const following of [false, true]) {
-    it(`preserves a saved custom span with following=${following} on all charts`, () => {
-      const edge = 30 * 86400, sync = new ChartSynchronizer({ from: 0, to: edge })
-      // A deliberately wider custom view must not be replaced by the new default.
-      const saved = { range: { from: edge - 86400, to: edge - 43200 }, following }
-      sync.restore(saved)
-      for (const [id, timeframe] of (['M1', 'M15', 'H4'] as const).entries()) {
-        const step = TIMEFRAME_MS[timeframe] / 1000
-        const times = Array.from({ length: edge / step + 1 }, (_, i) => i * step), chart = fakeChart()
-        register(sync, id, chart, times, timeframe)
-        expect(chart.getRange().to - chart.getRange().from).toBeCloseTo(43200 / step)
-      }
-      expect(sync.snapshot()).toEqual(following
-        ? { range: { from: edge - 43200, to: edge }, following: true } : saved)
-    })
-  }
 })
