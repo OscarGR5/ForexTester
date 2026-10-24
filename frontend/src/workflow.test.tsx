@@ -59,6 +59,7 @@ const coverage={symbol:'6E',resolution:'M1',providerEarliestTimestamp:'2010-06-0
 let host:HTMLDivElement,root:Root,disk:Awaited<ReturnType<typeof diskApiFixture>>,historyCalls=0
 let missingAsk=false,failHistory=false
 const beginning=Date.UTC(2024,0,9)
+const preroll=Array.from({length:90},(_,i)=>({timestamp:beginning-(90-i)*14400000,open:1.1,high:1.1002,low:1.0999,close:1.1001}))
 const bid=Array.from({length:12},(_,i)=>({timestamp:beginning+i*60000,open:1.1+i*.0001,close:1.1001+i*.0001,high:1.1002+i*.0001,low:i===5?1.0985:1.0999+i*.0001}))
 beforeEach(async()=>{
  disk=await diskApiFixture();historyCalls=0;missingAsk=false;failHistory=false
@@ -66,11 +67,12 @@ beforeEach(async()=>{
  Object.assign(globalThis,{IS_REACT_ACT_ENVIRONMENT:true});vi.spyOn(window,'confirm').mockReturnValue(true);vi.clearAllMocks()
  vi.stubGlobal('fetch',async(path:string,options?:RequestInit)=>{
   if(path.startsWith('/api/storage'))return disk.fetch(path,options)
+  if(path==='/api/history/calendar')return new Response(JSON.stringify({days:[]}))
   if(path==='/api/history/coverage')return new Response(JSON.stringify(coverage))
   if(path.startsWith('/api/history/estimate')&&!failHistory) {const params=new URL(path,'http://local').searchParams;return new Response(JSON.stringify({id:'fixture-cached-quote',from:'2023-12-10',tradingFrom:params.get('from'),to:params.get('to'),cached:true,estimatedUsd:0,reservedUsd:0,remainingBudgetUsd:5,downloadAllowed:true,blockedReason:null,expiresAt:'2030-01-01T00:00:00Z',missingRanges:[]}))}
   historyCalls++;if(failHistory)return new Response(JSON.stringify({code:'DATABENTO_AUTH',error:"Databento credentials were rejected.",action:'Check backend configuration.'}),{status:502})
   const params=new URL(path,'http://local').searchParams,from=params.get('from')!,to=params.get('to')!
-  return new Response(JSON.stringify({symbol:'EURUSD',resolution:'M1',from,to,bid:bid.filter(b=>b.timestamp>=Date.parse(from)&&b.timestamp<Date.parse(to)),ask:bid.filter(b=>b.timestamp>=Date.parse(from)&&b.timestamp<Date.parse(to)&&(!missingAsk||b.timestamp!==beginning+3*60000)).map(b=>({...b,open:b.open+.0002,close:b.close+.0002,high:b.high+.0002,low:b.low+.0002}))}))
+  return new Response(JSON.stringify({symbol:'EURUSD',resolution:'M1',from,to,bid:[...preroll,...bid].filter(b=>b.timestamp>=Date.parse(from)&&b.timestamp<Date.parse(to)),ask:[...preroll,...bid].filter(b=>b.timestamp>=Date.parse(from)&&b.timestamp<Date.parse(to)&&(!missingAsk||b.timestamp!==beginning+3*60000)).map(b=>({...b,open:b.open+.0002,close:b.close+.0002,high:b.high+.0002,low:b.low+.0002}))}))
  })
  host=document.createElement('div');document.body.append(host);root=createRoot(host)
 })
@@ -81,17 +83,17 @@ function button(name:string){const result=[...host.querySelectorAll<HTMLButtonEl
 async function click(name:string){await act(async()=>button(name).click())}
 async function input(label:string,value:string){const el=host.querySelector<HTMLInputElement>(`[aria-label="${label}"]`)!;expect(el).toBeTruthy();await act(async()=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')!.set!.call(el,value);el.dispatchEvent(new Event('input',{bubbles:true}))})}
 async function select(label:string,value:string){const el=host.querySelector<HTMLSelectElement>(`[aria-label="${label}"]`)!;await act(async()=>{el.value=value;el.dispatchEvent(new Event('change',{bubbles:true}))})}
-async function load(){await click('Load historical data');await until(()=>host.querySelector('.data-ready'))}
-async function start(){await mount();await load();await click('Start backtest')}
+async function load(){await click('Start backtest');await until(()=>host.querySelector('.phase-trading'))}
+async function start(){await mount();await load()}
 function chart(){return vi.mocked(createChart).mock.results.filter(r=>r.type==='return').at(-1)!.value}
 async function pick(price:number,paneIndex=0){const calls=vi.mocked(chart().subscribeClick).mock.calls;expect(calls.length).toBeGreaterThan(0);await act(async()=>calls.at(-1)![0]({point:{x:100,y:price*100000},paneIndex,seriesData:new Map()} as any))}
 async function order(direction='Buy',price=.099+1){await click(direction);await pick(price);await click('Confirm order')}
 it('keeps initial setup explicit, bounded and free from automatic downloads under StrictMode',async()=>{
  await mount();expect(historyCalls).toBe(0);expect(host.textContent).toContain('Set up a backtest');expect(host.querySelector('.chart-canvas')).toBeNull()
  const from=host.querySelector<HTMLInputElement>('[aria-label="From"]')!,through=host.querySelector<HTMLInputElement>('[aria-label="Through"]')!
- expect(from.min).toBe(coverage.earliestSelectableDate);expect(through.max).toBe('2024-02-29');expect(through.value).toBe('2024-01-09')
- await click('90 days');expect(host.textContent).toContain('90 calendar days');expect(historyCalls).toBe(0)
- await input('From','2000-01-01');await click('Load historical data');expect(historyCalls).toBe(0)
+ expect(from.min).toBe('');expect(through.max).toBe('');expect(through.value).toBe('2024-01-09')
+ expect(button('90 days').disabled).toBe(true);expect(historyCalls).toBe(0)
+ await input('From','2000-01-01');await click('Start backtest');expect(historyCalls).toBe(0)
 })
 it('keeps legacy-only recovery optional on refresh and preserves the browser original',async()=>{
  const legacy=new SessionStore(),history=sessionHistory(),sim=sessionSimulation(history),historyId=await historyFingerprint(history)
@@ -107,7 +109,7 @@ it('keeps legacy-only recovery optional on refresh and preserves the browser ori
  await act(async()=>{release()});await until(()=>!host.querySelector<HTMLFieldSetElement>('.workspace-controls')!.disabled)
  expect(host.querySelector<HTMLFieldSetElement>('.workspace-controls')!.hidden).toBe(false)
  expect(host.querySelector('dialog')).toBeNull();expect(historyCalls).toBe(0)
- expect(button('Load historical data').disabled).toBe(false)
+ expect(button('Start backtest').disabled).toBe(false)
  await until(()=>host.textContent?.includes('Review browser backtests'));await click('Review browser backtests');expect(host.textContent).toContain('Older browser backtest')
  await click('Close management');expect(host.querySelector('dialog')).toBeNull()
  await act(async()=>root.unmount());root=createRoot(host);await mount()
@@ -122,15 +124,15 @@ it('keeps legacy-only recovery optional on refresh and preserves the browser ori
 })
 it('saves loaded setup, locks configured account at start, and mounts chart-first trading without analytics',async()=>{
  await mount();await input('Starting balance (USD)','15000');await input('Round-trip commission (USD per standard lot)','7');await load()
- await until(()=>host.querySelector('.save-state')?.textContent==='Saved');let records=await disk.storage.list();expect(records.sessions[0].checkpoint.lifecycle).toBe('setup')
- await click('Start backtest');expect(host.querySelector('.chart-canvas')).toBeTruthy();expect(host.querySelector('[aria-label="Starting balance (USD)"]')).toBeNull()
+ await until(()=>host.querySelector('.save-state')?.textContent==='Saved');let records=await disk.storage.list();expect(records.sessions[0].checkpoint.lifecycle).toBe('trading')
+ expect(host.querySelector('.chart-canvas')).toBeTruthy();expect(host.querySelector('[aria-label="Starting balance (USD)"]')).toBeNull()
  expect(host.querySelector('.trading-journal')).toBeNull();expect(host.querySelector('[aria-label="Account PnL"]')?.textContent).toContain('$0.00 · 0.00%')
  await until(()=>host.querySelector('.save-state')?.textContent==='Saved');records=await disk.storage.list();expect(records.sessions[0].checkpoint.trading.account.referenceBalance).toBe(15000)
 })
 it('keeps Databento configuration errors readable and retries only on user action',async()=>{
- failHistory=true;await mount();await click('Load historical data');await until(()=>host.querySelector('.load-error'))
- expect(host.textContent).toContain('Databento credentials were rejected');expect(host.textContent).toContain('Configure Databento on the backend');expect(host.querySelector('.chart-message')).toBeNull()
- failHistory=false;await click('Retry historical data');await until(()=>host.querySelector('.data-ready'))
+ failHistory=true;await mount();await click('Start backtest');await until(()=>host.querySelector('.form-error[role=alert]'))
+ expect(host.textContent).toContain('Databento credentials were rejected');expect(host.querySelector('.chart-message')).toBeNull()
+ failHistory=false;await click('Start backtest');await until(()=>host.querySelector('.phase-trading'))
 })
 it.each([
  ['DATABENTO_ACCESS','Databento access denied','Databento denied dataset access.',undefined],
@@ -141,12 +143,11 @@ it.each([
  vi.stubGlobal('fetch',async(path:string,options?:RequestInit)=>path.startsWith('/api/history?')
   ? new Response(JSON.stringify({code,title,error,action:'Retry later. Completed chunks remain cached where valid.',retryAfterMs}),{status:code==='PROVIDER_RATE_LIMIT'?429:502})
   : underlying(path,options))
- await mount();await click('Load historical data');await until(()=>host.querySelector('.load-error'))
- expect(host.querySelector('.load-error strong')?.textContent).toBe(title)
- expect(host.querySelector('.load-error')?.textContent).not.toContain('install-browser')
- expect(host.querySelector('.data-ready')).toBeNull();expect(button('Start backtest').disabled).toBe(true)
- expect(button('Retry historical data').disabled).toBe(false)
- if(retryAfterMs!==undefined)expect(host.textContent).toContain('at least 12 seconds')
+ await mount();await click('Start backtest');await until(()=>host.querySelector('.form-error[role=alert]'))
+ expect(host.querySelector('.form-error[role=alert]')?.textContent).toContain(error)
+ expect(host.querySelector('.form-error[role=alert]')?.textContent).not.toContain('install-browser')
+ expect(host.querySelector('.data-ready')).toBeNull();expect(button('Start backtest').disabled).toBe(false)
+ if(retryAfterMs!==undefined)expect(host.textContent).toContain(error)
 })
 it.each(['Buy','Sell'])('requires chart selection and confirmation for %s; rejects wrong side and ignores oscillator clicks',async(direction)=>{
  await start();await click(direction);await pick(direction==='Buy'?1.102:1.098,1);expect(button('Confirm order').disabled).toBe(true)
@@ -176,7 +177,7 @@ it('maintains independent stops and setup grouping, changes stop history, execut
  expect(state.closed).toHaveLength(2);expect(state.setups).toHaveLength(1);expect(state.closed[0].stopModifications).toHaveLength(1);expect(state.closed[0].exitReason).toBe('stop_loss');expect(state.closed[1].exitReason).toBe('manual')
 })
 it('reports account equity PnL including fees, and unavailable equity when a required quote is missing',async()=>{
- missingAsk=true;await mount();await input('Round-trip commission (USD per standard lot)','7');await load();await click('Start backtest');await order('Sell',1.103);await click('Next Candle')
+ missingAsk=true;await mount();await input('Round-trip commission (USD per standard lot)','7');await load();await order('Sell',1.103);await click('Next Candle')
  await until(()=>host.querySelector('.save-state')?.textContent==='Saved');const row=(await disk.storage.list()).sessions[0];const state=stateOf(row)
  const net=(state.quote!.bid!.close-state.positions[0].entryPrice)*-100000*state.positions[0].lots-state.positions[0].entryCommissionUsd-state.positions[0].lots*20 // ask spread .0002
  expect(host.querySelector('[aria-label="Account PnL"]')?.textContent).toContain(`$${net.toFixed(2)}`)
@@ -211,11 +212,12 @@ it('converts inclusive calendar dates without changing exclusive stored ranges',
  expect(accountPnl(createEquityLedger(10000),10000)).toBeNull()
  expect(lifecycleOf({...sessionSimulation().snapshot().checkpoint,lifecycle:undefined})).toBe('setup')
 })
-it('keeps cancelled data loading in Setup and requires an explicit retry',async()=>{
- await mount();const underlying=globalThis.fetch
- vi.stubGlobal('fetch',(path:string,options?:RequestInit)=>path.startsWith('/api/history?')?new Promise((_resolve,reject)=>options?.signal?.addEventListener('abort',()=>reject(new DOMException('Aborted','AbortError')))):underlying(path,options))
- await click('Load historical data');expect(host.textContent).toContain('history chunks loaded');await click('Cancel loading');expect(button('Load historical data').disabled).toBe(false);expect(button('Start backtest').disabled).toBe(true)
- vi.stubGlobal('fetch',underlying);await load();expect(button('Start backtest').disabled).toBe(false)
+it('prevents duplicate clicks while cached startup is active',async()=>{
+ await mount();const underlying=globalThis.fetch;let release!:()=>void
+ vi.stubGlobal('fetch',async(path:string,options?:RequestInit)=>{if(path.startsWith('/api/history?'))await new Promise<void>(resolve=>{release=resolve});return underlying(path,options)})
+ await click('Start backtest');expect(host.textContent).toContain('Preparing charts and indicators');expect(button('Start backtest').disabled).toBe(true)
+ await click('Start backtest');await act(async()=>release());await until(()=>host.querySelector('.phase-trading'))
+ expect(historyCalls).toBe(1)
 })
 it('never publishes a finished view when the finished checkpoint fails to save',async()=>{
  await start();await until(()=>host.querySelector('.save-state')?.textContent==='Saved');const underlying=globalThis.fetch
@@ -238,20 +240,20 @@ it('shows an uncached quote, requires confirmation, and preserves the chosen nam
  const original = globalThis.fetch, paid = vi.fn()
  vi.stubGlobal('fetch',async(path:string,options?:RequestInit)=>{
   if(path.startsWith('/api/history/estimate'))return new Response(JSON.stringify({id:'fixture-approval',from:'2023-12-10',tradingFrom:'2024-01-09',to:'2024-01-10',cached:false,estimatedUsd:.01,reservedUsd:.02,remainingBudgetUsd:5,downloadAllowed:true,blockedReason:null,expiresAt:'2030-01-01T00:00:00Z',missingRanges:[{from:'2023-12-10',to:'2024-01-10'}]}))
-  if(path==='/api/history/download'){paid(options);return new Response(JSON.stringify({...fixtureHistory('2023-12-10','2024-01-10'),tradingFrom:'2024-01-09'}))}
+  if(path==='/api/history/download'){paid(options);return new Response(JSON.stringify({...fixtureHistory('2023-12-10','2024-01-10',undefined,true),tradingFrom:'2024-01-09'}))}
   return original(path,options)
  })
- await mount();await input('Backtest name','6E research draft');await input('Replay start (UTC)','2024-01-09T00:00')
- await click('Load historical data');await until(()=>host.querySelector('.paid-download-dialog'))
+ await mount();await input('Backtest name','6E research draft')
+ await click('Start backtest');await until(()=>host.querySelector('.paid-download-dialog'))
  expect(paid).not.toHaveBeenCalled();expect(host.textContent).toContain('$0.01')
  expect(button('Approve paid download — Estimated $0.01').disabled).toBe(true)
  await click('Cancel — No download');expect(paid).not.toHaveBeenCalled()
- await click('Load historical data');await until(()=>host.querySelector('.paid-download-dialog'))
+ await click('Start backtest');await until(()=>host.querySelector('.paid-download-dialog'))
  await act(async()=>host.querySelector<HTMLInputElement>('.download-acknowledgement input')!.click())
- await click('Approve paid download — Estimated $0.01');await until(()=>host.querySelector('.data-ready'))
+ await click('Approve paid download — Estimated $0.01');await until(()=>host.querySelector('.phase-trading'))
  expect(paid).toHaveBeenCalledOnce();expect(JSON.parse(paid.mock.calls[0][0].body)).toEqual({quoteId:'fixture-approval',confirm:true})
- expect((host.querySelector('[aria-label="Backtest name"]') as HTMLInputElement).value).toBe('6E research draft')
- await click('Start backtest');await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
+ expect(host.querySelector('.header-session')?.textContent).toContain('6E research draft')
+ await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
  const record=(await disk.storage.list()).sessions[0]
  expect(record.symbol).toBe('6E');expect(record.checkpoint.trading.quote).toHaveProperty('trade')
 })
@@ -266,15 +268,15 @@ it('saves a replacement paid history under a new session before flushing the pre
    quote={id:'replacement-quote',from,tradingFrom,to,cached:false,estimatedUsd:.01,reservedUsd:.02,remainingBudgetUsd:5,downloadAllowed:true,blockedReason:null,expiresAt:'2030-01-01T00:00:00Z',missingRanges:[{from,to}]}
    return new Response(JSON.stringify(quote))
   }
-  if(path==='/api/history/download')return new Response(JSON.stringify({...fixtureHistory(quote.from,quote.to),tradingFrom:quote.tradingFrom}))
+  if(path==='/api/history/download')return new Response(JSON.stringify({...fixtureHistory(quote.from,quote.to,undefined,true),tradingFrom:quote.tradingFrom}))
   return original(path,options)
  })
  await mount();await load();await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
  const before=(await disk.storage.list()).sessions[0]
- await input('Backtest name','Preserved replacement name')
- paidMode=true;await input('From','2024-01-08');await click('Load historical data');await until(()=>host.querySelector('.paid-download-dialog'))
+ await click('Sessions / settings');await click('New session');await until(()=>host.querySelector('.phase-setup'));await input('Backtest name','Preserved replacement name')
+ paidMode=true;await input('From','2024-01-08');await click('Start backtest');await until(()=>host.querySelector('.paid-download-dialog'))
  await act(async()=>host.querySelector<HTMLInputElement>('.download-acknowledgement input')!.click())
- await click('Approve paid download — Estimated $0.01');await until(()=>host.querySelector('.data-ready') && host.querySelector('.save-state')?.textContent==='Saved')
+ await click('Approve paid download — Estimated $0.01');await until(()=>host.querySelector('.phase-trading') && host.querySelector('.save-state')?.textContent==='Saved')
  expect(host.querySelector('.critical-save')).toBeNull()
  const records=(await disk.storage.list()).sessions
  expect(records).toHaveLength(2)
@@ -303,24 +305,24 @@ it('keeps cache bounds out of the date picker and reaches approval for earlier h
   }
   return original(path,options)
  })
- await mount();await until(()=>host.textContent?.includes('Validated local cache'))
+ await mount();await until(()=>host.textContent?.includes('No downloaded history yet'))
  const from=host.querySelector<HTMLInputElement>('[aria-label="From"]')!
  expect(from.min).toBe('');expect(host.textContent).not.toContain('Earliest advertised M1')
- expect(host.textContent).toContain('Additional data requires Databento access')
+ expect(host.textContent).toContain('Get more historical data')
  expect(selectedRange('2022-01-01','2022-03-31',cacheCoverage).error).toBeNull()
  expect(selectedRange('2022-01-01','2022-04-01',cacheCoverage).error).toBeTruthy()
- await input('From','2022-01-03');await input('Through','2022-01-04');await click('Load historical data')
+ await input('From','2022-01-03');await input('Through','2022-01-04');await click('Start backtest')
  await until(()=>host.querySelector('.paid-download-dialog'))
  expect(estimates).toEqual(['2022-01-03']);expect(host.textContent).toContain('2022-01-03 through 2022-01-04')
  expect(button('Approve paid download — Estimated $0.02').disabled).toBe(true)
  await act(async()=>host.querySelector<HTMLInputElement>('.download-acknowledgement input')!.click())
  expect(button('Approve paid download — Estimated $0.02').disabled).toBe(false)
  await click('Cancel — No download');expect(paid).not.toHaveBeenCalled()
- access=false;await click('Load historical data');await until(()=>host.querySelector('.load-error'))
- expect(host.textContent).toContain('Set DATABENTO_API_KEY');expect(host.textContent).toContain('Additional data requires Databento access')
- await input('From','2024-01-09');await input('Through','2024-01-09');await click('Retry historical data')
- await until(()=>host.querySelector('.data-ready'))
- expect(host.querySelector('.cached-history-status')?.textContent).toContain('$0.00')
+ access=false;await click('Start backtest');await until(()=>host.querySelector('.form-error[role=alert]'))
+ expect(host.textContent).toContain('Set DATABENTO_API_KEY');expect(host.textContent).toContain('Get more historical data')
+ await input('From','2024-01-09');await input('Through','2024-01-09');await click('Start backtest')
+ await until(()=>host.querySelector('.phase-trading'))
+ expect(host.querySelector('.phase-trading')).not.toBeNull()
  expect(host.querySelector('.paid-download-dialog')).toBeNull();expect(paid).not.toHaveBeenCalled()
 })
 
@@ -368,7 +370,7 @@ it('opens an actionable startup error when disk initialization fails', async()=>
 it('opens Setup while optional legacy discovery is still pending',async()=>{
  let release!:(value:[])=>void
  vi.spyOn(SessionStore.prototype,'list').mockImplementation(()=>new Promise<[]>(resolve=>{release=resolve}))
- await mount();expect(button('Load historical data').disabled).toBe(false);expect(host.querySelector('.startup-selection')).toBeNull()
+ await mount();expect(button('Start backtest').disabled).toBe(false);expect(host.querySelector('.startup-selection')).toBeNull()
  await act(async()=>release([]))
 })
 it('removes preferences only after backend deletion succeeds and leaves other sessions untouched', async()=>{
@@ -431,4 +433,47 @@ it('refuses cleanup with unreadable disk inventory',async()=>{
  vi.stubGlobal('fetch',(path:string,options?:RequestInit)=>path==='/api/storage/sessions'?Promise.resolve(new Response(JSON.stringify({sessions:[],errors:[{id:'broken',error:'Unreadable',revision:null}]}))):underlying(path,options))
  await click('Clean up unused UI preferences');await until(()=>host.textContent?.includes('inventory contains unreadable sessions'))
  expect(localStorage.getItem(uiKey('orphan'))).toBe('keep')
+})
+
+it('keeps a restored session\'s original start timestamp and indices even when automatic warm-up would choose another start',async()=>{
+ const original=await seedSaved()
+ await mount();await click('Resume backtest');await until(()=>host.querySelector('.phase-trading'));await click('Sessions / settings');await click('Save now');await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
+ const saved=(await disk.storage.list()).sessions[0]
+ expect(saved.checkpoint.replay.startTimestamp).toBe(original.checkpoint.replay.startTimestamp)
+ expect(saved.checkpoint.replay.startIndex).toBe(original.checkpoint.replay.startIndex)
+ expect(saved.checkpoint.replay.index).toBe(original.checkpoint.replay.index)
+})
+it('keeps an expired quote unsubmitted and asks for a fresh estimate',async()=>{
+ const underlying=globalThis.fetch,paid=vi.fn()
+ vi.stubGlobal('fetch',async(path:string,options?:RequestInit)=>{
+  if(path==='/api/history/download'){paid();throw Error('No paid submission allowed')}
+  const response=await underlying(path,options)
+  if(path.startsWith('/api/history/estimate')){const quote=await response.json();return new Response(JSON.stringify({...quote,cached:false,estimatedUsd:.01,reservedUsd:.02,expiresAt:'2020-01-01T00:00:00Z',missingRanges:[{from:quote.from,to:quote.to}]}))}
+  return response
+ })
+ await mount();await click('Start backtest');await until(()=>host.querySelector('.paid-download-dialog'))
+ expect(host.textContent).toContain('Quote expired');expect(button('Approve paid download — Estimated $0.01').disabled).toBe(true)
+ await click('Cancel — No download');expect(paid).not.toHaveBeenCalled();expect(host.querySelector('.phase-setup')).not.toBeNull()
+})
+it('cancels an in-flight cached load without creating or starting a session',async()=>{
+ await mount();const underlying=globalThis.fetch
+ vi.stubGlobal('fetch',(path:string,options?:RequestInit)=>path.startsWith('/api/history?')?new Promise((_resolve,reject)=>options?.signal?.addEventListener('abort',()=>reject(new DOMException('Aborted','AbortError')))):underlying(path,options))
+ await click('Start backtest');await click('Cancel loading')
+ expect(button('Start backtest').disabled).toBe(false);expect(host.querySelector('.phase-trading')).toBeNull();expect((await disk.storage.list()).sessions).toHaveLength(0)
+ vi.stubGlobal('fetch',underlying);await load();expect(historyCalls).toBe(1)
+})
+it('preserves the production rollover blocker after one-click startup',async()=>{
+ const {fixtureHistory}=await import('../../tests/databentoFixture'),underlying=globalThis.fetch
+ vi.stubGlobal('fetch',async(path:string,options?:RequestInit)=>{
+  if(path.startsWith('/api/history?')){
+   const source=fixtureHistory('2023-12-10','2024-01-11','2024-01-10')
+   source.candles=[...preroll,...bid.slice(0,2),{...bid[0],timestamp:Date.parse('2024-01-10')}].map(bar=>({...bar,volume:'1',instrumentId:bar.timestamp<Date.parse('2024-01-10')?101:202}))
+   return new Response(JSON.stringify(source))
+  }
+  return underlying(path,options)
+ })
+ await mount();await input('Through','2024-01-10');await load();await click('Next Candle')
+ expect(host.querySelector('[aria-label="Replay status"]')?.textContent).toBe('Rollover blocked')
+ expect(button('Next Candle').disabled).toBe(true);expect(button('Play').disabled).toBe(true)
+ await until(()=>host.querySelector('.save-state')?.textContent==='Saved');expect((await disk.storage.list()).sessions[0].checkpoint.replay.timestamp).toBe(beginning+60000)
 })

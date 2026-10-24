@@ -358,3 +358,56 @@ button:disabled { opacity: 0.45; cursor: default; }
 .legacy-migration > summary { cursor: pointer; color: #b2b5be; padding: 8px 0; }
 .startup-selection .legacy-migration { border-top: 1px solid #354250; padding: 8px 0; }
 .startup-heading h2:focus { outline: none; }
+
+/* Setup keeps the terminal palette, with the historical selection leading. */
+.setup-form { display: flex; flex-direction: column; gap: 28px; }
+.setup-form section, .setup-advanced { min-width: 0; }
+.setup-form h3 { font-size: 17px; margin: 0 0 18px; }
+.setup-form h3 > span { color: #b2b5be; font-size: 12px; font-weight: 400; margin-left: 12px; }
+.timeline-navigation { display: flex; justify-content: space-between; align-items: end; gap: 12px; }
+.timeline-navigation label { gap: 4px; }
+.timeline-navigation select { background: #171e28; color: #e5eaf0; border: 1px solid #4a596b; border-radius: 4px; padding: 6px; min-height: 36px; }
+.selected-dates { display: flex; justify-content: space-between; margin: 24px 0 12px; gap: 16px; }
+.selected-dates > div { display: flex; flex-direction: column; gap: 6px; }
+.selected-dates > div:last-child { text-align: right; }
+.selected-dates span { color: #b2b5be; font-size: 13px; }
+.selected-dates strong { font-size: 23px; font-variant-numeric: tabular-nums; }
+.timeline-track { position: relative; height: 48px; margin: 0 12px; }
+.timeline-days { display: flex; position: absolute; inset: 13px 0; }
+.timeline-days > span { flex: 1; min-width: 0; background: #354250; opacity: .5; border-right: 1px solid #10151d; }
+.timeline-days > .cached { background: #75c4b5; }
+.timeline-days > .selected { opacity: 1; }
+.timeline-days > .invalid { background: #e2a2a6; }
+.timeline-days > .rollover { border-left: 2px solid #ffcc80; }
+.setup-workspace .timeline-track input[type=range] { position: absolute; inset: 0 -12px; width: calc(100% + 24px); max-width: none; padding: 0; margin: 0; height: 48px; border: none; background: transparent; pointer-events: none; appearance: none; }
+.timeline-track input[type=range]::-webkit-slider-thumb { appearance: none; pointer-events: auto; height: 40px; width: 24px; background: #f2f7f8; border: 4px solid #315e60; border-radius: 4px; cursor: ew-resize; touch-action: none; }
+.timeline-track input[type=range]::-moz-range-thumb { pointer-events: auto; height: 32px; width: 16px; background: #f2f7f8; border: 4px solid #315e60; border-radius: 4px; cursor: ew-resize; }
+.timeline-track input[type=range]:focus-visible { outline: 2px solid #85c8d4; outline-offset: 2px; }
+.timeline-scale { display: flex; justify-content: space-between; font-size: 12px; color: #b2b5be; }
+.timeline-legend { display: flex; flex-wrap: wrap; gap: 8px 20px; color: #b2b5be; font-size: 12px; }
+.timeline-legend span:first-child::before, .timeline-legend span:nth-child(2)::before { content: ''; display: inline-block; width: 12px; height: 8px; margin-right: 6px; background: #75c4b5; }
+.timeline-legend span:nth-child(2)::before { background: #354250; }
+.period-readiness { line-height: 1.5; font-size: 14px; }
+.period-readiness p { margin: 6px 0; }
+.more-history { margin-top: 12px; }
+.more-history-fields { margin-top: 16px; font-size: 14px; }
+.setup-account { padding-top: 24px; border-top: 1px solid #354250; }
+.setup-account .account-fields { max-width: 660px; }
+.setup-advanced { border-top: 1px solid #354250; padding-top: 20px; }
+.setup-advanced > summary { cursor: pointer; color: #b2b5be; }
+.advanced-fields { display: grid; gap: 20px; margin-top: 20px; }
+.advanced-fields > label { max-width: 500px; }
+.setup-form .setup-footer { margin-top: 0; }
+@media (max-width: 600px) {
+  .selected-dates strong { font-size: 20px; }
+  .timeline-navigation { gap: 8px; }
+  .timeline-navigation button { padding: 8px; }
+  .timeline-navigation select { max-width: 145px; font-size: 16px; }
+}
+.setup-workspace { display: flex; flex-direction: column; overflow: hidden; }
+.setup-form { overflow-y: auto; min-height: 0; padding-right: 4px; }
+.setup-footer { flex-shrink: 0; }
+.indicator-readiness { color: #b2b5be; font-size: 11px; margin-left: 8px; }
+@media (max-width: 600px) { .indicator-readiness { margin-left: 0; font-size: 10px; } }
+.setup-workspace { flex: 1; min-height: 0; }
+@media (max-width: 600px) { .pane-toolbar:has(.indicator-readiness) { flex-wrap: wrap; } }

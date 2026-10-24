@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { CandlestickSeries, ColorType, LineStyle, createChart, type IChartApi, type IPriceLine, type ISeriesApi, type Time, type MouseEventParams } from 'lightweight-charts'
 import { ChartTimeSlots } from './chartTimeSlots'
 import { performanceStart, performanceEnd, performanceCount, performanceValue } from './replayPerformance'
@@ -8,6 +8,7 @@ import { IndicatorControls } from './IndicatorControls'
 import { IndicatorSeries } from './indicatorSeries'
 import type { IndicatorSettings } from './indicators'
 import { ReplayBars } from './replayBars'
+import { indicatorWarmupRequirement } from './indicatorSettings'
 import { TIMEFRAMES, type Timeframe, type Candle } from './history'
 import type { Position } from './trading'
 import type { StopDraft } from './TradingDock'
@@ -29,6 +30,7 @@ interface ChartPaneProps {
 }
 
 export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, placement, onPick }: ChartPaneProps) {
+  const [readiness, setReadiness] = useState('')
   const container = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
@@ -123,6 +125,9 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, se
     const bars = replace ? new ReplayBars(timeframe) : last.bars
     const dirty = bars.advance(source, count)
     const candles = bars.candles
+    const required = indicatorWarmupRequirement(settings)
+    const completed = Math.max(0, candles.length - (count ? 1 : 0))
+    setReadiness(!required ? '' : completed < required ? `Indicators warming up: ${completed} / ${required} completed ${timeframe} candles. Continue replay or reduce the indicator periods.` : `Indicators ready · ${required}+ completed ${timeframe} candles`)
     performanceValue(`chart.${id}.cursor`, count)
     performanceValue(`chart.${id}.time`, candles.at(-1)?.time ?? 0)
     if (!replace && dirty === candles.length && previousSettings.current === settings) {
@@ -213,6 +218,7 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, se
           onChange={(event) => onTimeframeChange(id, event.target.value as Timeframe)}>
           {TIMEFRAMES.map((option) => <option key={option} value={option}>{option}</option>)}
         </select></label>
+        {readiness && <span className="indicator-readiness" role="status">{readiness}</span>}
         <IndicatorControls key={timeframe} id={id} settings={settings} onChange={updateSettings} />
       </div>
       <div ref={container} className="chart-canvas" aria-hidden="true" />

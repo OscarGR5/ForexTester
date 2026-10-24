@@ -81,3 +81,25 @@ it('quotes earlier uncached dates through verified metadata without spending, wh
   expect(client.paid).toHaveLength(paid)
   expect(await readFile(ledgerPath, 'utf8')).toBe(ledger)
 })
+
+it('returns a read-only empty calendar with zero provider calls', async () => {
+  expect(await (await fetch(`${origin}/api/history/calendar`)).json()).toEqual({days:[]})
+  expect(client.metadataCalls).toHaveLength(0);expect(client.paid).toHaveLength(0)
+})
+it('validates individual calendar dates, preserves gaps and identifies damaged cache objects', async () => {
+  const { unlink, writeFile } = await import('node:fs/promises')
+  client.dense=true;client.roll='2020-01-01'
+  const quote=await (await fetch(`${origin}/api/history/estimate?symbol=6E&from=2024-01-09&to=2024-01-11`)).json()
+  await fetch(`${origin}/api/history/download`,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({quoteId:quote.id,confirm:true})})
+  await unlink(join(directory,'cache','2023-12-15.ref.json'))
+  await writeFile(join(directory,'cache','2023-12-16.ref.json'),'{"id":"damaged"}')
+  const ledger=await readFile(join(directory,'cache','verification-budget.json'),'utf8'),metadata=client.metadataCalls.length
+  const value=await (await fetch(`${origin}/api/history/calendar`)).json()
+  expect(value.days).toHaveLength(31)
+  expect(value.days.find((day:any)=>day.date==='2023-12-15')).toBeUndefined()
+  expect(value.days.find((day:any)=>day.date==='2023-12-16')).toMatchObject({status:'invalid',observations:0,h4:[]})
+  expect(value.days[0]).toMatchObject({date:'2023-12-10',status:'cached',observations:1440})
+  expect(value.days[0].h4).toHaveLength(6)
+  expect(client.metadataCalls).toHaveLength(metadata);expect(client.paid).toHaveLength(1)
+  expect(await readFile(join(directory,'cache','verification-budget.json'),'utf8')).toBe(ledger)
+})

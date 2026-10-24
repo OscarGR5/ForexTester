@@ -111,9 +111,9 @@ Setup uses a 28px heading; Results uses 26px. The app name and Setup section tit
 
 The shell fills `100dvh`, with a compact header and phase-specific content. Desktop Trading gives remaining height to one, two, or three vertically stacked charts, with a replay strip above and a trading dock below. Chart panes have no outer card border or rounded corners; narrow 4px gaps separate them. Pane toolbars are 32px high.
 
-Setup is centered at a maximum 1080px width, with 36px 32px padding and a two-column `1.2fr 1fr` grid separated by 44px. Results uses 28px padding, flat statistic groups, and section dividers. Setup and Results scroll independently of the header.
+Setup is centered at a maximum 1080px width, with 36px 32px padding. Its vertical hierarchy is Historical period, Trading account, then collapsed Advanced settings. Dates, the daily history timeline, presets, and readiness lead the first viewport; account and advanced controls follow in a scrolling form. The Start backtest footer remains visible outside that scroll area. Results uses 28px padding, flat statistic groups, and section dividers. Results scrolls independently of the header.
 
-At 700px and below, Setup becomes one column with 24px 16px padding; Results uses 20px 12px. The header and replay controls wrap, account PnL occupies its own row, and Trading can scroll with a chart workspace minimum of 400px. At 600px and below, journal statistics use two columns. Wide journal tables scroll within their own container.
+At 700px and below, Setup uses 24px 16px padding and a full-width Start button; Results uses 20px 12px. The header and replay controls wrap, account PnL occupies its own row, and Trading can scroll with a chart workspace minimum of 400px. At 600px and below, journal statistics use two columns. Wide journal tables scroll within their own container.
 
 ## Elevation & Depth
 
@@ -128,6 +128,8 @@ Controls use 4px corners and thin borders. Chart messages use 6px corners. Data 
 Buttons are compact, normally at least 34px high. Start backtest has larger padding. Hover changes enabled buttons to the action-hover color; disabled buttons use 45% opacity. Keyboard focus is a 2px focus-color outline with a 2px offset.
 
 Inputs use dark surfaces, visible labels, 4px corners, and a minimum 36px height in Setup and the dock. Date and time fields retain native browser interaction. Error text accompanies invalid state; existing invalid-input styles use the negative border color.
+
+Setup's responsive daily timeline uses two labeled range handles, explicit From and Through dates, and a legend for downloaded days, local gaps, and contract-change markers. Preserve keyboard, mouse, and touch interaction. The 7-, 30-, and 90-day presets precede readiness text; manual date entry stays secondary under Advanced settings or Get more historical data. Keep the existing terminal palette and visible status labels.
 
 Results navigation uses three labeled buttons with `aria-pressed`; the active button has the action surface and focus-color border. Chart layout uses native radio inputs. Indicator settings expand as a bounded overlay attached to the pane toolbar.
 

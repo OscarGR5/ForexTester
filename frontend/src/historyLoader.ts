@@ -1,4 +1,4 @@
-import { aggregateBidCandles, fetchHistory, parseHistory, validateDateRange, type Candle, type DateRange, type HistoryResponse } from './history.js'
+import { aggregateBidCandles, fetchHistory, parseHistory, validateDateRange, type Candle, type DateRange, type HistoryResponse, type TradeCandle } from './history.js'
 
 const DAY = 86_400_000
 const date = (ms: number) => new Date(ms).toISOString().slice(0, 10)
@@ -32,7 +32,10 @@ export function replayStartIndex(candles: readonly Candle[], timestamp: number):
 }
 
 export function ichimokuWarmup(candles: readonly Candle[], start: number, settings = { tenkan: 9, kijun: 26, spanB: 52, displacement: 26 }) {
-  const count = aggregateBidCandles(candles.filter((bar) => bar.timestamp < start), 'H4').length
+  const target = (candles[replayStartIndex(candles, start)] ?? candles.at(-1)) as TradeCandle | undefined
+  let first = replayStartIndex(candles, start)
+  while (first > 0 && (candles[first - 1] as TradeCandle).instrumentId === target?.instrumentId) first--
+  const count = aggregateBidCandles(candles.slice(first).filter((bar) => bar.timestamp < start), 'H4').filter(bar => Math.floor(bar.timestamp / 14400000) * 14400000 + 14400000 <= start).length
   // A paired cloud at the replay edge needs its lookback plus forward displacement.
   const required = Math.max(settings.tenkan, settings.kijun, settings.spanB) + settings.displacement
   return { count, required, ready: count >= required }

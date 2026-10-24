@@ -3,7 +3,7 @@ import { open, readFile, readdir, rename, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { providerCachePaths } from './projectPaths.js'
 import { DatabentoClient, DataError, dateMs, day, IDENTITY } from './databento.js'
-import { isSinglePrice, parseHistory, type ContractInterval, type SinglePriceHistory } from '../../frontend/src/history.js'
+import { aggregateBidCandles, isSinglePrice, parseHistory, type ContractInterval, type SinglePriceHistory } from '../../frontend/src/history.js'
 import type { LoadedHistory } from '../../frontend/src/historyLoader.js'
 
 export type { Candle, HistoryResponse } from '../../frontend/src/history.js'
@@ -92,6 +92,29 @@ export class HistoryService {
       else ranges.push({ from: date, to: end })
     }
     return { missing: ranges, cacheState: hash(identities) }
+  }
+  // Read-only: validate every reference independently; gaps and damaged days stay explicit.
+  async calendar() {
+    let names: string[]
+    try { names = await readdir(await this.root()) }
+    catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { days: [] }; throw error }
+    const dates = names.filter(name => /^\d{4}-\d{2}-\d{2}\.ref\.json$/.test(name)).map(name => name.slice(0, 10)).sort()
+    const days = []
+    for (const date of dates) {
+      try {
+        const history = await this.cachedDay(date)
+        if (history) {
+          // Keep the actual first observed minute, rather than a fabricated bucket opening.
+          const h4 = aggregateBidCandles(history.candles, 'H4').map(bar => ({ ...bar,
+            timestamp: history.candles.find(c => Math.floor(c.timestamp / 14400000) === Math.floor(bar.timestamp / 14400000) && c.instrumentId === (bar as { instrumentId?: number }).instrumentId)!.timestamp }))
+          days.push({ date, status: 'cached' as const, observations: history.candles.length, h4 })
+        }
+      } catch (error) {
+        if (!(error instanceof DataError) || error.code !== 'CACHE_CORRUPT') throw error
+        days.push({ date, status: 'invalid' as const, observations: 0, h4: [] })
+      }
+    }
+    return { days }
   }
   async cachedBounds(): Promise<(Range & { cachedDates: number }) | null> {
     const dates = (await readdir(await this.root())).filter(name => /^\d{4}-\d{2}-\d{2}\.ref\.json$/.test(name)).map(name => name.slice(0, 10)).sort()

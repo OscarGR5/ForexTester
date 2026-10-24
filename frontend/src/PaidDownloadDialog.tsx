@@ -30,6 +30,7 @@ export function PaidDownloadDialog({ quote, onCancel, onApprove }: { quote: Hist
   return <dialog ref={ref} className="paid-download-dialog" aria-labelledby="paid-download-title" aria-describedby="paid-download-description" onCancel={event => { event.preventDefault(); if (!submitted.current) onCancel() }}>
     <h2 ref={headingRef} tabIndex={-1} id="paid-download-title">Approve paid history download</h2>
     <p id="paid-download-description">6E / Databento · M1 trade prices · UTC</p>
+    <p>After a successful download, your backtest will open automatically, paused and ready.</p>
     <dl className="download-period">
       <div><dt>Requested period</dt><dd>{quote.tradingFrom} through {shiftDate(quote.to, -1)}</dd></div>
       <div><dt>Included 30-day pre-roll</dt><dd>{quote.from} through {shiftDate(quote.tradingFrom, -1)}</dd></div>
