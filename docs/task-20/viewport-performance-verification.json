@@ -1,0 +1,42 @@
+{
+  "scenario": "D",
+  "days": 90,
+  "timeframes": [
+    "M5",
+    "M15",
+    "H4"
+  ],
+  "initial": 122621,
+  "total": 123823,
+  "batch": 100,
+  "samples": 12,
+  "workMs": [
+    67.8999999910593,
+    81.5,
+    64.29999999701977,
+    75.29999999701977,
+    66.20000000298023,
+    45.5,
+    62.1000000089407,
+    52.20000000298023,
+    55.29999999701977,
+    59.400000005960464,
+    58.70000000298023,
+    48.599999994039536
+  ],
+  "meanMs": 61.416666666666664,
+  "p95Ms": 81.5,
+  "counts": {
+    "sync.crosshair.batchClear": 36,
+    "timeline.batch": 24,
+    "candles.update": 361,
+    "indicators.update": 2445,
+    "cloud.redraw": 5,
+    "sync.request": 36,
+    "sync.setRange": 31,
+    "sync.crosshair.restore": 12,
+    "sync.crosshair.set": 24,
+    "sync.crosshair.clear": 2
+  },
+  "errors": []
+}

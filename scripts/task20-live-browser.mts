@@ -24,9 +24,8 @@ try {
  await page.screenshot({path:'docs/task-20/setup-live.png',fullPage:true})
  await page.getByRole('button',{name:'Start backtest',exact:true}).click()
  await page.waitForFunction(()=>document.querySelector('.save-state')?.textContent==='Saved')
- // Public wheel interaction zooms into the observed edge, not future candles.
- const chart=page.locator('.chart-canvas');const box=await chart.boundingBox();assert.ok(box)
- await page.mouse.move(box.x+box.width*.85,box.y+box.height*.4);await page.mouse.wheel(0,-600);await page.waitForTimeout(300)
+ // Capture the initial viewport without applying a manual zoom.
+ await page.locator('.chart-canvas').waitFor();await page.waitForTimeout(300)
  await page.screenshot({path:'docs/task-20/trading-live.png',fullPage:true})
  assert.deepEqual(errors,[]);assert.ok(requests.every(r=>r.status===200));assert.ok(requests.some(r=>r.bid>0&&r.ask>0))
  await writeFile('docs/task-20/live-browser-verification.json',JSON.stringify({requests,errors,loaded:await page.getByLabel('Replay progress').innerText(),sandbox:true},null,2))

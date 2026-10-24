@@ -524,6 +524,10 @@ FOREXTESTER_CACHE_DIR=/tmp/forextester-live-check node --import tsx scripts/veri
 node --import tsx scripts/task20-browser.mts
 # Actual browser loading through the real provider:
 node --import tsx scripts/task20-live-browser.mts
+# Initial viewport, timeframe defaults, synchronization and custom-view restoration:
+node --import tsx scripts/task20-viewport-browser.mts
+# Optional deterministic weekday history for the same viewport checks:
+REPRESENTATIVE=1 node --import tsx scripts/task20-viewport-browser.mts
 ```
 
 These scripts use temporary, isolated session directories and sandboxed Chromium.

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { CandlestickData, IChartApi, ISeriesApi, LogicalRange, MouseEventParams, UTCTimestamp } from 'lightweight-charts'
 import { ChartSynchronizer, logicalToUtc, utcToLogical } from './chartSync'
 import type { Timeframe } from './history'
+import { TIMEFRAME_MS } from './history'
 
 function candles(times: number[]): CandlestickData<UTCTimestamp>[] {
   return times.map((time) => ({ time: time as UTCTimestamp, open: 1, high: 2, low: 0.5, close: 1.5 }))
@@ -132,6 +133,7 @@ describe('UTC chart synchronization', () => {
     const h4 = fakeChart({ from: 0, to: 5 } as LogicalRange, 5, 1)
     register(sync, 0, m1, Array.from({ length: 1440 }, (_, index) => index * 60), 'M1')
     register(sync, 1, h4, [0, 4, 8, 12, 16, 20].map((hour) => hour * 3600), 'H4')
+    m1.setVisibleLogicalRange.mockClear() // Count navigation after the initial trading window.
 
     const previousCalls = h4.setVisibleLogicalRange.mock.calls.length
     sync.activate(0)
@@ -339,4 +341,120 @@ it('does not redraw an absent crosshair during ordinary playback without a point
   sync.advance({ from: 0, to: 600 })
   expect(chart.clearCrosshairPosition).not.toHaveBeenCalled()
   expect(chart.setCrosshairPosition).not.toHaveBeenCalled()
+})
+
+describe('initial trading viewport', () => {
+  for (const timeframe of ['M1', 'M5', 'M15', 'H1', 'H4'] as const) {
+    it(`starts ${timeframe} at up to 200 recent observed candles`, () => {
+      const step = TIMEFRAME_MS[timeframe] / 1000
+      const times = Array.from({ length: Math.floor(30 * 86400 / step) + 1 }, (_, i) => i * step)
+      // Higher timeframes can end in a partially revealed bucket.
+      const edge = times.at(-1)! + (timeframe === 'M1' ? 0 : step - 60)
+      const sync = new ChartSynchronizer({ from: 0, to: edge }), chart = fakeChart()
+      register(sync, 0, chart, times, timeframe)
+      const visible = Math.min(200, times.length)
+      expect(sync.snapshot()).toEqual({ range: { from: edge - (visible - 1) * step, to: edge }, following: true })
+      expect(chart.getRange().from).toBeCloseTo(times.length - visible)
+      expect(chart.getRange().to).toBe(times.length - 1)
+      expect(chart.getRange().to - chart.getRange().from + 1).toBeCloseTo(visible)
+    })
+  }
+
+  it('initializes on the first populated update, and does not reset on timeframe changes or remounts', () => {
+    const times = Array.from({ length: 2001 }, (_, i) => i * 60)
+    const sync = new ChartSynchronizer({ from: 0, to: 120000 }), chart = fakeChart()
+    const stop = register(sync, 0, chart, [], 'M1')
+    expect(sync.snapshot().range).toBeNull()
+    sync.update(0, candles(times), 'M1', () => {})
+    expect(chart.getRange()).toEqual({ from: 1801, to: 2000 })
+    const initial = sync.snapshot()
+    sync.update(0, candles(Array.from({ length: 401 }, (_, i) => i * 300)), 'M5', () => {})
+    expect(sync.snapshot()).toEqual(initial)
+    stop()
+    register(sync, 0, fakeChart(), times, 'M1')
+    expect(sync.snapshot()).toEqual(initial)
+  })
+
+  it('counts observed candles across a weekend rather than opening with almost no prices', () => {
+    const times = Array.from({ length: 2001 }, (_, i) => i * 60 + (i >= 1995 ? 2 * 86400 : 0))
+    const edge = times.at(-1)!, chart = fakeChart(), sync = new ChartSynchronizer({ from: 0, to: edge })
+    register(sync, 0, chart, times, 'M1')
+    expect(chart.getRange()).toEqual({ from: 1801, to: 2000 })
+    expect(sync.snapshot().range).toEqual({ from: times[1801], to: edge })
+  })
+
+  it('uses available short history and handles a single candle without an invalid range', () => {
+    for (const times of [[0], [0, 60], [0, 60, 120]]) {
+      const sync = new ChartSynchronizer({ from: 0, to: times.at(-1)! }), chart = fakeChart()
+      register(sync, 0, chart, times, 'M1')
+      expect(sync.snapshot().range!.from).toBeLessThan(sync.snapshot().range!.to)
+      expect(sync.snapshot().range!.to).toBe(times.at(-1))
+      if (times.length > 1) expect(chart.getRange()).toEqual({ from: 0, to: times.length - 1 })
+    }
+  })
+
+  for (const frames of [['M1', 'M5', 'H1'], ['M5', 'M15', 'H4'], ['H4', 'H1', 'M1']] as const) {
+    it(`shares the initial ${frames[0]} UTC horizon across ${frames.join('/')}`, () => {
+      const edge = 30 * 86400, sync = new ChartSynchronizer({ from: 0, to: edge })
+      const charts = frames.map(timeframe => {
+        const step = TIMEFRAME_MS[timeframe] / 1000
+        const times = Array.from({ length: edge / step + 1 }, (_, i) => i * step)
+        const chart = fakeChart()
+        register(sync, times.length, chart, times, timeframe)
+        return { chart, times, step }
+      })
+      const view = sync.snapshot().range!
+      for (const { chart, times, step } of charts) {
+        expect(logicalToUtc(times, chart.getRange().from, step)).toBeCloseTo(view.from)
+        expect(logicalToUtc(times, chart.getRange().to, step)).toBe(view.to)
+      }
+    })
+  }
+
+  it('keeps all pre-roll navigable and holds a manual view while replay advances', () => {
+    const times = Array.from({ length: 43201 }, (_, i) => i * 60)
+    const edge = times.at(-1)!, sync = new ChartSynchronizer({ from: 0, to: edge }), chart = fakeChart()
+    register(sync, 0, chart, times, 'M1')
+    sync.activate(0)
+    chart.emitRange({ from: 0, to: 199 } as LogicalRange)
+    expect(sync.snapshot()).toEqual({ range: { from: 0, to: 11940 }, following: false })
+    sync.update(0, candles([...times, edge + 60]), 'M1', () => {}, times.length)
+    sync.advance({ from: 0, to: edge + 60 })
+    expect(chart.getRange()).toEqual({ from: 0, to: 199 })
+  })
+
+  it('follows the revealed edge with the initial span and retains Ichimoku projection only as plot space', () => {
+    const times = Array.from({ length: 43201 }, (_, i) => i * 60)
+    const edge = times.at(-1)!, sync = new ChartSynchronizer({ from: 0, to: edge })
+    const projected = fakeChart(), plain = fakeChart()
+    register(sync, 0, projected, [], 'M1')
+    register(sync, 1, plain, [], 'M1')
+    sync.update(0, candles(times), 'M1', () => 26)
+    sync.update(1, candles(times), 'M1', () => 0)
+    expect(projected.getRange()).toEqual({ from: 43001, to: 43226 })
+    expect(plain.getRange()).toEqual({ from: 43001, to: 43200 })
+    sync.update(0, candles([...times, edge + 60]), 'M1', () => 26, times.length)
+    sync.update(1, candles([...times, edge + 60]), 'M1', () => 0, times.length)
+    sync.advance({ from: 0, to: edge + 60 })
+    expect(sync.snapshot()).toEqual({ range: { from: edge + 60 - 11940, to: edge + 60 }, following: true })
+    expect(projected.getRange()).toEqual({ from: 43002, to: 43227 })
+    expect(plain.getRange()).toEqual({ from: 43002, to: 43201 })
+  })
+
+  for (const following of [false, true]) {
+    it(`preserves a saved custom span with following=${following} on all charts`, () => {
+      const edge = 30 * 86400, sync = new ChartSynchronizer({ from: 0, to: edge })
+      // A deliberately wider custom view must not be replaced by the new default.
+      const saved = { range: { from: edge - 86400, to: edge - 43200 }, following }
+      sync.restore(saved)
+      for (const [id, timeframe] of (['M1', 'M15', 'H4'] as const).entries()) {
+        const step = TIMEFRAME_MS[timeframe] / 1000
+        const times = Array.from({ length: edge / step + 1 }, (_, i) => i * step), chart = fakeChart()
+        register(sync, id, chart, times, timeframe)
+        expect(chart.getRange().to - chart.getRange().from).toBeCloseTo(43200 / step)
+      }
+      expect(sync.snapshot()).toEqual(following
+        ? { range: { from: edge - 43200, to: edge }, following: true } : saved)
+    })
+  }
 })

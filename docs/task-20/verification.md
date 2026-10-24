@@ -28,6 +28,22 @@ The canvas occupies 77.07% / 76.05% of desktop height after the 54 px applicatio
 
 The independent finish review returned **Pass**. Both findings were resolved: mobile trading input sizes are 16 px, and the starting-balance accessible name matches its visible label. The harness did not expose the named Impeccable reviewer/documenter roles, so fresh agents performed those scoped handoffs using the skill references.
 
+## PR #18 initial viewport fix
+
+`ChartSynchronizer.initializeViewport()` now uses up to 200 observed candles on the first populated chart, anchored to the revealed replay edge. Observed timestamps account for weekends and missing minutes. Standalone M1, M5, M15 and H1 start with 200 candles when available; H4 uses up to 200, which was 123 with this real 30-day pre-roll. Mixed layouts retain one shared UTC horizon chosen by their first populated chart. Adding a pane or changing its timeframe preserves that horizon. A saved custom viewport takes precedence, including its following preference; following restores retain the saved width at the recovered replay edge.
+
+The updated [fresh M1 screenshot](trading-live.png) is captured at 1440 × 900 without wheel zoom. Real Dukascopy EURUSD history for January 9, 2024, with the preceding warm-up, installs **27,712 revealed M1 candles** and initially displays **200**. Horizontal spacing is **6.79 px**; 164 visible bodies measure at least 2 px vertically and 184 visible high/low spans measure at least 4 px. Older prices remain reachable, including the earliest installed candle. [Mixed M5/M15/H4](trading-viewport-mixed.png) retains Ichimoku forward projection; [restored custom navigation](trading-viewport-restored.png) retains the exact saved UTC range with following disabled.
+
+[Viewport browser evidence](viewport-live-verification.json) records every standalone timeframe, three-chart synchronization, public wheel zoom/drag navigation, follow-replay, a manual viewport held through replay and reload, restoration without another history request, and zero unrevealed price candles or page exceptions. It distinguishes forward indicator points from future OHLC. The verification server exposes chart API handles through a test-only Vite transform; production code gains no debug interface. Sessions use an isolated temporary directory. The provider cache may reuse downloaded history.
+
+Reproduce with `node --import tsx scripts/task20-viewport-browser.mts`. `REPRESENTATIVE=1` selects deterministic weekday history with a 30-day warm-up instead of the provider. The earlier `task20-live-browser.mts` also captures the default viewport without applying manual zoom now.
+
+Fifteen added unit cases cover initial ranges on all five timeframes, partial buckets, weekends, short history, delayed data installation, remount/timeframe stability, three mixed layouts, full-history navigation, follow-replay, projection and saved custom ranges. The existing synchronization assertions remain, with the navigation-only call count reset after the newly necessary initial zoom.
+
+The late 90-day Task 19 isolated three-chart benchmark was rerun using `DIRECT_ONLY=1 DAYS=90 SCENARIO=D node --import tsx scripts/chart-replay-browser.mts viewport-fix-late`: 12 batches of 100 M1 observations, **61.42 ms mean / 81.50 ms p95** synchronous JavaScript with the pointer over chart 1. [Performance evidence](viewport-performance-verification.json) records incremental candle/indicator updates, no `candles.setData` calls during measured playback, and no browser errors. This is a local smoke check, not a new throughput guarantee. The production diff changes only initial viewport selection; execution, financial calculations, persistence schemas, underlying prices and indicator warm-up remain unchanged.
+
+`npm test` passed **37 files / 486 tests**. Typecheck, build and diff validation passed. An initial concurrent test/build/browser run timed out one existing indicator-reference test at 5 seconds; the subsequent full test run passed without competing build/browser work. The existing bundle-size warning remains.
+
 ## Live provider verification
 
 Installed `dukascopy-node` is 1.51.0 and its `playwright-core` is 1.64.1. `npx dukascopy-node --install-browser` completed successfully, installing regular Chromium revision 1248 through the Ubuntu 24.04 fallback build. The old installed revision alone was insufficient. Existing Linux libraries were sufficient; `--with-deps` was investigated but no privileged packages were installed.
@@ -61,7 +77,7 @@ Finish pauses and saves before confirmation, discloses open/pending counts, and 
 
 ## Automated checks
 
-`npm test`: **37 files, 471 tests passed**, including the startup regression below. `npm run typecheck`, `npm run build`, and `git diff --check` passed. Build retains the existing large-bundle warning; no runtime dependency was added.
+`npm test`: **37 files, 486 tests passed**, including the startup and initial-viewport regressions. `npm run typecheck`, `npm run build`, and `git diff --check` passed. Build retains the existing large-bundle warning; no runtime dependency was added.
 
 All prior regression assertions remain. The 61 legacy `App.interaction.test.tsx` cases use an explicitly test-only `RegressionWorkspace` composition of the former controls with current production chart, replay, trading, journal and persistence components. They do not claim to validate new navigation. `workflow.test.tsx` tests the production three-phase App under StrictMode, and Chromium scripts exercise the real new UI and Lightweight Charts.
 
