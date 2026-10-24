@@ -1,0 +1,144 @@
+{
+  "started": "2026-10-24T13:59:56.467Z",
+  "mode": "direct",
+  "serialized": true,
+  "sandbox": true,
+  "freshCachePerCase": true,
+  "defaults": {
+    "batchSize": 10,
+    "pauseBetweenBatchesMs": 1000,
+    "rateLimitRetryCount": 3,
+    "retryCount": 2
+  },
+  "preflight": {
+    "ok": true,
+    "ms": 723
+  },
+  "cases": [
+    {
+      "from": "2026-09-17",
+      "to": "2026-09-24",
+      "side": "bid",
+      "ok": false,
+      "ms": 61127,
+      "error": {
+        "name": "WafTokenError",
+        "code": "DUKASCOPY_WAF_TOKEN",
+        "diagnostic": {
+          "code": "PROVIDER_WAF",
+          "error": "The data provider could not authorize this historical request.",
+          "action": "Retry later. Check provider access and the backend diagnostics; do not bypass access protections."
+        },
+        "lastBrowserStatus": "503",
+        "wafAction": "none",
+        "cause": null
+      },
+      "calls": [
+        {
+          "side": "bid",
+          "ms": 61127,
+          "error": {
+            "name": "WafTokenError",
+            "code": "DUKASCOPY_WAF_TOKEN",
+            "diagnostic": {
+              "code": "PROVIDER_WAF",
+              "error": "The data provider could not authorize this historical request.",
+              "action": "Retry later. Check provider access and the backend diagnostics; do not bypass access protections."
+            },
+            "lastBrowserStatus": "503",
+            "wafAction": "none",
+            "cause": null
+          }
+        }
+      ],
+      "statuses": [
+        {
+          "status": 202,
+          "retryAfter": null,
+          "action": "challenge"
+        }
+      ]
+    },
+    {
+      "from": "2026-09-17",
+      "to": "2026-09-24",
+      "side": "ask",
+      "ok": false,
+      "ms": 60955,
+      "error": {
+        "name": "WafTokenError",
+        "code": "DUKASCOPY_WAF_TOKEN",
+        "diagnostic": {
+          "code": "PROVIDER_WAF",
+          "error": "The data provider could not authorize this historical request.",
+          "action": "Retry later. Check provider access and the backend diagnostics; do not bypass access protections."
+        },
+        "lastBrowserStatus": "503",
+        "wafAction": "none",
+        "cause": null
+      },
+      "calls": [
+        {
+          "side": "ask",
+          "ms": 60955,
+          "error": {
+            "name": "WafTokenError",
+            "code": "DUKASCOPY_WAF_TOKEN",
+            "diagnostic": {
+              "code": "PROVIDER_WAF",
+              "error": "The data provider could not authorize this historical request.",
+              "action": "Retry later. Check provider access and the backend diagnostics; do not bypass access protections."
+            },
+            "lastBrowserStatus": "503",
+            "wafAction": "none",
+            "cause": null
+          }
+        }
+      ],
+      "statuses": [
+        {
+          "status": 202,
+          "retryAfter": null,
+          "action": "challenge"
+        }
+      ]
+    },
+    {
+      "from": "2026-09-17",
+      "to": "2026-09-18",
+      "side": "bid",
+      "skipped": "Stopped after two persistent authorization failures."
+    },
+    {
+      "from": "2026-09-17",
+      "to": "2026-09-18",
+      "side": "ask",
+      "skipped": "Stopped after two persistent authorization failures."
+    },
+    {
+      "from": "2024-01-09",
+      "to": "2024-01-10",
+      "side": "bid",
+      "skipped": "Stopped after two persistent authorization failures."
+    },
+    {
+      "from": "2024-01-09",
+      "to": "2024-01-10",
+      "side": "ask",
+      "skipped": "Stopped after two persistent authorization failures."
+    },
+    {
+      "from": "2024-02-05",
+      "to": "2024-02-06",
+      "side": "bid",
+      "skipped": "Stopped after two persistent authorization failures."
+    },
+    {
+      "from": "2024-02-05",
+      "to": "2024-02-06",
+      "side": "ask",
+      "skipped": "Stopped after two persistent authorization failures."
+    }
+  ],
+  "finished": "2026-10-24T14:02:03.280Z"
+}

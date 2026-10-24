@@ -16,8 +16,8 @@ export function checkProviderBrowser(): Promise<void> {
     .catch(error => {
       checked = null
       const message = error instanceof Error ? error.message : String(error)
-      if (/shared libraries|\.so.*not found|Host system is missing dependencies/i.test(message)) throw new Error(`Browser system dependencies are missing. ${message}`)
-      throw new Error(`Could not launch browser executable with sandbox enabled. ${message}`)
+      if (/shared libraries|\.so.*not found|Host system is missing dependencies/i.test(message)) throw new Error(`Browser system dependencies are missing. ${message}`, { cause: error })
+      throw new Error(`Could not launch browser executable with sandbox enabled. ${message}`, { cause: error })
     })
   checked = { path, promise }
   return promise

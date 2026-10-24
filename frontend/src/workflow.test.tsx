@@ -130,6 +130,22 @@ it('keeps provider diagnosis readable in setup, and retries failed chunks',async
  expect(host.textContent).toContain('browser component could not start');expect(host.textContent).toContain('--install-browser');expect(host.querySelector('.chart-message')).toBeNull()
  failHistory=false;await click('Retry historical data');await until(()=>host.querySelector('.data-ready'))
 })
+it.each([
+ ['PROVIDER_WAF','Provider authorization unavailable','Dukascopy could not authorize this historical download. The selected period was not loaded.',undefined],
+ ['PROVIDER_RATE_LIMIT','Provider rate limit reached','Dukascopy has limited historical downloads.',12000],
+ ['PROVIDER_UNAVAILABLE','Provider temporarily unavailable','Dukascopy returned a temporary server error.',undefined],
+])('shows an actionable %s error without browser installation advice or a partial trading dataset',async(code,title,error,retryAfterMs)=>{
+ const underlying=globalThis.fetch
+ vi.stubGlobal('fetch',async(path:string,options?:RequestInit)=>path.startsWith('/api/history?')
+  ? new Response(JSON.stringify({code,title,error,action:'Retry later. Completed chunks remain cached where valid.',retryAfterMs}),{status:code==='PROVIDER_RATE_LIMIT'?429:502})
+  : underlying(path,options))
+ await mount();await click('Load historical data');await until(()=>host.querySelector('.load-error'))
+ expect(host.querySelector('.load-error strong')?.textContent).toBe(title)
+ expect(host.querySelector('.load-error')?.textContent).not.toContain('--install-browser')
+ expect(host.querySelector('.data-ready')).toBeNull();expect(button('Start backtest').disabled).toBe(true)
+ expect(button('Retry historical data').disabled).toBe(false)
+ if(retryAfterMs!==undefined)expect(host.textContent).toContain('at least 12 seconds')
+})
 it.each(['Buy','Sell'])('requires chart selection and confirmation for %s; rejects wrong side and ignores oscillator clicks',async(direction)=>{
  await start();await click(direction);await pick(direction==='Buy'?1.102:1.098,1);expect(button('Confirm order').disabled).toBe(true)
  await pick(direction==='Buy'?1.102:1.098);expect(button('Confirm order').disabled).toBe(true)

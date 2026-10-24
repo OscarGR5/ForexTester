@@ -81,6 +81,11 @@ describe('historical chart data', () => {
 
   it('reports connectivity failures', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
-    await expect(fetchHistory(range)).rejects.toThrow('Failed to fetch')
+    await expect(fetchHistory(range)).rejects.toMatchObject({code:'BACKEND_NETWORK',title:'Backend connection unavailable'})
+  })
+
+  it('retains structured rate-limit advice through the same-origin API',async()=>{
+    vi.stubGlobal('fetch',vi.fn(async()=>new Response(JSON.stringify({code:'PROVIDER_RATE_LIMIT',title:'Provider rate limit reached',error:'Dukascopy has limited historical downloads.',action:'Wait before retrying.',retryAfterMs:12000}),{status:429})))
+    await expect(fetchHistory(range)).rejects.toMatchObject({code:'PROVIDER_RATE_LIMIT',title:'Provider rate limit reached',retryAfterMs:12000})
   })
 })

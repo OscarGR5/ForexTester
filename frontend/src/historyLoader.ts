@@ -1,4 +1,4 @@
-import { aggregateBidCandles, fetchHistory, parseHistory, validateDateRange, type Candle, type DateRange, type HistoryResponse } from './history.js'
+import { aggregateBidCandles, fetchHistory, HistoryRequestError, parseHistory, validateDateRange, type Candle, type DateRange, type HistoryResponse } from './history.js'
 
 const DAY = 86_400_000
 const date = (ms: number) => new Date(ms).toISOString().slice(0, 10)
@@ -39,7 +39,7 @@ export class HistoryLoader {
     const warmup = { from: date(Date.parse(range.from) - PREROLL_DAYS * DAY), to: range.from }
     const chunks = [...historyChunks(warmup), ...historyChunks(range)]
     const results: HistoryResponse[] = new Array(chunks.length)
-    let next = 0, completed = 0, failed: string | null = null
+    let next = 0, completed = 0, failed: Error | null = null
     progress({ completed, total: chunks.length })
     const worker = async () => {
       while (next < chunks.length && !failed) {
@@ -58,13 +58,16 @@ export class HistoryLoader {
           progress({ completed: ++completed, total: chunks.length })
         } catch (reason) {
           signal.throwIfAborted()
-          failed = `${reason instanceof Error ? reason.message : 'Historical data is unavailable.'} Chunk ${index + 1}/${chunks.length} (${chunk.from} to ${chunk.to} UTC) failed. Retry to complete the interval.`
+          const message = `${reason instanceof Error ? reason.message : 'Historical data is unavailable.'} Chunk ${index + 1}/${chunks.length} (${chunk.from} to ${chunk.to} UTC) failed. Retry to complete the interval.`
+          failed ??= reason instanceof HistoryRequestError
+            ? new HistoryRequestError(message, reason.code, reason.title, reason.retryAfterMs)
+            : new Error(message)
         }
       }
     }
     await Promise.all([worker(), worker()])
     signal.throwIfAborted()
-    if (failed) throw new Error(failed)
+    if (failed) throw failed
     return { symbol: 'EURUSD', resolution: 'M1', from: warmup.from, to: range.to, tradingFrom: range.from,
       bid: mergeCandles(results.map((result) => result.bid)), ask: mergeCandles(results.map((result) => result.ask)) }
   }

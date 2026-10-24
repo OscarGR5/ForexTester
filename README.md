@@ -495,10 +495,28 @@ The provider's normal WAF challenge handling is unchanged; no protections are
 bypassed. WAF cookies/tokens must never be committed or included in bug reports.
 
 The API distinguishes `BROWSER_UNAVAILABLE`, `BROWSER_DEPENDENCIES`,
-`PROVIDER_WAF`, `PROVIDER_NETWORK`, `HISTORY_UNAVAILABLE`, and
-`INVALID_HISTORY_RANGE`. Messages and focused recovery actions reach Setup;
-stack traces remain in backend diagnostics. Provider network/WAF problems may be
-transient even after a successful browser check.
+`PROVIDER_WAF`, `PROVIDER_DENIED`, `PROVIDER_RATE_LIMIT`, `PROVIDER_UNAVAILABLE`,
+`PROVIDER_NETWORK`, `HISTORY_UNAVAILABLE`, and `INVALID_HISTORY_RANGE`.
+Setup shows a short title, recovery action and failed chunk. Browser installation
+advice appears for browser errors. Rate limits use HTTP 429 and preserve an
+available `retryAfterMs` value and rounded-up `Retry-After` header. The GUI shows
+the requested wait without promising success. A connection failure between the
+GUI and backend has its own `BACKEND_NETWORK` message.
+
+Backend diagnostics allow only the requested dates, classification, failing price
+side, known error names/codes, HTTP status and WAF action. Raw upstream errors,
+stacks, cookies, tokens and arbitrary cause properties are never logged. A
+`WafTokenError` can report a browser HTTP 503; that is presented as provider
+unavailability rather than incorrectly implying that Chromium needs reinstalling.
+A successful sandboxed launch does not prove provider authorization.
+
+The installed package already handles HTTP 429 with three rate-limit retries,
+exponential waits and `Retry-After` support. Its ordinary `retryCount: 2` does not
+retry authorization or exhausted rate-limit errors. ForexTester adds no automatic
+authorization retry: use **Retry historical data** after waiting. Successful
+chunks remain cached and an incomplete interval cannot start trading. Cancel
+aborts the frontend HTTP request even during a provider retry wait; the package
+does not expose cancellation of provider work already running on the backend.
 
 `GET /api/history/coverage` exposes installed EURUSD minute metadata, selectable
 calendar dates, a provisional latest completed UTC day, backend health, and the
@@ -517,6 +535,14 @@ coverage, warm-up requests legitimately contain no candles.
 Real provider verification:
 
 ```sh
+node --import tsx scripts/verify-provider-waf.mts
+# Single-request, paced provider diagnostic with fresh caches:
+WAF_MODE=direct WAF_SERIALIZED=1 node --import tsx scripts/verify-provider-waf.mts
+# Normal React loader; 30-day pre-roll starts with September 17–24, 2026:
+node --import tsx scripts/verify-provider-waf-browser.mts
+# Override one diagnostic period (end exclusive):
+WAF_FROM=2024-01-09 WAF_TO=2024-01-10 WAF_EVIDENCE=/tmp/provider-control.json node --import tsx scripts/verify-provider-waf.mts
+
 node --import tsx scripts/verify-provider.mts
 # Optional fresh external cache to prove a network download:
 FOREXTESTER_CACHE_DIR=/tmp/forextester-live-check node --import tsx scripts/verify-provider.mts

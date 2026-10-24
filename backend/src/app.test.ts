@@ -114,6 +114,29 @@ describe('history endpoint', () => {
     expect(await response.json()).toMatchObject({ error: 'Historical data is temporarily unavailable.', code: 'HISTORY_UNAVAILABLE' })
   })
 
+  it('preserves rate-limit delay and side diagnostics without exposing upstream secrets', async () => {
+    const log=vi.spyOn(console,'error').mockImplementation(()=>{})
+    const response=await request(path,async()=>{throw Object.assign(new Error('cookie=secret token=secret'),{name:'RateLimitError',code:'DUKASCOPY_RATE_LIMIT',status:429,retryAfterMs:12001})})
+    expect(response.status).toBe(429)
+    expect(response.headers.get('retry-after')).toBe('13')
+    expect(await response.json()).toMatchObject({code:'PROVIDER_RATE_LIMIT',retryAfterMs:12001})
+    expect(log.mock.calls[0][1]).toMatchObject({from:'2024-01-09',to:'2024-01-10',causes:[{name:'HistoryProviderError',priceType:'bid'},{name:'RateLimitError',code:'DUKASCOPY_RATE_LIMIT',status:429}]})
+    expect(JSON.stringify(log.mock.calls)).not.toContain('secret')
+  })
+
+  it('does not publish bid-only partial success when ask authorization fails',async()=>{
+    vi.spyOn(console,'error').mockImplementation(()=>{})
+    const download=vi.fn<RatesFetcher>(async config=>{
+      if(config.priceType==='ask')throw Object.assign(new Error('Could not acquire a WAF token'),{name:'WafTokenError',code:'DUKASCOPY_WAF_TOKEN'})
+      return [candle(first,1.1)]
+    })
+    const response=await request(path,download)
+    expect(response.status).toBe(502)
+    const body=await response.json()
+    expect(body.code).toBe('PROVIDER_WAF');expect(body.bid).toBeUndefined()
+    expect(download).toHaveBeenCalledTimes(2)
+  })
+
   it('rejects conflicting duplicate candles', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     const response = await request(path, async () => [candle(first, 1.09), candle(first, 1.1)])

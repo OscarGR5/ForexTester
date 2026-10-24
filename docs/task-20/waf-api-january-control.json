@@ -1,0 +1,58 @@
+{
+  "started": "2026-10-24T14:02:52.508Z",
+  "mode": "api",
+  "serialized": false,
+  "sandbox": true,
+  "freshCachePerCase": true,
+  "defaults": {
+    "batchSize": 10,
+    "pauseBetweenBatchesMs": 1000,
+    "rateLimitRetryCount": 3,
+    "retryCount": 2
+  },
+  "preflight": {
+    "ok": true,
+    "ms": 515
+  },
+  "cases": [
+    {
+      "from": "2024-01-09",
+      "to": "2024-01-10",
+      "ms": 60773,
+      "status": 502,
+      "error": {
+        "code": "PROVIDER_UNAVAILABLE",
+        "title": "Provider temporarily unavailable",
+        "error": "Dukascopy returned a temporary server error.",
+        "action": "Retry later. Completed chunks remain cached where valid."
+      },
+      "calls": [
+        {
+          "side": "bid",
+          "ms": 60757,
+          "error": {
+            "name": "WafTokenError",
+            "code": "DUKASCOPY_WAF_TOKEN",
+            "diagnostic": {
+              "code": "PROVIDER_UNAVAILABLE",
+              "title": "Provider temporarily unavailable",
+              "error": "Dukascopy returned a temporary server error.",
+              "action": "Retry later. Completed chunks remain cached where valid."
+            },
+            "lastBrowserStatus": "503",
+            "wafAction": "none",
+            "cause": null
+          }
+        }
+      ],
+      "statuses": [
+        {
+          "status": 202,
+          "retryAfter": null,
+          "action": "challenge"
+        }
+      ]
+    }
+  ],
+  "finished": "2026-10-24T14:03:55.807Z"
+}

@@ -1,0 +1,52 @@
+{
+  "started": "2026-10-24T14:04:19.762Z",
+  "ms": 62174,
+  "from": "2026-10-17",
+  "through": "2026-10-17",
+  "freshCache": true,
+  "sandbox": true,
+  "workers": 2,
+  "requests": [
+    {
+      "from": "2026-09-17",
+      "to": "2026-09-24",
+      "ms": 62013,
+      "status": 502,
+      "error": {
+        "code": "PROVIDER_UNAVAILABLE",
+        "title": "Provider temporarily unavailable",
+        "error": "Dukascopy returned a temporary server error.",
+        "action": "Retry later. Completed chunks remain cached where valid."
+      }
+    },
+    {
+      "from": "2026-09-24",
+      "to": "2026-10-01",
+      "ms": 62014,
+      "status": 502,
+      "error": {
+        "code": "PROVIDER_UNAVAILABLE",
+        "title": "Provider temporarily unavailable",
+        "error": "Dukascopy returned a temporary server error.",
+        "action": "Retry later. Completed chunks remain cached where valid."
+      }
+    }
+  ],
+  "outcome": "error",
+  "ui": "Provider temporarily unavailable\n\nDukascopy returned a temporary server error. Retry later. Completed chunks remain cached where valid. Chunk 1/6 (2026-09-17 to 2026-09-24 UTC) failed. Retry to complete the interval.",
+  "retryAvailable": true,
+  "startEnabled": false,
+  "errors": [],
+  "views": [
+    {
+      "width": 1440,
+      "height": 900,
+      "horizontalOverflow": false
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "horizontalOverflow": false
+    }
+  ]
+}

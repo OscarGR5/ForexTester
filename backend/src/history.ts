@@ -22,6 +22,12 @@ export interface HistoryResponse {
 
 export type RatesFetcher = (config: ConfigJsonItem) => Promise<JsonItem[]>
 
+class HistoryProviderError extends Error {
+  override name = 'HistoryProviderError'
+  constructor(readonly priceType: 'bid' | 'ask', cause: unknown) {
+    super('Historical provider retrieval failed', { cause })
+  }
+}
 
 function normalizeCandles(items: JsonItem[], from: number, to: number): Candle[] {
   const byTimestamp = new Map<number, Candle>()
@@ -64,8 +70,12 @@ export async function loadHistory(from: string, to: string, fetchRates: RatesFet
     retryCount: 2,
   }
 
-  const bid = await fetchRates({ ...baseConfig, priceType: 'bid' })
-  const ask = await fetchRates({ ...baseConfig, priceType: 'ask' })
+  async function side(priceType: 'bid' | 'ask') {
+    try { return await fetchRates({ ...baseConfig, priceType }) }
+    catch (cause) { throw new HistoryProviderError(priceType, cause) }
+  }
+  const bid = await side('bid')
+  const ask = await side('ask')
 
   return {
     symbol: 'EURUSD',

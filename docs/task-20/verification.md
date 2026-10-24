@@ -2,6 +2,79 @@
 
 Verified on October 24, 2026, on the target Linux machine (Fedora 44, Node 24.18). This report distinguishes live provider checks from deterministic execution fixtures.
 
+## PR #18 WAF reliability follow-up
+
+**Provider reliability remains unresolved.** On October 24, 2026, fresh-cache tests on this same Fedora 44 / Node 24.18 machine reproduced upstream-facing **HTTP 503** failures, including during the installed library's token acquisition. January 9, 2024 also failed during this run. No complete live dataset was downloaded in these follow-up checks. The earlier successful January/February checks below remain historical evidence, not evidence that September 2026 works now.
+
+### Live attempts
+
+All ranges in this table have an inclusive start and **exclusive** end. Provider market-data and authorization caches were isolated outside the repository; temporary durable storage was separate from real saved backtests. Installed versions remain `dukascopy-node` **1.51.0** and its `playwright-core` **1.64.1**. No dependencies, browser installation, sandbox settings, provider scripts or credentials were changed.
+
+| Path / UTC start | Period | Outcome | Elapsed |
+| --- | --- | --- | --- |
+| Baseline production `/api/history`, 13:58:14 | September 17–24, 2026 | HTTP 502, old `HISTORY_UNAVAILABLE`; Node transport saw seven HTTP 202 challenges, five HTTP 200 responses and five HTTP 503 responses before the failed API response | 55.367 s |
+| Installed supported API, serialized, 13:59:56 | September 17–24, bid only | `WafTokenError`, `DUKASCOPY_WAF_TOKEN`; last browser status **503**, WAF action **none**, no cause provided | 61.127 s |
+| Installed supported API, serialized, separate fresh cache | September 17–24, ask only | Same token acquisition error, browser **503**, action **none**, no cause provided | 60.955 s |
+| Instrumented `/api/history` control, 14:02:52 | January 9–10, 2024 | Bid token acquisition failed with browser **503**; API now reports `PROVIDER_UNAVAILABLE`. Ask was not started after bid failed | 60.773 s |
+| Actual React → production backend, 14:04:19 | Selected October 17, 2026; first pre-roll chunk September 17–24 | Normal two workers requested September 17–24 and September 24–October 1. Both failed with `WafTokenError`, browser **503**, action **none**; API returned HTTP 502 / `PROVIDER_UNAVAILABLE`. Setup identified chunk **1/6**, Retry stayed enabled, Start stayed disabled | 62.174 s to settled UI |
+
+[Baseline API evidence](waf-baseline-api.json), [independent serialized bid/ask evidence and skipped controls](waf-direct-serialized.json), [January control](waf-api-january-control.json), [React evidence](waf-browser-verification.json). [Desktop error state](waf-setup-1440.png) and [mobile error state](waf-setup-390.png) show the real failure. Neither viewport had horizontal overflow, and the browser reported no page exceptions. The selected October 17 date reproduces the reported first September 17 pre-roll chunk; it does not claim to recover the user's otherwise unknown full selected interval.
+
+The September 17 one-day control and February 5, 2024 older control were **not attempted** after the two direct authorization failures. Their bid/ask entries are explicitly marked skipped. One January API control then tested whether the previously working period still worked, followed by one normal React run to verify the actual application path and final error state. No Retry button was clicked during live testing. Further requests stopped after these checks; completing the remaining controls or proving successful September loading requires provider availability to recover.
+
+### Established failure path and limits
+
+In installed `dist/index.js`, `src/waf/browser-token.ts` begins at line **15764**. `acquireChromeSession` throws `WafTokenError` for unsupported Node, missing Playwright, launch failure, or failure to observe valid HTTP 200 JSON plus a provider authorization cookie. Its catch at line **15829** discards the original acquisition cause and reports only the last target-URL status and WAF action. The observed sanitized message was:
+
+```text
+Headless browser could not acquire a WAF token for [provider data URL] (last HTTP status: 503, WAF action: none)
+```
+
+There is no underlying `cause` on that installed error. The equivalent ESM implementation is in `dist/esm/chunk-IX7GKQR2.js`, with the final error message at line **15809**. `src/waf/index.ts` can additionally throw `WafTokenError` for an invalid acquired session. The inspected installed code, rather than older published retry guidance, determines the behavior described here. The [official retry documentation](https://www.dukascopy-node.app/errors-and-empty-data) covers the general retry options.
+
+Sandboxed preflights succeeded in **0.723 s** for the serialized test and **0.515 s** for the January control. The subsequent 503 failures establish that browser launch success is insufficient. The first baseline request recovered far enough from the initial challenges to receive HTTP 200 provider responses, but later 503s prevented a complete response. Later attempts failed inside authorization itself. This is not evidence of missing browser libraries or a browser initialization failure.
+
+**The reason Dukascopy returned 503 is not established.** The installed acquisition catch prevents inspecting a more precise cause. No HTTP 403 or 429 and no `Retry-After` were observed in the captured Node requests; the library exposes only the last browser status in its error. This does not rule out internal provider throttling, other unexposed browser responses or transient infrastructure faults. Both old and recent ranges failed, so a newer-period-specific explanation is unsupported.
+
+### Scheduling and retry decision
+
+The normal path retains two history workers, seven-day chunks and sequential bid then ask per chunk. The installed `batchSize` default is **10**, `pauseBetweenBatchesMs` is **1000**, generic `retryCount` is configured to **2**, and generic retry pause defaults to **500 ms**. The conservative direct test used one side at a time, `batchSize: 1`, `pauseBetweenBatchesMs: 1000` and `requestIntervalMs: 1000`. Both independent sides still failed. Concurrency is therefore not necessary to reproduce the error; these failed runs cannot quantify whether it contributes under otherwise healthy access. There is no measured benefit supporting a change to the two-worker default.
+
+The package already has a separate **three-retry** HTTP 429 budget with waits starting at **5, 10, 20 seconds** plus jitter and support for the longer `Retry-After` delay. A requested wait over five minutes stops the operation instead of being shortened. `WafTokenError`, `WafChallengeError` and exhausted `RateLimitError` bypass ordinary `retryCount` retries. Token acquisition is coordinated within one library fetcher, but separate `getHistoricalRates` calls create separate fetchers; the supported configuration does not expose shared acquisition state between those calls. No private transport or token coordination was introduced.
+
+**No additional automatic authorization retry/backoff was added.** Live tests demonstrated persistent 503 failures, not recoverable HTTP 429 throttling. Wrapping the existing retry budget in another automatic loop would add requests without demonstrated benefit. An explicit Retry retains completed frontend chunks and the existing provider disk cache. If a known rate limit is exhausted, the API sends HTTP 429, preserves `retryAfterMs` and a rounded-up `Retry-After` header, and the GUI explains the minimum wait without promising the next attempt will succeed. Existing completed-chunk progress and failed-chunk identity remain available. There is no newly introduced automatic retry timer whose progress needs streaming.
+
+### Changes and deterministic verification
+
+Backend classification now examines bounded cause chains, recognized error names/codes and available HTTP status before falling back to a generic result. Browser installation/dependency errors, authorization, unchallenged HTTP 403 denial, rate limits, HTTP 5xx availability and network errors have distinct results. In particular, a token acquisition error whose last browser status is 503 becomes `PROVIDER_UNAVAILABLE`, not an unsupported diagnosis that authorization or Chromium installation alone is at fault. Provider retrieval wraps the original cause with the failing bid/ask side. Browser preflight retains its original cause too.
+
+Backend logs now allowlist dates, error classification, side, known names/codes, status and WAF action. They never dump upstream errors, stacks, arbitrary cause properties, request headers, cookies or tokens. Typed frontend errors preserve the title, code and delay through chunk failure; the first worker's error is not overwritten by a later worker failure. Setup shows a focused title and explicit Retry. Browser setup instructions appear only for browser errors or an unclassified local validation error. GUI-to-backend connectivity failure has its own `BACKEND_NETWORK` diagnosis.
+
+`npm test` passed **38 files / 512 tests**. `npm run typecheck`, `npm run build` and `git diff --check` passed. The existing bundle-size warning remains. The Impeccable detector returned no findings for the changed production frontend files; real desktop/mobile error states were inspected together.
+
+| Requested deterministic case | Evidence |
+| --- | --- |
+| Transient authorization failure followed by success | `historyLoader.test.ts`: explicit Retry succeeds and completed chunks are fetched once |
+| Persistent authorization failure / bounded attempts | `historyLoader.test.ts`: at most the two in-flight frontend workers, no automatic repeated authorization; `providerRetries.test.ts`: installed package does not retry `WafTokenError` through generic `retryCount` |
+| Rate-limited responses | `providerRetries.test.ts`: real installed `BufferFetcher` with mocked HTTP transport, 12-second `Retry-After`, success, four-attempt exhaustion and refusal to shorten a 600-second delay; API/header and frontend metadata tests |
+| Browser launch versus WAF failure | Actual invalid-executable preflight, sandbox wrapper test, structured and nested classification cases |
+| Partial successful chunks followed by retry | `historyLoader.test.ts`: validated successful chunks survive explicit retry; distinct original ask prices remain distinct |
+| Cancellation during retry delay | `historyLoader.test.ts`: modeled pending HTTP response during provider backoff aborts promptly and leaves no frontend test timers; actual installed server-side provider work remains uncancellable through its public API |
+| Simultaneous bid/ask handling | `history.test.ts`: two concurrent callers retain independent sides with bid before ask per caller; `app.test.ts`: ask authorization failure never publishes bid-only success |
+| Error classification and secret safety | `historyCoverage.test.ts`, `app.test.ts`, `history.test.ts`, `workflow.test.tsx`: nested causes, HTTP 429/403/503, WAF, network, browser, unrelated token-named errors, cyclic causes and secret-bearing errors |
+| No duplicate or conflicting candles | Existing normalization/merge tests plus retry uniqueness checks |
+| Saved-backtest regression | Full suite including filesystem recovery, migration, historical fingerprint repair, replay and trading tests |
+
+No candle normalization, observations, gaps, fingerprints, persistence schema, saved backtest, trading/execution rules, seven-day boundaries, 30-day pre-roll or 90-day selected interval changed. No partial failed interval is installed as ready. No WAF protection was bypassed, sandbox disabled, identity rotated or provider replaced. **Successful September 2026 loading remains unverified. PR #18 remains open and unmerged.**
+
+Reproduction scripts are diagnostic, not success assertions. They record failure outcomes and stop the direct matrix after two authorization failures. Run them again only after provider availability has recovered:
+
+```sh
+WAF_MODE=direct WAF_SERIALIZED=1 node --import tsx scripts/verify-provider-waf.mts
+WAF_FROM=2024-01-09 WAF_TO=2024-01-10 WAF_EVIDENCE=/tmp/provider-control.json node --import tsx scripts/verify-provider-waf.mts
+node --import tsx scripts/verify-provider-waf-browser.mts
+```
+
 ## UX and screenshots
 
 [Annotated wireframes and transitions](design.md) describe Setup → Trading → Finished. Setup requires an explicit download; Trading mounts the chart stack and compact dock; Finished mounts Overview, Journal, or Equity & drawdown. Administration lives in a modal. Account PnL uses current ledger equity minus starting balance, including incurred fees, with an unavailable state for missing required quotes.

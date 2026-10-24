@@ -22,6 +22,13 @@ export interface DateRange {
   to: string
 }
 
+export class HistoryRequestError extends Error {
+  override name = 'HistoryRequestError'
+  constructor(message: string, readonly code: string, readonly title = 'Historical data unavailable', readonly retryAfterMs?: number) {
+    super(message)
+  }
+}
+
 export const TIMEFRAMES = ['M1', 'M5', 'M15', 'H1', 'H4'] as const
 export type Timeframe = typeof TIMEFRAMES[number]
 
@@ -113,13 +120,20 @@ export function toBidChartCandles(history: { bid: readonly Candle[] }, timeframe
 
 export async function fetchHistory(range: DateRange, signal?: AbortSignal): Promise<HistoryResponse> {
   const params = new URLSearchParams({ symbol: 'EURUSD', from: range.from, to: range.to })
-  const response = await fetch(`/api/history?${params}`, { signal })
+  let response: Response
+  try { response = await fetch(`/api/history?${params}`, { signal }) }
+  catch {
+    signal?.throwIfAborted()
+    throw new HistoryRequestError('The backend could not be reached. Check the backend and network connection, then retry.', 'BACKEND_NETWORK', 'Backend connection unavailable')
+  }
   const body: unknown = await response.json().catch(() => null)
   if (!response.ok) {
     const message = isRecord(body) && typeof body.error === 'string'
       ? `${body.error}${typeof body.action === 'string' ? ` ${body.action}` : ''}`
       : `Historical data request failed (HTTP ${response.status}).`
-    throw new Error(message)
+    const retryAfterMs = isRecord(body) && typeof body.retryAfterMs === 'number' && Number.isSafeInteger(body.retryAfterMs) && body.retryAfterMs >= 0 ? body.retryAfterMs : undefined
+    throw new HistoryRequestError(message, isRecord(body) && typeof body.code === 'string' ? body.code : 'HISTORY_UNAVAILABLE',
+      isRecord(body) && typeof body.title === 'string' ? body.title : 'Historical data unavailable', retryAfterMs)
   }
   return parseHistory(body, range)
 }

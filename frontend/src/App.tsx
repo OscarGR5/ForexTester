@@ -19,7 +19,7 @@ import { TradingJournal } from './TradingJournal'
 import { indicatorPreset, type IndicatorSettings } from './indicators'
 import { HistoryLoader, ichimokuWarmup, replayStartIndex, type LoadProgress, type LoadedHistory } from './historyLoader'
 import { EquityChart } from './EquityChart'
-import { type Candle, type DateRange, type Timeframe } from './history'
+import { HistoryRequestError, type Candle, type DateRange, type Timeframe } from './history'
 
 const EMPTY_CANDLES: readonly Candle[] = []
 const DEFAULT_RANGE: DateRange = { from: '2024-01-09', to: '2024-01-10' }
@@ -40,6 +40,7 @@ export function App() {
   const loadAbort = useRef<AbortController | null>(null)
   const loadGeneration = useRef(0)
   const [error, setError] = useState<string | null>(null)
+  const [historyFailure, setHistoryFailure] = useState<HistoryRequestError | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [loader] = useState(() => new HistoryLoader())
   const [loadProgress, setLoadProgress] = useState<LoadProgress>({ completed: 0, total: 0 })
@@ -126,13 +127,14 @@ export function App() {
     const generation = ++loadGeneration.current
     loadAbort.current?.abort()
     const controller = new AbortController(); loadAbort.current = controller
-    setStatus('loading'); setError(null); setHistory(null); setHydration(null); setRequestedRange(selected.range)
+    setStatus('loading'); setError(null); setHistoryFailure(null); setHistory(null); setHydration(null); setRequestedRange(selected.range)
     try {
       const result = await loader.load(selected.range, controller.signal, setLoadProgress)
       if (generation !== loadGeneration.current) return
       setHistory(result); setStatus('ready'); void refreshCoverage()
     } catch (reason) {
       if (generation !== loadGeneration.current || controller.signal.aborted) return
+      setHistoryFailure(reason instanceof HistoryRequestError ? reason : null)
       setError(reason instanceof Error ? reason.message : 'Historical data unavailable.'); setStatus('error'); void refreshCoverage()
     }
   }
@@ -199,7 +201,9 @@ export function App() {
             <div className="load-actions"><button type="submit" disabled={!coverage || status === 'loading'}>{status === 'error' ? 'Retry historical data' : 'Load historical data'}</button>
               {status === 'loading' && <button type="button" onClick={()=>{loadGeneration.current++;loadAbort.current?.abort();setStatus('idle')}}>Cancel loading</button>}</div>
             {status === 'loading' && <div role="status"><progress max={loadProgress.total || 1} value={loadProgress.completed}/><p>{loadProgress.completed} / {loadProgress.total} chunks downloaded</p></div>}
-            {status === 'error' && <div className="load-error" role="alert"><p>{error}</p><details><summary>Provider setup / troubleshooting</summary><p>Run <code>npx dukascopy-node --install-browser</code> from the project directory. Linux library installation with <code>--with-deps</code> needs administrator review. An installed browser may be selected with <code>DUKASCOPY_CHROME_PATH</code>. See README for sandbox and network diagnostics.</p></details></div>}
+            {status === 'error' && <div className="load-error" role="alert"><strong>{historyFailure?.title ?? 'Historical data unavailable'}</strong><p>{error}</p>
+              {historyFailure?.retryAfterMs !== undefined && <p>The provider requested a wait of at least {Math.ceil(historyFailure.retryAfterMs / 1000)} seconds before another attempt. A retry may still fail.</p>}
+              {(!historyFailure || historyFailure.code.startsWith('BROWSER_')) && <details><summary>Provider setup / troubleshooting</summary><p>Run <code>npx dukascopy-node --install-browser</code> from the project directory. Linux library installation with <code>--with-deps</code> needs administrator review. An installed browser may be selected with <code>DUKASCOPY_CHROME_PATH</code>. See README for sandbox and network diagnostics.</p></details>}</div>}
             {status === 'ready' && history && <p className="data-ready" role="status">Loaded {history.bid.length.toLocaleString()} bid and {history.ask.length.toLocaleString()} ask observations, including indicator pre-roll.</p>}
           </section>
           <section><h3>Account <span>USD</span></h3><div className="account-fields">

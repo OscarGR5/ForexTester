@@ -3,7 +3,7 @@ import { SessionStorage } from './sessionStorage.js'
 import { sessionApi } from './sessionApi.js'
 import { loadHistory, type RatesFetcher } from './history.js'
 
-import { historyCoverage, classifyHistoryError, verifiedDate } from './historyCoverage.js'
+import { historyCoverage, classifyHistoryError, historyErrorDetails, verifiedDate } from './historyCoverage.js'
 
 const MAX_HISTORY_DAYS = 7 // Per-chunk provider safety limit; the frontend coordinates longer intervals.
 
@@ -45,7 +45,7 @@ export function createApp(fetchRates?: RatesFetcher, now: () => Date = () => new
       if (symbol !== 'EURUSD' || fromMs === null || toMs === null || fromMs >= toMs ||
         toMs > todayUtc || (toMs - fromMs) / 86_400_000 > MAX_HISTORY_DAYS) {
         response.writeHead(400)
-        response.end(JSON.stringify({ code: 'INVALID_HISTORY_RANGE', error: 'Use symbol=EURUSD and a valid completed UTC date range of 1 to 7 days (from inclusive, to exclusive).' }))
+        response.end(JSON.stringify({ code: 'INVALID_HISTORY_RANGE', title: 'Invalid historical date range', error: 'Use symbol=EURUSD and a valid completed UTC date range of 1 to 7 days (from inclusive, to exclusive).' }))
         return
       }
 
@@ -57,9 +57,10 @@ export function createApp(fetchRates?: RatesFetcher, now: () => Date = () => new
         response.writeHead(200)
         response.end(JSON.stringify(history))
       } catch (error) {
-        console.error('Historical data retrieval failed:', error)
-        response.writeHead(502)
         const diagnostic = classifyHistoryError(error)
+        console.error('Historical data retrieval failed:', { from, to, code: diagnostic.code, causes: historyErrorDetails(error) })
+        if (diagnostic.retryAfterMs !== undefined) response.setHeader('Retry-After', String(Math.ceil(diagnostic.retryAfterMs / 1000)))
+        response.writeHead(diagnostic.code === 'PROVIDER_RATE_LIMIT' ? 429 : 502)
         providerHealth = { status: 'error', ...diagnostic }
         response.end(JSON.stringify(diagnostic))
       }
