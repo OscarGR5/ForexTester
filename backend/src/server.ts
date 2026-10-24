@@ -1,3 +1,4 @@
+import './environment.js'
 import { createApp } from './app.js'
 import { SessionStorage } from './sessionStorage.js'
 

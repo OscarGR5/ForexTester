@@ -19,16 +19,16 @@ Vite prints the frontend URL. The backend binds to `127.0.0.1:3001` by default. 
 
 ## Databento credentials and spending
 
-Keep `DATABENTO_API_KEY` in the **backend environment only**. Never use a `VITE_` variable or enter credentials into the browser. `.env.example` contains safe configuration names. Environment files are ignored by Git; the backend does not load them automatically.
-
-For an existing private environment file, start the backend from a shell that loads it:
+Keep `DATABENTO_API_KEY` in the **backend environment only**. Never use a `VITE_` variable or enter credentials into the browser. Copy `.env.example` to `.env` in the project root and fill in your private backend configuration:
 
 ```sh
-set -a
-source /home/admin/.config/forextester/databento.env
-set +a
+cp .env.example .env
 npm run dev:backend
 ```
+
+On Node.js 24, backend startup automatically loads the project-root `.env` using the built-in `process.loadEnvFile()` support. This works in development and with the compiled backend (`npm start --workspace backend`), regardless of the launch directory. Variables explicitly provided to the process take precedence, including an explicitly empty value. A missing `.env` is allowed; other file-access errors stop startup rather than silently ignoring configuration problems.
+
+Only backend startup loads this file. The frontend does not load the project-root `.env`, and the API key is never included in frontend configuration or browser assets. `.env` and `.env.*` remain ignored by Git; `.env.example` is a credential-free template. Do not commit private configuration. An existing private environment file can still be exported by the launching shell; those exported values override the project-root file.
 
 A missing key prevents live metadata and new downloads. Validated cached history remains available without a key or credit verification. Access failures never print upstream bodies, headers, keys or stack traces. HTTP redirects are refused. No browser installation, brokerage application or manual CSV download is required for history.
 
