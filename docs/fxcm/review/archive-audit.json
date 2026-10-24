@@ -1,0 +1,143 @@
+{
+  "checkedAt": "2026-10-24T14:57:45.784Z",
+  "requestBudget": 13,
+  "requestsMade": 13,
+  "retries": 0,
+  "rawDatasetsCommitted": false,
+  "results": [
+    {
+      "file": "2024/11.csv.gz",
+      "status": 200,
+      "ms": 144,
+      "bytes": 91510,
+      "sha256": "f28880b660b009a22d8c0c6a324d53f7a0df3ae05ed4bdc56743f684121ba5c0",
+      "rows": 7183,
+      "firstUtc": "2024-03-10T21:03:00.000Z",
+      "lastUtc": "2024-03-15T20:59:00.000Z",
+      "crossedRows": 7,
+      "crossedComponents": [
+        {
+          "utc": "2024-03-12T12:32:00.000Z",
+          "field": "high",
+          "bidMinusAskPips": 0.4
+        },
+        {
+          "utc": "2024-03-12T12:32:00.000Z",
+          "field": "low",
+          "bidMinusAskPips": 0.1
+        },
+        {
+          "utc": "2024-03-12T12:33:00.000Z",
+          "field": "close",
+          "bidMinusAskPips": 0.4
+        },
+        {
+          "utc": "2024-03-12T12:34:00.000Z",
+          "field": "open",
+          "bidMinusAskPips": 0.4
+        },
+        {
+          "utc": "2024-03-12T12:34:00.000Z",
+          "field": "close",
+          "bidMinusAskPips": 0.1
+        },
+        {
+          "utc": "2024-03-12T12:35:00.000Z",
+          "field": "open",
+          "bidMinusAskPips": 0.1
+        },
+        {
+          "utc": "2024-03-12T12:35:00.000Z",
+          "field": "close",
+          "bidMinusAskPips": 0.1
+        },
+        {
+          "utc": "2024-03-12T12:36:00.000Z",
+          "field": "open",
+          "bidMinusAskPips": 0.1
+        },
+        {
+          "utc": "2024-03-12T12:37:00.000Z",
+          "field": "low",
+          "bidMinusAskPips": 0.2
+        },
+        {
+          "utc": "2024-03-12T12:42:00.000Z",
+          "field": "low",
+          "bidMinusAskPips": 0.3
+        }
+      ],
+      "openOrCloseCrossedRows": 4
+    },
+    {
+      "file": "2026/18.csv.gz",
+      "status": 404,
+      "ms": 203
+    },
+    {
+      "file": "2026/19.csv.gz",
+      "status": 404,
+      "ms": 156
+    },
+    {
+      "file": "2026/20.csv.gz",
+      "status": 404,
+      "ms": 166
+    },
+    {
+      "file": "2026/21.csv.gz",
+      "status": 404,
+      "ms": 137
+    },
+    {
+      "file": "2026/22.csv.gz",
+      "status": 404,
+      "ms": 134
+    },
+    {
+      "file": "2026/23.csv.gz",
+      "status": 404,
+      "ms": 134
+    },
+    {
+      "file": "2026/24.csv.gz",
+      "status": 404,
+      "ms": 179
+    },
+    {
+      "file": "2026/25.csv.gz",
+      "status": 404,
+      "ms": 156
+    },
+    {
+      "file": "2026/26.csv.gz",
+      "status": 404,
+      "ms": 249
+    },
+    {
+      "file": "2026/27.csv.gz",
+      "status": 404,
+      "ms": 163
+    },
+    {
+      "file": "2026/1.csv.gz",
+      "status": 200,
+      "ms": 48,
+      "bytes": 96711,
+      "sha256": "5a64a53d7be64e8521dbb015e65dbb3d79a86ce2b7d171d0502bba9937812219",
+      "rows": 7170,
+      "firstUtc": "2026-01-04T22:07:00.000Z",
+      "lastUtc": "2026-01-09T21:58:00.000Z"
+    },
+    {
+      "file": "2026/37.csv.gz",
+      "status": 200,
+      "ms": 61,
+      "bytes": 94161,
+      "sha256": "021e5e1f66e7989539698b4536eb8d3cc433fb35edb9d514b697ca07f4cefe19",
+      "rows": 7175,
+      "firstUtc": "2026-09-13T21:03:00.000Z",
+      "lastUtc": "2026-09-18T20:58:00.000Z"
+    }
+  ]
+}

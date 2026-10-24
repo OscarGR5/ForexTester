@@ -38,3 +38,7 @@ Typecheck, production build and diff checks are required for the final commit. T
 A default-concurrency full run hit the existing 5-second timeout in the computational `replayBars` indicator comparison while other checks were running. No assertion failed in that run. The final complete suite runs with two workers to avoid that contention; its result is recorded below.
 
 Final checks: `npm test -- --reporter=dot --maxWorkers=2` passed **563 tests in 40 files** (33.82 seconds); `npm run typecheck`, `npm run build`, and `git diff --check` passed. The final live run also verifies that New session returns to Dukascopy and requires a fresh explicit FXCM selection.
+
+## Follow-up review of ca4a618
+
+The [PR #19 validation review](review/review.md) records the exact crossed UTC timestamps, fields and pip differences, assesses the independent-aggregation uncertainty, and retains validation unchanged. Four of the seven rows cross at open or close; this is not an extrema-only issue. A fixed 13-request audit found `2026/18`–`2026/27` unavailable while January/September controls worked. A different full 90+30-day Chromium attempt completed 12 chunks before missing August 2024 archives stopped loading; no dataset was installed or saved. Full-range storage performance remains unverified, and the merge recommendation is **hold pending one complete full-range load/save/refresh/restart verification**. Original failed evidence is preserved. Review-specific checks are in [review/checks.json](review/checks.json).

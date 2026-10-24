@@ -1,0 +1,51 @@
+{
+  "baseCommit": "ca4a61869ecac95a05b126898f4c2a84c05d9ecc",
+  "productionValidationChanged": false,
+  "tradingCalculationsChanged": false,
+  "originalHistoricalDataModified": false,
+  "userBacktestsAccessed": false,
+  "tests": {
+    "command": "npm test -- --reporter=dot --maxWorkers=2",
+    "passed": 569,
+    "filesPassed": 41,
+    "seconds": 30.54
+  },
+  "typecheck": "passed",
+  "build": "passed",
+  "diffCheck": "passed",
+  "regressionCoverage": [
+    "open crossing rejected by backend/frontend/stored-history validation",
+    "close crossing rejected by backend/frontend/stored-history validation",
+    "high crossing rejected by backend/frontend/stored-history validation",
+    "low crossing rejected by backend/frontend/stored-history validation",
+    "noncorresponding extrema overlap accepted",
+    "equal sides and exact price/gap preservation accepted"
+  ],
+  "liveChromium": {
+    "validationChanged": false,
+    "changedValidationVerification": "not applicable",
+    "new90Plus30DayAttempt": "failed: missing required August 2024 archive within bounded discovery",
+    "successfulChunks": 12,
+    "attemptedApiChunks": 14,
+    "plannedApiChunks": 18,
+    "loadMs": 2068,
+    "partialDatasetRejected": true,
+    "isolatedSessionsAfterFailure": 0,
+    "fullRangeStoragePerformance": "not measured; complete dataset unavailable"
+  },
+  "archiveAudit": {
+    "requests": 13,
+    "retries": 0,
+    "crossedRows": 7,
+    "crossedComponents": 10,
+    "rowsWithOpenOrCloseCrossings": 4,
+    "mayJune2026Candidates": 10,
+    "mayJune2026Http404": 10,
+    "controlsHttp200": 2
+  },
+  "mergeRecommendation": "hold pending successful complete 90+30-day load/save/refresh/restart verification; retain validation",
+  "warnings": [
+    "Existing React act warnings in workflow tests",
+    "Existing Vite bundle-size advisory"
+  ]
+}

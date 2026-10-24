@@ -1,0 +1,117 @@
+{
+  "checkedAt": "2026-10-24T14:58:31.346Z",
+  "sandbox": true,
+  "freshIsolatedCacheAndStorage": true,
+  "validationChanged": false,
+  "metrics": {
+    "selectedFrom": "2024-07-01",
+    "selectedThroughInclusive": "2024-09-28",
+    "apiToExclusive": "2024-09-29",
+    "expectedPrerollFrom": "2024-06-01",
+    "loadMs": 2068,
+    "incompleteDatasetRejected": true
+  },
+  "requests": [
+    {
+      "from": "2024-06-01",
+      "to": "2024-06-08",
+      "status": 200,
+      "bid": 7184,
+      "ask": 7184
+    },
+    {
+      "from": "2024-06-08",
+      "to": "2024-06-15",
+      "status": 200,
+      "bid": 7166,
+      "ask": 7166
+    },
+    {
+      "from": "2024-06-15",
+      "to": "2024-06-22",
+      "status": 200,
+      "bid": 7145,
+      "ask": 7145
+    },
+    {
+      "from": "2024-06-22",
+      "to": "2024-06-29",
+      "status": 200,
+      "bid": 7163,
+      "ask": 7163
+    },
+    {
+      "from": "2024-06-29",
+      "to": "2024-07-01",
+      "status": 200,
+      "bid": 179,
+      "ask": 179
+    },
+    {
+      "from": "2024-07-01",
+      "to": "2024-07-08",
+      "status": 200,
+      "bid": 7166,
+      "ask": 7166
+    },
+    {
+      "from": "2024-07-08",
+      "to": "2024-07-15",
+      "status": 200,
+      "bid": 7165,
+      "ask": 7165
+    },
+    {
+      "from": "2024-07-15",
+      "to": "2024-07-22",
+      "status": 200,
+      "bid": 7167,
+      "ask": 7167
+    },
+    {
+      "from": "2024-07-22",
+      "to": "2024-07-29",
+      "status": 200,
+      "bid": 7167,
+      "ask": 7167
+    },
+    {
+      "from": "2024-07-29",
+      "to": "2024-08-05",
+      "status": 200,
+      "bid": 7174,
+      "ask": 7174
+    },
+    {
+      "from": "2024-08-05",
+      "to": "2024-08-12",
+      "status": 200,
+      "bid": 7167,
+      "ask": 7167
+    },
+    {
+      "from": "2024-08-12",
+      "to": "2024-08-19",
+      "status": 200,
+      "bid": 7175,
+      "ask": 7175
+    },
+    {
+      "from": "2024-08-19",
+      "to": "2024-08-26",
+      "status": 502,
+      "code": "FXCM_MISSING",
+      "error": "No FXCM archive was found for a required trading week within the bounded filename search. Select another period or retry later. No fallback was used."
+    },
+    {
+      "from": "2024-08-26",
+      "to": "2024-09-02",
+      "status": 502,
+      "code": "FXCM_MISSING",
+      "error": "No FXCM archive was found for a required trading week within the bounded filename search. Select another period or retry later. No fallback was used."
+    }
+  ],
+  "storageTransfers": [],
+  "errors": [],
+  "failure": "FXCM archive unavailable\n\nNo FXCM archive was found for a required trading week within the bounded filename search. Select another period or retry later. No fallback was used. The selected interval was not loaded. Completed validated archives remain cached. Chunk 13/18 (2024-08-19 to 2024-08-26 UTC) failed. Retry to complete the interval."
+}
