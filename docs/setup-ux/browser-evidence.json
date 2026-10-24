@@ -1,0 +1,77 @@
+{
+  "isolatedSessions": "/tmp/forextester-setup-ux-8V7fLb",
+  "credentialsConfigured": false,
+  "providerRequests": 0,
+  "paidSubmissions": 0,
+  "screenshots": [
+    "docs/setup-ux/setup-1440.png",
+    "docs/setup-ux/setup-390.png",
+    "docs/setup-ux/trading-1440.png",
+    "docs/setup-ux/trading-390.png",
+    "docs/setup-ux/trading-h4-history-1440.png"
+  ],
+  "errors": [],
+  "checks": {
+    "keyboard": true,
+    "mouse": true,
+    "oneClick": true,
+    "visibleIndicatorReadiness": true,
+    "restoreUnchanged": true,
+    "touch": true,
+    "originalCacheUnchanged": true
+  },
+  "indicators": [
+    {
+      "timeframe": "M1",
+      "candles": 17216,
+      "ready": true,
+      "cloud": 0,
+      "bollinger": 0,
+      "stochastic": 0
+    },
+    {
+      "timeframe": "M5",
+      "candles": 3505,
+      "ready": true,
+      "cloud": 0,
+      "bollinger": 3486,
+      "stochastic": 3458
+    },
+    {
+      "timeframe": "M15",
+      "candles": 1169,
+      "ready": true,
+      "cloud": 0,
+      "bollinger": 1150,
+      "stochastic": 1122
+    },
+    {
+      "timeframe": "H1",
+      "candles": 293,
+      "ready": true,
+      "cloud": 242,
+      "bollinger": 0,
+      "stochastic": 0
+    },
+    {
+      "timeframe": "H4",
+      "candles": 79,
+      "ready": true,
+      "cloud": 28,
+      "bollinger": 0,
+      "stochastic": 0
+    }
+  ],
+  "selected": {
+    "from": "2024-01-01",
+    "through": "2024-03-30"
+  },
+  "replay": {
+    "index": 30678,
+    "timestamp": 1704470400000,
+    "count": 78,
+    "required": 78,
+    "utc": "2024-01-05T16:00:00.000Z"
+  },
+  "startDurationMs": 2930.381528
+}

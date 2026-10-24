@@ -41,3 +41,12 @@ export function validateIndicatorSettings(settings: IndicatorSettings): string |
   }
   return null
 }
+
+// Completed observations needed by the enabled settings, independent of future bars.
+export function indicatorWarmupRequirement(settings: IndicatorSettings): number {
+  return Math.max(0,
+    settings.bollinger.enabled ? settings.bollinger.length : 0,
+    settings.bollinger2.enabled ? settings.bollinger2.length : 0,
+    settings.stochastic.enabled ? settings.stochastic.length + settings.stochastic.smoothK + settings.stochastic.smoothD - 2 : 0,
+    settings.ichimoku.enabled ? Math.max(settings.ichimoku.tenkan, settings.ichimoku.kijun, settings.ichimoku.spanB) + settings.ichimoku.displacement : 0)
+}

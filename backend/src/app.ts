@@ -15,6 +15,7 @@ export function createApp(history = new HistoryService(), now: () => Date = () =
       const host = request.headers.host, origin = request.headers.origin
       if (!host || !/^(127\.0\.0\.1|localhost)(:\d+)?$/.test(host) || origin && origin !== `http://${host}` || request.headers['sec-fetch-site'] === 'cross-site') throw new DataError('LOCAL_ACCESS_REQUIRED', 'Same-origin localhost access required.', 403)
       if (request.method === 'GET' && url.pathname === '/api/health') { response.end(JSON.stringify({ status: 'ok' })); return }
+      if (request.method === 'GET' && url.pathname === '/api/history/calendar') { response.end(JSON.stringify(await history.calendar())); return }
       if (request.method === 'GET' && url.pathname === '/api/history/coverage') {
         const cached = await history.cachedBounds()
         if (cached) {
