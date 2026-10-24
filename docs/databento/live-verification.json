@@ -1,0 +1,298 @@
+{
+  "checkedAt": "2026-10-24T15:57:19.717Z",
+  "source": "Authenticated Databento Historical API",
+  "cacheDirectory": "/home/admin/.cache/forextester-databento-verification-20261024/databento/",
+  "approval": {
+    "verifiedAt": "2026-10-24T15:57:19Z",
+    "balanceUsd": 121.35,
+    "ranges": [
+      {
+        "from": "2024-01-09",
+        "to": "2024-01-11"
+      },
+      {
+        "from": "2023-12-02",
+        "to": "2024-03-31"
+      }
+    ],
+    "evidence": "User confirmed current portal balance and credit validity for these specific downloads in the task conversation. Actual expiry date remains unknown."
+  },
+  "availability": {
+    "start": "2010-06-06T00:00:00.000000000Z",
+    "end": "2026-10-24T07:57:20.734078000Z"
+  },
+  "samples": [
+    {
+      "quote": {
+        "id": "f12e29af-28ed-4bda-8679-55bc912f37ef",
+        "from": "2024-01-09",
+        "to": "2024-01-11",
+        "tradingFrom": "2024-01-09",
+        "cached": false,
+        "estimatedUsd": 0.00993013382,
+        "reservedUsd": 0.01986026764,
+        "remainingBudgetUsd": 5,
+        "downloadAllowed": true,
+        "blockedReason": null,
+        "expiresAt": "2026-10-24T16:02:28.410Z",
+        "missingRanges": [
+          {
+            "from": "2024-01-09",
+            "to": "2024-01-11"
+          }
+        ]
+      },
+      "candles": 2720,
+      "gapIntervals": 37,
+      "missingMinutesBetweenObservations": 160,
+      "gapInterpretation": "Includes exchange closures and no-trade intervals; M1 OHLCV alone cannot classify each gap as missing feed data.",
+      "largestGaps": [
+        {
+          "from": "2024-01-09T22:00:00.000Z",
+          "to": "2024-01-09T23:00:00.000Z",
+          "missingMinutes": 60
+        },
+        {
+          "from": "2024-01-10T22:00:00.000Z",
+          "to": "2024-01-10T23:00:00.000Z",
+          "missingMinutes": 60
+        },
+        {
+          "from": "2024-01-09T21:15:00.000Z",
+          "to": "2024-01-09T21:17:00.000Z",
+          "missingMinutes": 2
+        },
+        {
+          "from": "2024-01-09T21:21:00.000Z",
+          "to": "2024-01-09T21:23:00.000Z",
+          "missingMinutes": 2
+        },
+        {
+          "from": "2024-01-09T23:22:00.000Z",
+          "to": "2024-01-09T23:24:00.000Z",
+          "missingMinutes": 2
+        },
+        {
+          "from": "2024-01-10T05:16:00.000Z",
+          "to": "2024-01-10T05:18:00.000Z",
+          "missingMinutes": 2
+        },
+        {
+          "from": "2024-01-10T23:23:00.000Z",
+          "to": "2024-01-10T23:25:00.000Z",
+          "missingMinutes": 2
+        },
+        {
+          "from": "2024-01-09T03:06:00.000Z",
+          "to": "2024-01-09T03:07:00.000Z",
+          "missingMinutes": 1
+        },
+        {
+          "from": "2024-01-09T03:52:00.000Z",
+          "to": "2024-01-09T03:53:00.000Z",
+          "missingMinutes": 1
+        },
+        {
+          "from": "2024-01-09T03:56:00.000Z",
+          "to": "2024-01-09T03:57:00.000Z",
+          "missingMinutes": 1
+        }
+      ],
+      "contracts": [
+        {
+          "from": "2024-01-09",
+          "to": "2024-01-11",
+          "instrumentId": 156627,
+          "rawSymbol": "6EH4"
+        }
+      ],
+      "loadDurationMs": 9510.585490999998,
+      "downloadMetrics": [
+        [
+          {
+            "downloadBytes": 550168,
+            "durationMs": 4698.262937000001,
+            "candles": 2720
+          }
+        ]
+      ],
+      "timeframeCounts": {
+        "M1": 2720,
+        "M5": 552,
+        "M15": 184,
+        "H1": 46,
+        "H4": 12
+      },
+      "normalizedJsonBytes": 332080
+    },
+    {
+      "quote": {
+        "id": "f9dcd663-700e-4462-a1ca-ea2c76ef111c",
+        "from": "2023-12-02",
+        "to": "2024-03-31",
+        "tradingFrom": "2024-01-01",
+        "cached": false,
+        "estimatedUsd": 0.39305441081500003,
+        "reservedUsd": 0.7861088216300001,
+        "remainingBudgetUsd": 4.98013973236,
+        "downloadAllowed": true,
+        "blockedReason": null,
+        "expiresAt": "2026-10-24T16:03:07.632Z",
+        "missingRanges": [
+          {
+            "from": "2023-12-02",
+            "to": "2024-01-09"
+          },
+          {
+            "from": "2024-01-11",
+            "to": "2024-03-31"
+          }
+        ]
+      },
+      "candles": 110383,
+      "gapIntervals": 2187,
+      "missingMinutesBetweenObservations": 56537,
+      "gapInterpretation": "Includes exchange closures and no-trade intervals; M1 OHLCV alone cannot classify each gap as missing feed data.",
+      "largestGaps": [
+        {
+          "from": "2023-12-22T22:00:00.000Z",
+          "to": "2023-12-25T23:00:00.000Z",
+          "missingMinutes": 4380
+        },
+        {
+          "from": "2023-12-29T22:00:00.000Z",
+          "to": "2024-01-01T23:00:00.000Z",
+          "missingMinutes": 4380
+        },
+        {
+          "from": "2023-12-08T22:00:00.000Z",
+          "to": "2023-12-10T23:00:00.000Z",
+          "missingMinutes": 2940
+        },
+        {
+          "from": "2023-12-15T22:00:00.000Z",
+          "to": "2023-12-17T23:00:00.000Z",
+          "missingMinutes": 2940
+        },
+        {
+          "from": "2024-01-05T22:00:00.000Z",
+          "to": "2024-01-07T23:00:00.000Z",
+          "missingMinutes": 2940
+        },
+        {
+          "from": "2024-01-12T22:00:00.000Z",
+          "to": "2024-01-14T23:00:00.000Z",
+          "missingMinutes": 2940
+        },
+        {
+          "from": "2024-01-19T22:00:00.000Z",
+          "to": "2024-01-21T23:00:00.000Z",
+          "missingMinutes": 2940
+        },
+        {
+          "from": "2024-01-26T22:00:00.000Z",
+          "to": "2024-01-28T23:00:00.000Z",
+          "missingMinutes": 2940
+        },
+        {
+          "from": "2024-02-02T22:00:00.000Z",
+          "to": "2024-02-04T23:00:00.000Z",
+          "missingMinutes": 2940
+        },
+        {
+          "from": "2024-02-09T22:00:00.000Z",
+          "to": "2024-02-11T23:00:00.000Z",
+          "missingMinutes": 2940
+        }
+      ],
+      "contracts": [
+        {
+          "from": "2023-12-02",
+          "to": "2023-12-18",
+          "instrumentId": 306787,
+          "rawSymbol": "6EZ3"
+        },
+        {
+          "from": "2023-12-18",
+          "to": "2024-03-18",
+          "instrumentId": 156627,
+          "rawSymbol": "6EH4"
+        },
+        {
+          "from": "2024-03-18",
+          "to": "2024-03-31",
+          "instrumentId": 131197,
+          "rawSymbol": "6EM4"
+        }
+      ],
+      "loadDurationMs": 120275.09560599999,
+      "downloadMetrics": [
+        [
+          {
+            "downloadBytes": 6566254,
+            "durationMs": 22613.659600000006,
+            "candles": 32460
+          },
+          {
+            "downloadBytes": 15215027,
+            "durationMs": 85264.79900400001,
+            "candles": 75203
+          }
+        ]
+      ],
+      "timeframeCounts": {
+        "M1": 110383,
+        "M5": 22598,
+        "M15": 7538,
+        "H1": 1886,
+        "H4": 509
+      },
+      "normalizedJsonBytes": 13475331,
+      "historyId": "d99322ad7a37c3652452c67cc2f45a6de0f120389471297c14129931cf6a6336",
+      "storedJsonGzipBytes": 1132368
+    }
+  ],
+  "actualBilledUsd": null,
+  "ledger": {
+    "version": 1,
+    "reservations": [
+      {
+        "id": "f12e29af-28ed-4bda-8679-55bc912f37ef",
+        "from": "2024-01-09",
+        "to": "2024-01-11",
+        "estimatedUsd": 0.00993013382,
+        "reservedUsd": 0.01986026764,
+        "at": "2026-10-24T15:57:33.162Z",
+        "state": "complete",
+        "metrics": [
+          {
+            "downloadBytes": 550168,
+            "durationMs": 4698.262937000001,
+            "candles": 2720
+          }
+        ]
+      },
+      {
+        "id": "f9dcd663-700e-4462-a1ca-ea2c76ef111c",
+        "from": "2023-12-02",
+        "to": "2024-03-31",
+        "estimatedUsd": 0.39305441081500003,
+        "reservedUsd": 0.7861088216300001,
+        "at": "2026-10-24T15:58:18.420Z",
+        "state": "complete",
+        "metrics": [
+          {
+            "downloadBytes": 6566254,
+            "durationMs": 22613.659600000006,
+            "candles": 32460
+          },
+          {
+            "downloadBytes": 15215027,
+            "durationMs": 85264.79900400001,
+            "candles": 75203
+          }
+        ]
+      }
+    ]
+  }
+}

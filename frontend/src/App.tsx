@@ -1,3 +1,5 @@
+import { quoteHistory, downloadHistory, type HistoryQuote } from './databentoHistory'
+import { historyCandles, historyLabel, isSinglePrice } from './history'
 import { flushSync } from 'react-dom'
 import { ManagementDialog } from './ManagementDialog'
 import { ChartPane } from './ChartPane'
@@ -28,6 +30,7 @@ export function App() {
   const [from, setFrom] = useState(DEFAULT_RANGE.from)
   const [to, setTo] = useState(DEFAULT_RANGE.to)
   const [requestedRange, setRequestedRange] = useState<DateRange>(DEFAULT_RANGE)
+  const [quote, setQuote] = useState<HistoryQuote | null>(null)
   const [history, setHistory] = useState<LoadedHistory | null>(null)
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
   const [lifecycle, setLifecycle] = useState<Lifecycle>('setup')
@@ -47,16 +50,24 @@ export function App() {
   const [replayStart, setReplayStart] = useState('')
   const [hydration, setHydration] = useState<Hydration | null>(null)
 
+  const source = history ? historyCandles(history) : EMPTY_CANDLES
   const tradingFrom = history?.tradingFrom ?? requestedRange.from
   const startMs = Date.parse(`${replayStart || `${tradingFrom}T00:00`}:00Z`)
-  const startIndex = useMemo(() => replayStartIndex(history?.bid ?? [], startMs), [history, startMs])
-  const replay = useReplay(history?.bid ?? null, startIndex, hydration ? { replay: hydration.checkpoint.replay, epoch: hydration.checkpoint.trading.session } : null)
+  const startIndex = useMemo(() => replayStartIndex(source, startMs), [history, startMs])
+  const replay = useReplay(history ? source : null, startIndex, hydration ? { replay: hydration.checkpoint.replay, epoch: hydration.checkpoint.trading.session } : null)
   const trading = useTrading(history, replay, hydration)
-  const bounds = useMemo(() => history?.bid.length && replay.count ? {
-    from: history.bid[0].timestamp / 1000,
-    to: history.bid[replay.count - 1].timestamp / 1000,
-  } : undefined, [history, replay.count])
-  const warmup = useMemo(() => ichimokuWarmup(history?.bid ?? [], startMs), [history, startMs])
+  const chartOffset = useMemo(() => {
+    if (!history || !isSinglePrice(history) || !history.candles[startIndex]) return 0
+    let index = startIndex
+    while (index > 0 && history.candles[index - 1].instrumentId === history.candles[startIndex].instrumentId) index--
+    return index
+  }, [history, startIndex])
+  const chartSource = useMemo(() => source.slice(chartOffset), [source, chartOffset])
+  const bounds = useMemo(() => source.length && replay.count ? {
+    from: source[chartOffset].timestamp / 1000,
+    to: source[replay.count - 1].timestamp / 1000,
+  } : undefined, [history, replay.count, chartOffset])
+  const warmup = useMemo(() => ichimokuWarmup(chartSource, startMs), [chartSource, startMs])
   const workspace = useMemo<WorkspaceSettings>(() => defaultWorkspace(), [])
   const snapshot = useMemo<SessionSnapshot | null>(() => history ? ({ ledger: trading.equity, checkpoint: {
     lifecycle, replay: { started: replay.active, index: replay.active ? replay.count - 1 : null, timestamp: replay.timestamp,
@@ -109,7 +120,7 @@ export function App() {
   }, [sessions.activeId, synchronizer])
 
   async function refreshCoverage() {
-    try { const response = await fetch('/api/history/coverage'); if (!response.ok) throw Error(); const value = await response.json(); if (!value.earliestSelectableDate) throw Error(); setCoverage(value); setCoverageError(false) }
+    try { const response = await fetch('/api/history/coverage'); const value = await response.json(); if (!response.ok) { setError(value.error ?? 'Historical coverage unavailable.'); throw Error() } if (!value.earliestSelectableDate) throw Error(); setCoverage(value); setCoverageError(false) }
     catch { setCoverageError(true) }
   }
   useEffect(() => { void refreshCoverage(); return () => { loadAbort.current?.abort(); loadGeneration.current++ } }, [])
@@ -127,15 +138,44 @@ export function App() {
     const generation = ++loadGeneration.current
     loadAbort.current?.abort()
     const controller = new AbortController(); loadAbort.current = controller
-    setStatus('loading'); setError(null); setHistoryFailure(null); setHistory(null); setHydration(null); setRequestedRange(selected.range)
+    setStatus('loading'); setError(null); setHistoryFailure(null); setRequestedRange(selected.range)
     try {
+      await sessions.flush()
+      const estimate = await quoteHistory(selected.range, controller.signal)
+      if (generation !== loadGeneration.current) return
+      setQuote(estimate)
+      if (!estimate.cached) { setStatus('idle'); return }
       const result = await loader.load(selected.range, controller.signal, setLoadProgress)
       if (generation !== loadGeneration.current) return
+      const chosenName = sessions.name, chosenStart = replayStart
+      if (history && !await sessions.fresh(selected.range)) throw new Error('The previous backtest could not be saved. New data remains cached; retry storage before switching.')
+      sessions.editName(chosenName); setReplayStart(chosenStart)
+      setHydration(null)
       setHistory(result); setStatus('ready'); void refreshCoverage()
     } catch (reason) {
       if (generation !== loadGeneration.current || controller.signal.aborted) return
       setHistoryFailure(reason instanceof HistoryRequestError ? reason : null)
       setError(reason instanceof Error ? reason.message : 'Historical data unavailable.'); setStatus('error'); void refreshCoverage()
+    }
+  }
+  async function confirmDownload() {
+    if (!quote || quote.tradingFrom !== from || quote.to !== to || !quote.downloadAllowed) return
+    if (!window.confirm(`Download 6E history and use Databento credits? Estimated $${quote.estimatedUsd.toFixed(8)}; budget reservation $${quote.reservedUsd.toFixed(8)}. Estimates are not guaranteed billing ceilings. Includes 30-day pre-roll.`)) return
+    const generation = ++loadGeneration.current
+    const controller = new AbortController(); loadAbort.current = controller
+    setStatus('loading'); setError(null); setHistoryFailure(null); setLoadProgress({ completed: 0, total: 1 })
+    try {
+      await sessions.flush()
+      const result = await downloadHistory(quote, controller.signal)
+      if (generation !== loadGeneration.current) return
+      const chosenName = sessions.name, chosenStart = replayStart
+      if (history && !await sessions.fresh({ from: quote.tradingFrom, to: quote.to })) throw new Error('The previous backtest could not be saved. Downloaded data remains cached; retry storage before switching.')
+      sessions.editName(chosenName); setReplayStart(chosenStart)
+      setHydration(null); setHistory(result); setStatus('ready'); setLoadProgress({ completed: 1, total: 1 }); setQuote(null)
+    } catch (reason) {
+      if (generation !== loadGeneration.current || controller.signal.aborted) return
+      setHistoryFailure(reason instanceof HistoryRequestError ? reason : null)
+      setError(reason instanceof Error ? reason.message : 'Historical download failed.'); setStatus('error'); setQuote(null)
     }
   }
   async function finish() {
@@ -191,8 +231,8 @@ export function App() {
         {!!sessions.legacySessions.length && <p className="chart-note">Older browser backtests are available. <button type="button" onClick={()=>setManage(true)}>Review browser backtests</button></p>}
         <label className="backtest-name">Backtest name<input maxLength={200} aria-label="Backtest name" value={sessions.name} onChange={e=>sessions.editName(e.target.value)}/></label>
         <form onSubmit={loadData} className="setup-grid">
-          <section><h3>Historical period <span>EURUSD · M1 · UTC</span></h3>
-            {coverage ? <div className="coverage-summary"><p>Earliest advertised M1: <strong>{coverage.providerEarliestTimestamp.replace('T',' ').replace('.000Z',' UTC')}</strong></p><p>Latest eligible date: <strong>{coverage.latestEligibleDate}</strong> · provisional</p><small>Eligible dates are not proof of uploaded observations. {coverage.lastVerifiedAvailableDate ? `Bid/ask observations verified through ${coverage.lastVerifiedAvailableDate} on this backend.` : 'No observations verified on this backend yet.'}</small></div> : <p role="status">{coverageError ? 'Historical coverage could not be read.' : 'Reading historical coverage…'} <button type="button" onClick={()=>void refreshCoverage()}>Retry coverage</button></p>}
+          <section><h3>Historical period <span>6E — Euro FX Futures · Databento · M1 · UTC</span></h3>
+            {coverage ? <div className="coverage-summary"><p>Earliest advertised M1: <strong>{coverage.providerEarliestTimestamp.replace('T',' ').replace('.000Z',' UTC')}</strong></p><p>Latest eligible date: <strong>{coverage.latestEligibleDate}</strong></p><small>Metadata availability includes the required 30-day indicator pre-roll. Untraded minutes and exchange closures remain gaps.</small></div> : <p role="status">{coverageError ? error ?? 'Historical coverage could not be read.' : 'Reading historical coverage…'} <button type="button" onClick={()=>void refreshCoverage()}>Retry coverage</button></p>}
             <div className="period-fields"><label>From<input aria-label="From" type="date" min={coverage?.earliestSelectableDate} max={coverage?.latestEligibleDate} value={from} disabled={status === 'loading'} onChange={e=>{setFrom(e.target.value);setFormError(null)}}/></label>
               <label>Through <span>(inclusive)</span><input aria-label="Through" type="date" min={from || coverage?.earliestSelectableDate} max={coverage?.latestEligibleDate} value={shiftDate(to,-1)} disabled={status === 'loading'} onChange={e=>{setTo(shiftDate(e.target.value,1));setFormError(null)}}/></label></div>
             <div className="period-shortcuts">{[7,30,90].map(days=><button type="button" key={days} disabled={!coverage || status === 'loading'} onClick={()=>{setTo(shiftDate(coverage!.latestEligibleDate,1));setFrom(shiftDate(coverage!.latestEligibleDate,1-days))}}>{days} days</button>)}<span>{Number.isFinite(selected.days) ? selected.days : 0} calendar days · maximum 90</span></div>
@@ -203,8 +243,17 @@ export function App() {
             {status === 'loading' && <div role="status"><progress max={loadProgress.total || 1} value={loadProgress.completed}/><p>{loadProgress.completed} / {loadProgress.total} chunks downloaded</p></div>}
             {status === 'error' && <div className="load-error" role="alert"><strong>{historyFailure?.title ?? 'Historical data unavailable'}</strong><p>{error}</p>
               {historyFailure?.retryAfterMs !== undefined && <p>The provider requested a wait of at least {Math.ceil(historyFailure.retryAfterMs / 1000)} seconds before another attempt. A retry may still fail.</p>}
-              {(!historyFailure || historyFailure.code.startsWith('BROWSER_')) && <details><summary>Provider setup / troubleshooting</summary><p>Run <code>npx dukascopy-node --install-browser</code> from the project directory. Linux library installation with <code>--with-deps</code> needs administrator review. An installed browser may be selected with <code>DUKASCOPY_CHROME_PATH</code>. See README for sandbox and network diagnostics.</p></details>}</div>}
-            {status === 'ready' && history && <p className="data-ready" role="status">Loaded {history.bid.length.toLocaleString()} bid and {history.ask.length.toLocaleString()} ask observations, including indicator pre-roll.</p>}
+              <p>Configure Databento on the backend as described in README. New downloads require a current quote, usable credits and explicit confirmation.</p></div>}
+            {quote && quote.tradingFrom === from && quote.to === to && <div className="coverage-summary" role="status">
+              <p>Fully cached: <strong>{quote.cached ? 'Yes' : 'No'}</strong> · Estimated download: <strong>${quote.estimatedUsd.toFixed(8)}</strong></p>
+              <p>Budget reservation (2× estimate): ${quote.reservedUsd.toFixed(8)} · Remaining verification budget: ${quote.remainingBudgetUsd.toFixed(6)}</p>
+              <small>Includes 30-day pre-roll. This estimate is not a guaranteed billing ceiling. Quote expires {new Date(quote.expiresAt).toISOString().slice(11,19)} UTC.</small>
+              {quote.blockedReason && <p className="form-error">{quote.blockedReason}</p>}
+              {!quote.cached && <button type="button" disabled={!quote.downloadAllowed || status === 'loading'} onClick={()=>void confirmDownload()}>Confirm Databento download</button>}
+            </div>}
+            {status === 'ready' && history && <p className="data-ready" role="status">Loaded {source.length.toLocaleString()} {isSinglePrice(history) ? 'trade-price M1 candles' : 'legacy bid observations'}, including indicator pre-roll.</p>}
+            <p className="chart-note">Hypothetical forex-style sizing applied to 6E-derived trade prices. No synthetic spread. Simplified fills do not represent EUR/USD CFD execution or exchange-accurate futures contracts.</p>
+
           </section>
           <section><h3>Account <span>USD</span></h3><div className="account-fields">
             <label>Starting balance (USD)<input aria-label="Starting balance (USD)" type="number" min="0" step="any" value={trading.state.account.referenceBalance || ''} onChange={e=>trading.configure({...trading.state.account,referenceBalance:Number(e.target.value)})}/></label>
@@ -215,22 +264,24 @@ export function App() {
         </form>
         <footer className="setup-footer"><div>{history && !warmup.ready && <p className="coverage-warning">Indicator warm-up incomplete: {warmup.count} prior H4 candles; {warmup.required} required for the default Ichimoku cloud.</p>}
           {history && replayStartError && <p className="form-error">Choose a replay start within the loaded interval.</p>}
-          {history && startIndex >= history.bid.length && <p className="form-error">No bid observations at or after the replay start.</p>}
+          {history && startIndex >= source.length && <p className="form-error">No bid observations at or after the replay start.</p>}
           {accountRiskError(trading.state.account) && <p className="form-error">{accountRiskError(trading.state.account)}</p>}
         </div><button className="primary-action" disabled={status !== 'ready' || !replay.canStart || replayStartError || !!accountRiskError(trading.state.account) || from !== requestedRange.from || to !== requestedRange.to} onClick={()=>{setDraft(null);setLifecycle('trading');replay.start()}}>Start backtest</button></footer>
       </section>}
       {lifecycle === 'trading' && <>
-        <div className="replay-strip" role="group" aria-label="Market replay"><strong>EURUSD</strong><time className="replay-clock">{replay.timestamp === null ? 'Awaiting replay' : new Date(replay.timestamp).toISOString().slice(0,16).replace('T',' ') + ' UTC'}</time>
+        <div className="replay-strip" role="group" aria-label="Market replay"><strong>{historyLabel(history)}</strong><time className="replay-clock">{replay.timestamp === null ? 'Awaiting replay' : new Date(replay.timestamp).toISOString().slice(0,16).replace('T',' ') + ' UTC'}</time>
           <button disabled={!replay.canPlay} onClick={()=>{setDraft(null);replay.play()}}>Play</button><button disabled={!replay.canPause} onClick={replay.pause}>Pause</button><button disabled={!replay.canNext} onClick={()=>{setDraft(null);replay.next()}}>Next Candle</button>
           <label>Speed<select aria-label="Replay speed" value={replay.speed} onChange={e=>replay.setSpeed(Number(e.target.value) as 1|10|100)}>{[1,10,100].map(s=><option key={s} value={s}>{s}×</option>)}</select></label>
           {chartLayout}<span aria-label="Replay status" className="replay-status">{replay.status}</span><span className="replay-progress" aria-label="Replay progress">{replay.revealed-replay.startIndex} / {replay.total-replay.startIndex} candles</span><button onClick={()=>void finish()}>{replay.complete ? 'Review Results' : 'Finish backtest'}</button>
         </div>
-        <div className="chart-workspace" aria-label="EURUSD bid chart workspace"><div className="chart-stack" style={{gridTemplateRows:`repeat(${chartCount}, minmax(0, 1fr))`}}>
-          {timeframes.slice(0,chartCount).map((timeframe,id)=><ChartPane key={id} id={id} timeframe={timeframe} sessionId={sessions.activeId} positions={trading.state.positions} source={history?.bid ?? EMPTY_CANDLES} count={replay.count} synchronizer={synchronizer} onTimeframeChange={changeTimeframe} settings={indicatorSettings[id][timeframe]!} onSettingsChange={changeSettings} placement={draft} onPick={pickStop}/>)}</div></div>
+        {replay.blocked && <p className="coverage-warning" role="alert">Replay blocked at contract rollover. No positions, stops or pending orders were executed across the boundary. Finish this backtest or select a replay start after the rollover. A carry/roll policy requires project-lead approval.</p>}
+        {history && isSinglePrice(history) && <details className="chart-note"><summary>Contract mappings and rollover events</summary>{history.contracts.map(c=><p key={c.from}>{c.from} to {c.to} (exclusive): {c.rawSymbol} · instrument {c.instrumentId}</p>)}</details>}
+        <div className="chart-workspace" aria-label={`${history?.symbol ?? '6E'} chart workspace`}><div className="chart-stack" style={{gridTemplateRows:`repeat(${chartCount}, minmax(0, 1fr))`}}>
+          {timeframes.slice(0,chartCount).map((timeframe,id)=><ChartPane key={id} instrument={history?.symbol ?? '6E'} id={id} timeframe={timeframe} sessionId={sessions.activeId} positions={trading.state.positions} source={chartSource} count={Math.max(0, replay.count - chartOffset)} synchronizer={synchronizer} onTimeframeChange={changeTimeframe} settings={indicatorSettings[id][timeframe]!} onSettingsChange={changeSettings} placement={draft} onPick={pickStop}/>)}</div></div>
         <TradingDock key={`${sessions.activeId}-${trading.state.session}`} trading={trading} draft={draft} setDraft={setDraft}/>
       </>}
       {lifecycle === 'finished' && <section className="results-workspace" aria-label="Backtest results"><div className="results-heading"><h2>Backtest results</h2><button onClick={sessions.save}>Save now</button></div>
-        <p className="results-disclosure">{trading.state.positions.length} positions remain open · {trading.state.pending.length} entries pending. Account PnL includes open equity; journal statistics use completed trades. No exits were created when finishing.</p>
+        <p className="chart-note">{historyLabel(history)} · {history && isSinglePrice(history) ? 'Hypothetical forex-style sizing; simplified trade-price fills.' : 'Original legacy execution model.'}</p><p className="results-disclosure">{trading.state.positions.length} positions remain open · {trading.state.pending.length} entries pending. Account PnL includes open equity; journal statistics use completed trades. No exits were created when finishing.</p>
         <nav className="results-navigation" aria-label="Results sections">{([['summary','Overview'],['journal','Journal'],['equity','Equity & drawdown']] as const).map(([key,label])=><button key={key} aria-pressed={resultSection === key} onClick={()=>setResultSection(key)}>{label}</button>)}</nav>
         {resultSection !== 'equity' && <TradingJournal section={resultSection} sessionId={sessions.activeId} key={`${sessions.activeId}-${trading.state.session}`} state={trading.state} onUpdateSetup={trading.updateSetup} scope={statisticsScope} view={journalScope} onScopeChange={setStatisticsScope} onViewChange={setJournalScope}/>}
         {resultSection === 'equity' && <EquityChart sessionId={sessions.activeId} ledger={trading.equity} referenceBalance={trading.state.account.referenceBalance}/>}

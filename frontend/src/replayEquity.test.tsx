@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { useReplay } from './useReplay'
 import { useTrading } from './useTrading'
 import { equityObservations } from './EquityChart'
-import type { HistoryResponse } from './history'
+import type { LegacyHistoryResponse as HistoryResponse } from './history'
 
 Object.assign(globalThis,{IS_REACT_ACT_ENVIRONMENT:true})
 const base=Date.UTC(2024,0,9)

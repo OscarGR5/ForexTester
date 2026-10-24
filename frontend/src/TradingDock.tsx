@@ -1,3 +1,4 @@
+import { observedPrice, quoteCandle } from './trading'
 import { useState } from 'react'
 import type { useTrading } from './useTrading'
 import { canRequestOrder, entryRequestError, setupAssignmentError, stopModificationError, markPosition, combinedRisk, type Direction, type TradingState } from './trading'
@@ -5,11 +6,11 @@ import { plannedRisk, sizeFromRisk, type EntrySizing } from './risk'
 export interface StopDraft { direction: Direction; sizing: EntrySizing; setupId: string | null; positionId?: string; slot: number; price: number | null }
 export function draftEstimate(state: TradingState, draft: StopDraft) {
   const position = state.positions.find(p => p.id === draft.positionId)
-  const price = position ? state.quote?.[draft.direction === 'buy' ? 'bid' : 'ask']?.close ?? null
-    : state.quote?.bid && state.quote.ask ? state.quote[draft.direction === 'buy' ? 'ask' : 'bid']!.close : null
+  const price = position ? quoteCandle(state.quote, draft.direction === 'buy' ? 'bid' : 'ask')?.close ?? null
+    : observedPrice(state.quote, draft.direction)
   const stop = draft.price
   if (!stop || !Number.isFinite(stop) || stop <= 0) return { error: 'Click the price chart to select a stop-loss.', lots: null, risk: null }
-  if (price === null) return { error: 'Current bid/ask quote unavailable.', lots: null, risk: null }
+  if (price === null) return { error: state.symbol === '6E' ? 'Current trade-price candle unavailable.' : 'Current bid/ask quote unavailable.', lots: null, risk: null }
   const sideError = draft.direction === 'buy' ? stop >= price : stop <= price
   if (!position && sideError) return { error: `${draft.direction === 'buy' ? 'Buy SL must be below' : 'Sell SL must be above'} the observed entry price.`, lots: null, risk: null }
   const lots = position?.lots ?? (typeof draft.sizing === 'number' ? draft.sizing : sizeFromRisk(state.account.referenceBalance * draft.sizing.riskPercent / 100, price, stop))
@@ -28,6 +29,7 @@ export function TradingDock({ trading, draft, setDraft }: { trading: ReturnType<
   const estimate = draft ? draftEstimate(state, draft) : null
   const begin = (direction: Direction) => setDraft({ direction, sizing: mode === 'risk' ? { mode: 'risk', riskPercent: Number(risk) } : Number(lots), setupId, slot: slots + 1, price: null })
   return <section className="trading-dock" aria-label="Simulated trading">
+    {state.symbol === '6E' && <p className="chart-note">6E trade prices · hypothetical forex-style sizing (1 lot = 100,000 EUR). No spread; M1 open fills, high/low stops and gap-open handling. Not exchange-accurate futures or EUR/USD CFD execution.</p>}
     <div className="dock-controls">
       <label>Sizing mode<select aria-label="Sizing mode" value={mode} onChange={e=>setMode(e.target.value)} disabled={!!draft}><option value="risk">Risk %</option><option value="manual">Manual lots</option></select></label>
       {mode === 'risk' ? <label>Risk per entry (%)<input aria-label="Risk per entry (%)" type="number" step="any" value={risk} onChange={e=>setRisk(e.target.value)} disabled={!!draft}/></label> : <label>Volume (lots)<input type="number" step="any" value={lots} onChange={e=>setLots(e.target.value)} disabled={!!draft}/></label>}
@@ -35,7 +37,7 @@ export function TradingDock({ trading, draft, setDraft }: { trading: ReturnType<
       <button className="buy-button" disabled={!canOrder || slots >= 2 || !!setupAssignmentError(state,'buy',setupId)} onClick={()=>begin('buy')}>Buy</button>
       <button className="sell-button" disabled={!canOrder || slots >= 2 || !!setupAssignmentError(state,'sell',setupId)} onClick={()=>begin('sell')}>Sell</button>
       <span>{slots} / 2 slots</span>
-      <span className="trading-message">{permission.playing ? 'Pause to trade' : !permission.hasFuture ? 'End of history; positions remain open' : 'Entries fill at the next synchronized M1 opening'}</span>
+      <span className="trading-message">{permission.playing ? 'Pause to trade' : !permission.hasFuture ? 'End of history; positions remain open' : state.symbol === '6E' ? 'Entries fill at the next eligible M1 opening' : 'Entries fill at the next synchronized M1 opening'}</span>
     </div>
     {draft && <div className="stop-placement" role="region" aria-label="Place stop-loss">
       <strong>{draft.positionId ? `Modify SL ${draft.positionId}` : `${draft.direction === 'buy' ? 'Buy' : 'Sell'} · slot ${draft.slot}`} · {draft.price === null ? 'Click the price chart to place SL' : `SL ${draft.price.toFixed(5)}`}</strong>

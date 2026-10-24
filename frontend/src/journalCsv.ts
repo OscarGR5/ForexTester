@@ -19,7 +19,7 @@ export function journalCsv(state: TradingState): string {
   const rows = executedPositions(state).map((position) => {
     const setup = metadata.get(position.setupId)
     const closed = isClosed(position) ? position : null
-    return [position.setupId, position.id, 'EURUSD', position.direction, position.lots, new Date(position.entryTime).toISOString(), position.entryPrice,
+    return [position.setupId, position.id, state.symbol ?? 'EURUSD', position.direction, position.lots, new Date(position.entryTime).toISOString(), position.entryPrice,
       closed ? new Date(closed.exitTime).toISOString() : null, closed?.exitPrice ?? null, closed?.exitReason ?? null,
       position.initialStopPrice, position.stopPrice, position.initialRiskUsd, closed?.grossPnlUsd ?? null,
       position.entryCommissionUsd, closed?.exitCommissionUsd ?? null, closed?.totalCommissionUsd ?? null, closed?.netPnlUsd ?? null,

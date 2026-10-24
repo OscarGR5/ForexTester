@@ -1,3 +1,4 @@
+import { observedPrice } from './trading'
 import { emptyOrderDraft, useUiValue, validOrderDraft } from './uiPreferences'
 import { useState } from 'react'
 import { commissionConfigError, perSideCommissionUsd, type CommissionConfig } from './commissions'
@@ -18,7 +19,7 @@ interface Props {
 
 function PendingManualRisk({ order, state }: { order: PendingEntry; state: TradingState }) {
   if (order.mode !== 'manual') return null
-  const quote = state.quote?.bid && state.quote.ask ? state.quote[order.direction === 'buy' ? 'ask' : 'bid']!.close : null
+  const quote = observedPrice(state.quote, order.direction)
   const validSide = quote !== null && (order.direction === 'buy' ? order.stopPrice < quote : order.stopPrice > quote)
   const usd = validSide ? plannedRisk({ ...order, entryPrice: quote, lots: order.lots! }) : null
   return <span>Estimated risk: {usd === null || !Number.isFinite(usd) ? 'unavailable' : `$${number(usd, 2)} USD (${number(usd / state.account.referenceBalance * 100, 2)}%)`} · Unreserved; actual cap checked at execution.</span>
@@ -125,7 +126,7 @@ export function TradingPanel({ sessionId = null, state, permission, onEntry, onC
     <p className="trading-message" role="status">{message}</p>
     <div className="entry-estimates" aria-label="Entry estimates">
       {(['buy', 'sell'] as const).map((direction) => {
-        const price = state.quote?.bid && state.quote.ask ? state.quote[direction === 'buy' ? 'ask' : 'bid']!.close : null
+        const price = observedPrice(state.quote, direction)
         const validSide = price !== null && validStop && (direction === 'buy' ? stopPrice < price : stopPrice > price)
         const estimateLots = validSide && valid ? mode === 'risk' ? sizeFromRisk(budget, price, stopPrice) : lots : null
         const estimateRisk = estimateLots === null || price === null ? null : plannedRisk({ direction, lots: estimateLots, entryPrice: price, stopPrice })
@@ -192,6 +193,6 @@ export function TradingPanel({ sessionId = null, state, permission, onEntry, onC
         })}</ul>}
       </section>
     </div>
-    <p className="trading-note">EURUSD · 1 lot = 100,000 EUR · Planned SL exposure is not a guaranteed maximum loss. SL estimates include entry and expected exit commissions and assume a normal fill at the SL level. Gaps may increase losses; slippage is not modeled. Sizing and the gross risk cap exclude fees. Historical bid/ask fills already include spread; only commission is subtracted from gross PnL. Swaps and financing are not modeled.</p>
+    <p className="trading-note">{state.symbol === '6E' ? '6E-derived trade prices. Hypothetical forex-style sizing: 1 lot = 100,000 EUR. Both directions and manual closes fill at the next eligible M1 open. Stops use M1 high/low with conservative gap-open fills. No spread or intrabar ordering is modeled. These are not exchange-accurate futures or EUR/USD CFD fills. Commissions are configurable.' : <>EURUSD · 1 lot = 100,000 EUR · Planned SL exposure is not a guaranteed maximum loss. SL estimates include entry and expected exit commissions and assume a normal fill at the SL level. Gaps may increase losses; slippage is not modeled. Sizing and the gross risk cap exclude fees. Historical bid/ask fills already include spread; only commission is subtracted from gross PnL. Swaps and financing are not modeled.</>}</p>
   </section>
 }

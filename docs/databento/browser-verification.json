@@ -1,0 +1,36 @@
+{
+  "source": "Authentic cached Databento 6E M1",
+  "isolatedSessionDirectory": "/tmp/forextester-databento-browser-l0FHzH",
+  "cacheDirectory": "/home/admin/.cache/forextester-databento-verification-20261024",
+  "replayStart": "2024-03-15T20:59",
+  "boundary": 1710720000000,
+  "browserErrors": [],
+  "paidApiCalls": 0,
+  "screenshots": [
+    "docs/databento/setup-1440.png",
+    "docs/databento/setup-390.png",
+    "docs/databento/setup-cached-1440.png",
+    "docs/databento/setup-cached-390.png",
+    "docs/databento/trading-1440.png",
+    "docs/databento/trading-390.png",
+    "docs/databento/rollover-block.png",
+    "docs/databento/results-1440.png",
+    "docs/databento/results-390.png"
+  ],
+  "timeframes": [
+    "M1",
+    "M5",
+    "M15",
+    "H1",
+    "H4"
+  ],
+  "checks": {
+    "nextCandleEntry": true,
+    "manualClose": true,
+    "rolloverBlockedWithPosition": true,
+    "refreshRestore": true,
+    "backendRestartWithoutCredentials": true,
+    "restorePaidRequests": 0
+  },
+  "loadAndStoreDurationMs": 4495.0783950000005
+}

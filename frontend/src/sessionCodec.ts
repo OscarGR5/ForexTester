@@ -2,7 +2,7 @@ import { accountRiskError, exceedsRisk } from './risk.js'
 import { commissionConfigError, perSideCommissionUsd } from './commissions.js'
 import { combinedRisk, grossPnl, type TradingState } from './trading.js'
 import { createEquityLedger, type EquityLedger, type EquityPoint } from './equity.js'
-import { parseHistory, TIMEFRAMES, validateDateRange } from './history.js'
+import { historyCandles, isSinglePrice, parseHistory, TIMEFRAMES, validateDateRange } from './history.js'
 import { PREROLL_DAYS, replayStartIndex, type LoadedHistory } from './historyLoader.js'
 import { defaultIndicatorSettings, validateIndicatorSettings } from './indicatorSettings.js'
 import { RECORD_VERSION, type EquitySummary, type SessionRecord } from './sessionTypes.js'
@@ -33,6 +33,9 @@ export function validatedHistory(value: LoadedHistory): LoadedHistory {
 // Explicit little-endian IEEE-754 numbers, side lengths and UTC range form the
 // canonical identity. Both independent sides, including gaps, participate.
 export async function historyFingerprint(history: LoadedHistory): Promise<string> {
+  if (isSinglePrice(history)) return sha256(JSON.stringify({ format: 'single-history-v1', source: history.source, symbol: history.symbol, dataset: history.dataset,
+    schema: history.schema, continuousSymbol: history.continuousSymbol, stypeIn: history.stypeIn, normalizationVersion: history.normalizationVersion,
+    from: history.from, tradingFrom: history.tradingFrom, to: history.to, contracts: history.contracts, candles: history.candles }))
   const prefix = new TextEncoder().encode(`EURUSD/M1/v1/${history.from}/${history.tradingFrom}/${history.to}/`)
   const buffer = new ArrayBuffer(prefix.length + 16 + (history.bid.length + history.ask.length) * 40)
   new Uint8Array(buffer).set(prefix)
@@ -54,7 +57,7 @@ function validateTrading(state: TradingState) {
   requireValid(state.pending.length + state.positions.length <= 2)
   const setups = new Map(state.setups.map((setup) => [setup.id, setup]))
   requireValid(setups.size === state.setups.length)
-  for (const setup of state.setups) requireValid(setup && setup.symbol === 'EURUSD' && ['buy', 'sell'].includes(setup.direction) &&
+  for (const setup of state.setups) requireValid(setup && setup.symbol === (state.symbol ?? 'EURUSD') && ['buy', 'sell'].includes(setup.direction) &&
     [setup.id, setup.title, setup.tag, setup.notes].every(text) && setup.id.startsWith(`${state.session}-S`) &&
     integer(Number(setup.id.slice(`${state.session}-S`.length))) && Number(setup.id.slice(`${state.session}-S`.length)) < state.nextSetupId)
   const entries = [...state.pending, ...state.positions, ...state.closed, ...state.rejected, ...state.cancelled]
@@ -87,7 +90,7 @@ function validateTrading(state: TradingState) {
       previous = change.newPrice; lastTime = change.timestamp
     }
     requireValid(previous === position.stopPrice && position.stopEffectiveAfter === lastTime)
-    for (const warning of position.coverageWarnings) requireValid(atOrBefore(warning.from) && atOrBefore(warning.to) && warning.from <= warning.to && ['bid', 'ask'].includes(warning.side) && ['clock_gap', 'missing_quote'].includes(warning.reason))
+    for (const warning of position.coverageWarnings) requireValid(atOrBefore(warning.from) && atOrBefore(warning.to) && warning.from <= warning.to && ['bid', 'ask', 'trade'].includes(warning.side) && ['clock_gap', 'missing_quote'].includes(warning.reason))
   }
   for (const trade of state.closed) requireValid(positive(trade.exitPrice) && atOrBefore(trade.exitTime) && trade.exitTime >= trade.entryTime &&
     ['manual', 'stop_loss'].includes(trade.exitReason) && (trade.exitReason === 'manual' ? trade.stopFillType === null : ['level', 'gap_open'].includes(trade.stopFillType!)) &&
@@ -97,8 +100,8 @@ function validateTrading(state: TradingState) {
   requireValid(!exceedsRisk(risk.usedUsd, risk.maximumUsd))
   if (clock === null) requireValid(!entries.length && !state.setups.length && state.quote === null)
   else {
-    requireValid(state.quote && state.quote.bid)
-    for (const bar of [state.quote.bid, state.quote.ask]) if (bar) requireValid(bar.timestamp === clock &&
+    requireValid(state.quote && ('priceModel' in state.quote ? state.quote.priceModel === 'single' && state.symbol === '6E' && state.quote.trade : state.quote.bid))
+    for (const bar of ['priceModel' in state.quote! ? state.quote.trade : state.quote!.bid, 'priceModel' in state.quote! ? null : state.quote!.ask]) if (bar) requireValid(bar.timestamp === clock &&
       [bar.open, bar.high, bar.low, bar.close].every(positive) && bar.low <= Math.min(bar.open, bar.close) && bar.high >= Math.max(bar.open, bar.close))
   }
 }
@@ -106,7 +109,7 @@ function validateTrading(state: TradingState) {
 export async function validateRecord(record: SessionRecord): Promise<void> {
   if (![1, RECORD_VERSION].includes(record?.schemaVersion)) throw new Error(`Unsupported saved-session schema version: ${record?.schemaVersion ?? 'missing'}. Data was kept; use a compatible application version.`)
   try {
-    requireValid(text(record.id) && record.id.length > 0 && text(record.name) && record.name.trim().length > 0 && record.symbol === 'EURUSD' &&
+    requireValid(text(record.id) && record.id.length > 0 && text(record.name) && record.name.trim().length > 0 && ['EURUSD', '6E'].includes(record.symbol) &&
       text(record.createdAt) && new Date(record.createdAt).toISOString() === record.createdAt && text(record.savedAt) && new Date(record.savedAt).toISOString() === record.savedAt && record.savedAt >= record.createdAt &&
       integer(record.revision) && record.revision > 0 && record.range && !validateDateRange(record.range) && /^[a-f0-9]{64}$/.test(record.historyId))
     requireValid(['paused', 'complete', 'in-progress'].includes(record.status) && integer(record.totalCandles) && integer(record.completedSetups))
@@ -119,6 +122,7 @@ export async function validateRecord(record: SessionRecord): Promise<void> {
       requireValid(lifecycle === 'setup' ? !replay.started : replay.started)
       requireValid(lifecycle !== 'finished' || !replay.playing)
     }
+    requireValid((trading.symbol ?? 'EURUSD') === record.symbol)
     validateTrading(trading)
     requireValid(typeof replay.started === 'boolean' && typeof replay.playing === 'boolean' && typeof replay.complete === 'boolean' && [1, 10, 100].includes(replay.speed) &&
       integer(replay.startIndex) && timestamp(replay.startTimestamp) && replay.startTimestamp >= Date.parse(record.range.from) && replay.startTimestamp < Date.parse(record.range.to))
@@ -152,11 +156,13 @@ export async function validateRecord(record: SessionRecord): Promise<void> {
 
 export function validateHistoryCheckpoint(record: SessionRecord, history: LoadedHistory) {
   const { replay, trading } = record.checkpoint
-  requireValid(history.tradingFrom === record.range.from && history.to === record.range.to && history.bid.length === record.totalCandles)
-  requireValid(replay.startIndex === replayStartIndex(history.bid, replay.startTimestamp))
+  requireValid(history.tradingFrom === record.range.from && history.to === record.range.to && historyCandles(history).length === record.totalCandles && history.symbol === record.symbol)
+  requireValid(replay.startIndex === replayStartIndex(historyCandles(history), replay.startTimestamp))
   if (replay.started) {
-    const bid = history.bid[replay.index!], ask = history.ask.find((bar) => bar.timestamp === replay.timestamp) ?? null
-    requireValid(bid?.timestamp === replay.timestamp && JSON.stringify(trading.quote) === JSON.stringify({ bid, ask }))
+    const bid = historyCandles(history)[replay.index!]
+    const expected = isSinglePrice(history) ? { priceModel: 'single', trade: bid } : { bid, ask: history.ask.find((bar) => bar.timestamp === replay.timestamp) ?? null }
+    requireValid(bid?.timestamp === replay.timestamp && JSON.stringify(trading.quote) === JSON.stringify(expected))
+    if (isSinglePrice(history)) requireValid(history.candles.slice(replay.startIndex, replay.index! + 1).every(bar => bar.instrumentId === history.candles[replay.startIndex].instrumentId))
   }
 }
 
@@ -176,7 +182,7 @@ export function restoreEquity(points: readonly EquityPoint[], summary: EquitySum
   let previous = ledger.tail?.point.timestamp ?? -1
   for (const point of points) {
     requireValid(point && timestamp(point.timestamp) && point.timestamp > previous && finite(point.cashUsd) && typeof point.clockGap === 'boolean' &&
-      Array.isArray(point.missingSides) && point.missingSides.length <= 2 && new Set(point.missingSides).size === point.missingSides.length && point.missingSides.every((side) => side === 'bid' || side === 'ask'))
+      Array.isArray(point.missingSides) && point.missingSides.length <= 2 && new Set(point.missingSides).size === point.missingSides.length && point.missingSides.every((side) => side === 'bid' || side === 'ask' || side === 'trade'))
     requireValid(point.clockGap === (previous >= 0 && point.timestamp > previous + 60_000))
     requireValid(point.missingSides.length ? point.unrealizedUsd === null && point.equityUsd === null && point.drawdownUsd === null && point.drawdownPercent === null
       : finite(point.unrealizedUsd) && finite(point.equityUsd) && near(point.equityUsd, point.cashUsd + point.unrealizedUsd))

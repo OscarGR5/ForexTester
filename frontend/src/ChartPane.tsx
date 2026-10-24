@@ -14,6 +14,7 @@ import type { StopDraft } from './TradingDock'
 
 interface ChartPaneProps {
   id: number
+  instrument?: string
   sessionId: string | null
   timeframe: Timeframe
   source: readonly Candle[]
@@ -27,7 +28,7 @@ interface ChartPaneProps {
   onTimeframeChange: (id: number, timeframe: Timeframe) => void
 }
 
-export const ChartPane = memo(function ChartPane({ id, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, placement, onPick }: ChartPaneProps) {
+export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, placement, onPick }: ChartPaneProps) {
   const container = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
@@ -202,12 +203,12 @@ export const ChartPane = memo(function ChartPane({ id, sessionId, timeframe, sou
   }, [placement, onPick])
 
   return (
-    <section className={`chart-pane${placement ? " placing-stop" : ""}`} aria-label={`Chart ${id + 1}: EURUSD ${timeframe} bid`}
+    <section className={`chart-pane${placement ? " placing-stop" : ""}`} aria-label={`Chart ${id + 1}: ${instrument} ${timeframe} ${instrument === '6E' ? 'trade prices' : 'bid'}`}
       onPointerDownCapture={() => synchronizer.activate(id)}
       onPointerMoveCapture={(event) => { if (event.buttons) synchronizer.activate(id) }}
       onWheelCapture={() => synchronizer.activate(id)}>
       <div className="pane-toolbar">
-        <span className="instrument"><strong>EURUSD</strong><span className="bid-label">Bid</span></span>
+        <span className="instrument"><strong>{instrument}</strong><span className="bid-label">{instrument === '6E' ? 'Trade' : 'Bid'}</span></span>
         <label>Timeframe <select aria-label={`Chart ${id + 1} timeframe`} value={timeframe}
           onChange={(event) => onTimeframeChange(id, event.target.value as Timeframe)}>
           {TIMEFRAMES.map((option) => <option key={option} value={option}>{option}</option>)}
