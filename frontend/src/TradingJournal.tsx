@@ -32,6 +32,7 @@ function PositionDetails({ position }: { position: Position }) {
 }
 
 interface JournalProps {
+  section?: 'all' | 'summary' | 'journal'
   sessionId?: string | null
   state: TradingState
   onUpdateSetup: (id: string, metadata: SetupMetadata) => void
@@ -40,7 +41,7 @@ interface JournalProps {
   onScopeChange?: (scope: AnalyticsScope) => void
   onViewChange?: (view: AnalyticsScope) => void
 }
-function TradingJournalView({ sessionId = null, state, onUpdateSetup, scope: savedScope, view: savedView, onScopeChange, onViewChange }: JournalProps) {
+function TradingJournalView({ section = 'all', sessionId = null, state, onUpdateSetup, scope: savedScope, view: savedView, onScopeChange, onViewChange }: JournalProps) {
   const [localScope, setLocalScope] = useState<AnalyticsScope>('setups')
   const [localView, setLocalView] = useState<AnalyticsScope>('setups')
   const scope = savedScope ?? localScope, view = savedView ?? localView
@@ -63,7 +64,7 @@ function TradingJournalView({ sessionId = null, state, onUpdateSetup, scope: sav
   return <section className="trading-journal" aria-label="Trading Journal">
     <div className="journal-heading"><h2>Trading Journal</h2><button type="button" disabled={!positions.length} onClick={() => downloadJournalCsv(state)}>Export Journal CSV</button></div>
     <p className="session-notice">Trades, setups and notes are included in session checkpoints. Check the last successful save above; CSV exports a separate journal copy.</p>
-    <section aria-label="Performance statistics">
+    {section !== 'journal' && <><section aria-label="Performance statistics">
       <div className="journal-controls"><h3>Performance by setup / position</h3><label>Statistics scope<select aria-label="Statistics scope" value={scope} onChange={(event) => setScope(event.target.value as AnalyticsScope)}>
         <option value="setups">Completed setups</option><option value="positions">Closed positions</option>
       </select></label></div>
@@ -81,7 +82,8 @@ function TradingJournalView({ sessionId = null, state, onUpdateSetup, scope: sav
         <p className="journal-help">Net winners ÷ all completed observations gives win rate. Exactly zero is a non-winner. Average loser includes strictly negative outcomes only. Profit factor = positive net PnL ÷ absolute negative net PnL. R uses original gross SL risk; setup R uses combined risk, not an average of position R. R statistics include {stats.validRCount} valid denominators. Setup holding duration runs from earliest entry to final exit.</p>
       </details>
     </section>
-    <RealizedChart performance={performance} scope={scope} />
+    <RealizedChart performance={performance} scope={scope} /></>}
+    {section !== 'summary' && <>
     <div className="journal-controls"><h3>Journal records</h3><label>Journal view<select aria-label="Journal view" value={view} onChange={(event) => setView(event.target.value as AnalyticsScope)}>
       <option value="setups">Setup view</option><option value="positions">Position view</option>
     </select></label></div>
@@ -124,13 +126,13 @@ function TradingJournalView({ sessionId = null, state, onUpdateSetup, scope: sav
         {state.rejected.map((entry) => <li key={entry.id}>Rejected · {entry.id} · Setup {entry.setupId} · {entry.direction} · Requested {tradingTime(entry.requestedAt)} · Rejected {tradingTime(entry.rejectedAt)} · {entry.reason}</li>)}
         {state.cancelled.map((entry) => <li key={entry.id}>Cancelled · {entry.id} · Setup {entry.setupId} · {entry.direction} · Requested {tradingTime(entry.requestedAt)} · Cancelled {tradingTime(entry.cancelledAt)}</li>)}
       </ul>}
-    </details>
+    </details></>}
   </section>
 }
 
 // Price-only observations do not rebuild the journal or its tables.
 export const TradingJournal = memo(TradingJournalView, (previous, next) =>
-  previous.sessionId === next.sessionId && previous.onUpdateSetup === next.onUpdateSetup && previous.scope === next.scope && previous.view === next.view &&
+  previous.section === next.section && previous.sessionId === next.sessionId && previous.onUpdateSetup === next.onUpdateSetup && previous.scope === next.scope && previous.view === next.view &&
   previous.onScopeChange === next.onScopeChange && previous.onViewChange === next.onViewChange &&
   (['session', 'account', 'setups', 'pending', 'positions', 'closed', 'rejected', 'cancelled'] as const)
     .every((key) => previous.state[key] === next.state[key]))

@@ -1,7 +1,8 @@
 // Deterministic offline fixtures shared by persistence tests and measurements.
 import { createEquityLedger, recordEquity, type EquityLedger } from './equity.js'
 import { defaultIndicatorSettings } from './indicators.js'
-import type { LoadedHistory } from './historyLoader.js'
+import type { LegacyHistoryResponse } from './history.js'
+type LoadedHistory = LegacyHistoryResponse & { tradingFrom: string }
 import { createTradingState, observeCandle, type TradingState } from './trading.js'
 import { equitySummary, type SessionSnapshot } from './sessionTypes.js'
 export const FIXTURE_START = Date.UTC(2024, 0, 1)
@@ -24,6 +25,7 @@ export function sessionSimulation(history = sessionHistory()) {
     }
   }
   const snapshot = (playing = false, speed: 1 | 10 | 100 = 1): SessionSnapshot => ({ ledger, checkpoint: {
+    lifecycle: index < 0 ? 'setup' : index === history.bid.length - 1 ? 'finished' : 'trading',
     replay: { started: index >= 0, index: index >= 0 ? index : null, timestamp: index >= 0 ? history.bid[index].timestamp : null,
       startIndex: 0, startTimestamp: FIXTURE_START, speed, complete: index === history.bid.length - 1, playing: playing && index < history.bid.length - 1 },
     executionCursor: index + 1, trading: state, equity: equitySummary(ledger),

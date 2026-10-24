@@ -1,0 +1,98 @@
+{
+  "started": "2026-10-24T13:58:14.254Z",
+  "ms": 55367,
+  "status": 502,
+  "body": {
+    "code": "HISTORY_UNAVAILABLE",
+    "error": "Historical data is temporarily unavailable.",
+    "action": "Retry the interval later or select an earlier completed UTC period."
+  },
+  "statuses": [
+    {
+      "status": 202,
+      "retryAfter": null,
+      "action": "challenge"
+    },
+    {
+      "status": 202,
+      "retryAfter": null,
+      "action": "challenge"
+    },
+    {
+      "status": 202,
+      "retryAfter": null,
+      "action": "challenge"
+    },
+    {
+      "status": 202,
+      "retryAfter": null,
+      "action": "challenge"
+    },
+    {
+      "status": 202,
+      "retryAfter": null,
+      "action": "challenge"
+    },
+    {
+      "status": 202,
+      "retryAfter": null,
+      "action": "challenge"
+    },
+    {
+      "status": 202,
+      "retryAfter": null,
+      "action": "challenge"
+    },
+    {
+      "status": 200,
+      "retryAfter": null,
+      "action": null
+    },
+    {
+      "status": 200,
+      "retryAfter": null,
+      "action": null
+    },
+    {
+      "status": 200,
+      "retryAfter": null,
+      "action": null
+    },
+    {
+      "status": 200,
+      "retryAfter": null,
+      "action": null
+    },
+    {
+      "status": 200,
+      "retryAfter": null,
+      "action": null
+    },
+    {
+      "status": 503,
+      "retryAfter": null,
+      "action": null
+    },
+    {
+      "status": 503,
+      "retryAfter": null,
+      "action": null
+    },
+    {
+      "status": 503,
+      "retryAfter": null,
+      "action": null
+    },
+    {
+      "status": 503,
+      "retryAfter": null,
+      "action": null
+    },
+    {
+      "status": 503,
+      "retryAfter": null,
+      "action": null
+    }
+  ],
+  "coldCache": true
+}

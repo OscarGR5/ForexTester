@@ -12,9 +12,9 @@ it('selects absolute XDG cache, fallback and explicit override outside the repos
   expect(cacheDirectory({ XDG_CACHE_HOME: 'relative' }, directory)).toBe(join(directory, '.cache/forextester'))
   expect(cacheDirectory({ FOREXTESTER_CACHE_DIR: join(directory, 'override'), XDG_CACHE_HOME: join(directory, 'xdg') }, directory)).toBe(join(directory, 'override'))
 })
-it('creates private cache directories, with provider and WAF token sharing the selected root', async () => {
+it('creates private cache directories, for Databento without changing legacy caches', async () => {
   const paths = await providerCachePaths({ XDG_CACHE_HOME: join(directory, 'xdg') }, directory)
-  expect(paths).toEqual({ cacheFolderPath: join(directory, 'xdg/forextester/dukascopy') + '/', wafTokenCachePath: join(directory, 'xdg/forextester/dukascopy/waf-token.json') })
+  expect(paths).toEqual({ cacheFolderPath: join(directory, 'xdg/forextester/databento') + '/' })
   expect((await lstat(paths.cacheFolderPath)).isDirectory()).toBe(true)
   expect((await lstat(paths.cacheFolderPath)).mode & 0o077).toBe(0)
   expect(await providerCachePaths({ XDG_CACHE_HOME: join(directory, 'xdg') }, directory)).toEqual(paths)
@@ -27,7 +27,7 @@ it('rejects repository paths and existing symlink ancestors before creating dire
   await expect(lstat(join(projectRoot, 'task18-must-not-exist'))).rejects.toMatchObject({ code: 'ENOENT' })
 })
 it('rejects symlinked provider subdirectories and overlap with durable saved sessions', async () => {
-  await mkdir(join(directory, 'cache')); await symlink(directory, join(directory, 'cache/dukascopy'))
+  await mkdir(join(directory, 'cache')); await symlink(directory, join(directory, 'cache/databento'))
   await expect(providerCachePaths({ FOREXTESTER_CACHE_DIR: join(directory, 'cache') }, directory)).rejects.toThrow('symlink')
   for (const cache of ['data', 'data/cache', '']) await expect(providerCachePaths({ FOREXTESTER_DATA_DIR: join(directory, 'data'), FOREXTESTER_CACHE_DIR: join(directory, cache) }, directory)).rejects.toThrow('separate')
 })

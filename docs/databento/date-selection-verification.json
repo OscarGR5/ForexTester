@@ -1,0 +1,78 @@
+{
+  "baseCommit": "01bb06293c8dae14716c724a53022a6ae002f162",
+  "tests": {
+    "files": 40,
+    "passed": 515,
+    "typecheck": "passed",
+    "build": "passed",
+    "diffCheck": "passed"
+  },
+  "chromium": {
+    "widths": [
+      1440,
+      390
+    ],
+    "mockedChecks": [
+      "1440: unknown provider availability imposes no cache-derived minimum; earlier 2022 history reaches paid approval without downloading",
+      "1440: fully cached loads without paid dialog or download",
+      "1440: cached/missing breakdown, ranges, prominent cost, labels, native focus trap, Escape and no overflow",
+      "1440: cancel sends no paid request",
+      "1440: changed dates require a fresh quote and acknowledgement",
+      "1440: expired quote cannot be approved",
+      "1440: insufficient budget has an actionable blocker",
+      "1440: acknowledgement gates approval; repeated clicks produce one mocked submission",
+      "390: unknown provider availability imposes no cache-derived minimum; earlier 2022 history reaches paid approval without downloading",
+      "390: fully cached loads without paid dialog or download",
+      "390: cached/missing breakdown, ranges, prominent cost, labels, native focus trap, Escape and no overflow",
+      "390: cancel sends no paid request",
+      "390: changed dates require a fresh quote and acknowledgement",
+      "390: expired quote cannot be approved",
+      "390: insufficient budget has an actionable blocker",
+      "390: acknowledgement gates approval; repeated clicks produce one mocked submission"
+    ],
+    "mockedHistoryCallsReachingBackend": 0,
+    "pageErrors": [],
+    "unexpectedConsoleErrors": [],
+    "authenticCandles": 110383,
+    "authenticFingerprint": "d99322ad7a37c3652452c67cc2f45a6de0f120389471297c14129931cf6a6336",
+    "authenticChecks": {
+      "exactOriginalOhlcvAndContracts": true,
+      "nextCandleEntry": true,
+      "manualClose": true,
+      "rolloverBlockedWithPosition": true,
+      "refreshRestore": true,
+      "exactReplayEquityAndExecutionCursorRestored": true,
+      "backendRestartWithoutCredentials": true,
+      "restorePaidRequests": 0
+    },
+    "loadAndSaveMs": 3520.763226,
+    "newEstimateUsd": 0,
+    "newReservationUsd": 0,
+    "paidSubmissions": 0,
+    "providerNetworkAttempts": 0,
+    "isolatedDurableStorage": "/home/admin/.local/share/forextester-cache-reuse-verification-B79Jtl/sessions"
+  },
+  "preservation": {
+    "/home/admin/.cache/forextester-databento-verification-20261024": {
+      "files": 241,
+      "unchanged": true,
+      "treeSha256": "c8908796db50612e4b681dc40afbc926141c25682d2200ade312f26431f85d78"
+    },
+    "/home/admin/.cache/forextester/databento": {
+      "files": 241,
+      "unchanged": true,
+      "treeSha256": "a00513b850ea64dd1c5f161fab548b0e9b357c2f696242208abcc5ffb8ba77ef"
+    },
+    "/home/admin/.cache/forextester/dukascopy": {
+      "files": 66,
+      "unchanged": true,
+      "treeSha256": "7f12d8076781c5a39f0bbcb7b392df262b34f4918167d77c9ea23de2ea1bda9d"
+    },
+    "/home/admin/.local/share/forextester": {
+      "files": 4,
+      "unchanged": true,
+      "treeSha256": "c2c7d8154084cb51deb468b3e6e7db03987fe0bdf3c13fac46111eb47ca0a4d0"
+    }
+  },
+  "note": "No live provider requests. The existing dev watcher process writer.lock is excluded from saved-session comparisons. Expected HEAD 404 probes before initial durable history upload are not application errors."
+}

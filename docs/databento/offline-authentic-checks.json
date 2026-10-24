@@ -1,0 +1,46 @@
+{
+  "source": "Previously validated authentic Databento cache",
+  "paidRequests": 0,
+  "indicators": [
+    {
+      "timeframe": "M1",
+      "bars": 400,
+      "bollinger": true,
+      "stochastic": true,
+      "ichimoku": true
+    },
+    {
+      "timeframe": "M5",
+      "bars": 400,
+      "bollinger": true,
+      "stochastic": true,
+      "ichimoku": true
+    },
+    {
+      "timeframe": "M15",
+      "bars": 400,
+      "bollinger": true,
+      "stochastic": true,
+      "ichimoku": true
+    },
+    {
+      "timeframe": "H1",
+      "bars": 400,
+      "bollinger": true,
+      "stochastic": true,
+      "ichimoku": true
+    },
+    {
+      "timeframe": "H4",
+      "bars": 391,
+      "bollinger": true,
+      "stochastic": true,
+      "ichimoku": true
+    }
+  ],
+  "execution": {
+    "buySameBarStop": true,
+    "sellSameBarStop": true,
+    "actualGapOpenStop": true
+  }
+}

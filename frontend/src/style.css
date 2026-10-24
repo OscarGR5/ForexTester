@@ -223,3 +223,106 @@ button:disabled { opacity: 0.45; cursor: default; }
   .saved-session .session-actions label { flex-basis: 100%; }
   .session-status { flex-direction: column; }
 }
+
+/* Task 20: bounded trading canvas; setup and results have their own scroll. */
+.app-shell { padding: 0; gap: 0; }
+.app-header { min-height: 54px; padding: 8px 20px; gap: 24px; border-bottom: 1px solid #354250; flex: none; }
+.app-header h1 { font-size: 17px; letter-spacing: -.02em; }
+.header-session { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #b2b5be; font-size: 13px; }
+.save-state { margin-left: 12px; color: #a7b3c1; font-size: 12px; }
+.workspace-controls { display: flex; flex: 1; flex-direction: column; gap: 0; min-width: 0; min-height: 0; padding: 0; margin: 0; border: 0; }
+.startup-status { margin: 24px; color: #b2b5be; }
+.workspace-controls[hidden] { display: none; }
+.account-pnl { display: flex; align-items: baseline; gap: 12px; font-variant-numeric: tabular-nums; }
+.account-pnl span { color: #b2b5be; font-size: 12px; }
+.account-pnl strong { font-size: 18px; }
+.positive strong { color: #75c4b5; }.negative strong { color: #e2a2a6; }
+.setup-workspace { width: min(1080px, 100%); margin: 0 auto; padding: 36px 32px; overflow-y: auto; }
+.setup-heading h2 { font-size: 28px; letter-spacing: -.025em; margin: 0 0 8px; }
+.setup-heading p { margin: 0 0 24px; color: #b2b5be; font-size: 14px; }
+.setup-workspace label { display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: #b2b5be; }
+.setup-workspace input, .dock-controls input, .dock-controls select, .stop-placement input, .replay-strip select { min-width: 0; max-width: 100%; min-height: 36px; padding: 6px 10px; background: #171e28; border: 1px solid #4a596b; border-radius: 4px; color: #e5eaf0; color-scheme: dark; }
+.backtest-name { max-width: 500px; }
+.setup-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 44px; margin-top: 26px; }
+.setup-grid h3 { font-size: 17px; font-weight: 600; margin: 0 0 16px; }.setup-grid h3 span { color: #b2b5be; font-size: 12px; font-weight: 400; margin-left: 8px; }
+.coverage-summary { padding-bottom: 16px; line-height: 1.6; font-size: 13px; color: #b2b5be; }.coverage-summary p { margin: 0 0 4px; }.coverage-summary strong { color: #e5eaf0; font-weight: 500; }.coverage-summary small { font-size: 12px; }
+.period-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }.period-fields label span { display: contents; }
+.period-shortcuts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 14px 0; }.period-shortcuts span { font-size: 12px; color: #b2b5be; }.period-shortcuts button { background: #1e2935; }
+.account-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 16px; }.account-fields label:nth-child(n+3) { grid-column: 1/-1; }
+.account-fields + p { margin: 12px 0 20px; line-height: 1.6; }.initial-layout { margin-top: 16px; }
+.setup-footer { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-top: 24px; padding-top: 20px; border-top: 1px solid #354250; }.setup-footer > div { max-width: 65%; font-size: 13px; }.primary-action { padding: 10px 20px; background: #315e60; white-space: nowrap; }
+.load-actions { display: flex; gap: 12px; margin: 20px 0 12px; }.load-error { font-size: 13px; line-height: 1.6; color: #e2a2a6; }.load-error code { overflow-wrap: anywhere; }.load-error summary { cursor: pointer; color: #e5eaf0; }.data-ready { font-size: 13px; color: #75c4b5; }progress { width: 100%; accent-color: #75c4b5; }
+.replay-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 14px; flex: none; font-size: 12px; }.replay-strip > strong { margin-right: 6px; }.replay-strip label { display: flex; align-items: center; gap: 6px; }.replay-strip .layout-controls { margin-left: 10px; }.replay-progress { font-size: 11px; }
+.phase-trading .chart-workspace, .phase-trading .chart-workspace:has(input:checked) { flex: 1 1 0; min-height: 200px; border: 0; border-radius: 0; overflow: hidden; }
+.chart-stack { padding: 0 8px; gap: 4px; }.phase-trading .chart-pane, .phase-trading .chart-pane:has(.indicator-controls[open]), .phase-trading .chart-pane:has(input:checked) { min-height: 0; border: 0; border-radius: 0; }
+.phase-trading .chart-pane:has(.indicator-controls input[aria-label$='Stochastic']:checked),
+.phase-trading .chart-pane:has(.indicator-controls[open] input[aria-label$='Stochastic']:checked) { min-height: 0; }
+.pane-toolbar { position: relative; min-height: 32px; padding: 1px 10px; flex-wrap: nowrap; }.pane-toolbar select, .indicator-controls summary { min-height: 28px; padding-top: 2px; padding-bottom: 2px; }.instrument strong { font-size: 13px; }
+.pane-toolbar:has(.indicator-controls[open]) { flex-wrap: nowrap; }.indicator-controls[open] { flex-basis: auto; }.indicator-options { position: absolute; top: 32px; right: 0; z-index: 5; width: min(720px, 100%); max-height: 300px; padding: 12px; background: #1e2935; border: 1px solid #4a596b; box-shadow: 0 8px 24px #0008; }
+.placing-stop .chart-canvas, .placing-stop .chart-canvas * { cursor: crosshair !important; }
+.trading-dock { flex: none; padding: 8px 14px; border-top: 1px solid #354250; background: #171e28; font-size: 12px; }.dock-controls { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: end; }.dock-controls label { display: flex; flex-direction: column; gap: 4px; }.dock-controls input { width: 96px; }.dock-controls select { max-width: 180px; }.dock-controls .trading-message { margin-left: auto; color: #b2b5be; align-self: center; }.buy-button { background: #254d46; border-color: #75c4b5; }.sell-button { background: #54383e; border-color: #e2a2a6; }
+.active-positions { display: flex; flex-wrap: wrap; gap: 8px 20px; }.active-positions > div { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-top: 8px; }.active-positions span { color: #b2b5be; }.active-positions button { min-height: 28px; padding: 3px 8px; }.stop-placement { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 0; color: #c5dce1; }.stop-placement details summary { cursor: pointer; }.stop-placement input { width: 130px; }.stop-placement > span { max-width: 500px; line-height: 1.5; }
+.management-dialog { position: fixed; inset: 60px 16px 16px auto; margin: 0; width: min(760px, calc(100% - 32px)); max-height: calc(100dvh - 76px); overflow: auto; z-index: 20; background: #171e28; color: #e5eaf0; border: 1px solid #4a596b; box-shadow: 0 12px 40px #0009; }.close-management { display: block; margin: 0 0 12px auto; }.session-controls { border: 0; padding: 8px; }.critical-save { padding: 8px 16px; }
+.results-workspace { overflow-y: auto; padding: 28px; }.results-heading { display: flex; align-items: center; justify-content: space-between; }.results-heading h2 { margin: 0; font-size: 26px; }.results-disclosure { color: #b2b5be; font-size: 13px; line-height: 1.6; }.results-workspace .trading-journal { border: 0; padding: 16px 0; background: none; }.results-workspace .equity-panel { margin-top: 24px; }
+@media (max-width: 700px) {
+  .app-header { padding: 8px 12px; gap: 10px; flex-wrap: wrap; }.header-session { flex-basis: 45%; }.app-header > button { margin-left: auto; }.account-pnl { order: 3; flex-basis: 100%; justify-content: space-between; }.setup-workspace { padding: 24px 16px; }.setup-grid { grid-template-columns: 1fr; gap: 28px; }.setup-footer { align-items: start; flex-direction: column; }.setup-footer > div { max-width: 100%; }.setup-footer > button { width: 100%; }.setup-workspace input { font-size: 16px; }.replay-strip { gap: 6px; padding: 6px 8px; }.replay-strip .layout-controls { margin-left: 0; }.replay-progress { display: none; }.replay-clock { font-size: 12px; }.phase-trading .workspace-controls { overflow-y: auto; }.phase-trading .chart-workspace { min-height: 330px; }.chart-stack { padding: 0; }.pane-toolbar { gap: 4px; padding: 0 6px; }.pane-toolbar label { font-size: 11px; gap: 4px; }.indicator-controls { font-size: 11px; }.trading-dock { padding: 8px; }.dock-controls { gap: 6px; }.dock-controls .trading-message { flex-basis: 100%; margin: 0; font-size: 11px; }.results-workspace { padding: 20px 12px; }.active-positions { gap: 4px; }.management-dialog { inset: 8px; width: auto; max-height: calc(100dvh - 16px); }
+}
+.setup-grid { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
+.setup-grid > section, .account-fields > label, .period-fields > label { min-width: 0; }
+.period-fields, .account-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.setup-workspace .layout-controls label { flex-direction: row; align-items: center; gap: 6px; }
+.setup-workspace .layout-controls input { min-height: 0; }
+.management-dialog::backdrop { background: #080d16b8; }
+.results-navigation { display: flex; gap: 8px; padding: 12px 0; border-bottom: 1px solid #354250; }
+.results-navigation button { background: #171e28; }
+.results-navigation button[aria-pressed='true'] { background: #2a4955; border-color: #85c8d4; }
+@media (max-width: 700px) {
+  .setup-grid { grid-template-columns: minmax(0, 1fr); }
+  .period-fields, .account-fields { grid-template-columns: minmax(0, 1fr); }
+  .setup-workspace input { width: 100%; }
+  .setup-workspace .layout-controls input { width: auto; }
+  .setup-workspace .chart-note { line-height: 1.6; }
+  .phase-trading .app-header .header-session { flex: 1; }
+  .phase-trading .app-header > button { font-size: 12px; min-height: 30px; }
+  .phase-trading .replay-strip .replay-status { min-width: auto; }
+  .phase-trading .replay-strip .layout-controls label { padding: 0 4px; }
+  .phase-trading .chart-workspace, .phase-trading .chart-workspace:has(input:checked) { min-height: 400px; }
+}
+@media (max-width: 700px) {
+  .dock-controls input, .dock-controls select, .stop-placement input { font-size: 16px; }
+}
+
+.paid-download-dialog { width: min(640px, calc(100% - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; padding: 28px; border: 1px solid #4a596b; border-radius: 6px; background: #171e28; color: #e5eaf0; box-shadow: 0 12px 40px #0009; }
+.paid-download-dialog::backdrop { background: #080d16b8; }
+.paid-download-dialog h2 { margin: 0; font-size: 22px; letter-spacing: -.025em; }
+.paid-download-dialog h3 { margin: 0 0 6px; font-size: 15px; }
+.paid-download-dialog p { line-height: 1.5; }
+#paid-download-description { margin: 8px 0 24px; color: #a7b3c1; font-size: 14px; }
+.download-period, .download-allowance { margin: 0; font-size: 13px; font-variant-numeric: tabular-nums; }
+.download-period > div, .download-allowance > div { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; }
+.paid-download-dialog dt { color: #b2b5be; }
+.paid-download-dialog dd { margin: 0; text-align: right; }
+.download-cache { margin: 24px 0; padding-top: 20px; border-top: 1px solid #354250; font-size: 14px; }
+.download-cache p { margin: 0 0 10px; }
+.download-cache summary { color: #b2b5be; cursor: pointer; }
+.download-cache summary:focus-visible { outline: 2px solid #85c8d4; outline-offset: 2px; }
+.download-cache ul { padding-left: 20px; font-size: 13px; line-height: 1.6; }
+.download-cost { padding: 18px 20px; margin-bottom: 20px; background: #1e2935; border: 1px solid #4d6d79; border-radius: 4px; }
+.download-cost > span { display: block; font-size: 13px; color: #b2b5be; }
+.download-cost > strong { display: block; margin-top: 6px; font-size: 32px; font-weight: 600; color: #ffcc80; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.download-cost p { margin: 6px 0 0; font-size: 13px; }
+.download-disclosure { margin: 12px 0 20px; font-size: 13px; color: #b2b5be; }
+.download-acknowledgement { display: flex; align-items: flex-start; gap: 10px; margin-top: 20px; font-size: 14px; line-height: 1.5; cursor: pointer; }
+.download-acknowledgement input { flex: none; width: 18px; height: 18px; margin: 2px 0; accent-color: #75c4b5; }
+.download-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+.download-actions button { min-height: 44px; font-size: 13px; }
+.download-actions > button:first-child { background: #171e28; }
+.download-actions .approve-download { background: #315e60; }
+.cached-history-status { color: #75c4b5; }
+@media (max-width: 700px) {
+  .paid-download-dialog { width: calc(100% - 16px); max-height: calc(100dvh - 16px); padding: 20px 16px; }
+  .download-period > div, .download-allowance > div { flex-direction: column; gap: 3px; }
+  .paid-download-dialog dd { text-align: left; }
+  .download-actions { flex-direction: column; }
+  .download-actions button { width: 100%; }
+}

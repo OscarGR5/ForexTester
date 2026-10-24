@@ -46,10 +46,10 @@ export async function providerCachePaths(env = process.env, home = homedir()) {
   const overlaps = (a: string, b: string) => { const r = relative(a, b); return !r || !(r === '..' || r.startsWith(`..${sep}`) || isAbsolute(r)) }
   if (overlaps(durable, canonical) || overlaps(canonical, durable)) throw new Error('Provider cache and durable session storage must use separate directories.')
   await mkdir(root, { recursive: true, mode: 0o700 })
-  const provider = join(root, 'dukascopy')
+  const provider = join(root, 'databento')
   await mkdir(provider, { recursive: true, mode: 0o700 })
   const info = await lstat(provider)
   if (!info.isDirectory() || info.isSymbolicLink()) throw new Error('Provider cache directory must not be a symlink.')
   outsideRepository(await realpath(provider))
-  return { cacheFolderPath: provider + sep, wafTokenCachePath: join(provider, 'waf-token.json') }
+  return { cacheFolderPath: provider + sep }
 }

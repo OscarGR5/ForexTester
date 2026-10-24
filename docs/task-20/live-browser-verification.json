@@ -1,0 +1,43 @@
+{
+  "requests": [
+    {
+      "url": "http://127.0.0.1:5190/api/history?symbol=EURUSD&from=2023-12-17&to=2023-12-24",
+      "status": 200,
+      "bid": 7183,
+      "ask": 7183
+    },
+    {
+      "url": "http://127.0.0.1:5190/api/history?symbol=EURUSD&from=2023-12-10&to=2023-12-17",
+      "status": 200,
+      "bid": 7183,
+      "ask": 7183
+    },
+    {
+      "url": "http://127.0.0.1:5190/api/history?symbol=EURUSD&from=2023-12-24&to=2023-12-31",
+      "status": 200,
+      "bid": 6060,
+      "ask": 6060
+    },
+    {
+      "url": "http://127.0.0.1:5190/api/history?symbol=EURUSD&from=2023-12-31&to=2024-01-07",
+      "status": 200,
+      "bid": 5740,
+      "ask": 5740
+    },
+    {
+      "url": "http://127.0.0.1:5190/api/history?symbol=EURUSD&from=2024-01-07&to=2024-01-09",
+      "status": 200,
+      "bid": 1545,
+      "ask": 1545
+    },
+    {
+      "url": "http://127.0.0.1:5190/api/history?symbol=EURUSD&from=2024-01-09&to=2024-01-10",
+      "status": 200,
+      "bid": 1438,
+      "ask": 1438
+    }
+  ],
+  "errors": [],
+  "loaded": "1 / 1438 candles",
+  "sandbox": true
+}

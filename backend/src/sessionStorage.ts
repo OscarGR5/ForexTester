@@ -1,3 +1,4 @@
+import { historyCandles } from '../../frontend/src/history.js'
 import { open, mkdir, readFile, readdir, rename, unlink, lstat, realpath } from 'node:fs/promises'
 import { resolve, join, dirname, isAbsolute, relative } from 'node:path'
 import { homedir } from 'node:os'
@@ -7,7 +8,7 @@ import { promisify } from 'node:util'
 import { projectRoot as repository } from './projectPaths.js'
 import { corrupt, historyFingerprint, recordDigest, restoreEquity, sha256, validatedHistory, validateHistoryCheckpoint, validateRecord, equitySuffix } from '../../frontend/src/sessionCodec.js'
 import type { StorageCode, CleanupCategory, CleanupPreview, CleanupResult } from '../../frontend/src/storageProtocol.js'
-import { EQUITY_CHUNK_SIZE, type SessionRecord } from '../../frontend/src/sessionTypes.js'
+import { EQUITY_CHUNK_SIZE, RECORD_VERSION, type SessionRecord } from '../../frontend/src/sessionTypes.js'
 import type { EquityLedger, EquityPoint } from '../../frontend/src/equity.js'
 import type { LoadedHistory } from '../../frontend/src/historyLoader.js'
 
@@ -194,7 +195,7 @@ export class SessionStorage {
     if (cached?.digest === record.digest) return cached.ledger
     return restoreEquity((await this.chunks(record)).flatMap((chunk) => chunk.points), record.checkpoint.equity, record.checkpoint.trading.account.referenceBalance)
   }
-  status() { return this.run(async () => ({ directory: this.directory, authoritative: 'filesystem', schemaVersion: 1 })) }
+  status() { return this.run(async () => ({ directory: this.directory, authoritative: 'filesystem', schemaVersion: RECORD_VERSION })) }
   list() { return this.run(async () => {
     const records: SessionRecord[] = [], errors: { id: string; error: string; revision: number | null }[] = []
     for (const name of await readdir(join(this.directory, 'sessions'))) {
@@ -267,7 +268,7 @@ export class SessionStorage {
     }
     const newPoints = suffix.slice(oldCount - from)
     const ledger = restoreEquity(newPoints, record.checkpoint.equity, record.checkpoint.trading.account.referenceBalance, initial)
-    for (const [index, point] of newPoints.entries()) if (history.bid[record.checkpoint.replay.startIndex + oldCount + index]?.timestamp !== point.timestamp) throw corrupt()
+    for (const [index, point] of newPoints.entries()) if (historyCandles(history)[record.checkpoint.replay.startIndex + oldCount + index]?.timestamp !== point.timestamp) throw corrupt()
     if (ledger.tail && ledger.tail.point.timestamp !== record.checkpoint.replay.timestamp) throw corrupt()
     for (const chunk of changed) {
       if (!record.chunkHashes.includes(chunk.hash)) throw new StorageFailure(400, 'Unreferenced equity chunk.')
@@ -307,7 +308,7 @@ export class SessionStorage {
         const points = chunks.flatMap((chunk) => chunk.points)
         const ledger = restoreEquity(points, record.checkpoint.equity, record.checkpoint.trading.account.referenceBalance)
         validateHistoryCheckpoint(record, history)
-        if (points.some((point, index) => point.timestamp !== history.bid[record.checkpoint.replay.startIndex + index]?.timestamp) || (ledger.tail && ledger.tail.point.timestamp !== record.checkpoint.replay.timestamp)) throw corrupt()
+        if (points.some((point, index) => point.timestamp !== historyCandles(history)[record.checkpoint.replay.startIndex + index]?.timestamp) || (ledger.tail && ledger.tail.point.timestamp !== record.checkpoint.replay.timestamp)) throw corrupt()
         live.add(`checkpoints/${manifest.hash}.json`)
         live.add(`history/${record.historyId}.json.gz`)
         for (const hash of record.chunkHashes) live.add(`equity/${hash}.json.gz`)

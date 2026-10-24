@@ -1,3 +1,4 @@
+import { historyCandles } from './history'
 // @vitest-environment jsdom
 import { StrictMode, act } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -17,6 +18,7 @@ let store: SessionStore
 beforeEach(() => { vi.stubGlobal('crypto', webcrypto); vi.stubGlobal('IDBKeyRange', IDBKeyRange); store = new SessionStore(new IDBFactory()) })
 afterEach(async () => { vi.useRealTimers(); await store.close(); vi.unstubAllGlobals() })
 async function persisted(sim: ReturnType<typeof sessionSimulation>, speed: 1 | 10 | 100, playing: boolean) {
+  await store.cacheHistory(await historyFingerprint(sim.history), sim.history)
   const record = await store.save({ id: crypto.randomUUID(), name: 'Recovery', createdAt: '2026-10-23T00:00:00.000Z', range: { from: sim.history.tradingFrom, to: sim.history.to }, historyId: await historyFingerprint(sim.history), totalCandles: sim.history.bid.length }, sim.snapshot(playing, speed), null)
   return store.recover(record.id, async () => sim.history)
 }
@@ -29,7 +31,7 @@ describe('deliberate StrictMode hydration and next-candle execution', () => {
     sim.observe(21)
     const saved = await persisted(sim, speed, true), root = createRoot(document.createElement('div'))
     let replay!: ReturnType<typeof useReplay>, trading!: ReturnType<typeof useTrading>
-    function Harness() { replay = useReplay(saved.history.bid, 0, { replay: saved.checkpoint.replay, epoch: saved.checkpoint.trading.session }); trading = useTrading(saved.history, replay, saved); return null }
+    function Harness() { replay = useReplay(historyCandles(saved.history), 0, { replay: saved.checkpoint.replay, epoch: saved.checkpoint.trading.session }); trading = useTrading(saved.history, replay, saved); return null }
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
     try {
       await act(async () => root.render(<StrictMode><Harness /></StrictMode>))
@@ -53,14 +55,14 @@ describe('deliberate StrictMode hydration and next-candle execution', () => {
     if (kind === 'close') { sim.observe(); sim.state = requestClose(sim.state, sim.state.positions[0].id, manualPermission) }
     const saved = await persisted(sim, 10, false), root = createRoot(document.createElement('div'))
     let replay!: ReturnType<typeof useReplay>, trading!: ReturnType<typeof useTrading>
-    function Harness() { replay = useReplay(saved.history.bid, 0, { replay: saved.checkpoint.replay, epoch: saved.checkpoint.trading.session }); trading = useTrading(saved.history, replay, saved); return null }
+    function Harness() { replay = useReplay(historyCandles(saved.history), 0, { replay: saved.checkpoint.replay, epoch: saved.checkpoint.trading.session }); trading = useTrading(saved.history, replay, saved); return null }
     try {
       await act(async () => root.render(<StrictMode><Harness /></StrictMode>))
       expect(trading.state).toEqual(saved.checkpoint.trading)
       await act(async () => replay.next())
       const next = saved.checkpoint.replay.index! + 1
-      if (kind === 'entry') { expect(trading.state.positions[0].entryTime).toBe(saved.history.bid[next].timestamp); expect(trading.state.pending).toHaveLength(0) }
-      else { expect(trading.state.closed[0].exitTime).toBe(saved.history.bid[next].timestamp); expect(trading.state.closed[0].totalCommissionUsd).toBeCloseTo(.7) }
+      if (kind === 'entry') { expect(trading.state.positions[0].entryTime).toBe(historyCandles(saved.history)[next].timestamp); expect(trading.state.pending).toHaveLength(0) }
+      else { expect(trading.state.closed[0].exitTime).toBe(historyCandles(saved.history)[next].timestamp); expect(trading.state.closed[0].totalCommissionUsd).toBeCloseTo(.7) }
       expect(trading.equity.count).toBe(saved.ledger.count + 1)
     } finally { await act(async () => root.unmount()) }
   })
@@ -68,7 +70,7 @@ describe('deliberate StrictMode hydration and next-candle execution', () => {
     const sim = sessionSimulation(sessionHistory(3)); sim.observe(); sim.state = requestEntry(sim.state, 'buy', .1, 1.098, manualPermission); sim.observe(2)
     const saved = await persisted(sim, 100, false), root = createRoot(document.createElement('div'))
     let replay!: ReturnType<typeof useReplay>, trading!: ReturnType<typeof useTrading>
-    function Harness() { replay = useReplay(saved.history.bid, 0, { replay: saved.checkpoint.replay, epoch: saved.checkpoint.trading.session }); trading = useTrading(saved.history, replay, saved); return null }
+    function Harness() { replay = useReplay(historyCandles(saved.history), 0, { replay: saved.checkpoint.replay, epoch: saved.checkpoint.trading.session }); trading = useTrading(saved.history, replay, saved); return null }
     try {
       await act(async () => root.render(<StrictMode><Harness /></StrictMode>))
       expect(replay.status).toBe('Complete'); expect(replay.playing).toBe(false); expect(replay.canNext).toBe(false)

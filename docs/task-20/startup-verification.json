@@ -1,0 +1,12 @@
+{
+  "errors": [],
+  "historyRequests": [],
+  "verified": [
+    "delayed discovery hides Setup",
+    "legacy-only refresh keeps Setup available",
+    "two reloads",
+    "optional dismissible migration",
+    "original browser session imports successfully",
+    "desktop/mobile no overflow"
+  ]
+}

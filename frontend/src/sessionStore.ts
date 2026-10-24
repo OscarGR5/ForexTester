@@ -1,7 +1,8 @@
+import { historyCandles } from './history.js'
 import type { EquityPoint } from './equity.js'
 import type { LoadedHistory } from './historyLoader.js'
 import { corrupt, equitySuffix, historyFingerprint, recordDigest, restoreEquity, sha256, validateHistoryCheckpoint, validatedHistory, validateRecord } from './sessionCodec.js'
-import { EQUITY_CHUNK_SIZE, STORAGE_VERSION, type Hydration, type SessionRecord, type SessionSnapshot } from './sessionTypes.js'
+import { EQUITY_CHUNK_SIZE, STORAGE_VERSION, RECORD_VERSION, lifecycleOf, type Hydration, type SessionRecord, type SessionSnapshot } from './sessionTypes.js'
 
 export const DATABASE_NAME = 'forextester-sessions'
 export class RevisionConflict extends Error {
@@ -87,11 +88,11 @@ export class SessionStore {
       const index = (from + offset) / EQUITY_CHUNK_SIZE
       hashes[index] = hash; changed.push({ sessionId: base.id, index, points, hash })
     }
-    const record: SessionRecord = { ...base, name: base.name.trim(), savedAt: new Date().toISOString(), schemaVersion: STORAGE_VERSION,
-      symbol: 'EURUSD', revision: (previous?.revision ?? 0) + 1,
+    const record: SessionRecord = { ...base, name: base.name.trim(), savedAt: new Date().toISOString(), schemaVersion: RECORD_VERSION,
+      symbol: checkpoint.trading.symbol ?? 'EURUSD', revision: (previous?.revision ?? 0) + 1,
       status: checkpoint.replay.complete ? 'complete' : checkpoint.replay.playing ? 'in-progress' : 'paused',
       completedSetups: checkpoint.trading.setups.filter((setup) => checkpoint.trading.closed.some((p) => p.setupId === setup.id) && ![...checkpoint.trading.pending, ...checkpoint.trading.positions].some((p) => p.setupId === setup.id)).length,
-      checkpoint, chunkHashes: hashes, digest: '' }
+      checkpoint: { ...checkpoint, lifecycle: lifecycleOf(checkpoint) }, chunkHashes: hashes, digest: '' }
     record.digest = await recordDigest(record)
     await validateRecord(record)
     const db = await this.open(), tx = db.transaction(['sessions', 'equity'], 'readwrite'), done = committed(tx)
@@ -181,6 +182,7 @@ export class SessionStore {
       } catch { /* Invalid cache can be recovered only with matching redownloaded data. */ }
     }
     if (!history) {
+      if (record.symbol === 'EURUSD') throw new Error('The original Dukascopy provider dataset is required. Recover its stored history from backup; Databento cannot regenerate it.')
       history = validatedHistory(await download(record.range))
       if (await historyFingerprint(history) !== record.historyId) throw new Error('Historical-data conflict: recovered bid/ask candles differ from this session’s saved fingerprint. Recovery stopped; original trades were kept. Retry with the original dataset.')
       // Replace a damaged cache only after verifying against the saved identity.
@@ -191,8 +193,8 @@ export class SessionStore {
       } catch (error) { cacheWarning = `History cache unavailable: ${storageError(error)} Recovery will need a matching download next time.` }
     }
     validateHistoryCheckpoint(record, history)
-    if (points.length && (points[0].timestamp !== history.bid[record.checkpoint.replay.startIndex]?.timestamp || points.at(-1)!.timestamp !== record.checkpoint.replay.timestamp ||
-      points.some((point, index) => point.timestamp !== history!.bid[record.checkpoint.replay.startIndex + index]?.timestamp))) throw corrupt()
+    if (points.length && (points[0].timestamp !== historyCandles(history)[record.checkpoint.replay.startIndex]?.timestamp || points.at(-1)!.timestamp !== record.checkpoint.replay.timestamp ||
+      points.some((point, index) => point.timestamp !== historyCandles(history!)[record.checkpoint.replay.startIndex + index]?.timestamp))) throw corrupt()
     return { record, checkpoint: record.checkpoint, ledger, history, cacheWarning }
   }
 }

@@ -1,0 +1,398 @@
+{
+  "source": "Dukascopy EURUSD bid/ask M1",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "initial": {
+    "M1": {
+      "id": 0,
+      "range": {
+        "from": 27512,
+        "to": 27711
+      },
+      "view": {
+        "range": {
+          "from": 1704746100,
+          "to": 1704758400
+        },
+        "following": true
+      },
+      "installed": 27712,
+      "first": 1702245600,
+      "last": 1704758400,
+      "visible": 200,
+      "spacing": 6.789999999999964,
+      "projected": 0,
+      "replayEdge": 1704758400,
+      "futurePrices": 0,
+      "bodyPixels": 164,
+      "wickPixels": 184
+    },
+    "M5": {
+      "id": 0,
+      "range": {
+        "from": 5394,
+        "to": 5593
+      },
+      "view": {
+        "range": {
+          "from": 1704698760,
+          "to": 1704758460
+        },
+        "following": true
+      },
+      "installed": 5594,
+      "first": 1702245600,
+      "last": 1704758400,
+      "visible": 200,
+      "spacing": 6.789999999999964,
+      "projected": 0,
+      "replayEdge": 1704758460,
+      "futurePrices": 0,
+      "bodyPixels": 162,
+      "wickPixels": 195
+    },
+    "M15": {
+      "id": 0,
+      "range": {
+        "from": 1668,
+        "to": 1867
+      },
+      "view": {
+        "range": {
+          "from": 1704406560,
+          "to": 1704758460
+        },
+        "following": true
+      },
+      "installed": 1868,
+      "first": 1702245600,
+      "last": 1704758400,
+      "visible": 200,
+      "spacing": 6.789999999999964,
+      "projected": 0,
+      "replayEdge": 1704758460,
+      "futurePrices": 0,
+      "bodyPixels": 158,
+      "wickPixels": 194
+    },
+    "H1": {
+      "id": 0,
+      "range": {
+        "from": 268,
+        "to": 493
+      },
+      "view": {
+        "range": {
+          "from": 1703610060,
+          "to": 1704758460
+        },
+        "following": true
+      },
+      "installed": 468,
+      "first": 1702245600,
+      "last": 1704758400,
+      "visible": 200,
+      "spacing": 6.008849557522126,
+      "projected": 52,
+      "replayEdge": 1704758460,
+      "futurePrices": 0,
+      "bodyPixels": 167,
+      "wickPixels": 198
+    },
+    "H4": {
+      "id": 0,
+      "range": {
+        "from": 0,
+        "to": 148
+      },
+      "view": {
+        "range": {
+          "from": 1702238460,
+          "to": 1704758460
+        },
+        "following": true
+      },
+      "installed": 123,
+      "first": 1702238400,
+      "last": 1704758400,
+      "visible": 123,
+      "spacing": 9.114093959731463,
+      "projected": 52,
+      "replayEdge": 1704758460,
+      "futurePrices": 0,
+      "bodyPixels": 112,
+      "wickPixels": 122
+    }
+  },
+  "following": {
+    "before": {
+      "from": 1704746100,
+      "to": 1704758400
+    },
+    "after": {
+      "from": 1704746160,
+      "to": 1704758460
+    },
+    "incremental": true
+  },
+  "mixed": [
+    {
+      "id": 0,
+      "range": {
+        "from": 5394,
+        "to": 5593
+      },
+      "view": {
+        "range": {
+          "from": 1704698760,
+          "to": 1704758460
+        },
+        "following": true
+      },
+      "installed": 5594,
+      "first": 1702245600,
+      "last": 1704758400,
+      "visible": 200,
+      "spacing": 6.789999999999964,
+      "projected": 0,
+      "replayEdge": 1704758460,
+      "futurePrices": 0,
+      "bodyPixels": 102,
+      "wickPixels": 137
+    },
+    {
+      "id": 1,
+      "range": {
+        "from": 1800.6666666666667,
+        "to": 1867
+      },
+      "view": {
+        "range": {
+          "from": 1704698760,
+          "to": 1704758460
+        },
+        "following": true
+      },
+      "installed": 1868,
+      "first": 1702245600,
+      "last": 1704758400,
+      "visible": 67,
+      "spacing": 20.16831683168334,
+      "projected": 0,
+      "replayEdge": 1704758460,
+      "futurePrices": 0,
+      "bodyPixels": 40,
+      "wickPixels": 57
+    },
+    {
+      "id": 2,
+      "range": {
+        "from": 117.85416666666667,
+        "to": 148
+      },
+      "view": {
+        "range": {
+          "from": 1704698760,
+          "to": 1704758460
+        },
+        "following": true
+      },
+      "installed": 123,
+      "first": 1702238400,
+      "last": 1704758400,
+      "visible": 5,
+      "spacing": 43.60133779264197,
+      "projected": 52,
+      "replayEdge": 1704758460,
+      "futurePrices": 0,
+      "bodyPixels": 4,
+      "wickPixels": 4
+    }
+  ],
+  "synchronizedZoom": [
+    {
+      "id": 0,
+      "range": {
+        "from": 5405.447315181818,
+        "to": 5586.265497
+      },
+      "view": {
+        "range": {
+          "from": 1704702134.1945546,
+          "to": 1704756379.6491
+        },
+        "following": false
+      },
+      "installed": 5594,
+      "first": 1702245600,
+      "last": 1704758400,
+      "visible": 181,
+      "spacing": 7.469000000000051,
+      "projected": 0,
+      "replayEdge": 1704758460,
+      "futurePrices": 0,
+      "bodyPixels": 95,
+      "wickPixels": 125
+    },
+    {
+      "id": 1,
+      "range": {
+        "from": 1804.4824383939638,
+        "to": 1864.7551656667392
+      },
+      "view": {
+        "range": {
+          "from": 1704702134.1945546,
+          "to": 1704756379.6491
+        },
+        "following": false
+      },
+      "installed": 1868,
+      "first": 1702245600,
+      "last": 1704758400,
+      "visible": 60,
+      "spacing": 22.163204747756936,
+      "projected": 0,
+      "replayEdge": 1704758460,
+      "futurePrices": 0,
+      "bodyPixels": 38,
+      "wickPixels": 53
+    },
+    {
+      "id": 2,
+      "range": {
+        "from": 118.09265239962274,
+        "to": 121.8596978541712
+      },
+      "view": {
+        "range": {
+          "from": 1704702134.1945546,
+          "to": 1704756379.6491
+        },
+        "following": false
+      },
+      "installed": 123,
+      "first": 1702238400,
+      "last": 1704758400,
+      "visible": 3,
+      "spacing": 284.8724672227045,
+      "projected": 52,
+      "replayEdge": 1704758460,
+      "futurePrices": 0,
+      "bodyPixels": 3,
+      "wickPixels": 3
+    }
+  ],
+  "restoredCustom": {
+    "view": {
+      "range": {
+        "from": 1704685425.1304228,
+        "to": 1704739670.5849683
+      },
+      "following": false
+    },
+    "charts": [
+      {
+        "id": 0,
+        "range": {
+          "from": 5349.750434742768,
+          "to": 5530.568616561095
+        },
+        "view": {
+          "range": {
+            "from": 1704685425.1304228,
+            "to": 1704739670.5849683
+          },
+          "following": false
+        },
+        "installed": 5594,
+        "first": 1702245600,
+        "last": 1704758400,
+        "visible": 181,
+        "spacing": 7.468999999993912,
+        "projected": 0,
+        "replayEdge": 1704758520,
+        "futurePrices": 0,
+        "bodyPixels": 100,
+        "wickPixels": 132
+      },
+      {
+        "id": 1,
+        "range": {
+          "from": 1785.916811580923,
+          "to": 1846.1895388536982
+        },
+        "view": {
+          "range": {
+            "from": 1704685425.1304228,
+            "to": 1704739670.5849683
+          },
+          "following": false
+        },
+        "installed": 1868,
+        "first": 1702245600,
+        "last": 1704758400,
+        "visible": 61,
+        "spacing": 22.163204747756936,
+        "projected": 0,
+        "replayEdge": 1704758520,
+        "futurePrices": 0,
+        "bodyPixels": 41,
+        "wickPixels": 59
+      },
+      {
+        "id": 2,
+        "range": {
+          "from": 116.93230072380769,
+          "to": 120.69934617835614
+        },
+        "view": {
+          "range": {
+            "from": 1704685425.1304228,
+            "to": 1704739670.5849683
+          },
+          "following": false
+        },
+        "installed": 123,
+        "first": 1702238400,
+        "last": 1704758400,
+        "visible": 4,
+        "spacing": 284.87246722270515,
+        "projected": 52,
+        "replayEdge": 1704758520,
+        "futurePrices": 0,
+        "bodyPixels": 4,
+        "wickPixels": 4
+      }
+    ],
+    "historyRequests": 6
+  },
+  "oldestHistory": {
+    "id": 0,
+    "range": {
+      "from": 0,
+      "to": 199
+    },
+    "view": {
+      "range": {
+        "from": 1702245600,
+        "to": 1702257600
+      },
+      "following": false
+    },
+    "installed": 27714,
+    "first": 1702245600,
+    "last": 1704758520,
+    "visible": 200,
+    "spacing": 6.790000000008149,
+    "projected": 0,
+    "replayEdge": 1704758520,
+    "futurePrices": 0,
+    "bodyPixels": 166,
+    "wickPixels": 175
+  },
+  "errors": [],
+  "sandbox": true
+}

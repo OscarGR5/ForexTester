@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { aggregateBidCandles, fetchHistory, parseHistory, TIMEFRAMES, toBidChartCandles, validateDateRange, type Candle } from './history'
+import { aggregateBidCandles, fetchHistory, parseHistory, isSinglePrice, TIMEFRAMES, toBidChartCandles, validateDateRange, type Candle } from './history'
 
 const range = { from: '2024-01-09', to: '2024-01-10' }
 const bid = { timestamp: 1704758400000, open: 1.09497, high: 1.09504, low: 1.09492, close: 1.09501 }
@@ -44,7 +44,7 @@ describe('historical chart data', () => {
 
   it('converts milliseconds to UTC seconds and maps only bid OHLC values', () => {
     const history = parseHistory(response, range)
-    expect(history.ask).toEqual([ask])
+    expect(!isSinglePrice(history) && history.ask).toEqual([ask])
     expect(toBidChartCandles(history)).toEqual([
       { time: 1704758400, open: 1.09497, high: 1.09504, low: 1.09492, close: 1.09501 },
     ])
@@ -75,12 +75,17 @@ describe('historical chart data', () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ error: 'Provider unavailable' }), { status: 502 }))
     vi.stubGlobal('fetch', mock)
     await expect(fetchHistory(range)).resolves.toMatchObject({ bid: [bid], ask: [ask] })
-    expect(mock.mock.calls[0][0]).toBe('/api/history?symbol=EURUSD&from=2024-01-09&to=2024-01-10')
-    await expect(fetchHistory(range)).rejects.toThrow('Historical data is temporarily unavailable.')
+    expect(mock.mock.calls[0][0]).toBe('/api/history?symbol=6E&from=2024-01-09&to=2024-01-10')
+    await expect(fetchHistory(range)).rejects.toThrow('Provider unavailable')
   })
 
   it('reports connectivity failures', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
-    await expect(fetchHistory(range)).rejects.toThrow('Failed to fetch')
+    await expect(fetchHistory(range)).rejects.toMatchObject({code:'BACKEND_NETWORK',title:'Backend connection unavailable'})
+  })
+
+  it('retains structured rate-limit advice through the same-origin API',async()=>{
+    vi.stubGlobal('fetch',vi.fn(async()=>new Response(JSON.stringify({code:'PROVIDER_RATE_LIMIT',title:'Provider rate limit reached',error:'Dukascopy has limited historical downloads.',action:'Wait before retrying.',retryAfterMs:12000}),{status:429})))
+    await expect(fetchHistory(range)).rejects.toMatchObject({code:'PROVIDER_RATE_LIMIT',title:'Provider rate limit reached',retryAfterMs:12000})
   })
 })

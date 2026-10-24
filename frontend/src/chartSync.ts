@@ -117,10 +117,14 @@ export class ChartSynchronizer {
   }
 
   private initializeViewport(entry: Entry): void {
-    entry.chart.timeScale().fitContent()
-    const bounds = this.bounds ?? { from: entry.times[0], to: entry.times[entry.times.length - 1] }
-    // A single revealed candle starts with a one-hour following window.
-    this.viewport = bounds.from === bounds.to ? { from: bounds.from - 3600, to: bounds.to } : bounds
+    const last = entry.times[entry.times.length - 1]
+    const to = this.bounds?.to ?? last
+    // The first populated chart sets the shared UTC horizon. Count observed
+    // candles, rather than elapsed time, so weekends do not shrink the view.
+    // Keep the full pre-roll installed for indicators and manual navigation.
+    const first = entry.times[Math.max(0, entry.times.length - 200)]
+    const width = last - first || 199 * entry.step
+    this.viewport = { from: to - width, to }
   }
 
   activate(id: number): void {

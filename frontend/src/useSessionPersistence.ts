@@ -1,3 +1,4 @@
+import { historyCandles } from './history.js'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { accountRiskError } from './risk'
 import { commissionConfigError } from './commissions'
@@ -81,7 +82,7 @@ export function useSessionPersistence(options: Options) {
         target.cacheAttempted = true
       }
       const record = await store.save({ id: target.id, name: target.name, createdAt: target.createdAt,
-        range: { from: current.history.tradingFrom, to: current.history.to }, historyId: target.historyId!, totalCandles: current.history.bid.length }, snapshot, target.record)
+        range: { from: current.history.tradingFrom, to: current.history.to }, historyId: target.historyId!, totalCandles: historyCandles(current.history).length }, snapshot, target.record)
       target.record = record
       setSavedAt(record.savedAt); setSaveStatus(latest.current.snapshot === snapshot && target.name === record.name ? 'Saved' : 'Saving'); setError(null)
       channel.current?.postMessage({ id: record.id, revision: record.revision })
@@ -108,10 +109,13 @@ export function useSessionPersistence(options: Options) {
       const status = await store.status(), rows = await store.list()
       if (!live()) return
       setStorageLocation(status.directory); setSessions(rows); setDiskErrors(store.listErrors)
-      const legacy = await discoverLegacy()
+      await discoverLegacy()
       if (!live()) return
+      if (active.current) ready.current = true
       if (!active.current) {
-        if (rows.length || legacy.length || store.listErrors.length) setAwaitingChoice(true)
+        // Browser migration is optional. Its discovery must not block a new
+        // setup when there are no authoritative disk sessions to choose from.
+        if (rows.length || store.listErrors.length) setAwaitingChoice(true)
         else { active.current = newActive(); ready.current = true; setAwaitingChoice(false) }
       }
       if (!conflicted.current) setError(null)
@@ -164,7 +168,7 @@ export function useSessionPersistence(options: Options) {
     await queue.current?.flush()
   }
   async function switchWorkspace(id: string | null, range?: DateRange, repair = false) {
-    if (switching.current || busyRef.current || !initialized) return
+    if (switching.current || busyRef.current || !initialized) return false
     switching.current = true; setBusy(true)
     latest.current.pause()
     let recovering = false
@@ -193,10 +197,11 @@ export function useSessionPersistence(options: Options) {
       }
       setRepairTarget(null); setRepairProgress(null)
       ready.current = true; setAwaitingChoice(false); conflicted.current = false; setConflict(false); setError(null); setSaveStatus(id ? 'Saved' : 'Saving')
+      return true
     } catch (reason) {
       if (id && recovering && repairableHistory(reason)) setRepairTarget({ id, name: sessions.find((record) => record.id === id)?.name ?? 'Saved session' })
       else if (!repair && recovering) setRepairTarget(null)
-      report(reason)
+      report(reason); return false
     }
     finally { busyRef.current = false; switching.current = false; setBusy(false) }
   }
@@ -258,6 +263,6 @@ export function useSessionPersistence(options: Options) {
     finally { busyRef.current = false; setBusy(false) }
   }
   return { repairTarget, repairProgress, repair: () => repairTarget && switchWorkspace(repairTarget.id, undefined, true), cleanupPreview, cleanupResult, previewCleanup, cleanup, sessions, diskErrors, legacySessions, storageLocation, migrationWarning, migrate, retry: () => { void initialize() }, name, savedAt, saveStatus, error, cacheWarning, conflict, busy, initialized, awaitingChoice,
-    activeId: active.current?.id ?? null, editName, rename, remove, resume: (id: string) => switchWorkspace(id),
+    flush, activeId: active.current?.id ?? null, editName, rename, remove, resume: (id: string) => switchWorkspace(id),
     fresh: (range?: DateRange) => switchWorkspace(null, range), save: () => { if (active.current) active.current.cacheAttempted = false; void flush().catch(report) } }
 }

@@ -1,15 +1,15 @@
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it } from 'vitest'
+import { expect, it } from 'vitest'
 import { App } from './App'
-
-describe('application shell', () => {
-  it('shows the default range and loading state', () => {
-    const html = renderToStaticMarkup(<App />)
-    expect(html).toContain('ForexTester')
-    expect(html).toContain('EURUSD')
-    expect(html).toContain('Bid')
-    expect(html).toContain('value="2024-01-09"')
-    expect(html).toContain('value="2024-01-10"')
-    expect(html).toContain('Loading EURUSD bid/ask history')
-  })
+it('hides setup until session discovery completes, without mounting charts or results', () => {
+  const html = renderToStaticMarkup(<App/>)
+  expect(html).toContain('Set up a backtest')
+  expect(html).toContain('Load historical data')
+  expect(html).toContain('Start backtest')
+  expect(html).toContain('Through')
+  expect(html).toContain('Checking saved backtests')
+  expect(html).toMatch(/class="workspace-controls"[^>]*hidden=""/)
+  expect(html).not.toContain('chart-canvas')
+  expect(html).not.toContain('Trading journal')
+  expect(html).not.toContain('>Buy<')
 })

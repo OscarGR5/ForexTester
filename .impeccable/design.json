@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-24T07:55:48.923682+00:00",
+  "title": "Design System: ForexTester",
+  "extensions": {
+    "shadows": [
+      {
+        "name": "chart-message",
+        "value": "0 6px 28px #0007",
+        "purpose": "Chart status overlay."
+      },
+      {
+        "name": "indicator-settings",
+        "value": "0 8px 24px #0008",
+        "purpose": "Settings above the chart."
+      },
+      {
+        "name": "session-management",
+        "value": "0 12px 40px #0009",
+        "purpose": "Native management dialog."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "workspace-mobile",
+        "value": "700px"
+      },
+      {
+        "name": "journal-mobile",
+        "value": "600px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Load historical data",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "Existing standard action.",
+      "html": "<button class=\"ds-button\">Load historical data</button>",
+      "css": ".ds-button{font-family:Inter,system-ui,sans-serif;min-height:34px;padding:5px 12px;border:1px solid #4d6d79;border-radius:4px;color:#f2f7f8;cursor:pointer;background:#2a4955;}.ds-button:hover:not(:disabled){background:#355c69;}.ds-button:focus-visible{outline:2px solid #85c8d4;outline-offset:2px;}.ds-button:disabled{opacity:.45;cursor:default;}"
+    },
+    {
+      "name": "Start backtest",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Existing primary setup action.",
+      "html": "<button class=\"ds-button-primary\">Start backtest</button>",
+      "css": ".ds-button-primary{font-family:Inter,system-ui,sans-serif;min-height:34px;padding:5px 12px;border:1px solid #4d6d79;border-radius:4px;color:#f2f7f8;cursor:pointer;background:#315e60;padding:10px 20px;}.ds-button-primary:hover:not(:disabled){background:#355c69;}.ds-button-primary:focus-visible{outline:2px solid #85c8d4;outline-offset:2px;}.ds-button-primary:disabled{opacity:.45;cursor:default;}"
+    },
+    {
+      "name": "Buy",
+      "kind": "button",
+      "refersTo": "button-buy",
+      "description": "Existing order direction action.",
+      "html": "<button class=\"ds-button-buy\">Buy</button>",
+      "css": ".ds-button-buy{font-family:Inter,system-ui,sans-serif;min-height:34px;padding:5px 12px;border:1px solid #4d6d79;border-radius:4px;color:#f2f7f8;cursor:pointer;background:#254d46;border-color:#75c4b5;}.ds-button-buy:hover:not(:disabled){background:#355c69;}.ds-button-buy:focus-visible{outline:2px solid #85c8d4;outline-offset:2px;}.ds-button-buy:disabled{opacity:.45;cursor:default;}"
+    },
+    {
+      "name": "Sell",
+      "kind": "button",
+      "refersTo": "button-sell",
+      "description": "Existing order direction action.",
+      "html": "<button class=\"ds-button-sell\">Sell</button>",
+      "css": ".ds-button-sell{font-family:Inter,system-ui,sans-serif;min-height:34px;padding:5px 12px;border:1px solid #4d6d79;border-radius:4px;color:#f2f7f8;cursor:pointer;background:#54383e;border-color:#e2a2a6;}.ds-button-sell:hover:not(:disabled){background:#355c69;}.ds-button-sell:focus-visible{outline:2px solid #85c8d4;outline-offset:2px;}.ds-button-sell:disabled{opacity:.45;cursor:default;}"
+    },
+    {
+      "name": "Labeled input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Setup account entry with units and native number input.",
+      "html": "<label class=\"ds-field\">Starting balance (USD)<input type=\"number\" value=\"10000\" min=\"0\" step=\"any\"></label>",
+      "css": ".ds-field{font-family:Inter,system-ui,sans-serif;display:flex;flex-direction:column;gap:8px;color:#b2b5be;font-size:13px;}.ds-field input{font:inherit;min-width:0;min-height:36px;padding:6px 10px;background:#171e28;border:1px solid #4a596b;border-radius:4px;color:#e5eaf0;color-scheme:dark;}.ds-field input:focus-visible{outline:2px solid #85c8d4;outline-offset:2px;}@media(max-width:700px){.ds-field input{font-size:16px;}}"
+    },
+    {
+      "name": "Results navigation",
+      "kind": "nav",
+      "refersTo": "results-navigation",
+      "description": "Three explicit results sections with a visible selected state.",
+      "html": "<nav class=\"ds-results-nav\" aria-label=\"Results sections\"><button aria-pressed=\"true\">Overview</button><button aria-pressed=\"false\">Journal</button><button aria-pressed=\"false\">Equity &amp; drawdown</button></nav>",
+      "css": ".ds-results-nav{display:flex;gap:8px;padding:12px 0;border-bottom:1px solid #354250;}.ds-results-nav button{font-family:Inter,system-ui,sans-serif;min-height:34px;padding:5px 12px;border:1px solid #4d6d79;border-radius:4px;color:#f2f7f8;cursor:pointer;background:#171e28;}.ds-results-nav button[aria-pressed=\"true\"]{background:#2a4955;border-color:#85c8d4;}.ds-results-nav button:hover:not(:disabled){background:#355c69;}.ds-results-nav button:focus-visible{outline:2px solid #85c8d4;outline-offset:2px;}"
+    },
+    {
+      "name": "Chart layout selector",
+      "kind": "custom",
+      "description": "Native radio controls choose the number of chart panes.",
+      "html": "<fieldset class=\"ds-layout\"><legend>Charts</legend><label><input type=\"radio\" name=\"ds-charts\" checked>1</label><label><input type=\"radio\" name=\"ds-charts\">2</label><label><input type=\"radio\" name=\"ds-charts\">3</label></fieldset>",
+      "css": ".ds-layout{font-family:Inter,system-ui,sans-serif;display:flex;align-items:center;gap:4px;margin:0;padding:0;border:0;color:#a7b3c1;font-size:.85rem;}.ds-layout legend{float:left;margin-right:8px;line-height:34px;}.ds-layout label{display:flex;align-items:center;gap:4px;min-height:34px;padding:0 8px;border:1px solid #354250;background:#171e28;cursor:pointer;}.ds-layout label:first-of-type{border-radius:4px 0 0 4px;}.ds-layout label:last-of-type{border-radius:0 4px 4px 0;}.ds-layout input{accent-color:#75c4b5;}.ds-layout input:focus-visible{outline:2px solid #85c8d4;outline-offset:2px;}"
+    },
+    {
+      "name": "Trading dock record",
+      "kind": "custom",
+      "refersTo": "trading-dock",
+      "description": "A compact open-position record within the dock.",
+      "html": "<section class=\"ds-dock\" aria-label=\"Simulated trading\"><div class=\"ds-position\"><strong>Buy \u00b7 2-1</strong><span>0.69 lots \u00b7 SL 1.09925</span><span>Est. net $-11.73 (-0.12%)</span><button>Modify SL</button><button>Close</button></div></section>",
+      "css": ".ds-dock{font-family:Inter,system-ui,sans-serif;padding:8px 14px;border-top:1px solid #354250;background:#171e28;color:#e5eaf0;font-size:12px;}.ds-position{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding-top:8px;}.ds-position span{color:#b2b5be;}.ds-position button{font-family:Inter,system-ui,sans-serif;min-height:34px;padding:5px 12px;border:1px solid #4d6d79;border-radius:4px;color:#f2f7f8;cursor:pointer;font-size:12px;min-height:28px;padding:3px 8px;background:#2a4955;}.ds-position button:hover:not(:disabled){background:#355c69;}.ds-position button:focus-visible{outline:2px solid #85c8d4;outline-offset:2px;}@media(max-width:700px){.ds-dock{padding:8px;}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Dark trading terminal",
+    "overview": "Price charts lead the trading workspace. Compact controls support deliberate manual execution, while Setup and Results have their own readable, scrolling surfaces. The interface uses slate layers, restrained color, and direct labels.",
+    "keyCharacteristics": [
+      "Chart dominates Trading.",
+      "Setup, Trading, and Results are distinct phases.",
+      "Dense controls retain visible labels and keyboard focus."
+    ],
+    "dos": [
+      "Do preserve chart space and keep trading controls compact.",
+      "Do retain visible units, UTC labels, numeric alignment, and keyboard focus.",
+      "Do keep Setup, Trading, and Results visually distinct."
+    ],
+    "donts": [
+      "Don't introduce a SaaS dashboard aesthetic, decorative card grids, or new fonts.",
+      "Don't use color as the only indication of action or state.",
+      "Don't turn auxiliary controls into persistent panels that crowd the chart."
+    ]
+  }
+}

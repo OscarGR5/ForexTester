@@ -26,6 +26,14 @@ async function fixture(history = sessionHistory(30)) {
   await client.cacheHistory(base.historyId, history)
   return { sim, base, saved: await client.save(base, sim.snapshot(), null) }
 }
+async function restoreBackup(id: string, original: (range: import('../../frontend/src/history.js').DateRange) => Promise<import('../../frontend/src/historyLoader.js').LoadedHistory>) {
+  const { record } = await client.call<{ record: import('../../frontend/src/sessionTypes.js').SessionRecord }>(`/sessions/${id}`)
+  const history = await original(record.range)
+  const body = await import('../../frontend/src/sessionCodec.js')
+  const validated = body.validatedHistory(history)
+  if (await historyFingerprint(validated) !== record.historyId) throw Object.assign(new Error('Original fingerprint differs'), { code: 'HISTORY_FINGERPRINT_MISMATCH' })
+  await client.cacheHistory(record.historyId, validated)
+}
 const historyPath = (id: string) => join(api.directory, 'history', `${id}.json.gz`)
 const old = new Date(Date.now() - 8 * 86_400_000)
 async function age(path: string) { await utimes(path, old, old) }
@@ -57,7 +65,7 @@ describe('explicit exact-history repair on real files', () => {
     const download = vi.fn(async () => first.sim.history)
     await expect(client.recover(first.saved.id, download)).rejects.toMatchObject({ code: expectedCode })
     expect(download).not.toHaveBeenCalled() // Never download during normal resume.
-    await client.repairHistory(first.saved.id, download)
+    await restoreBackup(first.saved.id, download)
     expect(download).toHaveBeenCalledExactlyOnceWith(first.saved.range)
     for (const { saved, sim } of [first, second]) {
       const restored = await client.recover(saved.id)
@@ -68,16 +76,16 @@ describe('explicit exact-history repair on real files', () => {
   it('rejects mismatching replacement in both browser and API while preserving every existing file, then allows retry', async () => {
     const { saved, sim } = await fixture(); await writeFile(historyPath(saved.historyId), 'corrupt')
     const before = await inventory(), different = structuredClone(sim.history); different.bid[0].close += .00001
-    await expect(client.repairHistory(saved.id, async () => different)).rejects.toMatchObject({ code: 'HISTORY_FINGERPRINT_MISMATCH' })
+    await expect(restoreBackup(saved.id, async () => different)).rejects.toMatchObject({ code: 'HISTORY_FINGERPRINT_MISMATCH' })
     await expect(client.call(`/history/${saved.historyId}`, 'PUT', different)).rejects.toMatchObject({ code: 'HISTORY_FINGERPRINT_MISMATCH' })
     expect(await inventory()).toEqual(before)
-    await client.repairHistory(saved.id, async () => sim.history)
+    await restoreBackup(saved.id, async () => sim.history)
     expect((await client.recover(saved.id)).record).toEqual(saved)
   })
   it('validates every bid/ask observation before replacement', async () => {
     const { saved, sim } = await fixture(); await rm(historyPath(saved.historyId))
     const invalid = structuredClone(sim.history); invalid.ask[15].high = 0
-    await expect(client.repairHistory(saved.id, async () => invalid)).rejects.toThrow()
+    await expect(restoreBackup(saved.id, async () => invalid)).rejects.toThrow()
     await expect(api.storage.putHistory(saved.historyId, invalid)).rejects.toMatchObject({ code: 'HISTORY_INVALID' })
     expect((await api.storage.get(saved.id)).digest).toBe(saved.digest)
     await expect(lstat(historyPath(saved.historyId))).rejects.toMatchObject({ code: 'ENOENT' })
@@ -98,33 +106,23 @@ describe('explicit exact-history repair on real files', () => {
     const { saved, sim } = await fixture(), path = historyPath(saved.historyId)
     await writeFile(path, 'original damaged bytes')
     failPublish = async (p) => { if (p === path) throw Object.assign(new Error('interrupted'), { code: 'EIO' }) }
-    await expect(client.repairHistory(saved.id, async () => sim.history)).rejects.toMatchObject({ code: 'STORAGE_UNAVAILABLE' })
+    await expect(restoreBackup(saved.id, async () => sim.history)).rejects.toMatchObject({ code: 'STORAGE_UNAVAILABLE' })
     expect(await readFile(path, 'utf8')).toBe('original damaged bytes')
     expect((await api.storage.get(saved.id)).digest).toBe(saved.digest)
-    failPublish = undefined; await client.repairHistory(saved.id, async () => sim.history)
+    failPublish = undefined; await restoreBackup(saved.id, async () => sim.history)
     const info = await lstat(path)
     failPublish = async () => { throw new Error('Must not republish valid history') }
-    await client.repairHistory(saved.id, async () => sim.history)
+    await restoreBackup(saved.id, async () => sim.history)
     expect((await lstat(path)).mtimeMs).toBe(info.mtimeMs)
     expect((await client.recover(saved.id)).record).toEqual(saved)
   })
-  it('uses the existing seven-day loader and 30-day pre-roll, reports progress and does not turn provider failure into corruption', async () => {
-    const { saved, sim } = await fixture()
-    const download = vi.fn(async (range: { from: string; to: string }) => ({ symbol: 'EURUSD' as const, resolution: 'M1' as const, ...range,
-      bid: sim.history.bid.filter((p) => p.timestamp >= Date.parse(range.from) && p.timestamp < Date.parse(range.to)),
-      ask: sim.history.ask.filter((p) => p.timestamp >= Date.parse(range.from) && p.timestamp < Date.parse(range.to)),
-    }))
-    await rm(historyPath(saved.historyId))
-    const progress = vi.fn(), loader = new HistoryLoader(download)
-    await client.repairHistory(saved.id, (range) => loader.load(range, new AbortController().signal, progress))
-    expect(download.mock.calls[0][0].from).toBe('2023-12-02')
-    expect(download.mock.calls.every(([r]) => Date.parse(r.to) - Date.parse(r.from) <= 7 * 86_400_000)).toBe(true)
-    const last = progress.mock.calls.at(-1)![0]; expect(last.completed).toBe(last.total)
-    await rm(historyPath(saved.historyId))
-    const unavailable = new HistoryLoader(async () => { throw new TypeError('network unavailable') })
-    const failure = await client.repairHistory(saved.id, (r) => unavailable.load(r, new AbortController().signal, () => {})).catch((e) => e)
-    expect(failure.message).toContain('Chunk'); expect(repairableHistory(failure)).toBe(false)
+  it('never calls a historical provider when the original legacy dataset is missing', async () => {
+    const { saved } = await fixture(); await rm(historyPath(saved.historyId))
+    const download = vi.fn(async () => sessionHistory(30))
+    await expect(client.repairHistory(saved.id, download)).rejects.toThrow('original Dukascopy provider dataset')
+    expect(download).not.toHaveBeenCalled()
   })
+
 })
 
 describe('conservative serialized mark and sweep', () => {
@@ -222,7 +220,7 @@ it('retains candidates changed or replaced by a symlink after marking', async ()
 it('preserves a valid original history object when the provider supplies different prices', async () => {
   const { saved, sim } = await fixture(), before = await inventory(), different = structuredClone(sim.history)
   different.ask[20].close += .00001
-  await expect(client.repairHistory(saved.id, async () => different)).rejects.toMatchObject({ code: 'HISTORY_FINGERPRINT_MISMATCH' })
+  await expect(restoreBackup(saved.id, async () => different)).rejects.toMatchObject({ code: 'HISTORY_FINGERPRINT_MISMATCH' })
   await expect(api.storage.putHistory(saved.historyId, different)).rejects.toMatchObject({ code: 'HISTORY_FINGERPRINT_MISMATCH' })
   expect(await inventory()).toEqual(before)
 })

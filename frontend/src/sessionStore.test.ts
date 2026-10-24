@@ -15,6 +15,7 @@ async function save(sim = sessionSimulation(), previous: SessionRecord | null = 
   return store.save({ id, name: 'London review', createdAt: '2026-10-23T00:00:00.000Z', range: { from: sim.history.tradingFrom, to: sim.history.to }, historyId, totalCandles: sim.history.bid.length }, sim.snapshot(playing), previous)
 }
 async function recover(record: SessionRecord, sim: ReturnType<typeof sessionSimulation>) {
+  await store.cacheHistory(record.historyId, sim.history)
   return store.recover(record.id, async () => sim.history)
 }
 async function rawEdit(id: string, mutate: (record: SessionRecord) => SessionRecord | Promise<SessionRecord>) {
@@ -28,7 +29,7 @@ const enter = (sim: ReturnType<typeof sessionSimulation>, group: string | null =
 describe('IndexedDB atomic session checkpoints and recovery', () => {
   it('creates a uniquely identified session with UTC metadata and unstarted replay progress', async () => {
     const sim = sessionSimulation(), record = await save(sim)
-    expect(record.revision).toBe(1); expect(record.schemaVersion).toBe(1); expect(record.savedAt).toMatch(/Z$/)
+    expect(record.revision).toBe(1); expect(record.schemaVersion).toBe(2); expect(record.savedAt).toMatch(/Z$/)
     expect((await store.list()).map((r) => r.id)).toEqual(['session-a'])
     expect((await recover(record, sim)).checkpoint).toEqual(sim.snapshot().checkpoint)
   })
@@ -193,14 +194,15 @@ describe('IndexedDB atomic session checkpoints and recovery', () => {
     await store.delete(a.id, a.revision)
     expect((await store.recover(b.id, download)).history).toEqual(sim.history); expect(download).not.toHaveBeenCalled()
   })
-  it('redownloads missing history and stops recovery on any changed bid or ask observation', async () => {
-    const sim = sessionSimulation(), record = await save(sim), changed = structuredClone(sim.history)
-    changed.ask[0].high += .001
-    await expect(store.recover(record.id, async () => changed)).rejects.toThrow(/Historical-data conflict/)
-    expect((await store.get(record.id)).revision).toBe(1)
+  it('refuses missing legacy history without invoking a network fallback', async () => {
+    const sim = sessionSimulation(), record = await save(sim)
+    const db = await new Promise<IDBDatabase>((resolve) => { const request = factory.open(DATABASE_NAME); request.onsuccess = () => resolve(request.result) })
+    await new Promise<void>((resolve) => { const tx = db.transaction('history', 'readwrite'); tx.objectStore('history').delete(record.historyId); tx.oncomplete = () => resolve() })
     const download = vi.fn(async () => sim.history)
-    await store.recover(record.id, download); await store.recover(record.id, download)
-    expect(download).toHaveBeenCalledTimes(1)
+    await expect(store.recover(record.id, download)).rejects.toThrow('original Dukascopy provider dataset')
+    expect(download).not.toHaveBeenCalled()
+    await store.cacheHistory(record.historyId, sim.history)
+    expect((await store.recover(record.id, download)).record).toEqual(record)
   })
   it('rejects stale cross-tab saves, rename and delete even without BroadcastChannel', async () => {
     const sim = sessionSimulation(); sim.observe(); const first = await save(sim)

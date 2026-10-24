@@ -1,4 +1,4 @@
-import { grossPnl, type TradingState } from './trading.js'
+import { grossPnl, quoteCandle, type TradingState } from './trading.js'
 
 export interface EquityPoint {
   timestamp: number
@@ -7,7 +7,7 @@ export interface EquityPoint {
   equityUsd: number | null
   drawdownUsd: number | null
   drawdownPercent: number | null
-  missingSides: ('bid' | 'ask')[]
+  missingSides: ('bid' | 'ask' | 'trade')[]
   clockGap: boolean
 }
 export interface EquityLedger {
@@ -35,11 +35,11 @@ export function recordEquity(ledger: EquityLedger, previous: TradingState, state
   const entries = [...state.positions, ...newCloses].filter((position) => !previousIds.has(position.id))
   const cashUsd = ledger.cashUsd + newCloses.reduce((sum, position) => sum + position.grossPnlUsd - position.exitCommissionUsd, 0)
     - entries.reduce((sum, position) => sum + position.entryCommissionUsd, 0)
-  const missingSides = new Set<'bid' | 'ask'>()
+  const missingSides = new Set<'bid' | 'ask' | 'trade'>()
   let gross = 0
   for (const position of state.positions) {
-    const side = position.direction === 'buy' ? 'bid' : 'ask'
-    const quote = state.quote?.[side]
+    const side = state.symbol === '6E' ? 'trade' : position.direction === 'buy' ? 'bid' : 'ask'
+    const quote = quoteCandle(state.quote, side)
     if (!quote || quote.timestamp !== state.observedTimestamp) missingSides.add(side)
     else gross += grossPnl(position, quote.close).usd
   }

@@ -1,0 +1,71 @@
+{
+  "measurements": [
+    {
+      "width": 1440,
+      "height": 900,
+      "chart": {
+        "x": 8,
+        "y": 138,
+        "width": 1424,
+        "height": 652
+      },
+      "heightRatio": 0.7244444444444444,
+      "price": {
+        "width": 1358,
+        "height": 624
+      },
+      "priceHeightRatio": 0.6933333333333334
+    },
+    {
+      "width": 1728,
+      "height": 864,
+      "chart": {
+        "x": 8,
+        "y": 138,
+        "width": 1712,
+        "height": 616
+      },
+      "heightRatio": 0.7129629629629629,
+      "price": {
+        "width": 1646,
+        "height": 588
+      },
+      "priceHeightRatio": 0.6805555555555556
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "chart": {
+        "x": 0,
+        "y": 241,
+        "width": 390,
+        "height": 368
+      },
+      "heightRatio": 0.43601895734597157,
+      "price": {
+        "width": 324,
+        "height": 340
+      },
+      "priceHeightRatio": 0.4028436018957346
+    }
+  ],
+  "historyRequests": 12,
+  "errors": [],
+  "verified": [
+    "setup",
+    "no automatic download",
+    "two independent chart stops",
+    "modify stop",
+    "automatic stop",
+    "manual close",
+    "sell",
+    "finish",
+    "CSV",
+    "finished restore without download",
+    "1/2/3 charts",
+    "crosshair and viewport synchronization",
+    "oscillator click ignored",
+    "SL selection on every timeframe",
+    "responsive"
+  ]
+}
