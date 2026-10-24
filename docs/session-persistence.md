@@ -1,6 +1,10 @@
-# Session persistence, schema 1 and filesystem format 1
+# Session persistence, record schema 2 and filesystem format 1
 
-`frontend/src/sessionTypes.ts` preserves the version-1 `SessionRecord`, full trading/replay checkpoint, flat equity summary and ordered equity SHA-256 hashes. Existing financial transitions and formulas are unchanged. The backend and browser share the existing validators. Financial models use Node-compatible `.js` import specifiers; the backend build emits their transitive modules under `backend/dist/frontend/src/` and starts `backend/dist/backend/src/server.js`. Indicator settings validation is a pure module and does not load chart/indicator calculation code in the backend. Dukascopy's temporary cache is outside the repository in both source and compiled execution; it is independent of authoritative saved histories.
+`frontend/src/sessionTypes.ts` defines schema-2 `SessionRecord` with explicit lifecycle and accepts validated schema-1 records. It preserves the full trading/replay checkpoint, flat equity summary and ordered equity SHA-256 hashes. Existing financial transitions and formulas are unchanged. The backend and browser share the existing validators. Financial models use Node-compatible `.js` import specifiers; the backend build emits their transitive modules under `backend/dist/frontend/src/` and starts `backend/dist/backend/src/server.js`. Indicator settings validation is a pure module and does not load chart/indicator calculation code in the backend. Dukascopy's temporary cache is outside the repository in both source and compiled execution; it is independent of authoritative saved histories.
+
+## Lifecycle migration
+
+Schema 2 checkpoints require `lifecycle`: `setup`, `trading`, or `finished`. Existing schema-1 records are validated against their original digest before deriving unstarted → setup, started → trading, complete → finished. The next checkpoint writes schema 2 atomically; original financial records, equity chunks, exclusive date ranges and history fingerprints are unchanged. The IndexedDB database version remains 1. Active recovery is paused, finished recovery opens Results, and unsubmitted stop-placement drafts are never persisted or restored. Setup becomes durable after its first successful historical load.
 
 ## Storage authority and location
 
@@ -19,7 +23,7 @@ forextester/
   writer.lock                         # one backend PID; exclusive creation
   writer-init.lock                    # brief guard during lock recovery/initialization
   sessions/<uuid>.json                # authoritative manifest or deletion tombstone
-  checkpoints/<sha256>.json           # immutable schema-1 SessionRecord
+  checkpoints/<sha256>.json           # immutable schema-1 or schema-2 SessionRecord
   equity/<sha256>.json.gz             # immutable arrays of <=1,024 EquityPoints
   history/<fingerprint>.json.gz        # shared validated bid/ask LoadedHistory
   imports/<legacy-uuid>.json           # verified source digest/revision and disk target ID
@@ -117,7 +121,7 @@ If interrupted before commit, retry creates the session. If interrupted after co
 
 ## Presentation preferences
 
-`forextester:ui:v1:<stable-session-uuid>` is a versioned localStorage JSON envelope. Fields include workspace chart count/timeframes/indicator overrides, UTC horizontal viewport and following preference; per-pane/timeframe public price-scale autoScale and visible range; order sizing mode, risk/lots/SL/setup draft; unsent replacement SL drafts; journal view/statistics scope; expanded setup/position and section selection; page scroll and the equity cash-reference toggle. There are no candle, execution, closed-position or equity arrays in localStorage.
+`forextester:ui:v1:<stable-session-uuid>` is a versioned localStorage JSON envelope. Fields include workspace chart count/timeframes/indicator overrides, UTC horizontal viewport and following preference; per-pane/timeframe public price-scale autoScale and visible range; journal view/statistics scope; expanded setup/position and section selection; page scroll and the equity cash-reference toggle. There are no candle, execution, closed-position or equity arrays in localStorage.
 
 Preference readers enforce types, allowed timeframes/scopes, indicator bounds, valid finite ranges, bounded strings and a 100,000-character envelope cap. Malformed/unavailable storage falls back to defaults. Preference updates never call trading transitions. Per-session keys prevent one workspace from changing another. New workspaces may inherit the existing layout as their initial value, then diverge independently.
 

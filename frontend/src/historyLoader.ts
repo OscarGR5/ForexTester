@@ -56,9 +56,9 @@ export class HistoryLoader {
           }
           results[index] = result
           progress({ completed: ++completed, total: chunks.length })
-        } catch {
+        } catch (reason) {
           signal.throwIfAborted()
-          failed = `Chunk ${index + 1}/${chunks.length} (${chunk.from} to ${chunk.to} UTC) failed. Retry to complete the interval.`
+          failed = `${reason instanceof Error ? reason.message : 'Historical data is unavailable.'} Chunk ${index + 1}/${chunks.length} (${chunk.from} to ${chunk.to} UTC) failed. Retry to complete the interval.`
         }
       }
     }

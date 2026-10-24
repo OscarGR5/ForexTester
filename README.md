@@ -38,7 +38,7 @@ npm run dev:frontend
 
 Open the URL printed by Vite, normally http://127.0.0.1:5173. The API health check is at http://127.0.0.1:3001/api/health. Keep both servers running: Vite forwards same-origin `/api` requests to the backend at `http://127.0.0.1:3001`.
 
-The chart automatically loads EURUSD M1 bid candles for January 9, 2024 (inclusive) through January 10, 2024 (exclusive). Use **Start date** and **End date**, then **Load Data**, to choose another period. Dates are UTC, and the end date must be no later than the current UTC date. Select up to **90 completed UTC calendar days**. Loading includes 30 earlier calendar days for chart/indicator warm-up, using multiple backend requests of no more than seven days each.
+The application opens Setup without downloading history. Choose **From** and **Through** dates, then **Load historical data**. Both dates are inclusive UTC calendar dates, constrained by advertised coverage and the latest completed UTC day. Select up to **90 calendar days**. Loading includes 30 earlier calendar days for chart/indicator warm-up, using multiple backend requests of no more than seven days each.
 
 Choose **1**, **2**, or **3** charts with the **Charts** control. Multiple charts stack vertically with equal initial heights; the workspace scrolls when they cannot fit. Each chart has its own **Timeframe** selector: M1, M5, M15, H1, or H4. Charts may use the same timeframe. The initial selections are M1, M5, and H1, and selections remain when switching layouts.
 
@@ -48,7 +48,7 @@ Zooming and horizontal scrolling synchronize the visible UTC period across displ
 
 ## Market replay
 
-The initial chart view shows the full loaded history. Choose a **Replay start (UTC)** within the selected trading interval, then **Start Replay**. Replay starts paused at the first available M1 bid candle at or after that timestamp. The default is the selected start date. All earlier loaded candles remain visible as historical context; no subsequent trading-period candles are revealed. The toolbar shows the simulation timestamp in UTC, status (**Ready**, **Playing**, **Paused**, or **Complete**), and revealed/total M1 candle count.
+Setup shows data coverage and configuration before charts are mounted. Choose a **Replay start (UTC)** within the selected trading interval, then **Start backtest**. Replay starts paused at the first available M1 bid candle at or after that timestamp. The default is the selected start date. All earlier loaded candles remain visible as historical context; no subsequent trading-period candles are revealed. The toolbar shows the simulation timestamp in UTC, status (**Ready**, **Playing**, **Paused**, or **Complete**), and revealed/total M1 candle count.
 
 - **Play** advances every 250 ms. **Replay speed** selects **1×**, **10×**, or **100×** available M1 observations per interval. Every intervening observation still passes through execution, stops, fees and equity accounting chronologically; charts refresh once per batch.
 - **Pause** freezes the revealed market state.
@@ -57,7 +57,7 @@ The initial chart view shows the full loaded history. Choose a **Replay start (U
 
 Playback stops automatically at the final candle and shows **Complete**. Controls are disabled when their actions are unavailable. A dataset containing one candle is complete immediately on starting replay. Replay and trading checkpoints are saved locally and can be resumed paused.
 
-All charts share one simulation clock, regardless of their timeframes or the number of charts displayed. Timeframe and layout changes preserve the clock, playing/paused state, and revealed history. Loading a historical period saves the previous session and opens a separate one in the full-history viewer; start its replay explicitly. Editing date inputs alone does not load data or reset replay. Missing M1 minutes and weekend closures are skipped directly, without synthetic candles or waiting through the missing period.
+All charts share one simulation clock, regardless of their timeframes or the number of charts displayed. Timeframe and layout changes preserve the clock, playing/paused state, and revealed history. Loading a historical period saves the previous session and opens a separate one in Setup; start its replay explicitly. Editing date inputs alone does not load data or reset replay. Missing M1 minutes and weekend closures are skipped directly, without synthetic candles or waiting through the missing period.
 
 During replay, chart data is built only from the revealed M1 prefix. Each M1 candle is revealed as a whole OHLC bar at its candle-open timestamp; this is candle replay, not a reconstruction of intraminute ticks. M5, M15, H1, and H4 buckets use UTC boundaries and evolve using only those revealed bars. At 10:32 UTC, for example, the current H1 candle starts at 10:00 and the current H4 candle at 08:00; neither can use M1 data later than 10:32. Buckets at the beginning or end of a loaded period may also be incomplete.
 
@@ -79,7 +79,7 @@ Directories are created automatically. Use a directory outside the Git repositor
 
 Choose **Resume session** from the startup list or **New session**. Recovery verifies the checkpoint, equity chunks and matching bid/ask history before opening the workspace. It always resumes paused. The next step processes the next candle; restored positions, orders, commissions and equity observations are installed directly and never executed a second time. Completed sessions remain available for notes and CSV export. Missing or corrupted history stops recovery and offers **Repair historical data**. Repair is explicit: it downloads the saved trading range and 30-day pre-roll through the seven-day chunk loader, validates all bid/ask observations and requires the original canonical SHA-256 fingerprint. Progress and failures appear in the session panel. Successful repair restores the checkpoint paused without replaying trades, charging fees again or changing equity. Changed provider prices are rejected; retry later or recover the original history object from a separate backup while the backend is stopped. Different prices cannot be substituted because they could change fills, stops and historical outcomes. Backend/network outages are reported separately and never initiate a repair download.
 
-**New session** saves the current backtest first and creates a separate ID. **Load Data** also saves the previous backtest before creating another one. A failed save stops the switch and preserves the current workspace. Rename updates the saved name. Delete requires confirmation and makes the session unavailable to the app. Deletion uses a tombstone to prevent stale clients from resurrecting it; immutable checkpoint, equity and history objects remain on disk until explicit cleanup. Open **Storage maintenance → Preview cleanup → Clean up unused files**, then confirm deletion. The preview reports eligible file counts, categories, estimated bytes and whether cleanup is safe. Only known unreferenced objects and abandoned temporary writes at least **seven days old** are eligible. The backend revalidates all active sessions and recomputes references before deleting; shared history, active checkpoint/equity objects, recent files, manifests, tombstones, migration receipts, locks, unknown files and legacy IndexedDB sessions are retained. Unreadable active data or unsafe file types refuse cleanup. Partial failures report removals and remaining candidates and can be retried. There is no background deletion.
+**New session** saves the current backtest first and creates a separate ID. **Load historical data** also saves the previous backtest before creating another one. A failed save stops the switch and preserves the current workspace. Rename updates the saved name. Delete requires confirmation and makes the session unavailable to the app. Deletion uses a tombstone to prevent stale clients from resurrecting it; immutable checkpoint, equity and history objects remain on disk until explicit cleanup. Open **Storage maintenance → Preview cleanup → Clean up unused files**, then confirm deletion. The preview reports eligible file counts, categories, estimated bytes and whether cleanup is safe. Only known unreferenced objects and abandoned temporary writes at least **seven days old** are eligible. The backend revalidates all active sessions and recomputes references before deleting; shared history, active checkpoint/equity objects, recent files, manifests, tombstones, migration receipts, locks, unknown files and legacy IndexedDB sessions are retained. Unreadable active data or unsafe file types refuse cleanup. Partial failures report removals and remaining candidates and can be retried. There is no background deletion.
 
 Entries, cancellations, close requests, SL changes, journal notes, account configuration, single steps and pauses queue a checkpoint promptly, normally after **150 ms** of batching. Playback checkpoints save approximately **every five seconds**. **Save now** flushes immediately and retries storage. Hiding the page attempts a flush, but closing a browser cannot guarantee an asynchronous write finishes.
 
@@ -95,7 +95,7 @@ If a disk session with the same ID contains different work, import reports a con
 
 ### Browser UI preferences
 
-Lightweight presentation settings use localStorage under `forextester:ui:v1:<session-id>`: chart count, timeframes, per-timeframe indicator settings, horizontal viewport/zoom and following state, vertical price range/autoscale, journal/statistics view, expanded sections/details, page scroll and unsent order/SL drafts. New sessions initially inherit the current chart layout; subsequent changes remain isolated by session ID. Losing these preferences resets the presentation without changing trades or account results. Restoring a draft never submits or modifies a trade.
+Lightweight presentation settings use localStorage under `forextester:ui:v1:<session-id>`: chart count, timeframes, per-timeframe indicator settings, horizontal viewport/zoom and following state, vertical price range/autoscale, journal/statistics view and expanded sections/details. New sessions initially inherit the current chart layout; subsequent changes remain isolated by session ID. Losing these preferences resets the presentation without changing trades or account results. Stop-placement drafts are transient and never restored.
 
 Viewport and scale writes are batched during interaction and flushed on visibility changes where possible. Invalid or unavailable localStorage falls back to defaults. Horizontal and vertical restoration uses public Lightweight Charts APIs and is constrained by revealed data, available layout space and library zoom limits. Crosshairs, pane heights and unsupported internal scale details are not restored. Scroll restoration is best effort after layout creation.
 
@@ -109,9 +109,9 @@ Storage details and endpoints are documented in [Persistence schema](docs/sessio
 
 ## Simulated trading
 
-The **Simulated trading** panel defaults to **Risk %** sizing, initially **1%**, with a required positive, finite **SL price** entered as an absolute EURUSD price. **Manual Lots** preserves the positive, finite volume workflow, initially **0.01 lots**. The SL field starts blank; the application never derives a fixed pip distance. One EURUSD lot represents **100,000 EUR** of base-currency exposure. Choose **Buy** or **Sell** while replay is active and paused. Trading is disabled in the full-history viewer, during playback, and at the final candle. There must be a later M1 bid candle available to advance to; the application does not look ahead for future quote availability.
+The trading dock defaults to **Risk %** sizing, initially **1%**, with a required positive, finite stop selected by clicking the chart and explicitly confirming. The keyboard fallback accepts an absolute EURUSD price. **Manual Lots** preserves the positive, finite volume workflow, initially **0.01 lots**. The SL draft starts empty; the application never derives a fixed pip distance. One EURUSD lot represents **100,000 EUR** of base-currency exposure. Choose **Buy** or **Sell** while replay is active and paused. Trading is available only in the Trading phase while paused with another candle remaining. There must be a later M1 bid candle available to advance to; the application does not look ahead for future quote availability.
 
-At most **two position slots** can be in use. Pending entries and open positions both consume slots, including positions with a pending close. Each entry keeps its own sizing request and SL. Risk-based entries determine their final volume only at execution. At the actual opening fill, a Buy SL must be strictly below its ask entry price, and a Sell SL strictly above its bid entry price. Invalid protected entries become rejected-order records with an explicit reason and release their slots. Stops attach immediately to valid fills. **Cancel** removes an unfilled entry and releases its slot. **Close** queues a manual exit; duplicate close requests are disabled. Pending entries can be cancelled during playback or after history ends. Entry, open, pending-close, and closed states are labeled separately.
+At most **two position slots** can be in use. Pending entries and open positions both consume slots, including positions with a pending close. Each entry keeps its own sizing request and SL. Risk-based entries determine their final volume only at execution. At the actual opening fill, a Buy SL must be strictly below its ask entry price, and a Sell SL strictly above its bid entry price. Invalid protected entries become rejected-order records with an explicit reason and release their slots. Stops attach immediately to valid fills. **Cancel** removes an unfilled entry and releases its slot. **Close** queues a manual exit; duplicate close requests are disabled. Pending entries can be cancelled while paused before history ends. Entry, open, pending-close, and closed states are labeled separately.
 
 Each revealed M1 OHLC bar is treated as an observed, completed candle for trading decisions, although its replay timestamp is the candle’s opening timestamp. An order requested after observing candle N can execute only at a later available M1 opening, never inside candle N. **Next Candle** or **Play** advances the shared clock and processes pending orders chronologically, including all intervening bars when React batches several clock updates. Visual zoom, scrolling, crosshairs, timeframes, and layouts never control execution.
 
@@ -126,13 +126,13 @@ Execution uses historical EURUSD prices, with both bid and ask candles required 
 
 Queued orders are evaluated in submission order at that opening, subject to the combined planned-risk cap. High, low, and close never select a market entry or manual exit price. Automatic stop exits use the rules below. Missing minutes and weekend/overnight gaps advance directly to the next available bid candle. If its ask is missing or has a different timestamp, orders remain pending until a later synchronized quote appears. Ask-only timestamps do not advance the bid replay clock. Prices are never invented or interpolated.
 
-Open positions show their entry time/price, direction, volume, current closing-side price, and unrealized PnL. Buys are valued at the revealed **bid close** and sells at the revealed **ask close**. The current observed candle must have synchronized bid and ask data; otherwise current price and PnL show **unavailable**, without carrying a stale valuation forward. Closed trades show their actual entry and exit prices/times and realized PnL.
+The trading dock shows open position IDs, direction, volume, stops and estimated net PnL. Detailed entry and exit records appear in Results. Buys are valued at the revealed **bid close** and sells at the revealed **ask close**. The current observed candle must have synchronized bid and ask data; otherwise current price and PnL show **unavailable**, without carrying a stale valuation forward. Closed trades show their actual entry and exit prices/times and realized PnL.
 
 For EURUSD, **1 pip = 0.0001**. Signed price difference is exit or current price minus entry for buys, and entry minus exit or current price for sells. **Pips = signed difference / 0.0001**; **gross USD PnL = signed difference × 100,000 × lots**. For example, a 0.01-lot buy at 1.10020 closed at bid 1.10120 yields 10.0 pips and $1.00 gross. Price-based pips and gross USD PnL retain these calculations. Net USD PnL subtracts recorded entry and exit commissions, as described below. Neither value is account equity. Swaps and financing are not modeled.
 
 Calculations retain JavaScript number precision. Display values use fixed decimal rounding: **5 decimals for prices, 1 for pips, 2 for USD**. Manual volumes retain the entered numeric value; automatic volumes use 0.01-lot increments, and values that round to zero display without a minus sign. All timestamps are UTC to the minute.
 
-**Restart**, including at the first replay candle, clears pending entries, open positions, and closed trades. Loading another historical range saves the previous session first, creates a separate session, and returns to the full-history viewer. Timeframe/layout changes preserve positions and pending orders. At the final candle, remaining positions are labeled **open at end of available history**. Unfilled entries or close requests stay pending. No position is force-closed and no exit price is assumed.
+**Restart**, including at the first replay candle, clears pending entries, open positions, and closed trades. Loading another historical range saves the previous session first, creates a separate session, and returns to Setup. Timeframe/layout changes preserve positions and pending orders. At the final candle, remaining positions are labeled **open at end of available history**. Unfilled entries or close requests stay pending. No position is force-closed and no exit price is assumed.
 
 Trading state runs in memory and is checkpointed through the local Node backend to files outside the repository. The pure TypeScript engine in `frontend/src/trading.ts` owns execution rules and transitions; `useTrading.ts` consumes the existing replay clock and processes every newly revealed bid candle with its matching ask. Chart components do not own trading state. IDs are deterministic and unique within and across replay sessions on the current page. Automated tests use local fixtures and controlled timers, with no live-data dependency.
 
@@ -144,7 +144,7 @@ Current limitations: EURUSD only; M1 candle replay, with no intraminute or tick-
 
 **Account settings · USD** starts with a **$100,000 reference balance** and **2% maximum combined planned risk**, or **$2,000**. Edit these before starting replay. Positive finite balances and percentages greater than 0 and at most 100% are required. Session settings lock while replay is active, including after the final candle. Restart clears trading records and retains settings; loading history clears records, retains settings, and unlocks configuration. The reference balance is a fixed sizing input, not simulated cash or equity. USD is the only accounting currency; there is no EUR account conversion.
 
-In **Risk %** mode, enter a percentage and an absolute SL, then choose Buy or Sell. Risk per new entry defaults to 1% and can change while paused without altering existing allocations. The request stores its direction, SL, percentage, and USD budget, without a final volume. Only an eligible future synchronized M1 opening supplies the actual entry: **ask open for Buy, bid open for Sell**. No future candle is inspected at submission and the observed close is never used for final sizing.
+In **Risk %** mode, enter a percentage, choose Buy or Sell, click a price-chart stop level, and confirm. Risk per new entry defaults to 1% and can change while paused without altering existing allocations. The request stores its direction, SL, percentage, and USD budget, without a final volume. Only an eligible future synchronized M1 opening supplies the actual entry: **ask open for Buy, bid open for Sell**. No future candle is inspected at submission and the observed close is never used for final sizing.
 
 ```text
 Risk budget USD = reference balance × risk percentage / 100
@@ -228,7 +228,7 @@ An opening quote exactly equal to SL is a level fill. A stop is not a guaranteed
 
 An entry at an M1 opening is protected throughout that same candle. It may enter and stop out with the same timestamp. Exit times identify the **triggering M1 candle**, not a known intraminute execution time. A synchronized manual close eligible at the opening has priority over the stop on that candle. If missing quotes prevent the manual close, the position's stop remains active whenever its required side is observable.
 
-Open positions display their IDs and current stops. Edit **Replacement SL** and choose **Update SL** while replay is active, paused, and has another candle available. A Buy replacement must be below the current available bid close; a Sell replacement must be above the current available ask close. The required current quote must exist, and prices must be positive and finite. Break-even and profit stops are allowed. Changes apply only from the next available M1 candle and never re-evaluate a previously observed bar. Records retain each old/new level and the simulation timestamp of the change. Playback and the end of history disable modifications. Stops never move automatically.
+Open positions display their IDs and current stops. Choose **Modify SL**, click a replacement level on the price chart, review its risk and confirm while replay is active, paused, and has another candle available. A Buy replacement must be below the current available bid close; a Sell replacement must be above the current available ask close. The required current quote must exist, and prices must be positive and finite. Break-even and profit stops are allowed. Changes apply only from the next available M1 candle and never re-evaluate a previously observed bar. Records retain each old/new level and the simulation timestamp of the change. Playback and the end of history disable modifications. Stops never move automatically.
 
 Every displayed chart shows horizontal SL lines labeled with position IDs and five-decimal prices. Different positions use different colors and line patterns; coincident levels label both IDs. Updates change the existing lines without recreating charts. Lines disappear on closure, restart, or history reload. Layout, timeframe, and indicator changes preserve execution state and SL modifications.
 
@@ -344,7 +344,7 @@ There are no filled or invented warm-up values. Default Bollinger Bands need 20 
 
 Ichimoku Span A is the average of Tenkan and Kijun; Span B is the midpoint of the 52-period high/low. They plot 26 candle positions ahead. Within known history, displacement follows actual candle positions across gaps. Beyond the revealed edge, timestamps extend by the selected timeframe interval, using whitespace time slots without OHLC data. As a gap becomes known, projected timestamps are realigned to the newly revealed candle positions. Cloud fill is split at interpolated Span A/B intersections so its color changes at the crossover. The chart reserves room for the projected horizon at the current edge; synchronized crosshairs still require a real price candle.
 
-During replay, all indicators use only the revealed M1 prefix aggregated to the selected timeframe. The current incomplete higher-timeframe candle recalculates as M1 candles arrive. Forward Ichimoku positions contain calculations from known candles only, and Chikou uses already known closing prices. Restart clears prior indicator observations and recalculates from the chosen start plus its earlier historical context. Timeframe changes recalculate from the available prefix; loading dates returns to the full-history viewer. The historical loader fetches warm-up history before replay starts; indicators never fetch or inspect future prices.
+During replay, all indicators use only the revealed M1 prefix aggregated to the selected timeframe. The current incomplete higher-timeframe candle recalculates as M1 candles arrive. Forward Ichimoku positions contain calculations from known candles only, and Chikou uses already known closing prices. Restart clears prior indicator observations and recalculates from the chosen start plus its earlier historical context. Timeframe changes recalculate from the available prefix; loading dates returns to Setup. The historical loader fetches warm-up history before replay starts; indicators never fetch or inspect future prices.
 
 The loader adds **30 calendar days of pre-roll** before the requested trading start through the same seven-day chunk coordinator. It initializes M1/M5/M15/H1/H4 charts from real UTC-aligned candles. Pre-roll and any candles before a later chosen replay start are context only: they create no engine executions, journal outcomes, or equity snapshots. At replay start the first available trading candle is revealed, with no later prices available to indicators.
 
@@ -402,7 +402,7 @@ To run a live integration check, start the backend and run the `curl` command ab
 
 ## Current status
 
-The React/Vite frontend displays one to three synchronized historical EURUSD bid candlestick charts using TradingView Lightweight Charts. The Node.js backend exposes `GET /api/health` and `GET /api/history`. Charts preserve market gaps. The full-history viewer remains available until replay starts; manual replay then progressively reveals M1 data with synchronized partial higher-timeframe candles. Bollinger Bands, slow Stochastic, and Ichimoku Cloud are available independently on each chart, including during replay. Automatic indicator presets and simulated market orders are available. Selected history extends to 90 days plus 30-day warm-up; replay supports a chosen UTC start and 1×/10×/100× speeds. Independent adjustable stop-losses execute on revealed M1 bid/ask data, with gap-through fills and coverage warnings. Configurable USD per-lot commissions, gross/net PnL, open mark-to-close estimates, explicit setup grouping, locally saved journal metadata, setup/position analytics, scope-aligned realized results/drawdown, M1 account equity/drawdown, and safe CSV export are available. Multiple locally saved backtests and paused recovery are available. Take profits remain excluded.
+The React/Vite frontend displays one to three synchronized historical EURUSD bid candlestick charts using TradingView Lightweight Charts. The Node.js backend exposes `GET /api/health` and `GET /api/history`. Charts preserve market gaps. Setup requires an explicit download and start; manual replay progressively reveals M1 data with synchronized partial higher-timeframe candles. Bollinger Bands, slow Stochastic, and Ichimoku Cloud are available independently on each chart, including during replay. Automatic indicator presets and simulated market orders are available. Selected history extends to 90 days plus 30-day warm-up; replay supports a chosen UTC start and 1×/10×/100× speeds. Independent adjustable stop-losses execute on revealed M1 bid/ask data, with gap-through fills and coverage warnings. Configurable USD per-lot commissions, gross/net PnL, open mark-to-close estimates, explicit setup grouping, locally saved journal metadata, setup/position analytics, scope-aligned realized results/drawdown, M1 account equity/drawdown, and safe CSV export are available. Multiple locally saved backtests and paused recovery are available. Take profits remain excluded.
 
 
 ## Replay performance
@@ -416,3 +416,113 @@ Task 19 adds synchronous chart batches: newly revealed time slots are installed 
 Simulation still processes every M1 observation. At 100× the existing clock requests 100 observations every 250 ms; charts present the completed batch. Pause and Next Candle install current data synchronously. No separate visual queue, persistence schema, execution rule or indicator formula was introduced. Speed is a batch setting, not a guarantee of 400 observations per wall-clock second.
 
 See [Task 19 performance and verification](docs/task-19-performance.md) for reproducible Chromium measurements, pointer-hover behavior, execution equivalence, and remaining paint/input limits. The optional harness is `node_modules/.bin/tsx scripts/chart-replay-browser.mts after`; it needs verification-only `playwright-core` and Chromium. Profiling is disabled in ordinary application use.
+
+## Task 20: setup, trading and results
+
+See [the UX proposal and annotated wireframes](docs/task-20/design.md) and
+[verification evidence and screenshots](docs/task-20/verification.md).
+
+New backtests open in **Setup**. Enter a name, account settings, replay start and
+historical **From / Through** dates in UTC. Through includes its selected date;
+the API and saved-session format still use an exclusive `to`. No data downloads
+until **Load historical data** is selected. The 7/30/90-day shortcuts select the
+latest eligible calendar period, not guaranteed provider observations. A loaded
+setup is checkpointed automatically. Before the first successful load, setup
+fields are an unsaved draft. **Start backtest** locks account settings and opens
+Trading paused.
+
+The trading workspace uses a bounded chart stack, compact replay strip and an
+open/pending position dock. The primary financial display is **Account PnL**:
+current equity minus the starting reference balance, in USD and percent. Missing
+required quotes show **PnL unavailable**. The display includes realized net PnL,
+open gross PnL and already-incurred entry/exit fees; it does not deduct hypothetical
+future exit fees. Position rows separately label estimated mark-to-close net PnL.
+
+While paused, choose sizing and setup assignment, select **Buy** or **Sell**, move
+onto any chart's price pane, click the stop level, review the observed-price
+estimate, then **Confirm order**. Clicking never submits by itself. Stochastic
+pane clicks are ignored. **Modify SL** uses the same select/review/confirm flow.
+Escape or Cancel discards the draft. Keyboard price entry is available under
+**Enter price with keyboard**. The original next-synchronized-M1-opening execution,
+risk sizing, independent two-slot stops, fees and setup grouping remain unchanged.
+
+**Sessions / settings** pauses replay and opens session management, manual save,
+restart, migration and storage maintenance. **Finish backtest** pauses and saves,
+then asks confirmation with open/pending counts. It creates no exits. Results has
+separate Overview, Journal, and Equity & drawdown sections. Journal notes remain
+editable. At the last candle use **Review Results**.
+
+Session records are now schema v2; the IndexedDB structure remains v1. Validated
+v1 records map unstarted → Setup, started → Trading, completed → Finished. A new
+checkpoint writes v2 atomically. Dataset fingerprints, exclusive ranges, equity
+chunks and financial records are unchanged. Active restores pause, finished
+restores open Results, and a valid saved dataset is never downloaded again.
+Stop-placement drafts are never persisted.
+
+### Repeatable Dukascopy browser setup on Linux
+
+Use the Node.js version listed in Prerequisites and the project's installed `dukascopy-node` (currently 1.51.0).
+After `npm ci`, run from the repository root:
+
+```sh
+npx dukascopy-node --install-browser
+npm run dev:backend
+```
+
+The installed command delegates to its matching `playwright-core` 1.64.1:
+`install chromium --no-shell`. It installs the regular Chromium build, not only
+headless-shell. An old Playwright browser revision alone does not satisfy it.
+On the verified Linux machine, the installer selected the Ubuntu 24.04 fallback
+build and the existing system libraries were sufficient. No privileged packages
+were installed.
+
+If diagnostics report missing system dependencies, have the system administrator
+review and run `npx dukascopy-node --install-browser --with-deps`. That option can
+invoke privileged system-package installation; ForexTester never runs it.
+Alternatively set `DUKASCOPY_CHROME_PATH=/absolute/path/to/chrome` before backend
+startup. This remains the actual binary selected by the Linux launcher.
+
+The backend checks a sandboxed browser launch once per executable per process;
+failed checks can be retried after setup. `dukascopy-node` 1.51.0 does not expose a
+sandbox option and its Playwright launcher otherwise uses the disabled-sandbox
+default. On Linux, `scripts/provider-browser.sh` removes those disabling flags
+before executing the selected browser. Sandbox failure stays an error. There is
+no automatic `--no-sandbox` fallback. Keep this executable script with the source
+when running the compiled backend; it is resolved relative to the project root.
+The provider's normal WAF challenge handling is unchanged; no protections are
+bypassed. WAF cookies/tokens must never be committed or included in bug reports.
+
+The API distinguishes `BROWSER_UNAVAILABLE`, `BROWSER_DEPENDENCIES`,
+`PROVIDER_WAF`, `PROVIDER_NETWORK`, `HISTORY_UNAVAILABLE`, and
+`INVALID_HISTORY_RANGE`. Messages and focused recovery actions reach Setup;
+stack traces remain in backend diagnostics. Provider network/WAF problems may be
+transient even after a successful browser check.
+
+`GET /api/history/coverage` exposes installed EURUSD minute metadata, selectable
+calendar dates, a provisional latest completed UTC day, backend health, and the
+last date containing genuinely verified synchronized bid/ask observations in this
+backend process. It makes no claim that all minutes or the newest day exist.
+Installed 1.51.0 metadata says **2003-05-04 19:00 UTC**; the
+[published EURUSD page](https://www.dukascopy-node.app/instrument/eurusd) says
+**21:00 UTC**. The endpoint deliberately uses the installed value and labels it
+advertised coverage. Both yield May 4 as the earliest selectable calendar date;
+actual observations alone determine available replay candles.
+
+The XDG provider cache, seven-day requests, two workers, retained successful chunks,
+30-day warm-up and exact bid/ask observations are unchanged. Before advertised
+coverage, warm-up requests legitimately contain no candles.
+
+Real provider verification:
+
+```sh
+node --import tsx scripts/verify-provider.mts
+# Optional fresh external cache to prove a network download:
+FOREXTESTER_CACHE_DIR=/tmp/forextester-live-check node --import tsx scripts/verify-provider.mts
+# Actual browser workflow with deterministic provider fixtures:
+node --import tsx scripts/task20-browser.mts
+# Actual browser loading through the real provider:
+node --import tsx scripts/task20-live-browser.mts
+```
+
+These scripts use temporary, isolated session directories and sandboxed Chromium.
+The live scripts require provider access; fixture results are not a substitute.

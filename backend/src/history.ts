@@ -1,5 +1,7 @@
 import { getHistoricalRates, instrumentMetaData, type ConfigJsonItem, type JsonItem } from 'dukascopy-node'
-import { providerCachePaths } from './projectPaths.js'
+import { checkProviderBrowser } from './providerBrowser.js'
+import { join } from 'node:path'
+import { projectRoot, providerCachePaths } from './projectPaths.js'
 
 export interface Candle {
   timestamp: number
@@ -47,6 +49,7 @@ function normalizeCandles(items: JsonItem[], from: number, to: number): Candle[]
 export async function loadHistory(from: string, to: string, fetchRates: RatesFetcher = getHistoricalRates): Promise<HistoryResponse> {
   const first = Date.parse(instrumentMetaData.eurusd.startDayForMinuteCandles)
   if (Date.parse(to) <= first) return { symbol: 'EURUSD', resolution: 'M1', from, to, bid: [], ask: [] }
+  if (fetchRates === getHistoricalRates) await checkProviderBrowser()
   const dates = { from: new Date(Math.max(Date.parse(from), first)), to: new Date(`${to}T00:00:00.000Z`) }
   const baseConfig: ConfigJsonItem = {
     instrument: 'eurusd',
@@ -56,7 +59,8 @@ export async function loadHistory(from: string, to: string, fetchRates: RatesFet
     utcOffset: 0,
     useCache: true,
     ...await providerCachePaths(),
-    ...(process.env.DUKASCOPY_CHROME_PATH ? { chromePath: process.env.DUKASCOPY_CHROME_PATH } : {}),
+    ...(process.platform === 'linux' ? { chromePath: join(projectRoot, 'scripts/provider-browser.sh') }
+      : process.env.DUKASCOPY_CHROME_PATH ? { chromePath: process.env.DUKASCOPY_CHROME_PATH } : {}),
     retryCount: 2,
   }
 

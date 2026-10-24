@@ -76,7 +76,7 @@ describe('historical chart data', () => {
     vi.stubGlobal('fetch', mock)
     await expect(fetchHistory(range)).resolves.toMatchObject({ bid: [bid], ask: [ask] })
     expect(mock.mock.calls[0][0]).toBe('/api/history?symbol=EURUSD&from=2024-01-09&to=2024-01-10')
-    await expect(fetchHistory(range)).rejects.toThrow('Historical data is temporarily unavailable.')
+    await expect(fetchHistory(range)).rejects.toThrow('Provider unavailable')
   })
 
   it('reports connectivity failures', async () => {

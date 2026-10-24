@@ -5,7 +5,12 @@ import type { DateRange, Timeframe } from './history.js'
 import type { IndicatorSettings } from './indicatorSettings.js'
 import type { TradingState } from './trading.js'
 
-export const STORAGE_VERSION = 1
+export const STORAGE_VERSION = 1 // IndexedDB structure is unchanged.
+export const RECORD_VERSION = 2
+export type Lifecycle = 'setup' | 'trading' | 'finished'
+export function lifecycleOf(checkpoint: SessionCheckpoint): Lifecycle {
+  return checkpoint.lifecycle ?? (checkpoint.replay.complete ? 'finished' : checkpoint.replay.started ? 'trading' : 'setup')
+}
 export const EQUITY_CHUNK_SIZE = 1024
 export interface ReplayCheckpoint {
   started: boolean
@@ -27,6 +32,7 @@ export interface WorkspaceSettings {
 }
 export type EquitySummary = Omit<EquityLedger, 'tail'>
 export interface SessionCheckpoint {
+  lifecycle?: Lifecycle // Absent only in v1; derived after its digest is verified.
   replay: ReplayCheckpoint
   executionCursor: number
   trading: TradingState

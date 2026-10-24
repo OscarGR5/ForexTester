@@ -65,7 +65,7 @@ describe('history endpoint', () => {
       expect(config.cacheFolderPath).toBe(join(cache, 'dukascopy') + '/')
       expect(config.wafTokenCachePath).toBe(join(cache, 'dukascopy/waf-token.json'))
       expect(config.retryCount).toBe(2)
-      expect(config.chromePath).toBe('/test/chromium')
+      expect(config.chromePath).toMatch(process.platform === 'linux' ? /scripts\/provider-browser\.sh$/ : /\/test\/chromium$/)
       expect(config.dates).toEqual({ from: new Date('2024-01-09T00:00:00.000Z'), to: new Date('2024-01-10T00:00:00.000Z') })
     }
   })
@@ -111,7 +111,7 @@ describe('history endpoint', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     const response = await request(path, async () => { throw new Error('secret upstream detail') })
     expect(response.status).toBe(502)
-    expect(await response.json()).toEqual({ error: 'Historical data is temporarily unavailable.' })
+    expect(await response.json()).toMatchObject({ error: 'Historical data is temporarily unavailable.', code: 'HISTORY_UNAVAILABLE' })
   })
 
   it('rejects conflicting duplicate candles', async () => {

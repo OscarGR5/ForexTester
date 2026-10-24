@@ -5,7 +5,7 @@ import { createEquityLedger, type EquityLedger, type EquityPoint } from './equit
 import { parseHistory, TIMEFRAMES, validateDateRange } from './history.js'
 import { PREROLL_DAYS, replayStartIndex, type LoadedHistory } from './historyLoader.js'
 import { defaultIndicatorSettings, validateIndicatorSettings } from './indicatorSettings.js'
-import { STORAGE_VERSION, type EquitySummary, type SessionRecord } from './sessionTypes.js'
+import { RECORD_VERSION, type EquitySummary, type SessionRecord } from './sessionTypes.js'
 
 export const corrupt = () => new Error('Saved session is corrupt or incomplete. The original data was kept. Retry recovery or explicitly delete this session.')
 function requireValid(value: unknown): asserts value { if (!value) throw corrupt() }
@@ -104,7 +104,7 @@ function validateTrading(state: TradingState) {
 }
 
 export async function validateRecord(record: SessionRecord): Promise<void> {
-  if (record?.schemaVersion !== STORAGE_VERSION) throw new Error(`Unsupported saved-session schema version: ${record?.schemaVersion ?? 'missing'}. Data was kept; use a compatible application version.`)
+  if (![1, RECORD_VERSION].includes(record?.schemaVersion)) throw new Error(`Unsupported saved-session schema version: ${record?.schemaVersion ?? 'missing'}. Data was kept; use a compatible application version.`)
   try {
     requireValid(text(record.id) && record.id.length > 0 && text(record.name) && record.name.trim().length > 0 && record.symbol === 'EURUSD' &&
       text(record.createdAt) && new Date(record.createdAt).toISOString() === record.createdAt && text(record.savedAt) && new Date(record.savedAt).toISOString() === record.savedAt && record.savedAt >= record.createdAt &&
@@ -113,6 +113,12 @@ export async function validateRecord(record: SessionRecord): Promise<void> {
     requireValid(Array.isArray(record.chunkHashes) && record.chunkHashes.every((hash) => /^[a-f0-9]{64}$/.test(hash)))
     requireValid(await recordDigest(record) === record.digest)
     const { replay, trading, equity, executionCursor, workspace } = record.checkpoint
+    if (record.schemaVersion === RECORD_VERSION) {
+      const lifecycle = record.checkpoint.lifecycle
+      requireValid(['setup', 'trading', 'finished'].includes(lifecycle!))
+      requireValid(lifecycle === 'setup' ? !replay.started : replay.started)
+      requireValid(lifecycle !== 'finished' || !replay.playing)
+    }
     validateTrading(trading)
     requireValid(typeof replay.started === 'boolean' && typeof replay.playing === 'boolean' && typeof replay.complete === 'boolean' && [1, 10, 100].includes(replay.speed) &&
       integer(replay.startIndex) && timestamp(replay.startTimestamp) && replay.startTimestamp >= Date.parse(record.range.from) && replay.startTimestamp < Date.parse(record.range.to))

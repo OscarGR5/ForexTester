@@ -1,0 +1,86 @@
+[
+  {
+    "from": "2024-01-09",
+    "to": "2024-01-10",
+    "ms": 20390,
+    "bid": 1438,
+    "ask": 1438,
+    "firstBid": {
+      "timestamp": 1704758400000,
+      "open": 1.09497,
+      "high": 1.09504,
+      "low": 1.09492,
+      "close": 1.09501
+    },
+    "firstAsk": {
+      "timestamp": 1704758400000,
+      "open": 1.09499,
+      "high": 1.09509,
+      "low": 1.09496,
+      "close": 1.09504
+    },
+    "lastBid": {
+      "timestamp": 1704844740000,
+      "open": 1.09313,
+      "high": 1.09317,
+      "low": 1.09313,
+      "close": 1.09317
+    },
+    "lastAsk": {
+      "timestamp": 1704844740000,
+      "open": 1.09316,
+      "high": 1.09321,
+      "low": 1.09316,
+      "close": 1.09321
+    }
+  },
+  {
+    "from": "2024-02-05",
+    "to": "2024-02-07",
+    "ms": 37648,
+    "bid": 2873,
+    "ask": 2873,
+    "firstBid": {
+      "timestamp": 1707091200000,
+      "open": 1.07796,
+      "high": 1.07801,
+      "low": 1.07721,
+      "close": 1.07748
+    },
+    "firstAsk": {
+      "timestamp": 1707091200000,
+      "open": 1.07799,
+      "high": 1.07806,
+      "low": 1.07726,
+      "close": 1.07752
+    },
+    "lastBid": {
+      "timestamp": 1707263940000,
+      "open": 1.07566,
+      "high": 1.07567,
+      "low": 1.07563,
+      "close": 1.07566
+    },
+    "lastAsk": {
+      "timestamp": 1707263940000,
+      "open": 1.0757,
+      "high": 1.07571,
+      "low": 1.07567,
+      "close": 1.0757
+    }
+  },
+  {
+    "symbol": "EURUSD",
+    "resolution": "M1",
+    "providerEarliestTimestamp": "2003-05-04T19:00:00.000Z",
+    "earliestSelectableDate": "2003-05-04",
+    "latestEligibleDate": "2026-10-23",
+    "latestBoundaryProvisional": true,
+    "maximumCalendarDays": 90,
+    "timezone": "UTC",
+    "lastVerifiedAvailableDate": "2024-02-06",
+    "providerHealth": {
+      "status": "ready"
+    }
+  }
+]

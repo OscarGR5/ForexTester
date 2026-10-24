@@ -110,6 +110,7 @@ export function useSessionPersistence(options: Options) {
       setStorageLocation(status.directory); setSessions(rows); setDiskErrors(store.listErrors)
       const legacy = await discoverLegacy()
       if (!live()) return
+      if (active.current) ready.current = true
       if (!active.current) {
         if (rows.length || legacy.length || store.listErrors.length) setAwaitingChoice(true)
         else { active.current = newActive(); ready.current = true; setAwaitingChoice(false) }
@@ -258,6 +259,6 @@ export function useSessionPersistence(options: Options) {
     finally { busyRef.current = false; setBusy(false) }
   }
   return { repairTarget, repairProgress, repair: () => repairTarget && switchWorkspace(repairTarget.id, undefined, true), cleanupPreview, cleanupResult, previewCleanup, cleanup, sessions, diskErrors, legacySessions, storageLocation, migrationWarning, migrate, retry: () => { void initialize() }, name, savedAt, saveStatus, error, cacheWarning, conflict, busy, initialized, awaitingChoice,
-    activeId: active.current?.id ?? null, editName, rename, remove, resume: (id: string) => switchWorkspace(id),
+    flush, activeId: active.current?.id ?? null, editName, rename, remove, resume: (id: string) => switchWorkspace(id),
     fresh: (range?: DateRange) => switchWorkspace(null, range), save: () => { if (active.current) active.current.cacheAttempted = false; void flush().catch(report) } }
 }

@@ -3,6 +3,8 @@ import { SessionStorage } from './sessionStorage.js'
 import { sessionApi } from './sessionApi.js'
 import { loadHistory, type RatesFetcher } from './history.js'
 
+import { historyCoverage, classifyHistoryError, verifiedDate } from './historyCoverage.js'
+
 const MAX_HISTORY_DAYS = 7 // Per-chunk provider safety limit; the frontend coordinates longer intervals.
 
 function parseUtcDate(value: string | null): number | null {
@@ -14,6 +16,8 @@ function parseUtcDate(value: string | null): number | null {
 }
 
 export function createApp(fetchRates?: RatesFetcher, now: () => Date = () => new Date(), storage = new SessionStorage()): Server {
+  let providerHealth: { status: string; code?: string; error?: string; action?: string } = { status: 'unknown' }
+  let lastVerifiedAvailableDate: string | null = null
   const server = createServer(async (request, response) => {
     response.setHeader('Content-Type', 'application/json; charset=utf-8')
 
@@ -26,6 +30,10 @@ export function createApp(fetchRates?: RatesFetcher, now: () => Date = () => new
     }
 
     const url = new URL(request.url ?? '/', 'http://localhost')
+    if (request.method === 'GET' && url.pathname === '/api/history/coverage') {
+      response.end(JSON.stringify({ ...historyCoverage(now()), lastVerifiedAvailableDate, providerHealth }))
+      return
+    }
     if (request.method === 'GET' && url.pathname === '/api/history') {
       const symbol = url.searchParams.get('symbol')
       const from = url.searchParams.get('from')
@@ -37,18 +45,23 @@ export function createApp(fetchRates?: RatesFetcher, now: () => Date = () => new
       if (symbol !== 'EURUSD' || fromMs === null || toMs === null || fromMs >= toMs ||
         toMs > todayUtc || (toMs - fromMs) / 86_400_000 > MAX_HISTORY_DAYS) {
         response.writeHead(400)
-        response.end(JSON.stringify({ error: 'Use symbol=EURUSD and a valid completed UTC date range of 1 to 7 days (from inclusive, to exclusive).' }))
+        response.end(JSON.stringify({ code: 'INVALID_HISTORY_RANGE', error: 'Use symbol=EURUSD and a valid completed UTC date range of 1 to 7 days (from inclusive, to exclusive).' }))
         return
       }
 
       try {
         const history = await loadHistory(from!, to!, fetchRates)
+        const verified = verifiedDate(history)
+        if (verified && (!lastVerifiedAvailableDate || verified > lastVerifiedAvailableDate)) lastVerifiedAvailableDate = verified
+        providerHealth = { status: verified ? 'ready' : 'no-observations' }
         response.writeHead(200)
         response.end(JSON.stringify(history))
       } catch (error) {
         console.error('Historical data retrieval failed:', error)
         response.writeHead(502)
-        response.end(JSON.stringify({ error: 'Historical data is temporarily unavailable.' }))
+        const diagnostic = classifyHistoryError(error)
+        providerHealth = { status: 'error', ...diagnostic }
+        response.end(JSON.stringify(diagnostic))
       }
       return
     }

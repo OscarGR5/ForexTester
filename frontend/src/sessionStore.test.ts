@@ -28,7 +28,7 @@ const enter = (sim: ReturnType<typeof sessionSimulation>, group: string | null =
 describe('IndexedDB atomic session checkpoints and recovery', () => {
   it('creates a uniquely identified session with UTC metadata and unstarted replay progress', async () => {
     const sim = sessionSimulation(), record = await save(sim)
-    expect(record.revision).toBe(1); expect(record.schemaVersion).toBe(1); expect(record.savedAt).toMatch(/Z$/)
+    expect(record.revision).toBe(1); expect(record.schemaVersion).toBe(2); expect(record.savedAt).toMatch(/Z$/)
     expect((await store.list()).map((r) => r.id)).toEqual(['session-a'])
     expect((await recover(record, sim)).checkpoint).toEqual(sim.snapshot().checkpoint)
   })

@@ -117,7 +117,7 @@ export async function fetchHistory(range: DateRange, signal?: AbortSignal): Prom
   const body: unknown = await response.json().catch(() => null)
   if (!response.ok) {
     const message = isRecord(body) && typeof body.error === 'string'
-      ? 'Historical data is temporarily unavailable.'
+      ? `${body.error}${typeof body.action === 'string' ? ` ${body.action}` : ''}`
       : `Historical data request failed (HTTP ${response.status}).`
     throw new Error(message)
   }

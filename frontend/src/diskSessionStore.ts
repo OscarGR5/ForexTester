@@ -3,7 +3,7 @@ import { historyRequestBody } from './historyRequestBody.js'
 import type { EquityPoint } from './equity.js'
 import type { LoadedHistory } from './historyLoader.js'
 import { corrupt, equitySuffix, historyFingerprint, recordDigest, restoreEquity, sha256, validateHistoryCheckpoint, validatedHistory, validateRecord } from './sessionCodec.js'
-import { EQUITY_CHUNK_SIZE, STORAGE_VERSION, type Hydration, type SessionRecord, type SessionSnapshot } from './sessionTypes.js'
+import { EQUITY_CHUNK_SIZE, RECORD_VERSION, lifecycleOf, type Hydration, type SessionRecord, type SessionSnapshot } from './sessionTypes.js'
 import { RevisionConflict, SessionStore } from './sessionStore.js'
 
 export class DiskSessionStore {
@@ -57,11 +57,11 @@ export class DiskSessionStore {
       const index = (from + offset) / EQUITY_CHUNK_SIZE
       hashes[index] = hash; changed.push({ sessionId: base.id, index, points, hash })
     }
-    const record: SessionRecord = { ...base, name: base.name.trim(), savedAt: new Date().toISOString(), schemaVersion: STORAGE_VERSION,
+    const record: SessionRecord = { ...base, name: base.name.trim(), savedAt: new Date().toISOString(), schemaVersion: RECORD_VERSION,
       symbol: 'EURUSD', revision: (previous?.revision ?? 0) + 1,
       status: checkpoint.replay.complete ? 'complete' : checkpoint.replay.playing ? 'in-progress' : 'paused',
       completedSetups: checkpoint.trading.setups.filter((setup) => checkpoint.trading.closed.some((p) => p.setupId === setup.id) && ![...checkpoint.trading.pending, ...checkpoint.trading.positions].some((p) => p.setupId === setup.id)).length,
-      checkpoint, chunkHashes: hashes, digest: '' }
+      checkpoint: { ...checkpoint, lifecycle: lifecycleOf(checkpoint) }, chunkHashes: hashes, digest: '' }
     record.digest = await recordDigest(record)
     await validateRecord(record)
     return this.call<SessionRecord>(`/sessions/${base.id}${previous ? '/checkpoint' : ''}`, previous ? 'PUT' : 'POST', { record, chunks: changed.map(({ hash, points }) => ({ hash, points })), expectedRevision: previous?.revision ?? 0 })

@@ -7,7 +7,7 @@ import { promisify } from 'node:util'
 import { projectRoot as repository } from './projectPaths.js'
 import { corrupt, historyFingerprint, recordDigest, restoreEquity, sha256, validatedHistory, validateHistoryCheckpoint, validateRecord, equitySuffix } from '../../frontend/src/sessionCodec.js'
 import type { StorageCode, CleanupCategory, CleanupPreview, CleanupResult } from '../../frontend/src/storageProtocol.js'
-import { EQUITY_CHUNK_SIZE, type SessionRecord } from '../../frontend/src/sessionTypes.js'
+import { EQUITY_CHUNK_SIZE, RECORD_VERSION, type SessionRecord } from '../../frontend/src/sessionTypes.js'
 import type { EquityLedger, EquityPoint } from '../../frontend/src/equity.js'
 import type { LoadedHistory } from '../../frontend/src/historyLoader.js'
 
@@ -194,7 +194,7 @@ export class SessionStorage {
     if (cached?.digest === record.digest) return cached.ledger
     return restoreEquity((await this.chunks(record)).flatMap((chunk) => chunk.points), record.checkpoint.equity, record.checkpoint.trading.account.referenceBalance)
   }
-  status() { return this.run(async () => ({ directory: this.directory, authoritative: 'filesystem', schemaVersion: 1 })) }
+  status() { return this.run(async () => ({ directory: this.directory, authoritative: 'filesystem', schemaVersion: RECORD_VERSION })) }
   list() { return this.run(async () => {
     const records: SessionRecord[] = [], errors: { id: string; error: string; revision: number | null }[] = []
     for (const name of await readdir(join(this.directory, 'sessions'))) {

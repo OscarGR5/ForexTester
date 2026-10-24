@@ -7,7 +7,7 @@ import { StrictMode, act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createChart, type CandlestickData, type ISeriesApi, type UTCTimestamp } from 'lightweight-charts'
-import { App } from './App'
+import { RegressionWorkspace as App } from './RegressionWorkspace.test-support'
 import { TIMEFRAMES, TIMEFRAME_MS, type Candle } from './history'
 
 vi.mock('lightweight-charts', () => ({
