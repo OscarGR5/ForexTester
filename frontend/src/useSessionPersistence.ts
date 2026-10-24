@@ -1,3 +1,4 @@
+import { PreferenceTabGuard, previewUiCleanup, removeUnusedUi, removeDeletedUi, type PreferenceCleanupPreview, type PreferenceCleanupResult } from './uiPreferenceCleanup'
 import { historyCandles } from './history.js'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { accountRiskError } from './risk'
@@ -51,6 +52,10 @@ export function useSessionPersistence(options: Options) {
   const [repairProgress, setRepairProgress] = useState<LoadProgress | null>(null)
   const [cleanupPreview, setCleanupPreview] = useState<CleanupPreview | null>(null)
   const [cleanupResult, setCleanupResult] = useState<CleanupResult | null>(null)
+  const preferenceGuard = useRef<PreferenceTabGuard | null>(null)
+  const [uiCleanupPreview, setUiCleanupPreview] = useState<PreferenceCleanupPreview | null>(null)
+  const [uiCleanupResult, setUiCleanupResult] = useState<PreferenceCleanupResult | null>(null)
+  const [preferenceNotice, setPreferenceNotice] = useState<string | null>(null)
   const [awaitingChoice, setAwaitingChoice] = useState(false)
   const [initialized, setInitialized] = useState(false)
   const ready = useRef(false)
@@ -109,8 +114,6 @@ export function useSessionPersistence(options: Options) {
       const status = await store.status(), rows = await store.list()
       if (!live()) return
       setStorageLocation(status.directory); setSessions(rows); setDiskErrors(store.listErrors)
-      await discoverLegacy()
-      if (!live()) return
       if (active.current) ready.current = true
       if (!active.current) {
         // Browser migration is optional. Its discovery must not block a new
@@ -120,12 +123,15 @@ export function useSessionPersistence(options: Options) {
       }
       if (!conflicted.current) setError(null)
       setInitialized(true)
+      void discoverLegacy()
     } catch (reason) { if (live()) { report(reason); setAwaitingChoice(true) } }
   }
   useEffect(() => {
     let live = true
     queue.current = new AutosaveQueue(write)
-    void initialize(() => live)
+    const guard = new PreferenceTabGuard()
+    preferenceGuard.current = guard
+    void guard.start().catch(() => {}).then(() => { if (live) void initialize(() => live) })
 
     // Revision checks in the write transaction are authoritative. Broadcasts
     // shorten the time until an active editor sees the conflict.
@@ -137,7 +143,7 @@ export function useSessionPersistence(options: Options) {
         void refresh().catch(() => {})
       }
     }
-    return () => { live = false; ready.current = false; if (promptTimer.current) clearTimeout(promptTimer.current); promptTimer.current = null; queue.current?.dispose(); channel.current?.close(); channel.current = null }
+    return () => { live = false; guard.stop(); ready.current = false; if (promptTimer.current) clearTimeout(promptTimer.current); promptTimer.current = null; queue.current?.dispose(); channel.current?.close(); channel.current = null }
   }, [store])
 
   const previous = useRef<{ snapshot: SessionSnapshot | null; action: number } | null>(null)
@@ -220,20 +226,54 @@ export function useSessionPersistence(options: Options) {
     } catch (reason) { report(reason) }
   }
   async function remove(record: SessionRecord) {
+    if (switching.current || busyRef.current) return
     if (!window.confirm(`Delete “${record.name}” from saved backtests? It cannot be resumed afterward. This cannot be undone in the app.`)) return
+    switching.current = true; setBusy(true)
     try {
       if (record.id === active.current?.id) {
         await flush()
         record = active.current.record!
       }
+      busyRef.current = true
       await store.delete(record.id, record.revision)
       channel.current?.postMessage({ id: record.id, revision: Number.MAX_SAFE_INTEGER })
       if (record.id === active.current?.id) {
         active.current = newActive(); setName(active.current.name); setSavedAt(null)
         latest.current.fresh(record.range)
       }
+      try {
+        await preferenceGuard.current!.exclusive(() => removeDeletedUi(record.id, () => legacyStore.list()))
+        setPreferenceNotice(null)
+      } catch { setPreferenceNotice('Backtest deleted. Its UI preferences were retained because browser storage or other tabs could not be verified. Use Storage maintenance to retry later.') }
       await refresh()
     } catch (reason) { report(reason) }
+    finally { busyRef.current = false; switching.current = false; setBusy(false) }
+  }
+  const uiInventory = {
+    disk: async () => {
+      const rows = await store.list()
+      if (store.listErrors.length) throw new Error('Disk session inventory contains unreadable sessions. UI preferences were kept.')
+      return rows
+    },
+    legacy: () => legacyStore.list(),
+    active: () => active.current?.id ?? null,
+  }
+  async function previewPreferences() {
+    if (switching.current || busyRef.current) return
+    switching.current = true; setBusy(true); setUiCleanupResult(null)
+    try {
+      const candidates = await preferenceGuard.current!.exclusive(() => previewUiCleanup(uiInventory))
+      setUiCleanupPreview({ candidates, error: null })
+    } catch (reason) { setUiCleanupPreview({ candidates: [], error: storageError(reason) }) }
+    finally { switching.current = false; setBusy(false) }
+  }
+  async function cleanupPreferences() {
+    if (switching.current || busyRef.current || !uiCleanupPreview?.candidates.length || uiCleanupPreview.error) return
+    if (!window.confirm(`Remove ${uiCleanupPreview.candidates.length} unused UI preference entries? Saved backtests and historical data will be kept. Session inventories are checked again before removal.`)) return
+    switching.current = true; setBusy(true)
+    try { setUiCleanupResult(await preferenceGuard.current!.exclusive(() => removeUnusedUi(uiCleanupPreview.candidates, uiInventory))) }
+    catch (reason) { setUiCleanupResult({ removed: 0, error: storageError(reason) }) }
+    finally { setUiCleanupPreview(null); switching.current = false; setBusy(false) }
   }
   async function previewCleanup() {
     if (switching.current || busyRef.current) return
@@ -262,7 +302,7 @@ export function useSessionPersistence(options: Options) {
     } catch (reason) { report(reason) }
     finally { busyRef.current = false; setBusy(false) }
   }
-  return { repairTarget, repairProgress, repair: () => repairTarget && switchWorkspace(repairTarget.id, undefined, true), cleanupPreview, cleanupResult, previewCleanup, cleanup, sessions, diskErrors, legacySessions, storageLocation, migrationWarning, migrate, retry: () => { void initialize() }, name, savedAt, saveStatus, error, cacheWarning, conflict, busy, initialized, awaitingChoice,
+  return { uiCleanupPreview, uiCleanupResult, preferenceNotice, previewPreferences, cleanupPreferences, repairTarget, repairProgress, repair: () => repairTarget && switchWorkspace(repairTarget.id, undefined, true), cleanupPreview, cleanupResult, previewCleanup, cleanup, sessions, diskErrors, legacySessions, storageLocation, migrationWarning, migrate, retry: () => { void initialize() }, name, savedAt, saveStatus, error, cacheWarning, conflict, busy, initialized, awaitingChoice,
     flush, activeId: active.current?.id ?? null, editName, rename, remove, resume: (id: string) => switchWorkspace(id),
     fresh: (range?: DateRange) => switchWorkspace(null, range), save: () => { if (active.current) active.current.cacheAttempted = false; void flush().catch(report) } }
 }

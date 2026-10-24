@@ -9,6 +9,8 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { createChart, type CandlestickData, type UTCTimestamp } from 'lightweight-charts'
 import { App } from './App'
 import { selectedRange, shiftDate, accountPnl } from './workflow'
+import { PreferenceTabGuard } from './uiPreferenceCleanup'
+import { uiKey } from './uiPreferences'
 import { SessionStore } from './sessionStore'
 import { DiskSessionStore } from './diskSessionStore'
 import { recordDigest, historyFingerprint } from './sessionCodec'
@@ -106,13 +108,13 @@ it('keeps legacy-only recovery optional on refresh and preserves the browser ori
  expect(host.querySelector<HTMLFieldSetElement>('.workspace-controls')!.hidden).toBe(false)
  expect(host.querySelector('dialog')).toBeNull();expect(historyCalls).toBe(0)
  expect(button('Load historical data').disabled).toBe(false)
- await click('Review browser backtests');expect(host.textContent).toContain('Older browser backtest')
+ await until(()=>host.textContent?.includes('Review browser backtests'));await click('Review browser backtests');expect(host.textContent).toContain('Older browser backtest')
  await click('Close management');expect(host.querySelector('dialog')).toBeNull()
  await act(async()=>root.unmount());root=createRoot(host);await mount()
  expect(host.querySelector('dialog')).toBeNull();expect(historyCalls).toBe(0)
  expect((await legacy.get(original.id)).digest).toBe(original.digest)
  expect((await disk.storage.list()).sessions).toHaveLength(0)
- await click('Review browser backtests');await click('Import to disk');await until(()=>!button('Resume / Manage sessions').disabled)
+ await until(()=>host.textContent?.includes('Review browser backtests'));await click('Review browser backtests');await click('Import to disk');await until(()=>!button('Resume / Manage sessions').disabled)
  await click('Resume / Manage sessions');await until(()=>host.querySelector('.saved-session'))
  expect((await disk.storage.list()).sessions).toHaveLength(1)
  expect((await legacy.get(original.id)).digest).toBe(original.digest)
@@ -186,12 +188,12 @@ it('confirms finishing with open positions, preserves them, and restores finishe
  await click('Finish backtest');await until(()=>!host.querySelector<HTMLFieldSetElement>('.workspace-controls')!.disabled);expect(host.querySelector('.phase-trading')).toBeTruthy();expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('1 open positions'))
  await click('Finish backtest');await until(()=>host.querySelector('.phase-finished')&&host.querySelector('.save-state')?.textContent==='Saved')
  expect(host.querySelector('.trading-journal')).toBeTruthy();const record=(await disk.storage.list()).sessions[0];expect(record.checkpoint.lifecycle).toBe('finished');expect(record.checkpoint.trading.positions).toHaveLength(1);expect(record.checkpoint.trading.closed).toHaveLength(0)
- const before=historyCalls;await act(async()=>root.unmount());root=createRoot(host);await mount();await click('Resume session');await until(()=>host.querySelector('.phase-finished'));expect(historyCalls).toBe(before);expect(host.querySelector('.stop-placement')).toBeNull()
+ const before=historyCalls;await act(async()=>root.unmount());root=createRoot(host);await mount();await click('Resume backtest');await until(()=>host.querySelector('.phase-finished'));expect(historyCalls).toBe(before);expect(host.querySelector('.stop-placement')).toBeNull()
 })
 it('restores active sessions paused without drafts and keeps charts alive through next-candle updates',async()=>{
  await start();const count=vi.mocked(createChart).mock.calls.length;await order();await click('Next Candle');expect(vi.mocked(createChart).mock.calls.length).toBe(count)
  await click('Play');await click('Sessions / settings');await click('Save now');await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
- await act(async()=>root.unmount());root=createRoot(host);await mount();await click('Resume session');await until(()=>host.querySelector('.phase-trading'))
+ await act(async()=>root.unmount());root=createRoot(host);await mount();await click('Resume backtest');await until(()=>host.querySelector('.phase-trading'))
  expect(host.querySelector('[aria-label="Replay status"]')?.textContent).toBe('Paused');expect(host.querySelector('.stop-placement')).toBeNull()
 })
 it('migrates digest-verified v1 lifecycle on next save without changing financial data or fingerprints',async()=>{
@@ -199,7 +201,7 @@ it('migrates digest-verified v1 lifecycle on next save without changing financia
  await store.cacheHistory(historyId,history);let record=await store.save({id,name:'Old session',createdAt:new Date().toISOString(),range:{from:history.tradingFrom,to:history.to},historyId,totalCandles:history.bid.length},sim.snapshot(),null)
  const old={...record,schemaVersion:1,checkpoint:{...record.checkpoint}};delete old.checkpoint.lifecycle;old.revision++;old.digest=await recordDigest(old)
  await store.call(`/sessions/${id}/checkpoint`,'PUT',{record:old,chunks:[],expectedRevision:record.revision})
- await mount();await click('Resume session');await until(()=>host.querySelector('.phase-trading'));await click('Sessions / settings');await click('Save now');await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
+ await mount();await click('Resume backtest');await until(()=>host.querySelector('.phase-trading'));await click('Sessions / settings');await click('Save now');await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
  record=(await disk.storage.list()).sessions[0];expect(record.schemaVersion).toBe(2);expect(record.checkpoint.lifecycle).toBe('trading');expect(record.historyId).toBe(historyId);expect(record.checkpoint.trading).toEqual(old.checkpoint.trading)
 })
 it('converts inclusive calendar dates without changing exclusive stored ranges',()=>{
@@ -320,4 +322,113 @@ it('keeps cache bounds out of the date picker and reaches approval for earlier h
  await until(()=>host.querySelector('.data-ready'))
  expect(host.querySelector('.cached-history-status')?.textContent).toContain('$0.00')
  expect(host.querySelector('.paid-download-dialog')).toBeNull();expect(paid).not.toHaveBeenCalled()
+})
+
+async function seedSaved(name = 'Saved research', legacy = false) {
+ const store = legacy ? new SessionStore() : new DiskSessionStore(), history = sessionHistory(), sim = sessionSimulation(history)
+ sim.observe(5)
+ const historyId = await historyFingerprint(history)
+ await store.cacheHistory(historyId, history)
+ const record = await store.save({ id: crypto.randomUUID(), name, createdAt: new Date().toISOString(), range: { from: history.tradingFrom, to: history.to }, historyId, totalCandles: history.bid.length }, sim.snapshot(), null)
+ if (store instanceof SessionStore) await store.close()
+ return record
+}
+it('shows every saved backtest in the startup selector, gives heading focus and starts a separate Setup', async()=>{
+ const records = await Promise.all([seedSaved('January research'), seedSaved('February research')])
+ await mount()
+ expect(host.querySelector('.startup-selection')).not.toBeNull();expect(host.querySelector('dialog')).toBeNull()
+ expect(document.activeElement?.textContent).toBe('Choose a backtest')
+ expect(host.querySelectorAll('.startup-selection .saved-session')).toHaveLength(2)
+ expect(host.querySelector('.startup-selection')?.textContent).toContain('Replay progress: 3%')
+ await click('New backtest')
+ expect(host.querySelector('.startup-selection')).toBeNull();expect(host.querySelector<HTMLFieldSetElement>('.workspace-controls')!.hidden).toBe(false)
+ const preserved = (await disk.storage.list()).sessions
+ expect(preserved.map(r=>r.digest).sort()).toEqual(records.map(r=>r.digest).sort())
+})
+it('restores a selected checkpoint and retains the ordinary management dialog in Trading', async()=>{
+ const record = await seedSaved()
+ await mount();expect(host.querySelectorAll('.startup-selection .saved-session')).toHaveLength(1)
+ await click('Resume backtest');await until(()=>host.querySelector('.phase-trading'))
+ expect(host.querySelector('.replay-clock')?.textContent).toContain('2024-01-01 00:05 UTC')
+ await click('Sessions / settings');expect(host.querySelector('dialog.management-dialog')).not.toBeNull()
+ await click('Save now');await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
+ const restored = (await disk.storage.list()).sessions[0]
+ expect(restored.checkpoint.trading).toEqual(record.checkpoint.trading)
+ expect(restored.checkpoint.equity).toEqual(record.checkpoint.equity)
+ expect(restored.checkpoint.executionCursor).toBe(record.checkpoint.executionCursor)
+ expect(restored.checkpoint.replay.index).toBe(record.checkpoint.replay.index)
+ expect(restored.historyId).toBe(record.historyId)
+})
+it('opens an actionable startup error when disk initialization fails', async()=>{
+ const underlying=globalThis.fetch
+ vi.stubGlobal('fetch',(path:string,options?:RequestInit)=>path==='/api/storage/status'?Promise.reject(new Error('offline')):underlying(path,options))
+ await act(async()=>root.render(<App/>));await until(()=>host.querySelector('.startup-selection [role="alert"]'))
+ expect(button('Retry storage connection').disabled).toBe(false);expect(button('New backtest').disabled).toBe(true)
+})
+it('opens Setup while optional legacy discovery is still pending',async()=>{
+ let release!:(value:[])=>void
+ vi.spyOn(SessionStore.prototype,'list').mockImplementation(()=>new Promise<[]>(resolve=>{release=resolve}))
+ await mount();expect(button('Load historical data').disabled).toBe(false);expect(host.querySelector('.startup-selection')).toBeNull()
+ await act(async()=>release([]))
+})
+it('removes preferences only after backend deletion succeeds and leaves other sessions untouched', async()=>{
+ vi.spyOn(PreferenceTabGuard.prototype,'exclusive').mockImplementation(operation=>operation())
+ const record=await seedSaved();localStorage.setItem(uiKey(record.id),'target');localStorage.setItem(uiKey('other'),'keep')
+ const underlying=globalThis.fetch;let release!:()=>void
+ vi.stubGlobal('fetch',async(path:string,options?:RequestInit)=>{
+  if(options?.method==='DELETE')await new Promise<void>(resolve=>{release=resolve})
+  return underlying(path,options)
+ })
+ await mount();await click('Delete');expect(localStorage.getItem(uiKey(record.id))).toBe('target')
+ await act(async()=>release());await until(()=>!host.querySelector('.saved-session'))
+ expect(localStorage.getItem(uiKey(record.id))).toBeNull();expect(localStorage.getItem(uiKey('other'))).toBe('keep')
+})
+it('keeps preferences when backend deletion fails', async()=>{
+ vi.spyOn(PreferenceTabGuard.prototype,'exclusive').mockImplementation(operation=>operation())
+ const record=await seedSaved();localStorage.setItem(uiKey(record.id),'keep')
+ const underlying=globalThis.fetch
+ vi.stubGlobal('fetch',(path:string,options?:RequestInit)=>options?.method==='DELETE'?Promise.resolve(new Response(JSON.stringify({error:'Deletion failed'}),{status:503})):underlying(path,options))
+ await mount();await click('Delete');await until(()=>host.textContent?.includes('Deletion failed'))
+ expect(localStorage.getItem(uiKey(record.id))).toBe('keep');expect((await disk.storage.list()).sessions).toHaveLength(1)
+})
+it('keeps preferences shared with a retained legacy original after successful disk deletion', async()=>{
+ vi.spyOn(PreferenceTabGuard.prototype,'exclusive').mockImplementation(operation=>operation())
+ const original=await seedSaved('Browser original',true),store=new DiskSessionStore(),legacy=new SessionStore()
+ await store.migrate(legacy,original.id,async()=>{throw new Error('No download allowed')});await legacy.close()
+ localStorage.setItem(uiKey(original.id),'keep');await mount();await click('Delete');await until(()=>!host.querySelector('.saved-session'))
+ expect(localStorage.getItem(uiKey(original.id))).toBe('keep');expect((await disk.storage.list()).sessions).toHaveLength(0)
+})
+it('keeps successful backtest deletion successful if Local Storage removal throws',async()=>{
+ vi.spyOn(PreferenceTabGuard.prototype,'exclusive').mockImplementation(operation=>operation())
+ const record=await seedSaved();localStorage.setItem(uiKey(record.id),'keep')
+ vi.spyOn(Storage.prototype,'removeItem').mockImplementation(()=>{throw new Error('denied')})
+ await mount();await click('Delete');await until(()=>!host.querySelector('.saved-session'))
+ expect((await disk.storage.list()).sessions).toHaveLength(0);expect(host.textContent).toContain('Backtest deleted. Its UI preferences were retained')
+ expect(host.querySelector('.form-error')).toBeNull()
+})
+it('previews UI cleanup, requires confirmation and revalidates before removing only orphans', async()=>{
+ vi.spyOn(PreferenceTabGuard.prototype,'exclusive').mockImplementation(operation=>operation())
+ const saved=await seedSaved(),legacy=await seedSaved('Legacy',true)
+ for(const id of [saved.id,legacy.id,'orphan'])localStorage.setItem(uiKey(id),'keep')
+ localStorage.setItem('unrelated','keep')
+ await mount();await click('New backtest');await click('Sessions / settings')
+ // The current unsaved session has presentation preferences copied by fresh().
+ const activeKeys=Object.keys(localStorage).filter(key=>key.startsWith('forextester:ui:v1:')&&![saved.id,legacy.id,'orphan'].some(id=>key===uiKey(id)))
+ expect(activeKeys).toHaveLength(1)
+ await click('Clean up unused UI preferences');await until(()=>host.textContent?.includes('1 unused UI preference entries safe to remove'))
+ expect(localStorage.getItem(uiKey('orphan'))).toBe('keep')
+ vi.mocked(window.confirm).mockReturnValueOnce(false);await click('Confirm UI preference cleanup')
+ expect(localStorage.getItem(uiKey('orphan'))).toBe('keep')
+ await click('Confirm UI preference cleanup');await until(()=>host.textContent?.includes('Removed 1 UI preference entries'))
+ expect(localStorage.getItem(uiKey('orphan'))).toBeNull()
+ for(const key of [uiKey(saved.id),uiKey(legacy.id),'unrelated',...activeKeys])expect(localStorage.getItem(key)).not.toBeNull()
+ await click('Clean up unused UI preferences');await until(()=>host.textContent?.includes('0 unused UI preference entries safe to remove'))
+})
+it('refuses cleanup with unreadable disk inventory',async()=>{
+ vi.spyOn(PreferenceTabGuard.prototype,'exclusive').mockImplementation(operation=>operation())
+ await mount();localStorage.setItem(uiKey('orphan'),'keep');await click('Sessions / settings')
+ const underlying=globalThis.fetch
+ vi.stubGlobal('fetch',(path:string,options?:RequestInit)=>path==='/api/storage/sessions'?Promise.resolve(new Response(JSON.stringify({sessions:[],errors:[{id:'broken',error:'Unreadable',revision:null}]}))):underlying(path,options))
+ await click('Clean up unused UI preferences');await until(()=>host.textContent?.includes('inventory contains unreadable sessions'))
+ expect(localStorage.getItem(uiKey('orphan'))).toBe('keep')
 })

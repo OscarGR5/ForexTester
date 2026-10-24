@@ -1,0 +1,31 @@
+{
+  "checks": [
+    "Empty disk opens Setup",
+    "One saved session opens centered 740px selector with heading focus and visible keyboard focus",
+    "Six sessions render with scrollable list and no horizontal overflow at 1440px and 390px",
+    "Resume restores trading, replay index and equity; ordinary management opens right-side native dialog",
+    "New preserves all saved sessions; confirmation is required; cleanup retains saved, legacy, active and unrelated preferences; repeat preview is empty",
+    "A second tab with an unsaved session prevents cleanup",
+    "Unavailable disk inventory retains uncertain preferences",
+    "Confirmed disk deletion removes only its UI key with real Web Locks"
+  ],
+  "screenshots": [
+    "docs/session-startup/startup-single-1440.png",
+    "docs/session-startup/startup-1440.png",
+    "docs/session-startup/startup-390.png",
+    "docs/session-startup/management-trading-1440.png",
+    "docs/session-startup/management-trading-390.png"
+  ],
+  "errors": [],
+  "historyRequests": [
+    "/api/history/coverage",
+    "/api/history/coverage",
+    "/api/history/coverage",
+    "/api/history/coverage",
+    "/api/history/coverage",
+    "/api/history/coverage",
+    "/api/history/coverage",
+    "/api/history/coverage"
+  ],
+  "paidCalls": 0
+}
