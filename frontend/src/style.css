@@ -326,3 +326,35 @@ button:disabled { opacity: 0.45; cursor: default; }
   .download-actions { flex-direction: column; }
   .download-actions button { width: 100%; }
 }
+
+/* Startup selection inherits the terminal palette; management remains an overlay. */
+.startup-selection { flex: 1; min-height: 0; overflow-y: auto; display: grid; align-items: center; padding: 32px 24px; }
+.startup-selection .session-controls { width: 100%; max-width: 740px; margin: auto; padding: 28px 32px; box-sizing: border-box; }
+.startup-heading h2 { margin: 0 0 8px; font-size: 28px; letter-spacing: -.025em; }
+.startup-heading p { margin: 0 0 24px; color: #b2b5be; font-size: 14px; }
+.startup-selection .storage-location { font-size: 12px; overflow-wrap: anywhere; }
+.startup-selection .saved-sessions { max-height: min(42dvh, 420px); margin-bottom: 0; padding: 2px 4px; }
+.startup-selection .saved-session { padding: 20px 0; align-items: flex-start; }
+.startup-selection .saved-session-info { flex-basis: 380px; gap: 8px; }
+.startup-selection .saved-session-info strong { font-size: 17px; }
+.startup-selection .session-actions { align-items: flex-start; flex-direction: column; }
+.startup-selection .session-actions > button { background: #315e60; min-height: 40px; }
+.session-administration { max-width: 100%; font-size: 13px; }
+.session-administration summary, .storage-maintenance > summary { cursor: pointer; color: #b2b5be; padding: 8px 0; }
+.session-administration label { margin: 8px 0; }
+.session-administration button { margin: 0 6px 8px 0; }
+.startup-new { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 20px 0; border-top: 1px solid #354250; }
+.startup-new button { min-height: 40px; background: transparent; }
+.startup-new span { font-size: 12px; color: #b2b5be; }
+.startup-selection .storage-maintenance { border-top: 1px solid #354250; padding-top: 8px; }
+@media (max-width: 700px) {
+  .startup-selection { padding: 16px 12px; }
+  .startup-selection .session-controls { padding: 24px 16px; }
+  .startup-selection .saved-session-info { flex-basis: 100%; }
+  .startup-selection .saved-session > .session-actions { width: 100%; }
+  .startup-selection .session-actions > button, .startup-new button { width: 100%; min-height: 44px; }
+  .startup-selection .saved-sessions { max-height: 44dvh; }
+}
+.legacy-migration > summary { cursor: pointer; color: #b2b5be; padding: 8px 0; }
+.startup-selection .legacy-migration { border-top: 1px solid #354250; padding: 8px 0; }
+.startup-heading h2:focus { outline: none; }

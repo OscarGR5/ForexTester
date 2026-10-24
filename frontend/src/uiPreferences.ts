@@ -5,7 +5,8 @@ import type { WorkspaceSettings } from './sessionTypes'
 
 export const defaultWorkspace = (): WorkspaceSettings => ({ chartCount: 1, timeframes: ['M1', 'M5', 'H1'],
   indicators: [{ M1: indicatorPreset('M1') }, { M5: indicatorPreset('M5') }, { H1: indicatorPreset('H1') }], statisticsScope: 'setups', journalScope: 'setups', viewport: null })
-export const uiKey = (id: string) => `forextester:ui:v1:${id}`
+export const UI_PREFIX = 'forextester:ui:v1:'
+export const uiKey = (id: string) => `${UI_PREFIX}${id}`
 export function validWorkspace(value: unknown): value is WorkspaceSettings {
   try {
     const w = value as WorkspaceSettings

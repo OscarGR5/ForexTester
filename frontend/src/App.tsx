@@ -227,9 +227,10 @@ export function App() {
     <header className="app-header"><h1>ForexTester</h1><span className="header-session">{sessions.name} <span className="save-state">{history ? sessions.saveStatus : 'Not started'}</span></span>
       {lifecycle !== 'setup' && pnlDisplay}<button onClick={()=>{ replay.pause(); setDraft(null); setManage(true) }}>Sessions / settings</button>
     </header>
-    {sessions.error && !manage && <p className="form-error critical-save" role="alert">{sessions.error} <button onClick={()=>setManage(true)}>Open storage controls</button></p>}
-    {(manage || sessions.awaitingChoice) && <ManagementDialog required={sessions.awaitingChoice} onClose={()=>setManage(false)}>
-      {!sessions.awaitingChoice && <button className="close-management" onClick={()=>setManage(false)}>Close management</button>}
+    {sessions.error && !manage && !sessions.awaitingChoice && <p className="form-error critical-save" role="alert">{sessions.error} <button onClick={()=>setManage(true)}>Open storage controls</button></p>}
+    {sessions.awaitingChoice && !manage && <section className="startup-selection" aria-label="Choose a backtest"><SessionControls startup sessions={sessions} range={{from:tradingFrom,to:history?.to ?? requestedRange.to}} timestamp={replay.timestamp}/></section>}
+    {manage && <ManagementDialog required={false} onClose={()=>setManage(false)}>
+      <button className="close-management" onClick={()=>setManage(false)}>Close management</button>
       <SessionControls sessions={sessions} range={{from:tradingFrom,to:history?.to ?? requestedRange.to}} timestamp={replay.timestamp}/>
       {lifecycle === 'trading' && <button onClick={()=>{ restart(); setManage(false) }}>Restart backtest</button>}
     </ManagementDialog>}
