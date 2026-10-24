@@ -16,6 +16,10 @@ export async function quoteHistory(range: DateRange, signal: AbortSignal): Promi
   const quote = await call(`/api/history/estimate?${new URLSearchParams({ symbol: '6E', ...range })}`, { signal }) as HistoryQuote
   if (!quote || typeof quote.id !== 'string' || !Number.isFinite(quote.estimatedUsd) || quote.estimatedUsd < 0 || !Number.isFinite(quote.reservedUsd) ||
     quote.reservedUsd < quote.estimatedUsd || typeof quote.cached !== 'boolean' || typeof quote.downloadAllowed !== 'boolean' || quote.tradingFrom !== range.from || quote.to !== range.to) throw new Error('Invalid historical cost estimate.')
+  const validDate = (value: unknown): value is string => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value
+  if (!validDate(quote.from) || !validDate(quote.to) || quote.from >= quote.to || !Number.isFinite(quote.remainingBudgetUsd) || quote.remainingBudgetUsd < 0 ||
+    !Number.isFinite(Date.parse(quote.expiresAt)) || !Array.isArray(quote.missingRanges) || quote.cached !== (quote.missingRanges.length === 0) ||
+    quote.missingRanges.some((r, i) => !validDate(r.from) || !validDate(r.to) || r.from >= r.to || r.from < quote.from || r.to > quote.to || i > 0 && r.from < quote.missingRanges[i - 1].to)) throw new Error('Invalid historical cost estimate.')
   return quote
 }
 export async function downloadHistory(quote: HistoryQuote, signal: AbortSignal): Promise<LoadedHistory> {

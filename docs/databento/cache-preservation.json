@@ -1,0 +1,19 @@
+{
+  "/home/admin/.cache/forextester-databento-verification-20261024": {
+    "files": 241,
+    "treeSha256": "c8908796db50612e4b681dc40afbc926141c25682d2200ade312f26431f85d78",
+    "unchanged": true
+  },
+  "/home/admin/.cache/forextester/dukascopy": {
+    "files": 66,
+    "treeSha256": "7f12d8076781c5a39f0bbcb7b392df262b34f4918167d77c9ea23de2ea1bda9d",
+    "unchanged": true
+  },
+  "/home/admin/.local/share/forextester": {
+    "files": 4,
+    "treeSha256": "c2c7d8154084cb51deb468b3e6e7db03987fe0bdf3c13fac46111eb47ca0a4d0",
+    "unchanged": true
+  },
+  "userStorageNote": "All 4 durable user records are byte-identical. The active development watcher refreshed its process writer.lock during source edits; this transient lock is excluded.",
+  "standardDatabentoCacheMatchesOriginal": true
+}

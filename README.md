@@ -30,7 +30,7 @@ set +a
 npm run dev:backend
 ```
 
-A missing key produces a configuration error. Access failures never print upstream bodies, headers, keys or stack traces. HTTP redirects are refused. No browser installation, brokerage application or manual CSV download is required for history.
+A missing key prevents live metadata and new downloads. Validated cached history remains available without a key or credit verification. Access failures never print upstream bodies, headers, keys or stack traces. HTTP redirects are refused. No browser installation, brokerage application or manual CSV download is required for history.
 
 Before approving a new download, verify the current usable credit balance and validity in the Databento portal. Set these backend variables from that evidence:
 
@@ -41,7 +41,7 @@ Before approving a new download, verify the current usable credit balance and va
 
 The project lead reported $121.35 and separately confirmed validity for the two initial verification downloads. This is recorded as scoped approval for those exact ranges in the verification evidence. The actual expiry date remains unknown and is not an application default.
 
-Choose **From / Through** inclusive UTC dates, up to **90 calendar days**. Loading includes **30 earlier calendar days** for indicators. Select **Load historical data** to inspect the cache and obtain the quote. A fully cached interval loads without spending. An uncached interval displays its exact-range estimate and requires **Confirm Databento download**, followed by a confirmation dialog.
+Choose **From / Through** inclusive UTC dates, up to **90 calendar days**. Loading includes **30 earlier calendar days** for indicators. Select **Load historical data** to inspect the cache and obtain the quote. A fully cached interval loads without spending. A partially cached or uncached interval opens a dedicated Setup dialog showing calendar-date coverage, missing ranges, new cost, the internal reservation, remaining budget, expiry and blockers. Approval stays disabled until you acknowledge that actual billing can differ. **Cancel — No download** returns to Setup without a paid request or reservation; **Approve paid download — Estimated $X** submits the quoted missing ranges once.
 
 Quotes expire after five minutes. Before downloading, the backend rechecks costs, contract mappings, credit evidence and budget. Any cost increase, mapping change or changed uncached interval requires a fresh quote and approval. The backend reserves **twice the estimate** against the $5 budget as contingency. This is still an estimate, **not a Databento-enforced billing ceiling**. Actual billing cannot be guaranteed by `metadata.get_cost`.
 
@@ -79,6 +79,20 @@ The local backend saves immutable validated histories, checkpoint revisions and 
 
 Databento's validated daily cache lives at `$XDG_CACHE_HOME/forextester/databento/` when absolute, otherwise `~/.cache/forextester/databento/`. `FOREXTESTER_CACHE_DIR=/absolute/cache/root` selects `/absolute/cache/root/databento/`. Both roots must be outside the repository and must not overlap, including through symlinks. Actual source, symbol, dataset, schema, normalization version, contract identity and UTC boundaries participate in cache keys and new fingerprints. Checksums and full validation protect cached objects. Successful days are reused across overlapping intervals.
 
+On this Linux installation, the verified December 2, 2023–March 31, 2024 cache (end exclusive) and original spending ledger were copied and validated into **`/home/admin/.cache/forextester/databento/`**. Normal `npm run dev:backend` launches discover them through the existing default. No cache environment override or credential file is needed for fully cached loads. Select **From 2024-01-01 / Through 2024-03-30** for the 90-day replay plus 30-day pre-roll. March 31 as an inclusive Through date would be 91 days in leap-year 2024.
+
+The original `/home/admin/.cache/forextester-databento-verification-20261024/` remains an intact backup. Its ledger was preserved byte for byte: $0.805969089270 reserved, $4.194030910730 remaining. These are internal budget figures, not a current account balance or measured provider debit. No verification sessions were copied into user storage. Existing Dukascopy files and saved user histories were retained.
+
+For another existing verified cache, a one-time offline import is available:
+
+```sh
+node --import tsx scripts/databento-cache-migrate.mts /absolute/source/databento
+# Optional final argument: /absolute/destination/databento
+```
+
+It locks paid work in both directories, stages and verifies every copied file, validates all referenced days and the original ledger, then publishes without overwriting. Existing identical files are accepted; any conflicting or additional destination file stops the import. Unexpected source files, including sessions, are refused. The source remains intact. Never remove a crash lock or reset a ledger to force an import; review uncertain spending first. Custom cache locations still require the same `FOREXTESTER_CACHE_DIR` on every backend launch.
+
+
 **Do not delete existing Dukascopy caches or user storage.** The application does not move, delete or mutate them. Existing EURUSD bid/ask datasets retain their original v1 fingerprint algorithm and execution rules. Valid stored sessions and older IndexedDB imports remain recoverable with their exact original history, checkpoint, journal and equity. New single-price datasets use a separate fingerprint format and cannot collide with legacy datasets.
 
 Recovery reads the original dataset from disk or IndexedDB and resumes paused without re-executing orders or fees. Missing/corrupt **legacy history requires its original stored provider dataset**, recovered from backup while the backend is stopped. Databento cannot regenerate or substitute it. Legacy repair and migration never invoke a replacement provider. New Databento repair reads only the validated external cache and must match the saved fingerprint; if that exact history is unavailable, recovery stops.
@@ -102,6 +116,6 @@ Authenticated metadata and download evidence, real Chromium screenshots, measure
 
 `scripts/databento-verify.mts` defaults to free quotes. Its optional paid path requires explicit confirmation flags, fresh scoped credit approval, unchanged approved estimates and the same persistent spending ledger. The initial authenticated datasets are already cached: **do not repeat paid requests for performance testing**.
 
-`scripts/databento-browser.mts` uses the cached authentic dataset with isolated sessions and Chromium, including a restart with no credentials. Install verification-only `playwright-core` outside the repository if needed, and point `PLAYWRIGHT_MODULE` at its `index.mjs`; no browser dependency remains in application runtime. The browser script's local cache and credential-file paths can be overridden by `FOREXTESTER_CACHE_DIR` and `DATABENTO_ENV_FILE`.
+`scripts/databento-browser.mts` uses the normal default cache and `npm run dev:backend` with isolated durable sessions under the Linux data directory, no credentials, and a provider-network tripwire. It checks charts, execution and refresh/restart restoration without provider traffic. Install verification-only `playwright-core` outside the repository if needed, and point `PLAYWRIGHT_MODULE` at its `index.mjs`; no browser dependency remains in application runtime. The authentic browser script honors `FOREXTESTER_CACHE_DIR`. `scripts/databento-confirmation-browser.mts` tests the paid dialog at 1440px and 390px with mocked history responses only. Run either with `node --import tsx scripts/<name>.mts`; set `PLAYWRIGHT_MODULE` to the external Playwright module path.
 
 TradingView Lightweight Charts attribution remains visible. See [third-party notices](THIRD_PARTY_NOTICES.md).

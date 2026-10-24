@@ -212,7 +212,7 @@ it('converts inclusive calendar dates without changing exclusive stored ranges',
 it('keeps cancelled data loading in Setup and requires an explicit retry',async()=>{
  await mount();const underlying=globalThis.fetch
  vi.stubGlobal('fetch',(path:string,options?:RequestInit)=>path.startsWith('/api/history?')?new Promise((_resolve,reject)=>options?.signal?.addEventListener('abort',()=>reject(new DOMException('Aborted','AbortError')))):underlying(path,options))
- await click('Load historical data');expect(host.textContent).toContain('chunks downloaded');await click('Cancel loading');expect(button('Load historical data').disabled).toBe(false);expect(button('Start backtest').disabled).toBe(true)
+ await click('Load historical data');expect(host.textContent).toContain('history chunks loaded');await click('Cancel loading');expect(button('Load historical data').disabled).toBe(false);expect(button('Start backtest').disabled).toBe(true)
  vi.stubGlobal('fetch',underlying);await load();expect(button('Start backtest').disabled).toBe(false)
 })
 it('never publishes a finished view when the finished checkpoint fails to save',async()=>{
@@ -240,14 +240,45 @@ it('shows an uncached quote, requires confirmation, and preserves the chosen nam
   return original(path,options)
  })
  await mount();await input('Backtest name','6E research draft');await input('Replay start (UTC)','2024-01-09T00:00')
- await click('Load historical data');await until(()=>host.textContent?.includes('Fully cached:'))
- expect(paid).not.toHaveBeenCalled();expect(host.textContent).toContain('$0.01000000')
- vi.mocked(window.confirm).mockReturnValueOnce(false)
- await click('Confirm Databento download');expect(paid).not.toHaveBeenCalled()
- await click('Confirm Databento download');await until(()=>host.querySelector('.data-ready'))
+ await click('Load historical data');await until(()=>host.querySelector('.paid-download-dialog'))
+ expect(paid).not.toHaveBeenCalled();expect(host.textContent).toContain('$0.01')
+ expect(button('Approve paid download — Estimated $0.01').disabled).toBe(true)
+ await click('Cancel — No download');expect(paid).not.toHaveBeenCalled()
+ await click('Load historical data');await until(()=>host.querySelector('.paid-download-dialog'))
+ await act(async()=>host.querySelector<HTMLInputElement>('.download-acknowledgement input')!.click())
+ await click('Approve paid download — Estimated $0.01');await until(()=>host.querySelector('.data-ready'))
  expect(paid).toHaveBeenCalledOnce();expect(JSON.parse(paid.mock.calls[0][0].body)).toEqual({quoteId:'fixture-approval',confirm:true})
  expect((host.querySelector('[aria-label="Backtest name"]') as HTMLInputElement).value).toBe('6E research draft')
  await click('Start backtest');await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
  const record=(await disk.storage.list()).sessions[0]
  expect(record.symbol).toBe('6E');expect(record.checkpoint.trading.quote).toHaveProperty('trade')
+})
+
+it('saves a replacement paid history under a new session before flushing the preserved name', async () => {
+ const { fixtureHistory } = await import('../../tests/databentoFixture')
+ const original = globalThis.fetch
+ let paidMode = false, quote: any
+ vi.stubGlobal('fetch',async(path:string,options?:RequestInit)=>{
+  if(paidMode && path.startsWith('/api/history/estimate')) {
+   const query=new URL(path,'http://local').searchParams,tradingFrom=query.get('from')!,to=query.get('to')!,from=shiftDate(tradingFrom,-30)
+   quote={id:'replacement-quote',from,tradingFrom,to,cached:false,estimatedUsd:.01,reservedUsd:.02,remainingBudgetUsd:5,downloadAllowed:true,blockedReason:null,expiresAt:'2030-01-01T00:00:00Z',missingRanges:[{from,to}]}
+   return new Response(JSON.stringify(quote))
+  }
+  if(path==='/api/history/download')return new Response(JSON.stringify({...fixtureHistory(quote.from,quote.to),tradingFrom:quote.tradingFrom}))
+  return original(path,options)
+ })
+ await mount();await load();await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
+ const before=(await disk.storage.list()).sessions[0]
+ await input('Backtest name','Preserved replacement name')
+ paidMode=true;await input('From','2024-01-08');await click('Load historical data');await until(()=>host.querySelector('.paid-download-dialog'))
+ await act(async()=>host.querySelector<HTMLInputElement>('.download-acknowledgement input')!.click())
+ await click('Approve paid download — Estimated $0.01');await until(()=>host.querySelector('.data-ready') && host.querySelector('.save-state')?.textContent==='Saved')
+ expect(host.querySelector('.critical-save')).toBeNull()
+ const records=(await disk.storage.list()).sessions
+ expect(records).toHaveLength(2)
+ const replacement=records.find(record=>record.id!==before.id)!
+ expect(replacement.name).toBe('Preserved replacement name')
+ expect(replacement.symbol).toBe('6E');expect(replacement.range.from).toBe('2024-01-08')
+ expect(records.find(record=>record.id===before.id)!.historyId).toBe(before.historyId)
+ expect((await new DiskSessionStore().recover(replacement.id)).record.historyId).toBe(replacement.historyId)
 })

@@ -16,6 +16,13 @@ export function createApp(history = new HistoryService(), now: () => Date = () =
       if (!host || !/^(127\.0\.0\.1|localhost)(:\d+)?$/.test(host) || origin && origin !== `http://${host}` || request.headers['sec-fetch-site'] === 'cross-site') throw new DataError('LOCAL_ACCESS_REQUIRED', 'Same-origin localhost access required.', 403)
       if (request.method === 'GET' && url.pathname === '/api/health') { response.end(JSON.stringify({ status: 'ok' })); return }
       if (request.method === 'GET' && url.pathname === '/api/history/coverage') {
+        const cached = await history.cachedBounds()
+        if (cached) {
+          response.end(JSON.stringify({ symbol: '6E', resolution: 'M1', source: 'Databento', cachedFrom: cached.from, cachedTo: cached.to, cachedDates: cached.cachedDates,
+            providerEarliestTimestamp: cached.from + 'T00:00:00Z', earliestSelectableDate: day(Date.parse(cached.from) + 30 * 86400000),
+            latestEligibleDate: day(now().getTime() - 86400000), maximumCalendarDays: 90, latestBoundaryProvisional: false,
+            lastVerifiedAvailableDate: null, providerHealth: { status: 'cache-validated' }, timezone: 'UTC' })); return
+        }
         const range = await history.client.availability()
         const startDay = Date.parse(range.start) > Date.parse(range.start.slice(0, 10)) ? Date.parse(range.start.slice(0, 10)) + 86400000 : Date.parse(range.start.slice(0, 10))
         const end = Math.min(Date.parse(range.end.slice(0, 10)), Date.parse(day(now().getTime())))

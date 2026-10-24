@@ -1,0 +1,54 @@
+{
+  "historyResponses": "mocked only",
+  "paidBackendCalls": 0,
+  "checks": [
+    "1440: fully cached loads without paid dialog or download",
+    "1440: cached/missing breakdown, ranges, prominent cost, labels, native focus trap, Escape and no overflow",
+    "1440: cancel sends no paid request",
+    "1440: changed dates require a fresh quote and acknowledgement",
+    "1440: expired quote cannot be approved",
+    "1440: insufficient budget has an actionable blocker",
+    "1440: acknowledgement gates approval; repeated clicks produce one mocked submission",
+    "390: fully cached loads without paid dialog or download",
+    "390: cached/missing breakdown, ranges, prominent cost, labels, native focus trap, Escape and no overflow",
+    "390: cancel sends no paid request",
+    "390: changed dates require a fresh quote and acknowledgement",
+    "390: expired quote cannot be approved",
+    "390: insufficient budget has an actionable blocker",
+    "390: acknowledgement gates approval; repeated clicks produce one mocked submission"
+  ],
+  "browserErrors": [],
+  "consoleErrors": [
+    {
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "location": {
+        "url": "http://127.0.0.1:5196/api/storage/history/5baa03bf433eac0955db745ec4f91df225c15870cc05fb3ff6fabcac9044c5e6",
+        "line": 0,
+        "column": 0,
+        "lineNumber": 0,
+        "columnNumber": 0
+      }
+    },
+    {
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "location": {
+        "url": "http://127.0.0.1:5196/api/storage/history/0921515beea8e02f8e6ab39d6662bfa4e5fa04167f58ea2c4f87c3927c9fad01",
+        "line": 0,
+        "column": 0,
+        "lineNumber": 0,
+        "columnNumber": 0
+      }
+    }
+  ],
+  "screenshots": [
+    "docs/databento/paid-confirmation-1440.png",
+    "docs/databento/paid-confirmation-390.png",
+    "docs/databento/paid-confirmation-actions-390.png"
+  ],
+  "expectedMissingHistoryProbes": [
+    "/api/storage/history/5baa03bf433eac0955db745ec4f91df225c15870cc05fb3ff6fabcac9044c5e6",
+    "/api/storage/history/0921515beea8e02f8e6ab39d6662bfa4e5fa04167f58ea2c4f87c3927c9fad01"
+  ],
+  "unexpectedConsoleErrors": [],
+  "realBackendHistoryCalls": 0
+}

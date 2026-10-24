@@ -3,6 +3,7 @@ import type { EquityLedger } from './equity'
 export interface Coverage {
   symbol: string; resolution: string; providerEarliestTimestamp: string; earliestSelectableDate: string;
   latestEligibleDate: string; latestBoundaryProvisional: boolean; lastVerifiedAvailableDate: string | null;
+  cachedFrom?: string; cachedTo?: string; cachedDates?: number;
   providerHealth: { status: string; error?: string; action?: string }
 }
 export function shiftDate(value: string, days: number): string {
@@ -12,9 +13,8 @@ export function shiftDate(value: string, days: number): string {
 }
 export function selectedRange(from: string, through: string, coverage: Coverage | null) {
   const range = { from, to: shiftDate(through, 1) }
-  const invalid = !coverage ? 'Historical coverage is unavailable. Retry coverage before loading.'
-    : from < coverage.earliestSelectableDate || through > coverage.latestEligibleDate ? 'Choose dates inside the advertised historical boundaries.'
-    : validateDateRange(range, shiftDate(coverage.latestEligibleDate, 1))
+  const invalid = coverage?.providerHealth.status === 'metadata-verified' && (from < coverage.earliestSelectableDate || through > coverage.latestEligibleDate) ? 'Choose dates inside the advertised historical boundaries.'
+    : validateDateRange(range, coverage ? shiftDate(coverage.latestEligibleDate, 1) : undefined)
   return { range, error: invalid ? 'Choose 1 to 90 completed UTC calendar days within the historical boundaries. ' + invalid : null,
     days: Math.max(0, (Date.parse(range.to) - Date.parse(from)) / 86400000) }
 }

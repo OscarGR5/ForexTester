@@ -44,3 +44,16 @@ it.each(['from=2024-02-30&to=2024-03-01', 'from=2024-01-01&to=2024-04-01', 'from
   expect((await fetch(`${origin}/api/history/estimate?symbol=6E&${range}`)).status).toBe(400)
   expect(client.paid).toHaveLength(0)
 })
+
+it('discovers validated local coverage without live metadata and keeps offline cache loads free', async () => {
+  const first = await (await fetch(`${origin}/api/history/estimate?symbol=6E&from=2024-01-09&to=2024-01-11`)).json()
+  await fetch(`${origin}/api/history/download`, { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json' }, body: JSON.stringify({ quoteId: first.id, confirm: true }) })
+  client.availability = async () => { throw Error('Offline') }
+  const count = client.metadataCalls.length
+  expect(await (await fetch(`${origin}/api/history/coverage`)).json()).toMatchObject({ cachedFrom: '2023-12-10', cachedTo: '2024-01-11', providerHealth: { status: 'cache-validated' } })
+  const quote = await (await fetch(`${origin}/api/history/estimate?symbol=6E&from=2024-01-09&to=2024-01-11`)).json()
+  expect(quote).toMatchObject({ cached: true, estimatedUsd: 0 })
+  expect((await fetch(`${origin}/api/history?symbol=6E&from=2023-12-10&to=2024-01-11`)).status).toBe(200)
+  expect(client.metadataCalls).toHaveLength(count)
+  expect(client.paid).toHaveLength(1)
+})

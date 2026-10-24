@@ -1,6 +1,7 @@
 import { quoteHistory, downloadHistory, type HistoryQuote } from './databentoHistory'
 import { historyCandles, historyLabel, isSinglePrice } from './history'
 import { flushSync } from 'react-dom'
+import { PaidDownloadDialog, cacheBreakdown, usd } from './PaidDownloadDialog'
 import { ManagementDialog } from './ManagementDialog'
 import { ChartPane } from './ChartPane'
 import { TradingDock, type StopDraft } from './TradingDock'
@@ -31,6 +32,10 @@ export function App() {
   const [to, setTo] = useState(DEFAULT_RANGE.to)
   const [requestedRange, setRequestedRange] = useState<DateRange>(DEFAULT_RANGE)
   const [quote, setQuote] = useState<HistoryQuote | null>(null)
+  const [confirming, setConfirming] = useState(false)
+  const paidSubmitting = useRef(false)
+  const [paidPending, setPaidPending] = useState(false)
+  const [downloadNotice, setDownloadNotice] = useState<string | null>(null)
   const [history, setHistory] = useState<LoadedHistory | null>(null)
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
   const [lifecycle, setLifecycle] = useState<Lifecycle>('setup')
@@ -82,11 +87,11 @@ export function App() {
       setHydration(saved); setHistory(source); setRequestedRange(saved.record.range)
       setFrom(saved.record.range.from); setTo(saved.record.range.to)
       setReplayStart(new Date(saved.checkpoint.replay.startTimestamp).toISOString().slice(0, 16))
-      setStatus('ready'); setError(null); setFormError(null)
+      setStatus('ready'); setError(null); setFormError(null); setQuote(null); setConfirming(false)
     },
     fresh: (range) => {
       loadGeneration.current++; loadAbort.current?.abort(); setDraft(null); setLifecycle('setup'); setStatus('idle'); setReplayStart(''); setManage(false)
-      setHydration(null); setHistory(null); setRequestedRange({ ...range }); setFrom(range.from); setTo(range.to)
+      setQuote(null); setConfirming(false); setHydration(null); setHistory(null); setRequestedRange({ ...range }); setFrom(range.from); setTo(range.to)
     },
   })
 
@@ -120,7 +125,7 @@ export function App() {
   }, [sessions.activeId, synchronizer])
 
   async function refreshCoverage() {
-    try { const response = await fetch('/api/history/coverage'); const value = await response.json(); if (!response.ok) { setError(value.error ?? 'Historical coverage unavailable.'); throw Error() } if (!value.earliestSelectableDate) throw Error(); setCoverage(value); setCoverageError(false) }
+    try { const response = await fetch('/api/history/coverage'); const value = await response.json(); if (!response.ok) throw Error(); if (!value.earliestSelectableDate) throw Error(); setCoverage(value); setCoverageError(false) }
     catch { setCoverageError(true) }
   }
   useEffect(() => { void refreshCoverage(); return () => { loadAbort.current?.abort(); loadGeneration.current++ } }, [])
@@ -129,12 +134,14 @@ export function App() {
     const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') { setDraft(null); setManage(false) } }
     window.addEventListener('keydown', escape); return () => window.removeEventListener('keydown', escape)
   }, [])
+  useEffect(() => { setQuote(null); setConfirming(false) }, [from, to])
   const pickStop = useCallback((price: number) => setDraft(d => d ? { ...d, price } : null), [])
   async function loadData(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault()
     const selected = selectedRange(from, shiftDate(to, -1), coverage)
     setFormError(selected.error)
-    if (selected.error) return
+    if (selected.error || paidSubmitting.current) return
+    setQuote(null); setConfirming(false); setDownloadNotice(null)
     const generation = ++loadGeneration.current
     loadAbort.current?.abort()
     const controller = new AbortController(); loadAbort.current = controller
@@ -144,14 +151,14 @@ export function App() {
       const estimate = await quoteHistory(selected.range, controller.signal)
       if (generation !== loadGeneration.current) return
       setQuote(estimate)
-      if (!estimate.cached) { setStatus('idle'); return }
+      if (!estimate.cached) { setStatus('idle'); setConfirming(true); return }
       const result = await loader.load(selected.range, controller.signal, setLoadProgress)
       if (generation !== loadGeneration.current) return
       const chosenName = sessions.name, chosenStart = replayStart
       if (history && !await sessions.fresh(selected.range)) throw new Error('The previous backtest could not be saved. New data remains cached; retry storage before switching.')
-      sessions.editName(chosenName); setReplayStart(chosenStart)
-      setHydration(null)
-      setHistory(result); setStatus('ready'); void refreshCoverage()
+      // Name updates flush persistence immediately, so install the new history first.
+      flushSync(() => { setReplayStart(chosenStart); setHydration(null); setHistory(result); setStatus('ready') })
+      sessions.editName(chosenName); void refreshCoverage()
     } catch (reason) {
       if (generation !== loadGeneration.current || controller.signal.aborted) return
       setHistoryFailure(reason instanceof HistoryRequestError ? reason : null)
@@ -159,24 +166,26 @@ export function App() {
     }
   }
   async function confirmDownload() {
-    if (!quote || quote.tradingFrom !== from || quote.to !== to || !quote.downloadAllowed) return
-    if (!window.confirm(`Download 6E history and use Databento credits? Estimated $${quote.estimatedUsd.toFixed(8)}; budget reservation $${quote.reservedUsd.toFixed(8)}. Estimates are not guaranteed billing ceilings. Includes 30-day pre-roll.`)) return
+    if (!quote || quote.tradingFrom !== from || quote.to !== to || !quote.downloadAllowed || Date.now() >= Date.parse(quote.expiresAt) || paidSubmitting.current) return
+    paidSubmitting.current = true; setPaidPending(true); setConfirming(false); setDownloadNotice(null)
     const generation = ++loadGeneration.current
     const controller = new AbortController(); loadAbort.current = controller
     setStatus('loading'); setError(null); setHistoryFailure(null); setLoadProgress({ completed: 0, total: 1 })
     try {
       await sessions.flush()
+      if (Date.now() >= Date.parse(quote.expiresAt)) throw new Error('Quote expired. Load historical data again for a fresh estimate.')
       const result = await downloadHistory(quote, controller.signal)
       if (generation !== loadGeneration.current) return
       const chosenName = sessions.name, chosenStart = replayStart
       if (history && !await sessions.fresh({ from: quote.tradingFrom, to: quote.to })) throw new Error('The previous backtest could not be saved. Downloaded data remains cached; retry storage before switching.')
-      sessions.editName(chosenName); setReplayStart(chosenStart)
-      setHydration(null); setHistory(result); setStatus('ready'); setLoadProgress({ completed: 1, total: 1 }); setQuote(null)
+      flushSync(() => { setReplayStart(chosenStart); setHydration(null); setHistory(result); setStatus('ready'); setLoadProgress({ completed: 1, total: 1 }); setQuote(null) })
+      sessions.editName(chosenName)
     } catch (reason) {
       if (generation !== loadGeneration.current || controller.signal.aborted) return
       setHistoryFailure(reason instanceof HistoryRequestError ? reason : null)
       setError(reason instanceof Error ? reason.message : 'Historical download failed.'); setStatus('error'); setQuote(null)
-    }
+      setDownloadNotice('A paid submission may already have reached the backend. Closing this page does not guarantee no charge. Wait for the backend to finish, then load again to inspect the cache; no request is retried automatically.')
+    } finally { paidSubmitting.current = false; setPaidPending(false) }
   }
   async function finish() {
     flushSync(() => { replay.pause(); setDraft(null); setFinishing(true) })
@@ -232,24 +241,26 @@ export function App() {
         <label className="backtest-name">Backtest name<input maxLength={200} aria-label="Backtest name" value={sessions.name} onChange={e=>sessions.editName(e.target.value)}/></label>
         <form onSubmit={loadData} className="setup-grid">
           <section><h3>Historical period <span>6E — Euro FX Futures · Databento · M1 · UTC</span></h3>
-            {coverage ? <div className="coverage-summary"><p>Earliest advertised M1: <strong>{coverage.providerEarliestTimestamp.replace('T',' ').replace('.000Z',' UTC')}</strong></p><p>Latest eligible date: <strong>{coverage.latestEligibleDate}</strong></p><small>Metadata availability includes the required 30-day indicator pre-roll. Untraded minutes and exchange closures remain gaps.</small></div> : <p role="status">{coverageError ? error ?? 'Historical coverage could not be read.' : 'Reading historical coverage…'} <button type="button" onClick={()=>void refreshCoverage()}>Retry coverage</button></p>}
-            <div className="period-fields"><label>From<input aria-label="From" type="date" min={coverage?.earliestSelectableDate} max={coverage?.latestEligibleDate} value={from} disabled={status === 'loading'} onChange={e=>{setFrom(e.target.value);setFormError(null)}}/></label>
-              <label>Through <span>(inclusive)</span><input aria-label="Through" type="date" min={from || coverage?.earliestSelectableDate} max={coverage?.latestEligibleDate} value={shiftDate(to,-1)} disabled={status === 'loading'} onChange={e=>{setTo(shiftDate(e.target.value,1));setFormError(null)}}/></label></div>
+            {coverage?.cachedFrom ? <div className="coverage-summary"><p>Validated local cache: <strong>{coverage.cachedDates} calendar dates</strong></p><p>Cache bounds: {coverage.cachedFrom} to {coverage.cachedTo} (end exclusive).</p><small>Selected dates are checked individually when loading. Live availability is checked only for missing dates. Cached dates load without an API key.</small></div> : coverage ? <div className="coverage-summary"><p>Earliest advertised M1: <strong>{coverage.providerEarliestTimestamp.replace('T',' ').replace('.000Z',' UTC')}</strong></p><p>Latest eligible date: <strong>{coverage.latestEligibleDate}</strong></p><small>Metadata availability includes the required 30-day indicator pre-roll. Untraded minutes and exchange closures remain gaps.</small></div> : <p role="status">{coverageError ? 'Live coverage unavailable. You can still load validated cached dates.' : 'Reading historical coverage…'} <button type="button" onClick={()=>void refreshCoverage()}>Retry coverage</button></p>}
+            <div className="period-fields"><label>From<input aria-label="From" type="date" min={coverage?.providerHealth.status === 'metadata-verified' ? coverage.earliestSelectableDate : undefined} max={coverage?.latestEligibleDate} value={from} disabled={status === 'loading'} onChange={e=>{setFrom(e.target.value);setFormError(null)}}/></label>
+              <label>Through <span>(inclusive)</span><input aria-label="Through" type="date" min={from || undefined} max={coverage?.latestEligibleDate} value={shiftDate(to,-1)} disabled={status === 'loading'} onChange={e=>{setTo(shiftDate(e.target.value,1));setFormError(null)}}/></label></div>
             <div className="period-shortcuts">{[7,30,90].map(days=><button type="button" key={days} disabled={!coverage || status === 'loading'} onClick={()=>{setTo(shiftDate(coverage!.latestEligibleDate,1));setFrom(shiftDate(coverage!.latestEligibleDate,1-days))}}>{days} days</button>)}<span>{Number.isFinite(selected.days) ? selected.days : 0} calendar days · maximum 90</span></div>
             <p className="chart-note">All dates and replay times use UTC. Select historical years directly in the date fields.</p>
             {formError && <p className="form-error" role="alert">{formError}</p>}
-            <div className="load-actions"><button type="submit" disabled={!coverage || status === 'loading'}>{status === 'error' ? 'Retry historical data' : 'Load historical data'}</button>
-              {status === 'loading' && <button type="button" onClick={()=>{loadGeneration.current++;loadAbort.current?.abort();setStatus('idle')}}>Cancel loading</button>}</div>
-            {status === 'loading' && <div role="status"><progress max={loadProgress.total || 1} value={loadProgress.completed}/><p>{loadProgress.completed} / {loadProgress.total} chunks downloaded</p></div>}
+            <div className="load-actions"><button type="submit" disabled={status === 'loading'}>{status === 'error' ? 'Retry historical data' : 'Load historical data'}</button>
+              {status === 'loading' && !paidPending && <button type="button" onClick={()=>{loadGeneration.current++;loadAbort.current?.abort();setStatus('idle');setQuote(null)}}>Cancel loading</button>}</div>
+            {paidPending && <p role="status">Paid request submitted. The backend may already be downloading; closing or refreshing this page does not guarantee no charge.</p>}
+            {downloadNotice && <p role="status">{downloadNotice}</p>}
+            {status === 'loading' && <div role="status"><progress max={loadProgress.total || 1} value={loadProgress.completed}/><p>{loadProgress.completed} / {loadProgress.total} history chunks loaded</p></div>}
             {status === 'error' && <div className="load-error" role="alert"><strong>{historyFailure?.title ?? 'Historical data unavailable'}</strong><p>{error}</p>
               {historyFailure?.retryAfterMs !== undefined && <p>The provider requested a wait of at least {Math.ceil(historyFailure.retryAfterMs / 1000)} seconds before another attempt. A retry may still fail.</p>}
               <p>Configure Databento on the backend as described in README. New downloads require a current quote, usable credits and explicit confirmation.</p></div>}
-            {quote && quote.tradingFrom === from && quote.to === to && <div className="coverage-summary" role="status">
-              <p>Fully cached: <strong>{quote.cached ? 'Yes' : 'No'}</strong> · Estimated download: <strong>${quote.estimatedUsd.toFixed(8)}</strong></p>
-              <p>Budget reservation (2× estimate): ${quote.reservedUsd.toFixed(8)} · Remaining verification budget: ${quote.remainingBudgetUsd.toFixed(6)}</p>
-              <small>Includes 30-day pre-roll. This estimate is not a guaranteed billing ceiling. Quote expires {new Date(quote.expiresAt).toISOString().slice(11,19)} UTC.</small>
+            {quote && quote.tradingFrom === from && quote.to === to && <div className={`coverage-summary ${quote.cached ? 'cached-history-status' : ''}`} role="status">
+              <p><strong>{cacheBreakdown(quote).label}</strong>{quote.cached ? ' · No additional download required.' : ''}</p>
+              <p>{cacheBreakdown(quote).cached} calendar dates cached · {cacheBreakdown(quote).missing} additional dates needed, including 30-day pre-roll.</p>
+              <p>Estimated new download: <strong>{usd(quote.estimatedUsd)}</strong></p>
               {quote.blockedReason && <p className="form-error">{quote.blockedReason}</p>}
-              {!quote.cached && <button type="button" disabled={!quote.downloadAllowed || status === 'loading'} onClick={()=>void confirmDownload()}>Confirm Databento download</button>}
+              {!quote.cached && <button type="button" disabled={status === 'loading'} onClick={()=>setConfirming(true)}>Review paid download</button>}
             </div>}
             {status === 'ready' && history && <p className="data-ready" role="status">Loaded {source.length.toLocaleString()} {isSinglePrice(history) ? 'trade-price M1 candles' : 'legacy bid observations'}, including indicator pre-roll.</p>}
             <p className="chart-note">Hypothetical forex-style sizing applied to 6E-derived trade prices. No synthetic spread. Simplified fills do not represent EUR/USD CFD execution or exchange-accurate futures contracts.</p>
@@ -268,6 +279,7 @@ export function App() {
           {accountRiskError(trading.state.account) && <p className="form-error">{accountRiskError(trading.state.account)}</p>}
         </div><button className="primary-action" disabled={status !== 'ready' || !replay.canStart || replayStartError || !!accountRiskError(trading.state.account) || from !== requestedRange.from || to !== requestedRange.to} onClick={()=>{setDraft(null);setLifecycle('trading');replay.start()}}>Start backtest</button></footer>
       </section>}
+      {lifecycle === 'setup' && confirming && quote && quote.tradingFrom === from && quote.to === to && <PaidDownloadDialog key={quote.id} quote={quote} onCancel={()=>{setConfirming(false);setQuote(null);setDownloadNotice('Download cancelled. No paid request submitted and no additional budget reserved.')}} onApprove={()=>void confirmDownload()}/>}
       {lifecycle === 'trading' && <>
         <div className="replay-strip" role="group" aria-label="Market replay"><strong>{historyLabel(history)}</strong><time className="replay-clock">{replay.timestamp === null ? 'Awaiting replay' : new Date(replay.timestamp).toISOString().slice(0,16).replace('T',' ') + ' UTC'}</time>
           <button disabled={!replay.canPlay} onClick={()=>{setDraft(null);replay.play()}}>Play</button><button disabled={!replay.canPause} onClick={replay.pause}>Pause</button><button disabled={!replay.canNext} onClick={()=>{setDraft(null);replay.next()}}>Next Candle</button>

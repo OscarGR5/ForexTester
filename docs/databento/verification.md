@@ -1,5 +1,7 @@
 # Databento verification
 
+The cache-reuse and paid-confirmation follow-up is recorded in [zero-cost startup and dialog verification](cache-reuse-verification.md). Normal startup now uses the migrated standard cache and original spending ledger.
+
 Implemented from PR #18 head `f4ea330243fa17983749b8e99f0deb858781e6ec` on `feat/databento-history`, targeting `feat/chart-first-ux`. PR #19 / `feat/fxcm-history` was not incorporated, modified or removed. No actual user backtests, IndexedDB data, cache folders or repository branches were deleted or migrated.
 
 Recommendation: merge-ready for the explicitly requested **replay block at rollover**, subject to project-lead review. Continuous trading across rollover remains unimplemented and requires a separate product decision. This PR makes no claim of verified carry/roll execution.

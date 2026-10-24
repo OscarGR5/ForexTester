@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { open, readFile, rename, unlink } from 'node:fs/promises'
+import { open, readFile, readdir, rename, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { providerCachePaths } from './projectPaths.js'
 import { DatabentoClient, DataError, dateMs, day, IDENTITY } from './databento.js'
@@ -15,7 +15,7 @@ export interface HistoryQuote extends Range {
   id: string; tradingFrom: string; cached: boolean; estimatedUsd: number; reservedUsd: number; remainingBudgetUsd: number
   downloadAllowed: boolean; blockedReason: string | null; expiresAt: string; missingRanges: Range[]
 }
-interface QuotePlan { quote: HistoryQuote; plans: Plan[] }
+interface QuotePlan { quote: HistoryQuote; plans: Plan[]; cacheState: string }
 interface Reservation { id: string; estimatedUsd: number; reservedUsd: number; from: string; to: string; at: string; state: 'reserved' | 'complete'; metrics?: unknown }
 export interface ScopedCreditApproval { verifiedAt: string; balanceUsd: number; ranges: Range[] }
 interface Ledger { version: 1; reservations: Reservation[] }
@@ -80,16 +80,25 @@ export class HistoryService {
       throw new DataError('CACHE_CORRUPT', 'A Databento cache object failed validation. Original files were retained; no replacement was downloaded.', 503)
     }
   }
-  private async missing(from: string, to: string): Promise<Range[]> {
-    const ranges: Range[] = []
+  private async inspect(from: string, to: string) {
+    const ranges: Range[] = [], identities: unknown[] = []
     for (let time = dateMs(from); time < dateMs(to); time += DAY) {
       const date = day(time), end = day(time + DAY)
-      if (await this.cachedDay(date)) continue
+      const cached = await this.cachedDay(date)
+      identities.push([date, cached ? hash(cached) : null])
+      if (cached) continue
       const last = ranges.at(-1)
       if (last?.to === date) last.to = end
       else ranges.push({ from: date, to: end })
     }
-    return ranges
+    return { missing: ranges, cacheState: hash(identities) }
+  }
+  async cachedBounds(): Promise<(Range & { cachedDates: number }) | null> {
+    const dates = (await readdir(await this.root())).filter(name => /^\d{4}-\d{2}-\d{2}\.ref\.json$/.test(name)).map(name => name.slice(0, 10)).sort()
+    const validated: string[] = []
+    for (const date of dates) if (await this.cachedDay(date)) validated.push(date)
+    if (!validated.length) return null
+    return { from: validated[0], to: day(dateMs(validated.at(-1)!) + DAY), cachedDates: validated.length }
   }
   async readCached(from: string, to: string): Promise<SinglePriceHistory> {
     this.validate(from, to)
@@ -109,7 +118,7 @@ export class HistoryService {
   }
   async estimate(tradingFrom: string, to: string, preRollDays: 0 | 30 = 30): Promise<HistoryQuote> {
     this.validate(tradingFrom, to, 90)
-    const from = day(dateMs(tradingFrom) - preRollDays * DAY), missing = await this.missing(from, to), plans: Plan[] = []
+    const from = day(dateMs(tradingFrom) - preRollDays * DAY), { missing, cacheState } = await this.inspect(from, to), plans: Plan[] = []
     if (missing.length) {
       const availability = await this.client.availability()
       if (dateMs(from) < Date.parse(availability.start) || dateMs(to) > Date.parse(availability.end)) throw new DataError('HISTORY_UNAVAILABLE', 'The selected period and its full 30-day pre-roll must fall within verified Databento ohlcv-1m availability.')
@@ -128,7 +137,7 @@ export class HistoryService {
       expiresAt: new Date(this.now().getTime() + 5 * 60000).toISOString(), missingRanges: missing }
     for (const [id, plan] of this.quotes) if (plan.quote.expiresAt <= this.now().toISOString()) this.quotes.delete(id)
     if (this.quotes.size >= 100) this.quotes.delete(this.quotes.keys().next().value!)
-    this.quotes.set(quote.id, { quote, plans })
+    this.quotes.set(quote.id, { quote, plans, cacheState })
     return quote
   }
   private async persist(history: SinglePriceHistory) {
@@ -153,17 +162,19 @@ export class HistoryService {
     try { lock = await open(lockPath, 'wx', 0o600) }
     catch { throw new DataError('DOWNLOAD_BUSY', 'Another download holds the spending lock. Wait for it to finish; a lock left after a crash needs manual review.', 409) }
     try {
-      const missing = await this.missing(plan.quote.from, plan.quote.to)
+      if (this.quotes.get(id) !== plan) throw new DataError('QUOTE_EXPIRED', 'This quote has already been submitted. Estimate again.', 409)
+      this.quotes.delete(id) // Every submission is single-use, even if revalidation fails.
+      const { missing, cacheState } = await this.inspect(plan.quote.from, plan.quote.to)
+      if (cacheState !== plan.cacheState) throw new DataError('QUOTE_CHANGED', 'The cache changed. Estimate again to price only the remaining uncached dates.', 409)
       if (missing.length) {
         if (!plan.quote.downloadAllowed) throw new DataError('SPENDING_BLOCKED', plan.quote.blockedReason ?? 'Paid download blocked.', 409)
-        // Cache changes invalidate paid plans; re-quote exact remaining ranges rather than overpaying.
-        if (JSON.stringify(missing) !== JSON.stringify(plan.quote.missingRanges)) throw new DataError('QUOTE_CHANGED', 'The cache changed. Estimate again to price only the remaining uncached dates.', 409)
         const ledger = await this.ledger()
         // Refresh free costs and mappings immediately before reserving. Any increase or mapping change requires a new approval.
         for (const item of plan.plans) {
           const cost = await this.client.cost(item.from, item.to), contracts = await this.client.contracts(item.from, item.to)
           if (cost > item.estimatedUsd || JSON.stringify(contracts) !== JSON.stringify(item.contracts)) throw new DataError('QUOTE_CHANGED', 'Cost or contract mappings changed. Request a new estimate and confirm it.', 409)
         }
+        if (plan.quote.expiresAt <= this.now().toISOString()) throw new DataError('QUOTE_EXPIRED', 'The quote expired during revalidation. Estimate again and approve a fresh quote.', 409)
         const allowance = this.allowance(ledger, plan.quote.reservedUsd, plan.quote)
         if (allowance.blocked) throw new DataError('SPENDING_BLOCKED', allowance.blocked, 409)
         const reservation: Reservation = { id, from: plan.quote.from, to: plan.quote.to, estimatedUsd: plan.quote.estimatedUsd, reservedUsd: plan.quote.reservedUsd, at: this.now().toISOString(), state: 'reserved' }
