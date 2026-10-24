@@ -33,7 +33,7 @@ try {
     const respond = (route: any, value: unknown) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(value) })
     await page.route('**/api/history/**', async route => {
       const url = new URL(route.request().url())
-      if (url.pathname.endsWith('/coverage')) return respond(route, { symbol:'6E', resolution:'M1', providerEarliestTimestamp:'2010-06-06T00:00:00Z',earliestSelectableDate:'2010-07-06',latestEligibleDate:'2024-03-30',latestBoundaryProvisional:false,lastVerifiedAvailableDate:null,providerHealth:{status:'metadata-verified'} })
+      if (url.pathname.endsWith('/coverage')) return respond(route, { symbol:'6E', resolution:'M1', providerEarliestTimestamp:null,earliestSelectableDate:null,cachedFrom:'2023-12-10',cachedTo:'2024-01-11',cachedDates:32,latestEligibleDate:'2024-03-30',latestBoundaryProvisional:false,lastVerifiedAvailableDate:null,providerHealth:{status:'cache-validated'} })
       if (url.pathname.endsWith('/estimate')) {
         const tradingFrom = url.searchParams.get('from')!, to = url.searchParams.get('to')!
         const from = new Date(Date.parse(tradingFrom) - 30 * 86400000).toISOString().slice(0,10)
@@ -56,6 +56,21 @@ try {
     const dialog=page.getByRole('dialog',{name:'Approve paid history download'})
     const approve=()=>page.getByRole('button',{name:/^Approve paid download/})
     const acknowledge=()=>page.getByRole('checkbox',{name:'I understand that actual Databento billing can differ from this estimate.'})
+    await page.getByText('Provider historical availability has not been verified.', {exact:false}).waitFor()
+    assert.equal(await page.getByLabel('From',{exact:true}).getAttribute('min'),null)
+    assert.equal(await page.getByText('Earliest advertised M1:',{exact:false}).count(),0)
+    state='empty'
+    await page.getByLabel('From',{exact:true}).fill('2022-01-03')
+    await page.getByLabel('Through',{exact:true}).fill('2022-01-04')
+    await load();await dialog.waitFor()
+    assert.match(await dialog.innerText(),/2022-01-03 through 2022-01-04/)
+    assert.match(await dialog.innerText(),/2021-12-04 through 2022-01-02/)
+    await acknowledge().check();assert.equal(await approve().isEnabled(),true)
+    await button('Cancel — No download').click();assert.equal(paid,0)
+    report.checks.push(`${width}: unknown provider availability imposes no cache-derived minimum; earlier 2022 history reaches paid approval without downloading`)
+    state='cached'
+    await page.getByLabel('From',{exact:true}).fill('2024-01-09')
+    await page.getByLabel('Through',{exact:true}).fill('2024-01-09')
     await load();await page.locator('.data-ready').waitFor()
     assert.equal(await dialog.count(),0);assert.equal(paid,0)
     report.checks.push(`${width}: fully cached loads without paid dialog or download`)

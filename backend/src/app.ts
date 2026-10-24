@@ -19,7 +19,7 @@ export function createApp(history = new HistoryService(), now: () => Date = () =
         const cached = await history.cachedBounds()
         if (cached) {
           response.end(JSON.stringify({ symbol: '6E', resolution: 'M1', source: 'Databento', cachedFrom: cached.from, cachedTo: cached.to, cachedDates: cached.cachedDates,
-            providerEarliestTimestamp: cached.from + 'T00:00:00Z', earliestSelectableDate: day(Date.parse(cached.from) + 30 * 86400000),
+            providerEarliestTimestamp: null, earliestSelectableDate: null,
             latestEligibleDate: day(now().getTime() - 86400000), maximumCalendarDays: 90, latestBoundaryProvisional: false,
             lastVerifiedAvailableDate: null, providerHealth: { status: 'cache-validated' }, timezone: 'UTC' })); return
         }

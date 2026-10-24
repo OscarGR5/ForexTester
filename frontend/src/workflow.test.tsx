@@ -282,3 +282,42 @@ it('saves a replacement paid history under a new session before flushing the pre
  expect(records.find(record=>record.id===before.id)!.historyId).toBe(before.historyId)
  expect((await new DiskSessionStore().recover(replacement.id)).record.historyId).toBe(replacement.historyId)
 })
+
+it('keeps cache bounds out of the date picker and reaches approval for earlier history, with cached loads still free offline', async () => {
+ const original=globalThis.fetch, paid=vi.fn(), estimates:string[]=[]
+ const cacheCoverage={...coverage,providerEarliestTimestamp:null,earliestSelectableDate:null,cachedFrom:'2023-12-10',cachedTo:'2024-01-11',cachedDates:32,providerHealth:{status:'cache-validated'}}
+ let access=true
+ vi.stubGlobal('fetch',async(path:string,options?:RequestInit)=>{
+  if(path==='/api/history/coverage')return new Response(JSON.stringify(cacheCoverage))
+  if(path==='/api/history/download'){paid();throw Error('No download permitted in date-selection regression')}
+  if(path.startsWith('/api/history/estimate')) {
+   const query=new URL(path,'http://local').searchParams,from=query.get('from')!,to=query.get('to')!
+   estimates.push(from)
+   if(from==='2022-01-03') {
+    if(!access)return new Response(JSON.stringify({code:'DATABENTO_CONFIGURATION',error:'Set DATABENTO_API_KEY in the backend environment.'}),{status:503})
+    const start=shiftDate(from,-30)
+    return new Response(JSON.stringify({id:'earlier-history-quote',from:start,tradingFrom:from,to,cached:false,estimatedUsd:.02,reservedUsd:.04,remainingBudgetUsd:5,downloadAllowed:true,blockedReason:null,expiresAt:'2030-01-01T00:00:00Z',missingRanges:[{from:start,to}]}))
+   }
+  }
+  return original(path,options)
+ })
+ await mount();await until(()=>host.textContent?.includes('Validated local cache'))
+ const from=host.querySelector<HTMLInputElement>('[aria-label="From"]')!
+ expect(from.min).toBe('');expect(host.textContent).not.toContain('Earliest advertised M1')
+ expect(host.textContent).toContain('Additional data requires Databento access')
+ expect(selectedRange('2022-01-01','2022-03-31',cacheCoverage).error).toBeNull()
+ expect(selectedRange('2022-01-01','2022-04-01',cacheCoverage).error).toBeTruthy()
+ await input('From','2022-01-03');await input('Through','2022-01-04');await click('Load historical data')
+ await until(()=>host.querySelector('.paid-download-dialog'))
+ expect(estimates).toEqual(['2022-01-03']);expect(host.textContent).toContain('2022-01-03 through 2022-01-04')
+ expect(button('Approve paid download — Estimated $0.02').disabled).toBe(true)
+ await act(async()=>host.querySelector<HTMLInputElement>('.download-acknowledgement input')!.click())
+ expect(button('Approve paid download — Estimated $0.02').disabled).toBe(false)
+ await click('Cancel — No download');expect(paid).not.toHaveBeenCalled()
+ access=false;await click('Load historical data');await until(()=>host.querySelector('.load-error'))
+ expect(host.textContent).toContain('Set DATABENTO_API_KEY');expect(host.textContent).toContain('Additional data requires Databento access')
+ await input('From','2024-01-09');await input('Through','2024-01-09');await click('Retry historical data')
+ await until(()=>host.querySelector('.data-ready'))
+ expect(host.querySelector('.cached-history-status')?.textContent).toContain('$0.00')
+ expect(host.querySelector('.paid-download-dialog')).toBeNull();expect(paid).not.toHaveBeenCalled()
+})

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it } from 'vitest'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { Server } from 'node:http'
@@ -50,10 +50,34 @@ it('discovers validated local coverage without live metadata and keeps offline c
   await fetch(`${origin}/api/history/download`, { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json' }, body: JSON.stringify({ quoteId: first.id, confirm: true }) })
   client.availability = async () => { throw Error('Offline') }
   const count = client.metadataCalls.length
-  expect(await (await fetch(`${origin}/api/history/coverage`)).json()).toMatchObject({ cachedFrom: '2023-12-10', cachedTo: '2024-01-11', providerHealth: { status: 'cache-validated' } })
+  expect(await (await fetch(`${origin}/api/history/coverage`)).json()).toMatchObject({ cachedFrom: '2023-12-10', cachedTo: '2024-01-11', providerEarliestTimestamp: null, earliestSelectableDate: null, providerHealth: { status: 'cache-validated' } })
   const quote = await (await fetch(`${origin}/api/history/estimate?symbol=6E&from=2024-01-09&to=2024-01-11`)).json()
   expect(quote).toMatchObject({ cached: true, estimatedUsd: 0 })
   expect((await fetch(`${origin}/api/history?symbol=6E&from=2023-12-10&to=2024-01-11`)).status).toBe(200)
   expect(client.metadataCalls).toHaveLength(count)
   expect(client.paid).toHaveLength(1)
+})
+
+it('quotes earlier uncached dates through verified metadata without spending, while cached dates stay free offline', async () => {
+  const initial = await (await fetch(`${origin}/api/history/estimate?symbol=6E&from=2024-01-09&to=2024-01-11`)).json()
+  await fetch(`${origin}/api/history/download`, { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json' }, body: JSON.stringify({ quoteId: initial.id, confirm: true }) })
+  const ledgerPath = join(directory, 'cache', 'verification-budget.json'), ledger = await readFile(ledgerPath, 'utf8'), paid = client.paid.length
+  const coverage = await (await fetch(`${origin}/api/history/coverage`)).json()
+  expect(coverage).toMatchObject({ cachedFrom: '2023-12-10', providerEarliestTimestamp: null, earliestSelectableDate: null })
+  client.metadataCalls.length = 0
+  const response = await fetch(`${origin}/api/history/estimate?symbol=6E&from=2022-01-03&to=2022-01-05`)
+  expect(response.status).toBe(200)
+  const quote = await response.json()
+  expect(quote).toMatchObject({ tradingFrom: '2022-01-03', cached: false, downloadAllowed: true, estimatedUsd: .02, missingRanges: [{ from: '2021-12-04', to: '2022-01-05' }] })
+  expect(client.metadataCalls).toEqual(['availability', 'contracts', 'cost'])
+  const unapproved = await fetch(`${origin}/api/history/download`, { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json' }, body: JSON.stringify({ quoteId: quote.id, confirm: false }) })
+  expect(await unapproved.json()).toMatchObject({ code: 'DOWNLOAD_CONFIRMATION_REQUIRED' })
+  client.availability = () => new DatabentoClient('').availability()
+  const blocked = await fetch(`${origin}/api/history/estimate?symbol=6E&from=2022-01-03&to=2022-01-05`)
+  expect(blocked.status).toBe(503)
+  expect(await blocked.json()).toMatchObject({ code: 'DATABENTO_CONFIGURATION' })
+  const free = await (await fetch(`${origin}/api/history/estimate?symbol=6E&from=2024-01-09&to=2024-01-11`)).json()
+  expect(free).toMatchObject({ cached: true, estimatedUsd: 0, reservedUsd: 0, downloadAllowed: true })
+  expect(client.paid).toHaveLength(paid)
+  expect(await readFile(ledgerPath, 'utf8')).toBe(ledger)
 })
