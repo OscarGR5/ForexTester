@@ -89,6 +89,8 @@ If the backend is unavailable, startup shows an error and waits for **Retry stor
 
 ### Importing older browser sessions
 
+When only older browser sessions exist, startup stays in Setup. **Review browser backtests** opens optional migration controls; legacy discovery does not force a modal or prevent a new backtest. Setup is hidden behind a short loading state until startup discovery completes, avoiding a flash before disk-session selection.
+
 Existing PR #14 IndexedDB backtests are discovered alongside disk sessions. Use **Import to disk** to validate and transfer the complete checkpoint, equity chunks, notes and original historical fingerprint. If legacy history is missing, import can use the existing history downloader only when it reproduces the exact fingerprint. Import reads the disk result back and verifies it before recording a migration receipt. The browser original is retained, with no automatic deletion. Already verified sources are omitted from the migration prompt.
 
 If a disk session with the same ID contains different work, import reports a conflict and leaves both originals intact. Choose **Import as separate session** to preserve both under independent IDs. Interrupted imports can be retried; an already committed identical checkpoint is verified rather than duplicated. Open each old browser profile/origin to discover sessions saved there, and import before clearing that browser's storage.

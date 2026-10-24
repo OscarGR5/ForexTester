@@ -182,9 +182,11 @@ export function App() {
       <SessionControls sessions={sessions} range={{from:tradingFrom,to:history?.to ?? requestedRange.to}} timestamp={replay.timestamp}/>
       {lifecycle === 'trading' && <button onClick={()=>{ restart(); setManage(false) }}>Restart backtest</button>}
     </ManagementDialog>}
-    <fieldset className="workspace-controls" disabled={!sessions.initialized || sessions.busy || sessions.conflict || sessions.awaitingChoice || finishing} hidden={sessions.awaitingChoice}>
+    {!sessions.initialized && !sessions.awaitingChoice && <p className="startup-status" role="status">Checking saved backtests…</p>}
+    <fieldset className="workspace-controls" disabled={!sessions.initialized || sessions.busy || sessions.conflict || sessions.awaitingChoice || finishing} hidden={!sessions.initialized || sessions.awaitingChoice}>
       {lifecycle === 'setup' && <section className="setup-workspace" aria-label="Backtest setup">
         <div className="setup-heading"><h2>Set up a backtest</h2><p>Configure your account, load a historical period, then start replay.</p></div>
+        {!!sessions.legacySessions.length && <p className="chart-note">Older browser backtests are available. <button type="button" onClick={()=>setManage(true)}>Review browser backtests</button></p>}
         <label className="backtest-name">Backtest name<input maxLength={200} aria-label="Backtest name" value={sessions.name} onChange={e=>sessions.editName(e.target.value)}/></label>
         <form onSubmit={loadData} className="setup-grid">
           <section><h3>Historical period <span>EURUSD · M1 · UTC</span></h3>

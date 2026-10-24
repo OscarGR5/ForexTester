@@ -231,6 +231,7 @@ button:disabled { opacity: 0.45; cursor: default; }
 .header-session { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #b2b5be; font-size: 13px; }
 .save-state { margin-left: 12px; color: #a7b3c1; font-size: 12px; }
 .workspace-controls { display: flex; flex: 1; flex-direction: column; gap: 0; min-width: 0; min-height: 0; padding: 0; margin: 0; border: 0; }
+.startup-status { margin: 24px; color: #b2b5be; }
 .workspace-controls[hidden] { display: none; }
 .account-pnl { display: flex; align-items: baseline; gap: 12px; font-variant-numeric: tabular-nums; }
 .account-pnl span { color: #b2b5be; font-size: 12px; }

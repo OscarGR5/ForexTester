@@ -108,11 +108,13 @@ export function useSessionPersistence(options: Options) {
       const status = await store.status(), rows = await store.list()
       if (!live()) return
       setStorageLocation(status.directory); setSessions(rows); setDiskErrors(store.listErrors)
-      const legacy = await discoverLegacy()
+      await discoverLegacy()
       if (!live()) return
       if (active.current) ready.current = true
       if (!active.current) {
-        if (rows.length || legacy.length || store.listErrors.length) setAwaitingChoice(true)
+        // Browser migration is optional. Its discovery must not block a new
+        // setup when there are no authoritative disk sessions to choose from.
+        if (rows.length || store.listErrors.length) setAwaitingChoice(true)
         else { active.current = newActive(); ready.current = true; setAwaitingChoice(false) }
       }
       if (!conflicted.current) setError(null)

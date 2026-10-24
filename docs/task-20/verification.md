@@ -61,7 +61,7 @@ Finish pauses and saves before confirmation, discloses open/pending counts, and 
 
 ## Automated checks
 
-`npm test`: **37 files, 470 tests passed**. `npm run typecheck`, `npm run build`, and `git diff --check` passed. Build retains the existing large-bundle warning; no runtime dependency was added.
+`npm test`: **37 files, 471 tests passed**, including the startup regression below. `npm run typecheck`, `npm run build`, and `git diff --check` passed. Build retains the existing large-bundle warning; no runtime dependency was added.
 
 All prior regression assertions remain. The 61 legacy `App.interaction.test.tsx` cases use an explicitly test-only `RegressionWorkspace` composition of the former controls with current production chart, replay, trading, journal and persistence components. They do not claim to validate new navigation. `workflow.test.tsx` tests the production three-phase App under StrictMode, and Chromium scripts exercise the real new UI and Lightweight Charts.
 
@@ -80,6 +80,12 @@ Acceptance-test mapping:
 [Browser results and dimensions](browser-verification.json) record zero page exceptions. The script also confirms oscillator-pane clicks do not select an SL, chart clicks alone do not queue an order, every available timeframe accepts price placement, the journal is absent during Trading, notes save after finishing, and finished restore makes no history request.
 
 ## Reproduce and limitations
+
+### Refresh with older browser sessions
+
+A reported refresh bug exposed Setup briefly, then forced the migration drawer when only an older IndexedDB backtest existed. Discovery now shows a short loading state; legacy-only discovery leaves Setup usable with an optional **Review browser backtests** action. Disk sessions still receive the existing session-selection flow. No browser record is deleted or imported automatically.
+
+`node --import tsx scripts/task20-startup-browser.mts` seeds an isolated browser session, delays discovery, refreshes twice, checks Setup stays available without a modal or download, opens/closes migration, and imports the original successfully. [Browser evidence](startup-verification.json), [desktop](startup-legacy-1440.png), and [mobile](startup-legacy-390.png) captures verify the reported case. Production StrictMode regression coverage also checks the original digest is unchanged.
 
 Commands and browser setup are in the [README](../../README.md#repeatable-dukascopy-browser-setup-on-linux). Scripts use isolated temporary session directories, leaving real backtests untouched. Live scripts require network/provider availability. They use verification tooling already available in the local environment (`tsx`, `playwright-core`) rather than adding production dependencies.
 
