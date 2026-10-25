@@ -513,7 +513,8 @@ button:disabled { opacity: 0.45; cursor: default; }
 .results-equity-line, .results-peak-line, .results-start-line { fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .results-equity-line { stroke: #75c4b5; }
 .results-peak-line { stroke: #e2a2a6; }
-.results-start-line { stroke: #85c8d4; stroke-dasharray: 5 4; }
+.results-start-line { stroke: #85c8d4; }
+.results-gap-bridge { stroke-dasharray: 3 4; stroke-opacity: .65; }
 .results-peak-dot { fill: #e2a2a6; }
 .results-gridline { stroke: #354250; stroke-opacity: .35; }
 .results-crosshair { stroke: #b2b5be; stroke-dasharray: 3 4; stroke-width: 1; }
@@ -522,7 +523,7 @@ button:disabled { opacity: 0.45; cursor: default; }
 .results-chart-legend { display: flex; gap: 18px; margin: 4px 0 10px; color: #b2b5be; font-size: 11px; }
 .results-chart-legend span { display: flex; align-items: center; gap: 6px; }
 .results-chart-legend span::before { content: ''; width: 18px; border-top: 2px solid #e2a2a6; }
-.results-chart-legend .results-start-legend::before { border-color: #85c8d4; border-top-style: dashed; }
+.results-chart-legend .results-start-legend::before { border-color: #85c8d4; }
 .results-r-positive { fill: #75c4b5; }
 .results-r-negative { fill: #e2a2a6; }
 .results-r-zero { fill: #b2b5be; }
