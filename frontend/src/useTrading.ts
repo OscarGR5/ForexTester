@@ -7,7 +7,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { historyCandles, isSinglePrice, type HistoryResponse } from './history'
 import { requestAutomaticEntry, cancelEntry, configureAccount, configureCommission, createTradingState, observeCandle, modifyStop, requestClose, requestEntry, updateSetupMetadata, type SetupMetadata, type Direction, type TradingPermission, type TradingState } from './trading'
 
-interface ReplayClock { epoch: number; revealed: number; active: boolean; playing: boolean; complete: boolean; blocked?: boolean; startIndex?: number }
+interface ReplayClock { reviewing?: boolean; epoch: number; revealed: number; active: boolean; playing: boolean; complete: boolean; blocked?: boolean; startIndex?: number }
 interface Session { history: HistoryResponse | null; epoch: number; processed: number; state: TradingState; equity: EquityLedger; actionVersion: number }
 
 export function useTrading(history: HistoryResponse | null, replay: ReplayClock, restored?: Hydration | null) {
@@ -38,7 +38,7 @@ export function useTrading(history: HistoryResponse | null, replay: ReplayClock,
   // No effects/ref mutations: StrictMode can safely repeat this computation.
   if (current !== session) setSession(current)
 
-  const permission: TradingPermission = { active: replay.active, playing: replay.playing, hasFuture: !replay.complete && !replay.blocked }
+  const permission: TradingPermission = { active: replay.active && !replay.reviewing, playing: replay.playing, hasFuture: !replay.complete && !replay.blocked }
   const update = (transition: (state: TradingState) => TradingState) => {
     setSession((previous) => ({ ...previous, state: transition(previous.state), actionVersion: previous.actionVersion + 1 }))
   }

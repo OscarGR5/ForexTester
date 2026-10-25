@@ -44,6 +44,7 @@ describe('IndexedDB atomic session checkpoints and recovery', () => {
     const record = await save(sim), restored = await recover(record, sim)
     expect(record.status).toBe('complete'); expect(restored.checkpoint.replay.complete).toBe(true)
     expect(restored.checkpoint.trading.positions).toHaveLength(1)
+    expect(restored.checkpoint.trading.positions[0]).toMatchObject({ mode: 'manual', lots: .1, requestedRiskPercent: null })
   })
   it('keeps two sessions independent, renames with a revision, and deletes only the selected session', async () => {
     const a = sessionSimulation(), b = sessionSimulation(); a.observe(); enter(a); b.observe(8)

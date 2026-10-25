@@ -74,6 +74,8 @@ interface Entry {
 
 export class ChartSynchronizer {
   onViewportChange?: () => void
+  onActiveChartChange?: (id: number) => void
+  keyboardChartId = 0
   private entries = new Map<number, Entry>()
   private views = new Map<number, ChartView>()
   private legacy: ChartView | null = null
@@ -131,7 +133,13 @@ export class ChartSynchronizer {
     this.views.set(id, { range: { from: logicalToUtc(entry.times, from, entry.step), to: logicalToUtc(entry.times, to, entry.step) },
       logical: { from, to }, step: entry.step, following: true })
   }
-  activate(id: number): void { this.activeId = id; this.activeUntil = Date.now() + 1500 }
+  activate(id: number): void {
+    this.activeId = id; this.activeUntil = Date.now() + 1500
+    if (this.keyboardChartId !== id) { this.keyboardChartId = id; this.onActiveChartChange?.(id) }
+  }
+  retainCharts(count: number): void {
+    if (this.keyboardChartId >= count) this.activate(0)
+  }
   deactivate(): void { this.activeId = null }
   refresh(id: number): void {
     const entry = this.entries.get(id)

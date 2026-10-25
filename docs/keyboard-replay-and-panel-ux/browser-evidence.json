@@ -1,0 +1,144 @@
+{
+  "providerRequests": 0,
+  "paidSubmissions": 0,
+  "screenshots": [
+    "docs/keyboard-replay-and-panel-ux/review-1-1440.png",
+    "docs/keyboard-replay-and-panel-ux/indicators-1-1440.png",
+    "docs/keyboard-replay-and-panel-ux/management-1-1440.png",
+    "docs/keyboard-replay-and-panel-ux/1-charts-1440.png",
+    "docs/keyboard-replay-and-panel-ux/review-1-1100.png",
+    "docs/keyboard-replay-and-panel-ux/indicators-1-1100.png",
+    "docs/keyboard-replay-and-panel-ux/management-1-1100.png",
+    "docs/keyboard-replay-and-panel-ux/1-charts-1100.png",
+    "docs/keyboard-replay-and-panel-ux/review-2-1440.png",
+    "docs/keyboard-replay-and-panel-ux/indicators-2-1440.png",
+    "docs/keyboard-replay-and-panel-ux/management-2-1440.png",
+    "docs/keyboard-replay-and-panel-ux/2-charts-1440.png",
+    "docs/keyboard-replay-and-panel-ux/review-2-1100.png",
+    "docs/keyboard-replay-and-panel-ux/indicators-2-1100.png",
+    "docs/keyboard-replay-and-panel-ux/management-2-1100.png",
+    "docs/keyboard-replay-and-panel-ux/2-charts-1100.png",
+    "docs/keyboard-replay-and-panel-ux/review-3-1440.png",
+    "docs/keyboard-replay-and-panel-ux/indicators-3-1440.png",
+    "docs/keyboard-replay-and-panel-ux/management-3-1440.png",
+    "docs/keyboard-replay-and-panel-ux/3-charts-1440.png",
+    "docs/keyboard-replay-and-panel-ux/review-3-1100.png",
+    "docs/keyboard-replay-and-panel-ux/indicators-3-1100.png",
+    "docs/keyboard-replay-and-panel-ux/management-3-1100.png",
+    "docs/keyboard-replay-and-panel-ux/3-charts-1100.png",
+    "docs/keyboard-replay-and-panel-ux/risk-only-draft.png",
+    "docs/keyboard-replay-and-panel-ux/risk-only-executed.png",
+    "docs/keyboard-replay-and-panel-ux/restored-risk-session.png"
+  ],
+  "errors": [],
+  "checks": {
+    "1-1440-H1": {
+      "before": 1704470400000,
+      "after": 1704473940000,
+      "observations": 59,
+      "timeframe": "H1"
+    },
+    "1-1440-reviewAndDismissal": {
+      "reviewCutoff": 1704466740,
+      "authoritativeTimestamp": 1704473940000,
+      "tradingUnchanged": true,
+      "settingsPreserved": true
+    },
+    "1-1100-H1": {
+      "before": 1704473940000,
+      "after": 1704477540000,
+      "observations": 60,
+      "timeframe": "H1"
+    },
+    "1-1100-reviewAndDismissal": {
+      "reviewCutoff": 1704470340,
+      "authoritativeTimestamp": 1704477540000,
+      "tradingUnchanged": true,
+      "settingsPreserved": true
+    },
+    "2-1440-M5": {
+      "before": 1704477540000,
+      "after": 1704477840000,
+      "observations": 5,
+      "timeframe": "M5"
+    },
+    "2-1440-H1": {
+      "before": 1704477840000,
+      "after": 1704481140000,
+      "observations": 55,
+      "timeframe": "H1"
+    },
+    "2-1440-reviewAndDismissal": {
+      "reviewCutoff": 1704473940,
+      "authoritativeTimestamp": 1704481140000,
+      "tradingUnchanged": true,
+      "settingsPreserved": true
+    },
+    "2-1100-M5": {
+      "before": 1704481140000,
+      "after": 1704481440000,
+      "observations": 5,
+      "timeframe": "M5"
+    },
+    "2-1100-H1": {
+      "before": 1704481440000,
+      "after": 1704484740000,
+      "observations": 55,
+      "timeframe": "H1"
+    },
+    "2-1100-reviewAndDismissal": {
+      "reviewCutoff": 1704477540,
+      "authoritativeTimestamp": 1704484740000,
+      "tradingUnchanged": true,
+      "settingsPreserved": true
+    },
+    "3-1440-M5": {
+      "before": 1704484740000,
+      "after": 1704485040000,
+      "observations": 5,
+      "timeframe": "M5"
+    },
+    "3-1440-H1": {
+      "before": 1704485040000,
+      "after": 1704488340000,
+      "observations": 55,
+      "timeframe": "H1"
+    },
+    "3-1440-reviewAndDismissal": {
+      "reviewCutoff": 1704481140,
+      "authoritativeTimestamp": 1704488340000,
+      "tradingUnchanged": true,
+      "settingsPreserved": true
+    },
+    "3-1100-M5": {
+      "before": 1704488340000,
+      "after": 1704488640000,
+      "observations": 5,
+      "timeframe": "M5"
+    },
+    "3-1100-H1": {
+      "before": 1704488640000,
+      "after": 1704491940000,
+      "observations": 52,
+      "timeframe": "H1"
+    },
+    "3-1100-reviewAndDismissal": {
+      "reviewCutoff": 1704484740,
+      "authoritativeTimestamp": 1704491940000,
+      "tradingUnchanged": true,
+      "settingsPreserved": true
+    },
+    "riskOrderExecution": {
+      "before": 1704491940000,
+      "after": 1704671940000,
+      "observations": 59,
+      "timeframe": "H1"
+    },
+    "savedAndRestored": {
+      "timestamp": 1704671940000,
+      "positions": 1,
+      "completedTrades": 0
+    },
+    "cacheUnchanged": true
+  }
+}
