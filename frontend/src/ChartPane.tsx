@@ -123,9 +123,26 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, se
     const wheel = (event: WheelEvent) => {
       if (!chartRef.current || placement || stopInteraction?.preview) return
       const box = element.getBoundingClientRect(), chart = chartRef.current
-      if (event.clientX - box.left > chart.timeScale().width() || event.clientY - box.top >= chart.panes().reduce((height, pane) => height + pane.getHeight(), 0)) return
+      const x = event.clientX - box.left, y = event.clientY - box.top
+      if (x < 0 || x >= box.width || y < 0 || y >= chart.panes().reduce((height, pane) => height + pane.getHeight(), 0)) return
+      const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? box.height : 1)
+      if (x >= chart.timeScale().width()) {
+        // Only the candle pane's price axis controls its vertical range.
+        if (y >= chart.panes()[0].getHeight()) return
+        event.preventDefault(); event.stopPropagation()
+        const scale = seriesRef.current!.priceScale(), range = scale.getVisibleRange()
+        if (!range || !Number.isFinite(delta) || delta === 0) return
+        const middle = (range.from + range.to) / 2
+        const half = (range.to - range.from) / 2 * Math.exp(Math.max(-100, Math.min(100, delta)) * 0.002)
+        const next = { from: middle - half, to: middle + half }
+        if (!Number.isFinite(next.from) || !Number.isFinite(next.to) || next.from >= next.to) return
+        scale.applyOptions({ autoScale: false })
+        scale.setVisibleRange(next)
+        savePriceRef.current?.()
+        return
+      }
       event.preventDefault(); event.stopPropagation()
-      synchronizer.wheel(id, event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? box.height : 1))
+      synchronizer.wheel(id, delta)
     }
     element.addEventListener('wheel', wheel, { passive: false, capture: true })
     return () => element.removeEventListener('wheel', wheel, true)
@@ -252,7 +269,7 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, se
       onPointerDownCapture={() => synchronizer.activate(id)}
       onPointerMoveCapture={(event) => { if (event.buttons) synchronizer.activate(id) }}>
       <div className="pane-toolbar">
-        <span className="instrument"><strong>{instrument === '6E' ? 'EURUSD 6E' : instrument}</strong><span className="bid-label">{instrument === '6E' ? 'Trade' : 'Bid'}</span></span>
+        <span className="instrument"><strong>{instrument === '6E' ? 'EURUSD 6E' : instrument}</strong>{instrument !== '6E' && <span className="bid-label">Bid</span>}</span>
         <label>Timeframe <select aria-label={`Chart ${id + 1} timeframe`} value={timeframe}
           onChange={(event) => onTimeframeChange(id, event.target.value as Timeframe)}>
           {timeframe === 'M1' && <option value="M1">M1 (legacy)</option>}
