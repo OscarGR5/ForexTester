@@ -1,0 +1,1842 @@
+{
+  "providerRequests": 0,
+  "paidSubmissions": 0,
+  "screenshots": [
+    "docs/minor-chart-refinements/1-charts-1440.png",
+    "docs/minor-chart-refinements/axis-wheel-expanded.png",
+    "docs/minor-chart-refinements/axis-wheel-compressed.png",
+    "docs/minor-chart-refinements/1-charts-1100.png",
+    "docs/minor-chart-refinements/2-charts-1440.png",
+    "docs/minor-chart-refinements/2-charts-1100.png",
+    "docs/minor-chart-refinements/3-charts-1440.png",
+    "docs/minor-chart-refinements/3-charts-1100.png"
+  ],
+  "errors": [],
+  "checks": {
+    "1-charts-1440-pane-1": {
+      "before": {
+        "time": {
+          "from": 93,
+          "to": 318
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.11745
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "expanded": {
+        "time": {
+          "from": 93,
+          "to": 318
+        },
+        "price": {
+          "from": 1.0927701840120252,
+          "to": 1.1154798159879749
+        },
+        "auto": false,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "compressed": {
+        "time": {
+          "from": 93,
+          "to": 318
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.11745
+        },
+        "auto": false,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "plot": {
+        "time": {
+          "from": 126.26764748260246,
+          "to": 318
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.11745
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "panned": {
+        "time": {
+          "from": 120.87454778034834,
+          "to": 312.6069002977459
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.11745
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "nativeAxisDragAndReset": true,
+      "crosshair": true
+    },
+    "1-charts-1100-pane-1": {
+      "before": {
+        "time": {
+          "from": 169.12859774788527,
+          "to": 312.6069002977459
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.11745
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "expanded": {
+        "time": {
+          "from": 169.12859774788527,
+          "to": 312.6069002977459
+        },
+        "price": {
+          "from": 1.0927701840120252,
+          "to": 1.1154798159879749
+        },
+        "auto": false,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "compressed": {
+        "time": {
+          "from": 169.12859774788527,
+          "to": 312.6069002977459
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.11745
+        },
+        "auto": false,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "plot": {
+        "time": {
+          "from": 190.34275592846723,
+          "to": 312.6069002977459
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.114375
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "panned": {
+        "time": {
+          "from": 185.74154032332717,
+          "to": 308.0056846926058
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.114375
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "nativeAxisDragAndReset": true,
+      "crosshair": true
+    },
+    "2-charts-1440-pane-1": {
+      "before": {
+        "time": {
+          "from": 185.74154032332717,
+          "to": 308.0056846926058
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.114375
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "expanded": {
+        "time": {
+          "from": 185.74154032332717,
+          "to": 308.0056846926058
+        },
+        "price": {
+          "from": 1.0925428550875607,
+          "to": 1.112632144912439
+        },
+        "auto": false,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "compressed": {
+        "time": {
+          "from": 185.74154032332717,
+          "to": 308.0056846926058
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.1143749999999997
+        },
+        "auto": false,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "plot": {
+        "time": {
+          "from": 203.81905345505686,
+          "to": 308.0056846926058
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.11395
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "panned": {
+        "time": {
+          "from": 197.6123888789282,
+          "to": 301.79902011647715
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.114375
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "nativeAxisDragAndReset": true,
+      "crosshair": true
+    },
+    "2-charts-1440-pane-2": {
+      "before": {
+        "time": {
+          "from": 300.4166666666667,
+          "to": 318
+        },
+        "price": {
+          "from": 1.0945875,
+          "to": 1.0980875
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "upper": 1,
+          "middle": 1,
+          "lower": 1,
+          "upper2": 1,
+          "lower2": 1,
+          "k": 1,
+          "d": 1,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "expanded": {
+        "time": {
+          "from": 300.4166666666667,
+          "to": 318
+        },
+        "price": {
+          "from": 1.0948462483693093,
+          "to": 1.097828751630691
+        },
+        "auto": false,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "upper": 1,
+          "middle": 1,
+          "lower": 1,
+          "upper2": 1,
+          "lower2": 1,
+          "k": 1,
+          "d": 1,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "compressed": {
+        "time": {
+          "from": 300.4166666666667,
+          "to": 318
+        },
+        "price": {
+          "from": 1.0945875000000003,
+          "to": 1.0980875
+        },
+        "auto": false,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "upper": 1,
+          "middle": 1,
+          "lower": 1,
+          "upper2": 1,
+          "lower2": 1,
+          "k": 1,
+          "d": 1,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "plot": {
+        "time": {
+          "from": 303.0164717106775,
+          "to": 318
+        },
+        "price": {
+          "from": 1.0945875,
+          "to": 1.09805
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "upper": 1,
+          "middle": 1,
+          "lower": 1,
+          "upper2": 1,
+          "lower2": 1,
+          "k": 1,
+          "d": 1,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "panned": {
+        "time": {
+          "from": 302.0733442650342,
+          "to": 317.05687255435674
+        },
+        "price": {
+          "from": 1.0945875,
+          "to": 1.0980875
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "upper": 1,
+          "middle": 1,
+          "lower": 1,
+          "upper2": 1,
+          "lower2": 1,
+          "k": 1,
+          "d": 1,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "nativeAxisDragAndReset": true,
+      "crosshair": true
+    },
+    "2-charts-1100-pane-1": {
+      "before": {
+        "time": {
+          "from": 197.6123888789282,
+          "to": 301.79902011647715
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.114375
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "expanded": {
+        "time": {
+          "from": 197.6123888789282,
+          "to": 301.79902011647715
+        },
+        "price": {
+          "from": 1.0925428550875607,
+          "to": 1.112632144912439
+        },
+        "auto": false,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "compressed": {
+        "time": {
+          "from": 197.6123888789282,
+          "to": 301.79902011647715
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.1143749999999997
+        },
+        "auto": false,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "plot": {
+        "time": {
+          "from": 213.01702941408675,
+          "to": 301.79902011647715
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.112675
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "panned": {
+        "time": {
+          "from": 205.81931707929598,
+          "to": 294.6013077816864
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.113075
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "nativeAxisDragAndReset": true,
+      "crosshair": true
+    },
+    "2-charts-1100-pane-2": {
+      "before": {
+        "time": {
+          "from": 306.29259862712246,
+          "to": 317.05687255435674
+        },
+        "price": {
+          "from": 1.0945875,
+          "to": 1.097725
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "upper": 1,
+          "middle": 1,
+          "lower": 1,
+          "upper2": 1,
+          "lower2": 1,
+          "k": 1,
+          "d": 1,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "expanded": {
+        "time": {
+          "from": 306.29259862712246,
+          "to": 317.05687255435674
+        },
+        "price": {
+          "from": 1.0948194494310592,
+          "to": 1.0974930505689406
+        },
+        "auto": false,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "upper": 1,
+          "middle": 1,
+          "lower": 1,
+          "upper2": 1,
+          "lower2": 1,
+          "k": 1,
+          "d": 1,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "compressed": {
+        "time": {
+          "from": 306.29259862712246,
+          "to": 317.05687255435674
+        },
+        "price": {
+          "from": 1.0945875,
+          "to": 1.0977249999999998
+        },
+        "auto": false,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "upper": 1,
+          "middle": 1,
+          "lower": 1,
+          "upper2": 1,
+          "lower2": 1,
+          "k": 1,
+          "d": 1,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "plot": {
+        "time": {
+          "from": 307.8841633845331,
+          "to": 317.05687255435674
+        },
+        "price": {
+          "from": 1.0945875,
+          "to": 1.097725
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "upper": 1,
+          "middle": 1,
+          "lower": 1,
+          "upper2": 1,
+          "lower2": 1,
+          "k": 1,
+          "d": 1,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "panned": {
+        "time": {
+          "from": 307.0686297380072,
+          "to": 316.2413389078308
+        },
+        "price": {
+          "from": 1.0945875,
+          "to": 1.097725
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "upper": 1,
+          "middle": 1,
+          "lower": 1,
+          "upper2": 1,
+          "lower2": 1,
+          "k": 1,
+          "d": 1,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "nativeAxisDragAndReset": true,
+      "crosshair": true
+    },
+    "3-charts-1440-pane-1": {
+      "before": {
+        "time": {
+          "from": 205.81931707929598,
+          "to": 294.6013077816864
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.113075
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "expanded": {
+        "time": {
+          "from": 205.81931707929598,
+          "to": 294.6013077816864
+        },
+        "price": {
+          "from": 1.0924467485503888,
+          "to": 1.1114282514496112
+        },
+        "auto": false,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "compressed": {
+        "time": {
+          "from": 205.81931707929598,
+          "to": 294.6013077816864
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.113075
+        },
+        "auto": false,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "plot": {
+        "time": {
+          "from": 218.9462858325885,
+          "to": 294.6013077816864
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.112675
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "panned": {
+        "time": {
+          "from": 214.42316341944297,
+          "to": 290.07818536854086
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.112675
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "nativeAxisDragAndReset": true,
+      "crosshair": true
+    },
+    "3-charts-1440-pane-2": {
+      "before": {
+        "time": {
+          "from": 307.0686297380072,
+          "to": 316.2413389078308
+        },
+        "price": {
+          "from": 1.0945875,
+          "to": 1.097725
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "upper": 1,
+          "middle": 1,
+          "lower": 1,
+          "upper2": 1,
+          "lower2": 1,
+          "k": 1,
+          "d": 1,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "expanded": {
+        "time": {
+          "from": 307.0686297380072,
+          "to": 316.2413389078308
+        },
+        "price": {
+          "from": 1.0948194494310592,
+          "to": 1.0974930505689406
+        },
+        "auto": false,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "upper": 1,
+          "middle": 1,
+          "lower": 1,
+          "upper2": 1,
+          "lower2": 1,
+          "k": 1,
+          "d": 1,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "compressed": {
+        "time": {
+          "from": 307.0686297380072,
+          "to": 316.2413389078308
+        },
+        "price": {
+          "from": 1.0945875,
+          "to": 1.0977249999999998
+        },
+        "auto": false,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "upper": 1,
+          "middle": 1,
+          "lower": 1,
+          "upper2": 1,
+          "lower2": 1,
+          "k": 1,
+          "d": 1,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "plot": {
+        "time": {
+          "from": 308.4248717607722,
+          "to": 316.2413389078308
+        },
+        "price": {
+          "from": 1.0945875,
+          "to": 1.0975125000000001
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "upper": 1,
+          "middle": 1,
+          "lower": 1,
+          "upper2": 1,
+          "lower2": 1,
+          "k": 1,
+          "d": 1,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "panned": {
+        "time": {
+          "from": 307.90464543843024,
+          "to": 315.72111258548887
+        },
+        "price": {
+          "from": 1.0945875,
+          "to": 1.097725
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "upper": 1,
+          "middle": 1,
+          "lower": 1,
+          "upper2": 1,
+          "lower2": 1,
+          "k": 1,
+          "d": 1,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "nativeAxisDragAndReset": true,
+      "crosshair": true
+    },
+    "3-charts-1440-pane-3": {
+      "before": {
+        "time": {
+          "from": 0,
+          "to": 318
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.11745
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "expanded": {
+        "time": {
+          "from": 0,
+          "to": 318
+        },
+        "price": {
+          "from": 1.0927701840120252,
+          "to": 1.1154798159879749
+        },
+        "auto": false,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "compressed": {
+        "time": {
+          "from": 0,
+          "to": 318
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.11745
+        },
+        "auto": false,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "plot": {
+        "time": {
+          "from": 47.018275108744774,
+          "to": 318
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.11745
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "panned": {
+        "time": {
+          "from": 30.9696640126769,
+          "to": 301.9513889039321
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.11745
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "nativeAxisDragAndReset": true,
+      "crosshair": true
+    },
+    "3-charts-1100-pane-1": {
+      "before": {
+        "time": {
+          "from": 214.42316341944297,
+          "to": 290.07818536854086
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.112675
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "expanded": {
+        "time": {
+          "from": 214.42316341944297,
+          "to": 290.07818536854086
+        },
+        "price": {
+          "from": 1.092417177308182,
+          "to": 1.111057822691818
+        },
+        "auto": false,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "compressed": {
+        "time": {
+          "from": 214.42316341944297,
+          "to": 290.07818536854086
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.112675
+        },
+        "auto": false,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "plot": {
+        "time": {
+          "from": 225.6092283105147,
+          "to": 290.07818536854086
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.112575
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "panned": {
+        "time": {
+          "from": 220.36066213286705,
+          "to": 284.8296191908932
+        },
+        "price": {
+          "from": 1.0926,
+          "to": 1.112675
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "nativeAxisDragAndReset": true,
+      "crosshair": true
+    },
+    "3-charts-1100-pane-2": {
+      "before": {
+        "time": {
+          "from": 307.90464543843024,
+          "to": 315.72111258548887
+        },
+        "price": {
+          "from": 1.0945875,
+          "to": 1.097725
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "upper": 1,
+          "middle": 1,
+          "lower": 1,
+          "upper2": 1,
+          "lower2": 1,
+          "k": 1,
+          "d": 1,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "expanded": {
+        "time": {
+          "from": 307.90464543843024,
+          "to": 315.72111258548887
+        },
+        "price": {
+          "from": 1.0948194494310592,
+          "to": 1.0974930505689406
+        },
+        "auto": false,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "upper": 1,
+          "middle": 1,
+          "lower": 1,
+          "upper2": 1,
+          "lower2": 1,
+          "k": 1,
+          "d": 1,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "compressed": {
+        "time": {
+          "from": 307.90464543843024,
+          "to": 315.72111258548887
+        },
+        "price": {
+          "from": 1.0945875,
+          "to": 1.0977249999999998
+        },
+        "auto": false,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "upper": 1,
+          "middle": 1,
+          "lower": 1,
+          "upper2": 1,
+          "lower2": 1,
+          "k": 1,
+          "d": 1,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "plot": {
+        "time": {
+          "from": 309.06035865446444,
+          "to": 315.72111258548887
+        },
+        "price": {
+          "from": 1.0945875,
+          "to": 1.0974499999999998
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "upper": 1,
+          "middle": 1,
+          "lower": 1,
+          "upper2": 1,
+          "lower2": 1,
+          "k": 1,
+          "d": 1,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "panned": {
+        "time": {
+          "from": 308.4462053857325,
+          "to": 315.10695931675696
+        },
+        "price": {
+          "from": 1.0945875,
+          "to": 1.0975125000000001
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "upper": 1,
+          "middle": 1,
+          "lower": 1,
+          "upper2": 1,
+          "lower2": 1,
+          "k": 1,
+          "d": 1,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "nativeAxisDragAndReset": true,
+      "crosshair": true
+    },
+    "3-charts-1100-pane-3": {
+      "before": {
+        "time": {
+          "from": 102.76608207403308,
+          "to": 301.9513889039321
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.11745
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "expanded": {
+        "time": {
+          "from": 102.76608207403308,
+          "to": 301.9513889039321
+        },
+        "price": {
+          "from": 1.0927701840120252,
+          "to": 1.1154798159879749
+        },
+        "auto": false,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "compressed": {
+        "time": {
+          "from": 102.76608207403308,
+          "to": 301.9513889039321
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.11745
+        },
+        "auto": false,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "plot": {
+        "time": {
+          "from": 132.2168668355046,
+          "to": 301.9513889039321
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.11745
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "panned": {
+        "time": {
+          "from": 118.52928911693866,
+          "to": 288.2638111853662
+        },
+        "price": {
+          "from": 1.0908,
+          "to": 1.11745
+        },
+        "auto": true,
+        "candles": 293,
+        "last": {
+          "open": 1.101,
+          "high": 1.10115,
+          "low": 1.10095,
+          "close": 1.10095,
+          "time": 1704470400
+        },
+        "widths": {
+          "undefined": 3,
+          "tenkan": 2,
+          "kijun": 2,
+          "spanA": 2,
+          "spanB": 2,
+          "chikou": 2
+        }
+      },
+      "nativeAxisDragAndReset": true,
+      "crosshair": true
+    },
+    "unrelatedIndicatorWidths": {
+      "undefined": 3,
+      "tenkan": 2,
+      "kijun": 2,
+      "spanA": 2,
+      "spanB": 2,
+      "chikou": 2,
+      "upper": 1,
+      "middle": 1,
+      "lower": 1,
+      "upper2": 1,
+      "lower2": 1,
+      "k": 1,
+      "d": 1
+    },
+    "manualRangeRestored": true,
+    "cacheUnchanged": true
+  }
+}

@@ -1,14 +1,14 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { IChartApi } from 'lightweight-charts'
 import { ReplayBars } from './replayBars'
-import { IndicatorSeries } from './indicatorSeries'
+import { INDICATOR_COLORS, IndicatorSeries } from './indicatorSeries'
 import { calculateIndicators, defaultIndicatorSettings, type ChartCandle } from './indicators'
 import { TIMEFRAMES, toBidChartCandles } from './history'
 
 export function fakeChart() {
  const series: {title:string;values: {time:number;value?:number}[];setData:ReturnType<typeof vi.fn>}[]=[]
  const chart={
-  addSeries: (_type:unknown,options:{title:string})=>{
+  addSeries: vi.fn((_type:unknown,options:{title:string})=>{
    const line={setSeriesOrder:vi.fn(),applyOptions:vi.fn(),title:options.title,values:[] as {time:number;value?:number}[],setData:vi.fn(),
     update(point:{time:number;value?:number},historical=false){
      const at=line.values.findIndex(p=>p.time===point.time)
@@ -17,7 +17,7 @@ export function fakeChart() {
     },attachPrimitive:vi.fn(),detachPrimitive:vi.fn(),createPriceLine:vi.fn(),priceScale:()=>({applyOptions:vi.fn()})}
    line.setData.mockImplementation((data:typeof line.values)=>{line.values=data.map(p=>({...p}))})
    series.push(line);return line
-  },removeSeries:vi.fn(),panes:()=>[{setStretchFactor:vi.fn()},{setStretchFactor:vi.fn()}],
+  }),removeSeries:vi.fn(),panes:()=>[{setStretchFactor:vi.fn()},{setStretchFactor:vi.fn()}],
  }
  return {chart:chart as unknown as IChartApi,series}
 }
@@ -103,6 +103,11 @@ it.each(['M5','M15','H1','H4','D1'] as const)('orders every price overlay behind
  const candles=toBidChartCandles({bid:source},timeframe)
  manager.update(candles,settings,timeframe,true)
  const priceLines=series.filter(line=>!['k','d'].includes(line.title))
+ for (const [, options] of vi.mocked(chart.addSeries).mock.calls) {
+  const { title, lineWidth, color } = options as { title: keyof typeof INDICATOR_COLORS; lineWidth: number; color: string }
+  expect(lineWidth).toBe(['tenkan', 'kijun', 'chikou', 'spanA', 'spanB'].includes(title) ? 2 : 1)
+  expect(color).toBe(INDICATOR_COLORS[title])
+ }
  expect(priceLines.length).toBeGreaterThan(6)
  for(const line of priceLines) expect((line as any).setSeriesOrder).toHaveBeenCalledWith(0)
  for(const line of series.filter(line=>['k','d'].includes(line.title))) expect((line as any).setSeriesOrder).not.toHaveBeenCalled()

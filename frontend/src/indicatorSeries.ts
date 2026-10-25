@@ -61,7 +61,7 @@ export class IndicatorSeries {
       if (!line) {
         const oscillator = key === 'k' || key === 'd'
         const series = this.chart.addSeries(LineSeries, {
-          color: INDICATOR_COLORS[key], lineWidth: 1, title: key, crosshairMarkerVisible: false,
+          color: INDICATOR_COLORS[key], lineWidth: ['tenkan', 'kijun', 'chikou', 'spanA', 'spanB'].includes(key) ? 2 : 1, title: key, crosshairMarkerVisible: false,
           priceLineVisible: false, lastValueVisible: false,
           priceFormat: { type: 'price', precision: oscillator ? 2 : 5, minMove: oscillator ? 0.01 : 0.00001 },
           ...(oscillator ? { autoscaleInfoProvider: () => ({ priceRange: { minValue: 0, maxValue: 100 } }) } : {}),

@@ -48,7 +48,7 @@ vi.mock('lightweight-charts', () => ({
     }
     return {
       applyOptions: vi.fn(), subscribeClick: vi.fn(), unsubscribeClick: vi.fn(), addSeries: vi.fn(makeSeries), removeSeries: vi.fn(), remove: vi.fn(),
-      panes: () => [{ getHeight: () => 500, setStretchFactor: vi.fn() }, { setStretchFactor: vi.fn() }],
+      panes: () => [{ getHeight: () => 500, setStretchFactor: vi.fn() }, { getHeight: () => 100, setStretchFactor: vi.fn() }],
       timeScale: () => scale,
       subscribeCrosshairMove: vi.fn(), unsubscribeCrosshairMove: vi.fn(),
       setCrosshairPosition: vi.fn(), clearCrosshairPosition: vi.fn(),
@@ -86,6 +86,69 @@ async function select(label:string,value:string){const el=host.querySelector<HTM
 async function load(){await click('Start backtest');await until(()=>host.querySelector('.phase-trading'))}
 async function start(){await mount();await load()}
 function chart(){return vi.mocked(createChart).mock.results.filter(r=>r.type==='return').at(-1)!.value}
+function chartForCanvas(canvas: Element) {
+ const index = vi.mocked(createChart).mock.calls.map(([element]) => element).lastIndexOf(canvas as HTMLElement)
+ return vi.mocked(createChart).mock.results[index].value
+}
+function canvasWheel(canvas: Element, x: number, deltaY: number, deltaMode = 0, y = 200) {
+ const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, clientX: x, clientY: y, deltaY, deltaMode })
+ canvas.dispatchEvent(event)
+ return event
+}
+it.each([1, 2, 3])('scales only the hovered price axis in a %s-chart layout and retains plot wheel zoom', async count => {
+ await start()
+ await act(async () => host.querySelector<HTMLInputElement>(`input[name="chart-count"][value="${count}"]`)!.click())
+ const canvases = [...host.querySelectorAll('.chart-canvas')]
+ const charts = canvases.map(chartForCanvas)
+ for (const canvas of canvases) vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, width: 900, height: 650 } as DOMRect)
+ const scales = charts.map(c => vi.mocked(c.addSeries).mock.results[0].value.priceScale())
+ const originalPrices = scales.map(s => ({ ...s.getVisibleRange() }))
+ const originalTimes = charts.map(c => ({ ...c.timeScale().getVisibleLogicalRange() }))
+ const originalData = charts.map(c => vi.mocked(c.addSeries).mock.results[0].value.data())
+ const target = count - 1, before = originalPrices[target]
+ expect(canvasWheel(canvases[target], 850, -80).defaultPrevented).toBe(true)
+ const expanded = scales[target].getVisibleRange()
+ expect(expanded.to - expanded.from).toBeLessThan(before.to - before.from)
+ expect((expanded.to + expanded.from) / 2).toBeCloseTo((before.to + before.from) / 2, 12)
+ expect(scales[target].options().autoScale).toBe(false)
+ canvasWheel(canvases[target], 850, 80)
+ expect(scales[target].getVisibleRange().from).toBeCloseTo(before.from, 12)
+ expect(scales[target].getVisibleRange().to).toBeCloseTo(before.to, 12)
+ for (let i = 0; i < count; i++) {
+  expect(charts[i].timeScale().getVisibleLogicalRange()).toEqual(originalTimes[i])
+  expect(vi.mocked(charts[i].addSeries).mock.results[0].value.data()).toEqual(originalData[i])
+  if (i !== target) {
+   expect(scales[i].getVisibleRange()).toEqual(originalPrices[i])
+   expect(scales[i].options().autoScale).toBe(true)
+  }
+ }
+ canvasWheel(canvases[target], 200, -80)
+ const zoom = charts[target].timeScale().getVisibleLogicalRange()!
+ expect(zoom.to).toBeCloseTo(originalTimes[target].to!, 10)
+ expect(zoom.from).toBeGreaterThan(originalTimes[target].from!)
+ for (let i = 0; i < count; i++) if (i !== target) expect(charts[i].timeScale().getVisibleLogicalRange()).toEqual(originalTimes[i])
+ expect(scales[target].getVisibleRange()).toEqual(before)
+})
+it('normalizes axis wheel units, bounds large deltas and ignores non-price zones and draft stops', async () => {
+ await start()
+ const canvas = host.querySelector('.chart-canvas')!, active = chartForCanvas(canvas)
+ vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, width: 900, height: 650 } as DOMRect)
+ const scale = vi.mocked(active.addSeries).mock.results[0].value.priceScale(), before = { ...scale.getVisibleRange() }
+ canvasWheel(canvas, 850, -1, 1)
+ const lines = scale.getVisibleRange()
+ scale.setVisibleRange(before); canvasWheel(canvas, 850, -16)
+ expect(scale.getVisibleRange()).toEqual(lines)
+ scale.setVisibleRange(before); canvasWheel(canvas, 850, 1, 2)
+ const pages = scale.getVisibleRange()
+ scale.setVisibleRange(before); canvasWheel(canvas, 850, 10000)
+ expect(scale.getVisibleRange()).toEqual(pages)
+ canvasWheel(canvas, 850, 0)
+ expect(scale.getVisibleRange()).toEqual(pages)
+ for (const [x, y] of [[850, 550], [850, 620], [910, 200], [-1, 200], [850, -1]]) canvasWheel(canvas, x, -80, 0, y)
+ expect(scale.getVisibleRange()).toEqual(pages)
+ await click('Buy'); canvasWheel(canvas, 850, -80)
+ expect(scale.getVisibleRange()).toEqual(pages)
+})
 async function pick(price:number,paneIndex=0){const calls=vi.mocked(chart().subscribeClick).mock.calls;expect(calls.length).toBeGreaterThan(0);await act(async()=>calls.at(-1)![0]({point:{x:100,y:price*100000},paneIndex,seriesData:new Map()} as any))}
 async function order(direction='Buy',price=.099+1){await click(direction);await pick(price);await click('Confirm order')}
 it('keeps initial setup explicit, bounded and free from automatic downloads under StrictMode',async()=>{
@@ -254,6 +317,8 @@ it('shows an uncached quote, requires confirmation, and preserves the chosen nam
  expect(paid).toHaveBeenCalledOnce();expect(JSON.parse(paid.mock.calls[0][0].body)).toEqual({quoteId:'fixture-approval',confirm:true})
  expect(host.querySelector('.header-session')?.textContent).toContain('6E research draft')
  expect(host.querySelector('.pane-toolbar .instrument strong')?.textContent).toBe('EURUSD 6E')
+ expect(host.querySelector('.pane-toolbar .instrument')?.textContent).toBe('EURUSD 6E')
+ expect(host.querySelector('.pane-toolbar .bid-label')).toBeNull()
  expect(host.querySelector('.chart-workspace')?.getAttribute('aria-label')).toBe('EURUSD 6E chart workspace')
  expect(host.querySelector('.execution-details')?.textContent).toContain('6E trade prices')
  expect(host.querySelector('.workspace-toolbar')?.textContent).not.toMatch(/Ready for a new setup|Entries fill|Contract mappings/)
