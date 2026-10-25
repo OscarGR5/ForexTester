@@ -1,0 +1,432 @@
+{
+  "fixtures": "tests/resultsFixture.ts: synthetic 6E weekday M1 prices, $100,000 initial balance, combined 2% risk budget, $7/lot round-trip commissions; fixed 2024 UTC dates",
+  "isolatedDirectory": "/tmp/forextester-results-dashboard-xZYU6y",
+  "networkHistoryCalls": [],
+  "externalRequests": [],
+  "paidSubmissions": 0,
+  "errors": [],
+  "screenshots": [
+    "docs/results-dashboard/populated-1440.png",
+    "docs/results-dashboard/populated-1100.png",
+    "docs/results-dashboard/populated-1728.png",
+    "docs/results-dashboard/populated-1000.png",
+    "docs/results-dashboard/populated-dashboard.png",
+    "docs/results-dashboard/expanded-setup-breakdown.png",
+    "docs/results-dashboard/expanded-dashboard.png",
+    "docs/results-dashboard/empty-session.png",
+    "docs/results-dashboard/unfinished-session.png"
+  ],
+  "checks": {
+    "layout-1440": {
+      "pageWidth": 1440,
+      "width": 1440,
+      "scrollWidth": 1425,
+      "contentWidth": 1425,
+      "scrollHeight": 1493,
+      "headerBottom": 48,
+      "results": {
+        "x": 0,
+        "y": 48,
+        "width": 1440,
+        "height": 952,
+        "right": 1440,
+        "bottom": 1000
+      },
+      "metrics": [
+        {
+          "x": 28,
+          "y": 167.1875,
+          "width": 432.328125,
+          "height": 88.796875,
+          "right": 460.328125,
+          "bottom": 255.984375
+        },
+        {
+          "x": 496.328125,
+          "y": 167.1875,
+          "width": 432.328125,
+          "height": 88.796875,
+          "right": 928.65625,
+          "bottom": 255.984375
+        },
+        {
+          "x": 964.65625,
+          "y": 167.1875,
+          "width": 432.34375,
+          "height": 88.796875,
+          "right": 1397,
+          "bottom": 255.984375
+        },
+        {
+          "x": 28,
+          "y": 279.984375,
+          "width": 432.328125,
+          "height": 88.796875,
+          "right": 460.328125,
+          "bottom": 368.78125
+        },
+        {
+          "x": 496.328125,
+          "y": 279.984375,
+          "width": 432.328125,
+          "height": 88.796875,
+          "right": 928.65625,
+          "bottom": 368.78125
+        },
+        {
+          "x": 964.65625,
+          "y": 279.984375,
+          "width": 432.34375,
+          "height": 88.796875,
+          "right": 1397,
+          "bottom": 368.78125
+        }
+      ],
+      "timelines": [
+        {
+          "x": 28,
+          "y": 516.78125,
+          "width": 834.953125,
+          "height": 254.28125,
+          "right": 862.953125,
+          "bottom": 771.0625,
+          "viewWidth": 834
+        },
+        {
+          "x": 28,
+          "y": 903.0625,
+          "width": 834.953125,
+          "height": 208.234375,
+          "right": 862.953125,
+          "bottom": 1111.296875,
+          "viewWidth": 834
+        }
+      ],
+      "pathLengths": [
+        26115,
+        25451,
+        24822
+      ],
+      "invalidPaths": false,
+      "svgNodes": 27
+    },
+    "layout-1100": {
+      "pageWidth": 1100,
+      "width": 1100,
+      "scrollWidth": 1085,
+      "contentWidth": 1085,
+      "scrollHeight": 1474,
+      "headerBottom": 54,
+      "results": {
+        "x": 0,
+        "y": 54,
+        "width": 1100,
+        "height": 946,
+        "right": 1100,
+        "bottom": 1000
+      },
+      "metrics": [
+        {
+          "x": 24,
+          "y": 169.1875,
+          "width": 329.65625,
+          "height": 84.1875,
+          "right": 353.65625,
+          "bottom": 253.375
+        },
+        {
+          "x": 377.65625,
+          "y": 169.1875,
+          "width": 329.671875,
+          "height": 84.1875,
+          "right": 707.328125,
+          "bottom": 253.375
+        },
+        {
+          "x": 731.328125,
+          "y": 169.1875,
+          "width": 329.65625,
+          "height": 84.1875,
+          "right": 1060.984375,
+          "bottom": 253.375
+        },
+        {
+          "x": 24,
+          "y": 275.375,
+          "width": 329.65625,
+          "height": 84.1875,
+          "right": 353.65625,
+          "bottom": 359.5625
+        },
+        {
+          "x": 377.65625,
+          "y": 275.375,
+          "width": 329.671875,
+          "height": 84.1875,
+          "right": 707.328125,
+          "bottom": 359.5625
+        },
+        {
+          "x": 731.328125,
+          "y": 275.375,
+          "width": 329.65625,
+          "height": 84.1875,
+          "right": 1060.984375,
+          "bottom": 359.5625
+        }
+      ],
+      "timelines": [
+        {
+          "x": 24,
+          "y": 507.5625,
+          "width": 590.90625,
+          "height": 254.375,
+          "right": 614.90625,
+          "bottom": 761.9375,
+          "viewWidth": 590
+        },
+        {
+          "x": 24,
+          "y": 893.9375,
+          "width": 590.90625,
+          "height": 208.3125,
+          "right": 614.90625,
+          "bottom": 1102.25,
+          "viewWidth": 590
+        }
+      ],
+      "pathLengths": [
+        26075,
+        25411,
+        24782
+      ],
+      "invalidPaths": false,
+      "svgNodes": 27
+    },
+    "layout-1728": {
+      "pageWidth": 1728,
+      "width": 1728,
+      "scrollWidth": 1713,
+      "contentWidth": 1713,
+      "scrollHeight": 1493,
+      "headerBottom": 48,
+      "results": {
+        "x": 0,
+        "y": 48,
+        "width": 1728,
+        "height": 952,
+        "right": 1728,
+        "bottom": 1000
+      },
+      "metrics": [
+        {
+          "x": 28,
+          "y": 167.1875,
+          "width": 528.328125,
+          "height": 88.796875,
+          "right": 556.328125,
+          "bottom": 255.984375
+        },
+        {
+          "x": 592.328125,
+          "y": 167.1875,
+          "width": 528.328125,
+          "height": 88.796875,
+          "right": 1120.65625,
+          "bottom": 255.984375
+        },
+        {
+          "x": 1156.65625,
+          "y": 167.1875,
+          "width": 528.328125,
+          "height": 88.796875,
+          "right": 1684.984375,
+          "bottom": 255.984375
+        },
+        {
+          "x": 28,
+          "y": 279.984375,
+          "width": 528.328125,
+          "height": 88.796875,
+          "right": 556.328125,
+          "bottom": 368.78125
+        },
+        {
+          "x": 592.328125,
+          "y": 279.984375,
+          "width": 528.328125,
+          "height": 88.796875,
+          "right": 1120.65625,
+          "bottom": 368.78125
+        },
+        {
+          "x": 1156.65625,
+          "y": 279.984375,
+          "width": 528.328125,
+          "height": 88.796875,
+          "right": 1684.984375,
+          "bottom": 368.78125
+        }
+      ],
+      "timelines": [
+        {
+          "x": 28,
+          "y": 516.78125,
+          "width": 1014.28125,
+          "height": 254.0625,
+          "right": 1042.28125,
+          "bottom": 770.84375,
+          "viewWidth": 1014
+        },
+        {
+          "x": 28,
+          "y": 903.078125,
+          "width": 1014.28125,
+          "height": 208.046875,
+          "right": 1042.28125,
+          "bottom": 1111.125,
+          "viewWidth": 1014
+        }
+      ],
+      "pathLengths": [
+        26127,
+        25463,
+        24834
+      ],
+      "invalidPaths": false,
+      "svgNodes": 27
+    },
+    "layout-1000": {
+      "pageWidth": 1000,
+      "width": 1000,
+      "scrollWidth": 985,
+      "contentWidth": 985,
+      "scrollHeight": 1474,
+      "headerBottom": 54,
+      "results": {
+        "x": 0,
+        "y": 54,
+        "width": 1000,
+        "height": 946,
+        "right": 1000,
+        "bottom": 1000
+      },
+      "metrics": [
+        {
+          "x": 24,
+          "y": 169.1875,
+          "width": 296.328125,
+          "height": 84.1875,
+          "right": 320.328125,
+          "bottom": 253.375
+        },
+        {
+          "x": 344.328125,
+          "y": 169.1875,
+          "width": 296.328125,
+          "height": 84.1875,
+          "right": 640.65625,
+          "bottom": 253.375
+        },
+        {
+          "x": 664.65625,
+          "y": 169.1875,
+          "width": 296.34375,
+          "height": 84.1875,
+          "right": 961,
+          "bottom": 253.375
+        },
+        {
+          "x": 24,
+          "y": 275.375,
+          "width": 296.328125,
+          "height": 84.1875,
+          "right": 320.328125,
+          "bottom": 359.5625
+        },
+        {
+          "x": 344.328125,
+          "y": 275.375,
+          "width": 296.328125,
+          "height": 84.1875,
+          "right": 640.65625,
+          "bottom": 359.5625
+        },
+        {
+          "x": 664.65625,
+          "y": 275.375,
+          "width": 296.34375,
+          "height": 84.1875,
+          "right": 961,
+          "bottom": 359.5625
+        }
+      ],
+      "timelines": [
+        {
+          "x": 24,
+          "y": 507.5625,
+          "width": 532.578125,
+          "height": 254.265625,
+          "right": 556.578125,
+          "bottom": 761.828125,
+          "viewWidth": 532
+        },
+        {
+          "x": 24,
+          "y": 893.828125,
+          "width": 532.578125,
+          "height": 208.21875,
+          "right": 556.578125,
+          "bottom": 1102.046875,
+          "viewWidth": 532
+        }
+      ],
+      "pathLengths": [
+        26063,
+        25399,
+        24770
+      ],
+      "invalidPaths": false,
+      "svgNodes": 27
+    },
+    "legacyFinishedRestorationAndDeterminism": true,
+    "unitsAndSynchronizedKeyboardHover": true,
+    "setupDetails": [
+      "11-1",
+      "11-2"
+    ],
+    "csv": {
+      "filename": "forextester-journal-session-11.csv",
+      "exportedPositions": 44
+    },
+    "headerSave": true,
+    "finishPreservesOpenPartialPendingAndLedger": {
+      "open": 1,
+      "pending": 1,
+      "closed": 1
+    }
+  },
+  "fixturesSummary": {
+    "populated": {
+      "id": "40369e70-7f89-4e62-ae1a-d166e193e4e6",
+      "completedSetups": 22,
+      "observations": 93600,
+      "positions": 0,
+      "pending": 0
+    },
+    "empty": {
+      "id": "539457e6-6315-4656-ac01-a4261d14a665",
+      "completedSetups": 0,
+      "observations": 201,
+      "positions": 0,
+      "pending": 0
+    },
+    "unfinished": {
+      "id": "cbc57402-04ac-4ece-bd35-b92b6c8bfcc8",
+      "completedSetups": 0,
+      "observations": 801,
+      "positions": 1,
+      "pending": 1
+    }
+  }
+}

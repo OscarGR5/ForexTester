@@ -18,7 +18,7 @@ function MetadataEditor({ setup, onChange }: { setup: TradingSetup; onChange: (i
   </fieldset>
 }
 
-function PositionDetails({ position }: { position: Position }) {
+export function PositionDetails({ position }: { position: Position }) {
   const closed = isClosed(position) ? position : null
   return <article className="position-detail" aria-label={`Position details ${position.id}`}>
     <h4>Position {position.id} · Setup {position.setupId} · {position.direction} · {position.lots} lots · {positionStatus(position)}</h4>

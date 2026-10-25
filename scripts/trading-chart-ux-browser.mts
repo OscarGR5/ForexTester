@@ -161,9 +161,9 @@ try {
  assert.deepEqual(restored.workspace.timeframes, checkpoint.workspace.timeframes); assert.deepEqual(await ranges(), views)
  evidence.checks.durableRestore = { replayTimestamp: restored.replay.timestamp, timeframes: restored.workspace.timeframes, views, closed: restored.trading.closed.length, setups: restored.trading.setups.length }
  await screenshot('durable-restored')
- await button('Finish backtest').click(); await button('Journal').click()
- assert.equal(await page.locator('[data-journal-setup-id]').count(), 2)
- evidence.checks.journalGrouping = await page.locator('[data-journal-setup-id]').evaluateAll(rows => rows.map(row => ({ setupId: row.getAttribute('data-journal-setup-id'), positions: row.querySelectorAll('td')[2].textContent, status: row.querySelectorAll('td')[3].textContent })))
+ await button('Finish backtest').click(); await page.locator('.results-breakdown > summary').click()
+ assert.equal(await page.locator('[data-setup-id]').count(), 2)
+ evidence.checks.journalGrouping = await page.locator('[data-setup-id]').evaluateAll(rows => rows.map(row => ({ setupId: row.getAttribute('data-setup-id'), positions: row.querySelectorAll('td')[1].textContent, status: row.querySelectorAll('td')[2].textContent })))
  assert.deepEqual(evidence.checks.journalGrouping.map((row: any) => row.positions), ['2','1'])
  assert.ok(evidence.checks.journalGrouping.every((row: any) => row.status === 'completed'))
  evidence.checks.closedTrades = restored.trading.closed.map(p => ({ id: p.id, setupId: p.setupId, exitReason: p.exitReason, stopModifications: p.stopModifications, netPnlUsd: p.netPnlUsd }))

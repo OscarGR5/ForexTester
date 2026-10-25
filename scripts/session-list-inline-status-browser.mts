@@ -219,8 +219,11 @@ try {
   assert.equal(await page.getByLabel('Account PnL',{exact:true}).innerText(),account)
   await screenshot('restored-after-close-all');evidence.checks.closeAll={closedIds:closed.closed.map((p:any)=>p.id),account,restore:true}
   page.once('dialog',dialog=>dialog.accept());await button('Finish backtest').click();await page.locator('.phase-finished').waitFor()
-  await button('Journal').click();await page.getByLabel('Journal view',{exact:true}).selectOption('positions')
-  for(const position of closed.closed) assert.match(await page.locator('.journal-table-scroll').innerText(),new RegExp(position.id))
+  await page.locator('.results-breakdown > summary').click()
+  for (const setup of closed.setups) {
+   await page.getByRole('button', { name: `Details for setup ${setup.id}`, exact: true }).click()
+   for (const position of closed.closed.filter((position:any) => position.setupId === setup.id)) assert.equal(await page.getByRole('article', { name: `Position details ${position.id}`, exact: true }).isVisible(), true)
+  }
   await screenshot('journal-after-close-all');evidence.checks.journal=true
  }
  assert.deepEqual(await manifest(),beforeCache)

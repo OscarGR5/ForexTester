@@ -1,0 +1,39 @@
+{
+  "checks": [
+    "layout-1440",
+    "layout-1100",
+    "layout-1728",
+    "layout-1000",
+    "legacyFinishedRestorationAndDeterminism",
+    "unitsAndSynchronizedKeyboardHover",
+    "setupDetails",
+    "csv",
+    "headerSave",
+    "finishPreservesOpenPartialPendingAndLedger"
+  ],
+  "fixtures": {
+    "populated": {
+      "id": "40369e70-7f89-4e62-ae1a-d166e193e4e6",
+      "completedSetups": 22,
+      "observations": 93600,
+      "positions": 0,
+      "pending": 0
+    },
+    "empty": {
+      "id": "539457e6-6315-4656-ac01-a4261d14a665",
+      "completedSetups": 0,
+      "observations": 201,
+      "positions": 0,
+      "pending": 0
+    },
+    "unfinished": {
+      "id": "cbc57402-04ac-4ece-bd35-b92b6c8bfcc8",
+      "completedSetups": 0,
+      "observations": 801,
+      "positions": 1,
+      "pending": 1
+    }
+  },
+  "screenshots": 9,
+  "errors": []
+}
