@@ -21,7 +21,7 @@ const button = (label: string) => [...host.querySelectorAll('button')].find(b =>
 it('renders all six metrics, four chart areas and collapsed setup details with one combined row per setup', async () => {
   const fixture = resultsFixture('unfinished'), { trading: state, replay } = fixture.snapshot.checkpoint
   const save = vi.fn()
-  await render(<ResultsDashboard state={state} ledger={fixture.snapshot.ledger} start={replay.startTimestamp} endpoint={replay.timestamp} singlePrice onSave={save} />)
+  await render(<ResultsDashboard onResume={() => {}} reviewOnly={false} resumeDisabled={false} state={state} ledger={fixture.snapshot.ledger} start={replay.startTimestamp} endpoint={replay.timestamp} singlePrice onSave={save} />)
   expect(host.querySelectorAll('.results-primary-metrics > div')).toHaveLength(6)
   expect(host.querySelectorAll('.results-chart-panel')).toHaveLength(4)
   expect(host.querySelector('.results-navigation')).toBeNull(); expect(host.querySelector('[aria-label="Statistics scope"]')).toBeNull()
@@ -45,7 +45,7 @@ it('keeps CSV schema, metadata and formula safety through the header export acti
   const { snapshot } = resultsFixture('unfinished'), { trading: state, replay } = snapshot.checkpoint
   const create = vi.fn(() => 'blob:fixture'), revoke = vi.fn(), click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
   vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: create, revokeObjectURL: revoke }))
-  await render(<ResultsDashboard state={state} ledger={snapshot.ledger} start={replay.startTimestamp} endpoint={replay.timestamp} singlePrice onSave={() => {}} />)
+  await render(<ResultsDashboard onResume={() => {}} reviewOnly={false} resumeDisabled={false} state={state} ledger={snapshot.ledger} start={replay.startTimestamp} endpoint={replay.timestamp} singlePrice onSave={() => {}} />)
   await act(async () => button('Export trades').click())
   expect(click).toHaveBeenCalledOnce(); expect(create).toHaveBeenCalledOnce()
   const csv = journalCsv(state)
@@ -55,18 +55,20 @@ it('keeps CSV schema, metadata and formula safety through the header export acti
 
 it('shows honest empty statistics, recorded equity and no charts with invalid coordinates', async () => {
   const state = createTradingState(), ledger = createEquityLedger(state.account.referenceBalance)
-  await render(<ResultsDashboard state={state} ledger={ledger} start={Date.UTC(2024, 0, 1)} endpoint={null} singlePrice={false} onSave={() => {}} />)
+  await render(<ResultsDashboard onResume={() => {}} reviewOnly={false} resumeDisabled={false} state={state} ledger={ledger} start={Date.UTC(2024, 0, 1)} endpoint={null} singlePrice={false} onSave={() => {}} />)
   expect(host.textContent).toContain('No completed setups yet.'); expect(host.textContent).toContain('No M1 equity observations recorded.')
   expect(button('Export trades').disabled).toBe(true); expect(host.textContent).not.toMatch(/NaN|undefined/)
   expect(host.querySelector('.results-breakdown')!.textContent).toContain('No setups recorded.')
 })
 
 it('keeps setup scope fixed despite position preferences and provides keyboard synchronized equity/drawdown hover and units', async () => {
-  const { snapshot } = resultsFixture('populated'), { trading: state, replay } = snapshot.checkpoint
+  const { snapshot } = resultsFixture('populated', 8 * 1440), { trading: state, replay } = snapshot.checkpoint
   const stats = setupPerformance(completedSetups(state), state.account.referenceBalance)
-  await render(<ResultsDashboard state={state} ledger={snapshot.ledger} start={replay.startTimestamp} endpoint={replay.timestamp} singlePrice onSave={() => {}} />)
+  await render(<ResultsDashboard onResume={() => {}} reviewOnly={false} resumeDisabled={false} state={state} ledger={snapshot.ledger} start={replay.startTimestamp} endpoint={replay.timestamp} singlePrice onSave={() => {}} />)
   expect(host.querySelector('.results-primary-metrics')!.textContent).toContain(rValue(stats.totalNetR))
   expect(state.closed.length).toBeGreaterThan(stats.count)
+  const axes = [...host.querySelectorAll('.results-timeline')].map(svg => [...svg.querySelectorAll(':scope > text')].map(text => text.textContent))
+  expect(axes[0]).toEqual(axes[1]); expect(axes[0][0]).toBe('2024-01-10')
   const equity = host.querySelector<SVGSVGElement>('.results-timeline')!
   await act(async () => { equity.focus(); equity.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true })) })
   expect(host.querySelectorAll('.results-chart-readout time')).toHaveLength(2)
@@ -74,6 +76,19 @@ it('keeps setup scope fixed despite position preferences and provides keyboard s
   await act(async () => button('USD').click())
   expect(host.querySelector('.results-timeline')!.getAttribute('aria-label')).toContain('in USD')
   expect(button('USD').getAttribute('aria-pressed')).toBe('true')
+})
+
+it('puts the prominent resume action first and supports disabled and end-of-history review states', async () => {
+  const { snapshot } = resultsFixture('unfinished'), { trading: state, replay } = snapshot.checkpoint
+  const resume = vi.fn()
+  const props = { state, ledger: snapshot.ledger, start: replay.startTimestamp, endpoint: replay.timestamp, singlePrice: true, onSave: () => {}, onResume: resume }
+  await render(<ResultsDashboard {...props} reviewOnly={false} resumeDisabled={false} />)
+  expect(host.querySelector('.results-actions button')?.textContent).toBe('Resume Backtest')
+  expect(button('Resume Backtest').classList.contains('primary-action')).toBe(true)
+  await act(async () => button('Resume Backtest').click()); expect(resume).toHaveBeenCalledOnce()
+  await act(async () => root!.render(<ResultsDashboard {...props} reviewOnly resumeDisabled />))
+  expect(button('Return to charts').disabled).toBe(true)
+  await act(async () => button('Return to charts').click()); expect(resume).toHaveBeenCalledOnce()
 })
 
 it('pages through every R outcome, preserving zero and unavailable bars and deterministic setup identity', async () => {

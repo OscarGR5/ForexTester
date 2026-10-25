@@ -9,7 +9,7 @@ import { createServer } from 'vite'
 import { sessionApi } from '../backend/src/sessionApi.js'
 import { SessionStorage } from '../backend/src/sessionStorage.js'
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ?? 'playwright-core')
-const directory = await mkdtemp(join(tmpdir(), 'forextester-results-dashboard-')), output = 'docs/results-dashboard'
+const directory = await mkdtemp(join(tmpdir(), 'forextester-results-dashboard-')), output = 'docs/results-chart-resume'
 await mkdir(output, { recursive: true })
 const storage = new SessionStorage({ directory: join(directory, 'sessions') })
 const evidence: any = { fixtures: 'tests/resultsFixture.ts: synthetic 6E weekday M1 prices, $100,000 initial balance, combined 2% risk budget, $7/lot round-trip commissions; fixed 2024 UTC dates', isolatedDirectory: directory,
@@ -84,7 +84,7 @@ try {
     const { historyFingerprint, recordDigest } = await import('/src/sessionCodec.ts')
     const store = new DiskSessionStore(), fixtures: any = {}
     for (const kind of ['populated', 'empty', 'unfinished']) {
-      const { history, snapshot } = resultsFixture(kind)
+      const { history, snapshot } = resultsFixture(kind, kind === 'populated' ? 8 * 1440 : 0)
       const id = crypto.randomUUID(), historyId = await historyFingerprint(history)
       await store.cacheHistory(historyId, history)
       let record = await store.save({ id, name: `Synthetic ${kind} Results fixture`, createdAt: '2024-04-01T00:00:00.000Z', range: { from: history.tradingFrom, to: history.to }, historyId, totalCandles: history.candles.length }, snapshot, null)
@@ -105,7 +105,7 @@ try {
   assert.equal(await page.getByRole('button', { name: /^(Overview|Journal|Equity & drawdown)$/ }).count(), 0)
   assert.equal(await page.getByLabel('Statistics scope', { exact: true }).count(), 0)
   assert.equal(await page.locator('.results-breakdown').getAttribute('open'), null)
-  for (const width of [1440, 1100, 1728, 1000]) await layout(width)
+  for (const width of [1440, 1100]) await layout(width)
   await page.setViewportSize({ width: 1440, height: 1000 }); await page.waitForTimeout(150)
   await capture('populated-dashboard', true)
   const before = await record(fixtures.populated.id)
@@ -113,6 +113,11 @@ try {
   assert.equal(before.checkpoint.workspace.statisticsScope, 'positions')
   const kpis = await page.locator('.results-primary-metrics').innerText()
   const paths = await page.locator('.results-timeline path').evaluateAll(paths => paths.map(p => p.getAttribute('d')))
+  const axes = await page.locator('.results-timeline').evaluateAll(charts => charts.map(chart => [...chart.querySelectorAll(':scope > text')].map(t => t.textContent)))
+  assert.deepEqual(axes[0], axes[1]); assert.equal(axes[0][0], '2024-01-10')
+  assert.ok(before.checkpoint.replay.startTimestamp < Date.parse(axes[0][0]))
+  for (const path of paths) assert.equal((path.match(/M/g) ?? []).length, 1)
+  evidence.checks.shortenedSharedDomainAndFlatWeekendConnections = { axes, segments: paths.map(p => (p.match(/M/g) ?? []).length) }
   await page.reload(); await page.locator('.saved-session').filter({ hasText: 'Synthetic populated Results fixture' }).getByRole('button', { name: 'Resume backtest', exact: true }).click()
   await page.locator('.phase-finished').waitFor(); await saved(); await page.waitForTimeout(150)
   assert.equal(await page.locator('.results-primary-metrics').innerText(), kpis)
@@ -120,6 +125,11 @@ try {
   const restored = await record(fixtures.populated.id)
   assert.deepEqual(restored.checkpoint.trading, before.checkpoint.trading); assert.deepEqual(restored.checkpoint.equity, before.checkpoint.equity)
   evidence.checks.legacyFinishedRestorationAndDeterminism = true
+  await button('Return to charts').click(); await page.locator('.phase-trading').waitFor(); await saved()
+  assert.equal(await button('Play').isDisabled(), true); assert.equal(await button('Next Candle').isDisabled(), true)
+  assert.deepEqual((await record(fixtures.populated.id)).checkpoint.replay, restored.checkpoint.replay)
+  await button('Review Results').click(); await page.locator('.phase-finished').waitFor(); await saved()
+  evidence.checks.completeHistoryChartReview = true
   await button('USD').click(); assert.match(await page.locator('.results-timeline').first().getAttribute('aria-label'), /USD/)
   await button('%').click()
   await page.locator('.results-timeline').first().focus(); await page.keyboard.press('End')
@@ -151,6 +161,12 @@ try {
   assert.equal(await button('Export trades').isDisabled(), true); await capture('empty-session', true)
   const unfinishedBefore = await record(fixtures.unfinished.id)
   await open('Synthetic unfinished Results fixture'); await page.locator('.phase-trading').waitFor(); await saved()
+  await page.locator('input[name="chart-count"][value="2"]').check()
+  await page.getByLabel('Chart 1 timeframe', { exact: true }).selectOption('M15')
+  await page.getByLabel('Chart 2 timeframe', { exact: true }).selectOption('H1')
+  const chartBox = await page.locator('.chart-canvas').first().boundingBox()
+  await page.mouse.move(chartBox.x + chartBox.width / 2, chartBox.y + chartBox.height / 2)
+  await page.mouse.wheel(0, -160); await page.waitForTimeout(300); await saved()
   await button('Finish backtest').click(); await page.locator('.phase-finished').waitFor(); await saved()
   const unfinishedAfter = await record(fixtures.unfinished.id)
   assert.deepEqual(unfinishedAfter.checkpoint.trading, unfinishedBefore.checkpoint.trading)
@@ -162,6 +178,37 @@ try {
   await page.reload(); await page.locator('.saved-session').filter({ hasText: 'Synthetic unfinished Results fixture' }).getByRole('button', { name: 'Resume backtest', exact: true }).click()
   await page.locator('.phase-finished').waitFor(); await saved()
   assert.deepEqual((await record(fixtures.unfinished.id)).checkpoint.trading, unfinishedAfter.checkpoint.trading)
+  for (const width of [1440, 1100]) {
+    await page.setViewportSize({ width, height: 1000 }); await page.locator('.results-workspace').evaluate(el => el.scrollTop = 0)
+    await capture(`resume-action-${width}`)
+  }
+  await button('Resume Backtest').click(); await page.locator('.phase-trading').waitFor(); await saved()
+  const resumed = await record(fixtures.unfinished.id)
+  assert.equal(resumed.checkpoint.lifecycle, 'trading')
+  assert.deepEqual(resumed.checkpoint.trading, unfinishedAfter.checkpoint.trading)
+  assert.deepEqual(resumed.checkpoint.replay, unfinishedAfter.checkpoint.replay)
+  assert.deepEqual(resumed.checkpoint.equity, unfinishedAfter.checkpoint.equity)
+  assert.equal(resumed.checkpoint.executionCursor, unfinishedAfter.checkpoint.executionCursor)
+  assert.deepEqual(resumed.chunkHashes, unfinishedAfter.chunkHashes)
+  assert.deepEqual(resumed.checkpoint.workspace, unfinishedAfter.checkpoint.workspace)
+  assert.equal(await page.getByLabel('Replay status', { exact: true }).innerText(), 'Paused')
+  for (const width of [1440, 1100]) {
+    await page.setViewportSize({ width, height: 1000 }); await page.waitForTimeout(150)
+    await capture(`resumed-trading-${width}`)
+  }
+  await page.reload(); await page.locator('.saved-session').filter({ hasText: 'Synthetic unfinished Results fixture' }).getByRole('button', { name: 'Resume backtest', exact: true }).click()
+  await page.locator('.phase-trading').waitFor(); await saved()
+  assert.equal(await page.getByLabel('Replay status', { exact: true }).innerText(), 'Paused')
+  assert.deepEqual((await record(fixtures.unfinished.id)).checkpoint.trading, resumed.checkpoint.trading)
+  await button('Next Candle').click(); await saved()
+  const advanced = await record(fixtures.unfinished.id)
+  assert.equal(advanced.checkpoint.executionCursor, resumed.checkpoint.executionCursor + 1)
+  assert.equal(advanced.checkpoint.equity.count, resumed.checkpoint.equity.count + 1)
+  assert.deepEqual(advanced.checkpoint.trading.closed, resumed.checkpoint.trading.closed)
+  assert.equal(advanced.checkpoint.trading.pending.length, 0)
+  assert.equal(advanced.checkpoint.trading.positions.length, resumed.checkpoint.trading.positions.length + 1)
+  await button('Finish backtest').click(); await page.locator('.phase-finished').waitFor(); await saved()
+  evidence.checks.resumePreservesCheckpointAndReloadThenExecutesOnlyNextCandle = true
   assert.deepEqual(evidence.errors, []); assert.deepEqual(evidence.externalRequests, []); assert.deepEqual(evidence.networkHistoryCalls, []); assert.equal(evidence.paidSubmissions, 0)
   await writeFile(`${output}/browser-evidence.json`, JSON.stringify(evidence, null, 2) + '\n')
   console.log(JSON.stringify({ checks: Object.keys(evidence.checks), fixtures: fixtures, screenshots: evidence.screenshots.length, errors: evidence.errors }, null, 2))

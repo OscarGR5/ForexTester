@@ -1,5 +1,7 @@
 # Results dashboard verification
 
+For the subsequent chart-window, flat-gap continuity, and Resume Backtest changes, see [updated verification and screenshots](../results-chart-resume/verification.md). The browser runner now writes its current artifacts there; the captures below document the original dashboard revision.
+
 Implemented on `feat/unified-results-dashboard` from `origin/main` at `0e5b6078fd85064b28529e4e1d1f39c3b8567de4`. The unrelated local `main` styling commit remains on local `main` and is excluded from this feature.
 
 One scrolling Results page replaces Overview, Journal and Equity navigation. It contains six primary metrics, account-equity and setup-R charts, drawdown comparison, monthly realized contributions, secondary statistics and a collapsed setup breakdown. Save and the unchanged CSV export are in the header.

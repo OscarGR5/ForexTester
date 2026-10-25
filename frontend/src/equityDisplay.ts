@@ -1,5 +1,50 @@
 import type { EquityLedger, EquityPoint } from './equity'
 
+export interface ExecutedInterval { entryTime: number; exitTime?: number }
+
+export function equityWindowStart(points: readonly EquityPoint[], positions: readonly ExecutedInterval[]): number {
+  const first = points[0]?.timestamp ?? 0
+  if (!positions.length) return first
+  let firstEntry = Infinity
+  for (const position of positions) firstEntry = Math.min(firstEntry, position.entryTime)
+  return Math.max(first, Math.floor(firstEntry / 86_400_000) * 86_400_000 - 86_400_000)
+}
+
+// UTC day before the first actual fill. Keep real observations, never synthesize
+// a midnight value, and leave the complete ledger available to every KPI/save.
+export function equityWindow(points: readonly EquityPoint[], positions: readonly ExecutedInterval[]): readonly EquityPoint[] {
+  if (!positions.length) return points
+  const start = equityWindowStart(points, positions)
+  let low = 0, high = points.length
+  while (low < high) {
+    const mid = Math.floor((low + high) / 2)
+    if (points[mid].timestamp < start) low = mid + 1
+    else high = mid
+  }
+  return points.slice(low)
+}
+
+// Right endpoints of confirmed constant gaps, established from FULL-resolution
+// neighbors and executed exposure. Sorting once avoids scanning every position
+// for every M1 point. An exit at the left observation is already in its cash.
+export function flatEquityGaps(points: readonly EquityPoint[], positions: readonly ExecutedInterval[]): ReadonlySet<number> {
+  const intervals = [...positions].sort((a, b) => a.entryTime - b.entryTime)
+  const connected = new Set<number>()
+  let cursor = 0, latestExit = -Infinity
+  for (let index = 1; index < points.length; index++) {
+    const previous = points[index - 1], point = points[index]
+    if (!point.clockGap) continue
+    while (cursor < intervals.length && intervals[cursor].entryTime <= point.timestamp) {
+      latestExit = Math.max(latestExit, intervals[cursor++].exitTime ?? Infinity)
+    }
+    if (latestExit > previous.timestamp) continue
+    if ([previous, point].every(p => p.equityUsd !== null && Number.isFinite(p.equityUsd) && Number.isFinite(p.cashUsd)
+      && p.unrealizedUsd === 0 && p.missingSides.length === 0)
+      && previous.cashUsd === point.cashUsd && previous.equityUsd === point.equityUsd) connected.add(point.timestamp)
+  }
+  return connected
+}
+
 export function equityObservations(ledger: EquityLedger): EquityPoint[] {
   const points: EquityPoint[] = new Array(ledger.count)
   let node = ledger.tail

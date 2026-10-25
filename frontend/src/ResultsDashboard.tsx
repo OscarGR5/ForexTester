@@ -33,12 +33,14 @@ function SetupBreakdown({ state, rows }: { state: TradingState; rows: readonly S
   </details>
 }
 
-export const ResultsDashboard = memo(function ResultsDashboard({ state, ledger, start, endpoint, singlePrice, onSave }: {
+export const ResultsDashboard = memo(function ResultsDashboard({ state, ledger, start, endpoint, singlePrice, onSave, onResume, reviewOnly, resumeDisabled }: {
   state: TradingState; ledger: EquityLedger; start: number; endpoint: number | null; singlePrice: boolean; onSave: () => void
+  onResume: () => void; reviewOnly: boolean; resumeDisabled: boolean
 }) {
   const referenceBalance = state.account.referenceBalance
   const rows = useMemo(() => journalSetups(state), [state])
   const completed = useMemo(() => completedSetups(state), [state])
+  const positions = useMemo(() => [...state.positions, ...state.closed], [state.positions, state.closed])
   const stats = useMemo(() => setupPerformance(completed, referenceBalance), [completed, referenceBalance])
   const equity = useMemo(() => equityPerformance(ledger, referenceBalance), [ledger, referenceBalance])
   const partial = rows.filter(row => row.status === 'partially closed').length
@@ -61,7 +63,7 @@ export const ResultsDashboard = memo(function ResultsDashboard({ state, ledger, 
   ]
   return <section className="results-workspace" aria-label="Backtest results">
     <header className="results-heading"><div><h2>Backtest results</h2><p className="results-session-context">{singlePrice ? 'EURUSD 6E' : 'EURUSD'} <span>· {tradingTime(start)} → {endpoint === null ? 'N/A' : tradingTime(endpoint)}</span><span>· Initial balance {usd(referenceBalance)}</span></p></div>
-      <div className="results-actions"><button type="button" onClick={onSave}>Save now</button><button type="button" disabled={!state.positions.length && !state.closed.length} onClick={() => downloadJournalCsv(state)}>Export trades</button></div>
+      <div className="results-actions"><button type="button" className="primary-action" disabled={resumeDisabled} onClick={onResume}>{reviewOnly ? 'Return to charts' : 'Resume Backtest'}</button><button type="button" onClick={onSave}>Save now</button><button type="button" disabled={!state.positions.length && !state.closed.length} onClick={() => downloadJournalCsv(state)}>Export trades</button></div>
     </header>
     <section className="results-primary" aria-label="Primary performance metrics"><dl className="results-primary-metrics">{primary.map(metric => <div key={metric.label}>
       <dt>{metric.label} <Help text={metric.help} /></dt><dd><span className={metric.sign}>{metric.value}</span><small className="results-metric-context">{metric.context}</small></dd>
@@ -73,7 +75,7 @@ export const ResultsDashboard = memo(function ResultsDashboard({ state, ledger, 
     {ledger.nonpositiveEquity && <p className="coverage-warning results-data-notice">Equity reached zero or below. Peak percentage drawdown is unavailable; dollar drawdown remains recorded.</p>}
     {stats.validRCount < stats.count && <p className="coverage-warning results-data-notice">{stats.count - stats.validRCount} completed setups have invalid original risk. Aggregate net R is unavailable.</p>}
     <section className="results-analysis" aria-label="Performance charts"><h2 className="results-section-title">Performance charts</h2>
-      <ResultsCharts ledger={ledger} referenceBalance={referenceBalance} observations={completed} start={start} endpoint={endpoint} />
+      <ResultsCharts ledger={ledger} positions={positions} referenceBalance={referenceBalance} observations={completed} start={start} endpoint={endpoint} />
     </section>
     <section className="results-secondary" aria-label="Additional statistics"><h2 className="results-section-title">Additional statistics <Help text="Completed setups only. R averages include strictly positive or negative observations. Breakevens end losing streaks. Holding time runs from earliest executed entry to final exit. Commissions here cover completed setups; all incurred entry fees remain in account equity." /></h2>
       <dl>{secondary.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
@@ -82,7 +84,7 @@ export const ResultsDashboard = memo(function ResultsDashboard({ state, ledger, 
     <SetupBreakdown state={state} rows={rows} />
     <details className="results-assumptions"><summary>Execution assumptions and data quality</summary>
       <p>{singlePrice ? 'Databento 6E single-price M1 model. Hypothetical forex-style sizing and simplified trade-price fills; no synthetic spread.' : 'Legacy EURUSD bid/ask execution. Long positions mark to bid close; short positions mark to ask close.'} Incurred entry and exit commissions are included in account equity; unincurred future exit fees are excluded.</p>
-      <p>M1 snapshots cannot reconstruct intraminute or tick-level equity. Missing valuations and market clock gaps break chart lines. Drawdown maxima use all {ledger.count.toLocaleString('en-US')} recorded observations before display downsampling. Setup details retain recorded SL coverage warnings.</p>
+      <p>M1 snapshots cannot reconstruct intraminute or tick-level equity. Missing valuations and clock gaps with exposure break chart lines; confirmed constant values without exposure connect. Drawdown maxima use all {ledger.count.toLocaleString('en-US')} recorded observations before display downsampling. Setup details retain recorded SL coverage warnings.</p>
       <p>Account-equity return can differ from completed-setup realized PnL because open or partial positions and entry fees remain in the ledger. The normal 2% risk budget is combined across both entries. Rounded executed risk determines R; stops never redefine original risk.</p>
       <p>{state.rejected.length} rejected entries · {state.cancelled.length} cancelled entries. Notes, tags and stop history remain in saved records; Export trades preserves the existing position CSV schema.</p>
     </details>

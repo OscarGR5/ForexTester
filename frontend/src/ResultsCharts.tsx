@@ -1,7 +1,7 @@
 import { memo, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { netR, type Observation } from './analytics'
 import type { EquityLedger, EquityPoint } from './equity'
-import { EquityDisplay } from './equityDisplay'
+import { downsampleEquity, equityObservations, equityWindow, equityWindowStart, flatEquityGaps, type ExecutedInterval } from './equityDisplay'
 import { monthlyPerformance, returnPercent, startingDeficit } from './resultsAnalytics'
 import { decimal, percent, profitFactor, rValue, usd } from './resultsFormatting'
 import { tradingTime } from './trading'
@@ -33,24 +33,26 @@ function useWidth() {
 }
 
 // One path per series, even for a long, discontinuous M1 history.
-export function timelinePath(points: readonly EquityPoint[], value: (p: EquityPoint) => number | null, x: (timestamp: number) => number, y: (value: number) => number) {
+export function timelinePath(points: readonly EquityPoint[], value: (p: EquityPoint) => number | null, x: (timestamp: number) => number, y: (value: number) => number, flatGaps?: ReadonlySet<number>) {
   let drawing = false
+  let previousValue: number | null = null
   const commands: string[] = []
   for (const point of points) {
     const v = value(point)
-    if (point.clockGap || v === null || !Number.isFinite(v)) drawing = false
+    if ((point.clockGap && (!flatGaps?.has(point.timestamp) || previousValue !== v)) || v === null || !Number.isFinite(v)) drawing = false
     if (v !== null && Number.isFinite(v)) {
       commands.push(`${drawing ? 'L' : 'M'}${x(point.timestamp).toFixed(2)},${y(v).toFixed(2)}`)
       // A dot makes isolated observations visible without bridging gaps.
       if (!drawing) commands.push('l0,0')
       drawing = true
     }
+    previousValue = v
   }
   return commands.join(' ')
 }
 
-export function nearestObservation(points: readonly EquityPoint[], timestamp: number): EquityPoint | null {
-  if (!points.length) return null
+export function nearestObservation(points: readonly EquityPoint[], timestamp: number, flatGaps?: ReadonlySet<number>): EquityPoint | null {
+  if (!points.length || timestamp < points[0].timestamp || timestamp > points.at(-1)!.timestamp) return null
   let low = 0, high = points.length - 1
   while (low < high) {
     const mid = Math.floor((low + high) / 2)
@@ -58,16 +60,17 @@ export function nearestObservation(points: readonly EquityPoint[], timestamp: nu
     else high = mid
   }
   const next = points[low], previous = points[Math.max(0, low - 1)]
-  if (next.clockGap && timestamp > previous.timestamp + 30_000 && timestamp < next.timestamp - 30_000) return null
+  if (next.clockGap && !flatGaps?.has(next.timestamp) && timestamp > previous.timestamp + 30_000 && timestamp < next.timestamp - 30_000) return null
   return Math.abs(timestamp - previous.timestamp) < Math.abs(next.timestamp - timestamp) ? previous : next
 }
 
-const Timeline = memo(function Timeline({ points, width, referenceBalance, mode, unit, hoverTime, onHover }: {
+const Timeline = memo(function Timeline({ points, domainStart, flatGaps, width, referenceBalance, mode, unit, hoverTime, onHover }: {
   points: readonly EquityPoint[]; width: number; referenceBalance: number; mode: 'equity' | 'drawdown'; unit: 'percent' | 'usd'
+  flatGaps: ReadonlySet<number>; domainStart: number
   hoverTime: number | null; onHover: (timestamp: number | null) => void
 }) {
   const height = mode === 'equity' ? 254 : 208, left = 80, right = 16, top = 16, bottom = 36
-  const first = points[0]?.timestamp ?? 0, last = points.at(-1)?.timestamp ?? first
+  const first = domainStart, last = points.at(-1)?.timestamp ?? first
   const span = last - first || 60_000
   const x = (timestamp: number) => left + (timestamp - first) / span * (width - left - right)
   const geometry = useMemo(() => {
@@ -82,9 +85,9 @@ const Timeline = memo(function Timeline({ points, width, referenceBalance, mode,
     const padding = (max - min || (unit === 'usd' && mode === 'equity' ? Math.max(1, Math.abs(referenceBalance) * .01) : 1)) * .08
     min -= padding; max += mode === 'drawdown' ? 0 : padding
     const y = (v: number) => top + (max - v) / (max - min) * (height - top - bottom)
-    return { min, max, baseline, y, primary: timelinePath(points, value, x, y),
-      secondary: mode === 'drawdown' ? timelinePath(points, deficit, x, y) : null, value }
-  }, [points, width, referenceBalance, mode, unit])
+    return { min, max, baseline, y, primary: timelinePath(points, value, x, y, flatGaps),
+      secondary: mode === 'drawdown' ? timelinePath(points, deficit, x, y, flatGaps) : null, value }
+  }, [points, domainStart, flatGaps, width, referenceBalance, mode, unit])
   const point = hoverTime === null ? null : points.find(p => p.timestamp === hoverTime) ?? null
   const format = mode === 'equity' && unit === 'usd' ? usd : percent
   const onKeyDown = (event: KeyboardEvent<SVGSVGElement>) => {
@@ -104,7 +107,7 @@ const Timeline = memo(function Timeline({ points, width, referenceBalance, mode,
         const box = event.currentTarget.getBoundingClientRect()
         const px = (event.clientX - box.left) / box.width * width
         const timestamp = first + (px - left) / (width - left - right) * span
-        onHover(px < left || px > width - right ? null : nearestObservation(points, timestamp)?.timestamp ?? null)
+        onHover(px < left || px > width - right ? null : nearestObservation(points, timestamp, flatGaps)?.timestamp ?? null)
       }}>
       {[0, .5, 1].map(ratio => {
         const value = geometry.max - (geometry.max - geometry.min) * ratio, y = geometry.y(value)
@@ -162,23 +165,28 @@ export const SetupRChart = memo(function SetupRChart({ observations }: { observa
   </section>
 })
 
-export const ResultsCharts = memo(function ResultsCharts({ ledger, referenceBalance, observations, start, endpoint }: {
+export const ResultsCharts = memo(function ResultsCharts({ ledger, positions, referenceBalance, observations, start, endpoint }: {
   ledger: EquityLedger; referenceBalance: number; observations: readonly Observation[]; start: number; endpoint: number | null
+  positions: readonly ExecutedInterval[]
 }) {
-  const { ref, width } = useWidth(), [display] = useState(() => new EquityDisplay()), [unit, setUnit] = useState<'percent' | 'usd'>('percent'), [hoverTime, setHoverTime] = useState<number | null>(null)
-  const points = useMemo(() => display.update(ledger, width), [ledger, width, display])
+  const { ref, width } = useWidth(), [unit, setUnit] = useState<'percent' | 'usd'>('percent'), [hoverTime, setHoverTime] = useState<number | null>(null)
+  const fullPoints = useMemo(() => equityObservations(ledger), [ledger])
+  const domainStart = useMemo(() => equityWindowStart(fullPoints, positions), [fullPoints, positions])
+  const window = useMemo(() => equityWindow(fullPoints, positions), [fullPoints, positions])
+  const flatGaps = useMemo(() => flatEquityGaps(window, positions), [window, positions])
+  const points = useMemo(() => downsampleEquity(window, width), [window, width])
   const months = useMemo(() => monthlyPerformance(observations, referenceBalance, start, endpoint), [observations, referenceBalance, start, endpoint])
   return <div className="results-performance-grid">
     <section className="results-chart-panel results-account-chart" aria-label="Account Equity"><div ref={ref}>
-      <div className="results-panel-heading"><h3>Account Equity <Help text="M1 mark-to-market equity includes incurred commissions and available unrealized PnL. Return uses fixed initial capital. Missing marks and market clock gaps break the lines. Full-resolution observations determine every drawdown KPI." /></h3>
+      <div className="results-panel-heading"><h3>Account Equity <Help text="M1 mark-to-market equity includes incurred commissions and available unrealized PnL. Return uses fixed initial capital. Missing marks and clock gaps with exposure break the lines; confirmed flat account values connect. The view starts the UTC day before the first fill. Full-resolution observations determine every drawdown KPI." /></h3>
         <div className="results-unit-toggle" role="group" aria-label="Equity chart units"><button aria-pressed={unit === 'percent'} onClick={() => setUnit('percent')}>%</button><button aria-pressed={unit === 'usd'} onClick={() => setUnit('usd')}>USD</button></div></div>
-      <Timeline points={points} width={width} referenceBalance={referenceBalance} mode="equity" unit={unit} hoverTime={hoverTime} onHover={setHoverTime} />
+      <Timeline points={points} domainStart={domainStart} flatGaps={flatGaps} width={width} referenceBalance={referenceBalance} mode="equity" unit={unit} hoverTime={hoverTime} onHover={setHoverTime} />
     </div></section>
     <SetupRChart observations={observations} />
     <section className="results-chart-panel" aria-label="Drawdown Comparison">
       <div className="results-panel-heading"><h3>Drawdown Comparison</h3><Help text="From peak: deficit / previous-or-current high-water mark, initially seeded with starting capital. Below starting balance: deficit / initial capital, zero while above it. Downward values are negative. Peak percentages are unavailable at nonpositive equity." /></div>
       <div className="results-chart-legend"><span className="results-peak-legend">From peak</span><span className="results-start-legend">Below starting balance</span></div>
-      <Timeline points={points} width={width} referenceBalance={referenceBalance} mode="drawdown" unit="percent" hoverTime={hoverTime} onHover={setHoverTime} />
+      <Timeline points={points} domainStart={domainStart} flatGaps={flatGaps} width={width} referenceBalance={referenceBalance} mode="drawdown" unit="percent" hoverTime={hoverTime} onHover={setHoverTime} />
     </section>
     <section className="results-chart-panel" aria-label="Monthly Performance">
       <div className="results-panel-heading"><h3>Monthly Performance</h3><Help text="Completed setups are attributed once, to the UTC month of their final exit. Realized return is net PnL / fixed initial capital, a noncompounded contribution, not calendar-month equity return. Only the actual replay period is shown." /></div>

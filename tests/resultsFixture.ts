@@ -9,7 +9,7 @@ import type { SinglePriceHistory } from '../frontend/src/history.js'
 const start = Date.UTC(2024, 0, 1), minute = 60_000
 const permission = { active: true, playing: false, hasFuture: true }
 export type ResultsFixtureKind = 'populated' | 'empty' | 'unfinished'
-export function resultsFixture(kind: ResultsFixtureKind = 'populated') {
+export function resultsFixture(kind: ResultsFixtureKind = 'populated', entryDelay = 0) {
   const candles: SinglePriceHistory['candles'] = []
   // Real M1 spacing; synthetic weekday market closures create honest clock gaps.
   for (let timestamp = start - 30 * 86400000; timestamp < Date.UTC(2024, 2, 31); timestamp += minute) {
@@ -31,7 +31,9 @@ export function resultsFixture(kind: ResultsFixtureKind = 'populated') {
     state = { ...observeCandle(state, candles[index], undefined, 'single'), symbol: '6E' }
     ledger = recordEquity(ledger, previous, state)
     if (kind === 'empty') continue
-    const offset = index - startIndex, cycle = offset % 4320
+    const offset = index - startIndex - entryDelay
+    if (offset < 0) continue
+    const cycle = offset % 4320
     if (cycle === 0 && !state.positions.length) {
       const direction = Math.floor(offset / 4320) % 2 ? 'sell' : 'buy'
       const stop = Math.round((candles[index].close + (direction === 'buy' ? -.0043 : .0043)) * 100000) / 100000

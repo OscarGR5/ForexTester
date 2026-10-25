@@ -1,0 +1,267 @@
+{
+  "fixtures": "tests/resultsFixture.ts: synthetic 6E weekday M1 prices, $100,000 initial balance, combined 2% risk budget, $7/lot round-trip commissions; fixed 2024 UTC dates",
+  "isolatedDirectory": "/tmp/forextester-results-dashboard-t9BzqF",
+  "networkHistoryCalls": [],
+  "externalRequests": [],
+  "paidSubmissions": 0,
+  "errors": [],
+  "screenshots": [
+    "docs/results-chart-resume/populated-1440.png",
+    "docs/results-chart-resume/populated-1100.png",
+    "docs/results-chart-resume/populated-dashboard.png",
+    "docs/results-chart-resume/expanded-setup-breakdown.png",
+    "docs/results-chart-resume/expanded-dashboard.png",
+    "docs/results-chart-resume/empty-session.png",
+    "docs/results-chart-resume/unfinished-session.png",
+    "docs/results-chart-resume/resume-action-1440.png",
+    "docs/results-chart-resume/resume-action-1100.png",
+    "docs/results-chart-resume/resumed-trading-1440.png",
+    "docs/results-chart-resume/resumed-trading-1100.png"
+  ],
+  "checks": {
+    "layout-1440": {
+      "pageWidth": 1440,
+      "width": 1440,
+      "scrollWidth": 1425,
+      "contentWidth": 1425,
+      "scrollHeight": 1493,
+      "headerBottom": 48,
+      "results": {
+        "x": 0,
+        "y": 48,
+        "width": 1440,
+        "height": 952,
+        "right": 1440,
+        "bottom": 1000
+      },
+      "metrics": [
+        {
+          "x": 28,
+          "y": 167.1875,
+          "width": 432.328125,
+          "height": 88.796875,
+          "right": 460.328125,
+          "bottom": 255.984375
+        },
+        {
+          "x": 496.328125,
+          "y": 167.1875,
+          "width": 432.328125,
+          "height": 88.796875,
+          "right": 928.65625,
+          "bottom": 255.984375
+        },
+        {
+          "x": 964.65625,
+          "y": 167.1875,
+          "width": 432.34375,
+          "height": 88.796875,
+          "right": 1397,
+          "bottom": 255.984375
+        },
+        {
+          "x": 28,
+          "y": 279.984375,
+          "width": 432.328125,
+          "height": 88.796875,
+          "right": 460.328125,
+          "bottom": 368.78125
+        },
+        {
+          "x": 496.328125,
+          "y": 279.984375,
+          "width": 432.328125,
+          "height": 88.796875,
+          "right": 928.65625,
+          "bottom": 368.78125
+        },
+        {
+          "x": 964.65625,
+          "y": 279.984375,
+          "width": 432.34375,
+          "height": 88.796875,
+          "right": 1397,
+          "bottom": 368.78125
+        }
+      ],
+      "timelines": [
+        {
+          "x": 28,
+          "y": 516.78125,
+          "width": 834.953125,
+          "height": 254.28125,
+          "right": 862.953125,
+          "bottom": 771.0625,
+          "viewWidth": 834
+        },
+        {
+          "x": 28,
+          "y": 903.0625,
+          "width": 834.953125,
+          "height": 208.234375,
+          "right": 862.953125,
+          "bottom": 1111.296875,
+          "viewWidth": 834
+        }
+      ],
+      "pathLengths": [
+        6390,
+        6297,
+        6118
+      ],
+      "invalidPaths": false,
+      "svgNodes": 27
+    },
+    "layout-1100": {
+      "pageWidth": 1100,
+      "width": 1100,
+      "scrollWidth": 1085,
+      "contentWidth": 1085,
+      "scrollHeight": 1474,
+      "headerBottom": 54,
+      "results": {
+        "x": 0,
+        "y": 54,
+        "width": 1100,
+        "height": 946,
+        "right": 1100,
+        "bottom": 1000
+      },
+      "metrics": [
+        {
+          "x": 24,
+          "y": 169.1875,
+          "width": 329.65625,
+          "height": 84.1875,
+          "right": 353.65625,
+          "bottom": 253.375
+        },
+        {
+          "x": 377.65625,
+          "y": 169.1875,
+          "width": 329.671875,
+          "height": 84.1875,
+          "right": 707.328125,
+          "bottom": 253.375
+        },
+        {
+          "x": 731.328125,
+          "y": 169.1875,
+          "width": 329.65625,
+          "height": 84.1875,
+          "right": 1060.984375,
+          "bottom": 253.375
+        },
+        {
+          "x": 24,
+          "y": 275.375,
+          "width": 329.65625,
+          "height": 84.1875,
+          "right": 353.65625,
+          "bottom": 359.5625
+        },
+        {
+          "x": 377.65625,
+          "y": 275.375,
+          "width": 329.671875,
+          "height": 84.1875,
+          "right": 707.328125,
+          "bottom": 359.5625
+        },
+        {
+          "x": 731.328125,
+          "y": 275.375,
+          "width": 329.65625,
+          "height": 84.1875,
+          "right": 1060.984375,
+          "bottom": 359.5625
+        }
+      ],
+      "timelines": [
+        {
+          "x": 24,
+          "y": 507.5625,
+          "width": 590.90625,
+          "height": 254.375,
+          "right": 614.90625,
+          "bottom": 761.9375,
+          "viewWidth": 590
+        },
+        {
+          "x": 24,
+          "y": 893.9375,
+          "width": 590.90625,
+          "height": 208.3125,
+          "right": 614.90625,
+          "bottom": 1102.25,
+          "viewWidth": 590
+        }
+      ],
+      "pathLengths": [
+        4817,
+        4747,
+        4608
+      ],
+      "invalidPaths": false,
+      "svgNodes": 27
+    },
+    "shortenedSharedDomainAndFlatWeekendConnections": {
+      "axes": [
+        [
+          "2024-01-10",
+          "2024-03-29 23:59 UTC"
+        ],
+        [
+          "2024-01-10",
+          "2024-03-29 23:59 UTC"
+        ]
+      ],
+      "segments": [
+        1,
+        1,
+        1
+      ]
+    },
+    "legacyFinishedRestorationAndDeterminism": true,
+    "completeHistoryChartReview": true,
+    "unitsAndSynchronizedKeyboardHover": true,
+    "setupDetails": [
+      "11-1",
+      "11-2"
+    ],
+    "csv": {
+      "filename": "forextester-journal-session-11.csv",
+      "exportedPositions": 38
+    },
+    "headerSave": true,
+    "finishPreservesOpenPartialPendingAndLedger": {
+      "open": 1,
+      "pending": 1,
+      "closed": 1
+    },
+    "resumePreservesCheckpointAndReloadThenExecutesOnlyNextCandle": true
+  },
+  "fixturesSummary": {
+    "populated": {
+      "id": "5babc3b1-e146-4d9e-8033-d51529e2ae9e",
+      "completedSetups": 19,
+      "observations": 93600,
+      "positions": 0,
+      "pending": 0
+    },
+    "empty": {
+      "id": "b5541d70-5759-4739-b469-f15aa4c34b58",
+      "completedSetups": 0,
+      "observations": 201,
+      "positions": 0,
+      "pending": 0
+    },
+    "unfinished": {
+      "id": "319406ee-bb3d-46aa-adb2-2cbd261de64b",
+      "completedSetups": 0,
+      "observations": 801,
+      "positions": 1,
+      "pending": 1
+    }
+  }
+}

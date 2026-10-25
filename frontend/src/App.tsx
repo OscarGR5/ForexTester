@@ -262,6 +262,19 @@ export function App() {
     finally { setFinishing(false) }
   }
 
+  async function resumeBacktest() {
+    if (lifecycle !== 'finished' || finishing || sessions.busy || sessions.conflict || sessions.awaitingChoice || !sessions.initialized || sessions.saveStatus === 'Saving') return
+    flushSync(() => { replay.pause(); setFinishing(true) })
+    try {
+      await sessions.flush()
+      // Keep the replay/trading hooks and synchronizer intact. Only the saved
+      // workspace lifecycle changes; no replay start or next-candle action.
+      flushSync(() => { setLifecycle('trading') })
+      await sessions.flush()
+    } catch { flushSync(() => { setLifecycle('finished') }) }
+    finally { setFinishing(false) }
+  }
+
   function restart() {
     const valuable = trading.state.setups.length > 0 || trading.state.closed.length > 0 || trading.state.positions.length > 0 || trading.state.pending.length > 0
     if (valuable && !window.confirm('Restart this session? Trading records, journal notes and replay progress will be cleared and overwritten in autosaves. Cancel and choose New session to keep this backtest separately.')) return
@@ -303,7 +316,7 @@ export function App() {
         <fieldset className="header-replay" aria-label="Market replay" disabled={workspaceDisabled || status === 'loading' || pendingStart || manage || confirming || !!stopPreview} hidden={!sessions.initialized || sessions.awaitingChoice}>
           <button disabled={!replay.canPlay || !!stopPreview} onClick={()=>{setDraft(null);replay.play()}}>Play</button><button disabled={!replay.canPause} onClick={replay.pause}>Pause</button><button disabled={!replay.canNext || !!stopPreview} onClick={()=>{setDraft(null);replay.next()}}>Next Candle</button>
           <label>Speed<select aria-label="Replay speed" value={replay.speed} onChange={e=>replay.setSpeed(Number(e.target.value) as 1|10|100)}>{[1,10,100].map(s=><option key={s} value={s}>{s}×</option>)}</select></label>
-          {chartLayout}<div className="replay-state"><span aria-label="Replay status" className="replay-status">{replay.status}</span><span className="replay-progress" aria-label="Replay progress">{replay.revealed-replay.startIndex} / {replay.total-replay.startIndex} candles</span></div><button disabled={replay.reviewing} onClick={()=>void finish()}>{replay.complete ? 'Review Results' : 'Finish backtest'}</button>
+          {chartLayout}<div className="replay-state"><span aria-label="Replay status" className="replay-status">{replay.status}</span><span className="replay-progress" aria-label="Replay progress">{replay.revealed-replay.startIndex} / {replay.total-replay.startIndex} candles</span></div><button disabled={replay.reviewing} onClick={()=>void finish()}>{replay.complete || replay.blocked ? 'Review Results' : 'Finish backtest'}</button>
         </fieldset>
       )}
       {lifecycle !== 'setup' && <div className="header-account"><time className="replay-clock">{replay.timestamp === null ? 'Awaiting replay' : new Date(replay.timestamp).toISOString().slice(0,16).replace('T',' ') + ' UTC'}</time>{pnlDisplay}</div>}<button onClick={()=>{ replay.pause(); setDraft(null); setManage(true) }}>Sessions / settings</button>
@@ -382,7 +395,8 @@ export function App() {
         {stopError && <p className="stop-drag-status form-error" role="alert">{stopError}<button onClick={() => setStopError(null)}>Dismiss</button></p>}
       </>}
       {lifecycle === 'finished' && <ResultsDashboard key={`${sessions.activeId}-${trading.state.session}`} state={trading.state} ledger={trading.equity}
-        start={startMs} endpoint={replay.timestamp} singlePrice={!!history && isSinglePrice(history)} onSave={sessions.save} />}
+        start={startMs} endpoint={replay.timestamp} singlePrice={!!history && isSinglePrice(history)} onSave={sessions.save}
+        onResume={()=>void resumeBacktest()} reviewOnly={replay.complete || replay.blocked} resumeDisabled={workspaceDisabled || manage || sessions.saveStatus === 'Saving'} />}
     </fieldset>
   </main>
 }
