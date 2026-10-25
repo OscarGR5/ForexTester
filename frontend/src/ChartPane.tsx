@@ -22,6 +22,7 @@ import type { StopDraft } from './TradingDock'
 interface ChartPaneProps {
   id: number
   active?: boolean
+  reviewing?: boolean
   instrument?: string
   sessionId: string | null
   timeframe: Timeframe
@@ -41,7 +42,7 @@ interface ChartPaneProps {
   onTimeframeChange: (id: number, timeframe: Timeframe) => void
 }
 
-export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, active = false, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, stops, placement, onPick, stopInteraction, entries = [], onConfirmStop, confirmStopDisabled }: ChartPaneProps) {
+export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, active = false, reviewing = false, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, stops, placement, onPick, stopInteraction, entries = [], onConfirmStop, confirmStopDisabled }: ChartPaneProps) {
   const [readiness, setReadiness] = useState('')
   const container = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
@@ -190,6 +191,7 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, ac
     const last = previous.current
     const replace = !last || last.synchronizer !== synchronizer || last.timeframe !== timeframe ||
       source !== last.source || count < last.count || last.count === 0
+    const advancing = !reviewing && !!last && last.source === source && last.synchronizer === synchronizer && last.timeframe === timeframe && count > last.count
     const bars = replace ? new ReplayBars(timeframe) : last.bars
     const dirty = bars.advance(source, count)
     const candles = bars.candles
@@ -199,6 +201,7 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, ac
     performanceValue(`chart.${id}.cursor`, count)
     performanceValue(`chart.${id}.time`, candles.at(-1)?.time ?? 0)
     if (!replace && dirty === candles.length && previousSettings.current === settings) {
+      synchronizer.refresh(id, advancing)
       previous.current = { source, count, bars, timeframe, synchronizer }
       performanceEnd('chart.pane', frame)
       return
@@ -213,11 +216,11 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, ac
       }
       performanceEnd('candles.series', prices)
       return indicatorsRef.current!.update(candles, settings, timeframe, replace || previousSettings.current !== settings)
-    }, replace ? 0 : dirty)
+    }, replace ? 0 : dirty, advancing)
     performanceEnd('chart.pane', frame)
     previousSettings.current = settings
     previous.current = { source, count, bars, timeframe, synchronizer }
-  }, [id, source, count, synchronizer, timeframe, settings])
+  }, [id, source, count, synchronizer, timeframe, settings, reviewing])
 
   useLayoutEffect(() => {
     stopLines.current!.update(stops)
@@ -277,8 +280,7 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, ac
           {timeframe === 'M1' && <option value="M1">M1 (legacy)</option>}
           {VISIBLE_TIMEFRAMES.map((option) => <option key={option} value={option}>{option}</option>)}
         </select></label>
-        <IndicatorControls key={timeframe} id={id} settings={settings} onChange={updateSettings} />
-        {readiness && <span className="indicator-readiness" role="status">{readiness}</span>}
+        <IndicatorControls key={timeframe} id={id} settings={settings} readiness={readiness} onChange={updateSettings} />
       </div>
       {stopDrag.choices.length > 1 && <div className="stop-selector" role="group" aria-label="Select overlapping stop-loss">
         <span>Hold a position button and drag vertically:</span>
