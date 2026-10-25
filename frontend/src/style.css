@@ -381,7 +381,7 @@ button:disabled { opacity: 0.45; cursor: default; }
 .dock-controls input { width: 60px; }
 .dock-controls input, .dock-controls select, .header-replay select { min-height: 30px; padding: 4px 6px; }
 .workspace-toolbar button { min-height: 30px; padding: 4px 8px; }
-.stop-placement, .trading-toolbar > .form-error { flex-basis: 100%; }
+.trading-toolbar > .form-error { flex-basis: 100%; }
 .execution-details { position: relative; flex: none; font-size: 12px; }
 .execution-details > summary { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 4px; cursor: pointer; color: #b2b5be; list-style: none; }
 .execution-details > summary::-webkit-details-marker { display: none; }
@@ -450,3 +450,31 @@ button:disabled { opacity: 0.45; cursor: default; }
   .header-replay { grid-row: 2; grid-column: 1 / -1; }
   .header-replay .replay-state { margin-left: auto; }
 }
+
+/* Saved labels are the rename trigger; destructive actions stay separate. */
+.saved-session-info .saved-session-name { align-self: flex-start; min-width: 0; max-width: 100%; padding: 0; border-color: transparent; background: transparent; text-align: left; font-size: 17px; font-weight: 600; overflow-wrap: anywhere; }
+.saved-session-info .saved-session-name:hover { color: #a6dde5; text-decoration: underline; }
+.session-rename { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.session-rename input { flex: 1 1 180px; min-width: 0; max-width: 100%; padding: 6px 10px; background: #171e28; border: 1px solid #4a596b; border-radius: 4px; color: #e5eaf0; }
+.startup-selection .session-actions { flex-direction: row; align-items: center; gap: 8px; }
+.session-actions .session-delete { display: grid; place-items: center; padding: 8px; background: transparent; }
+.session-delete-confirmation { padding: 12px; background: #1e2935; border: 1px solid #4a596b; border-radius: 4px; }
+.session-delete-confirmation p { margin: 0 0 12px; line-height: 1.5; }
+.session-delete-confirmation button + button { margin-left: 8px; }
+.close-all { border-color: #a66a72; }
+.close-all:not(:disabled):hover, .close-all:not(:disabled):focus-visible,
+.session-actions .session-delete:not(:disabled):hover, .session-actions .session-delete:not(:disabled):focus-visible,
+.danger-action:not(:disabled):hover, .danger-action:not(:disabled):focus-visible { background: #8c303c; border-color: #e2a2a6; color: #fff; }
+/* Placement and records share the fixed-height row and scroll before wrapping. */
+.dock-controls .stop-placement { flex: 2 1 0; min-width: 0; flex-wrap: nowrap; gap: 8px; padding: 0; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; white-space: nowrap; }
+.stop-placement > * { flex: none; }
+.stop-placement > span { max-width: none; line-height: normal; }
+.stop-placement > .form-error { margin: 0; }
+.stop-placement details { display: flex; align-items: center; }
+.stop-placement details[open] { display: flex; }
+.stop-placement details label { display: inline-flex; margin-left: 8px; }
+.stop-placement details summary { display: inline; }
+
+.stop-placement .placement-status { flex: 1 1 0; min-width: 100px; overflow-x: auto; scrollbar-width: none; font-variant-numeric: tabular-nums; }
+.placement-status > span { margin-left: 8px; }
+.placement-status > .form-error { margin-top: 0; margin-bottom: 0; }

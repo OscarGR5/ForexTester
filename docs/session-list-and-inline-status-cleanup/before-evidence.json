@@ -1,0 +1,23 @@
+{
+  "isolatedSessions": "/tmp/forextester-trade-shortcuts-m5IaLK",
+  "providerRequests": 0,
+  "paidSubmissions": 0,
+  "screenshots": [
+    "docs/session-list-and-inline-status-cleanup/before-placement-1440.png",
+    "docs/session-list-and-inline-status-cleanup/before-placement-1100.png",
+    "docs/session-list-and-inline-status-cleanup/before-placement-1000.png",
+    "docs/session-list-and-inline-status-cleanup/before-chooser.png"
+  ],
+  "errors": [],
+  "checks": {
+    "before-1440": {
+      "toolbarHeight": 93
+    },
+    "before-1100": {
+      "toolbarHeight": 93
+    },
+    "before-1000": {
+      "toolbarHeight": 93
+    }
+  }
+}

@@ -6,33 +6,91 @@ type Sessions = ReturnType<typeof useSessionPersistence>
 const time = (value: string | null) => value && Number.isFinite(Date.parse(value)) ? `${new Date(value).toISOString().slice(0, 19).replace('T', ' ')} UTC` : 'No successful save yet'
 const count = (value: unknown) => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : null
 const readable = (value: unknown, fallback: string) => typeof value === 'string' ? value : fallback
-function SavedSession({ record, sessions, startup }: { record: SessionRecord; sessions: Sessions; startup: boolean }) {
+function SavedSession({ record, sessions, startup, onRemoveFinished }: { record: SessionRecord; sessions: Sessions; startup: boolean; onRemoveFinished: () => void }) {
   const start = count(record.checkpoint?.replay?.startIndex), total = count(record.totalCandles), index = count(record.checkpoint?.replay?.index)
   const progress = record.checkpoint?.replay?.started && start !== null && index !== null ? Math.max(0, index + 1 - start) : 0
   const available = start !== null && total !== null ? Math.max(0, total - start) : 'Unknown'
   const percent = typeof available === 'number' && available > 0 ? Math.min(100, Math.round(progress / available * 100)) : 0
-  const [name, setName] = useState(typeof record.name === 'string' ? record.name : 'Unreadable session')
+  const label = readable(record.name, 'Unreadable session')
+  const [name, setName] = useState(label)
+  const [editing, setEditing] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [working, setWorking] = useState(false)
+  const nameButton = useRef<HTMLButtonElement>(null), nameInput = useRef<HTMLInputElement>(null)
+  const deleteButton = useRef<HTMLButtonElement>(null), cancelDelete = useRef<HTMLButtonElement>(null)
+  const restore = useRef<'name' | 'delete' | null>(null)
+  useLayoutEffect(() => {
+    if (editing) { nameInput.current?.focus(); nameInput.current?.select() }
+    else if (deleting) cancelDelete.current?.focus()
+    else if (restore.current) {
+      (restore.current === 'name' ? nameButton : deleteButton).current?.focus()
+      restore.current = null
+    }
+  }, [editing, deleting])
+  const cancelRename = () => { restore.current = 'name'; setEditing(false); setName(label) }
+  const rename = async () => {
+    if (working || sessions.busy || !name.trim() || name.trim() === label) return
+    setWorking(true)
+    try { await sessions.rename(record, name.trim()); restore.current = 'name'; setEditing(false) }
+    finally { setWorking(false) }
+  }
+  const remove = async () => {
+    if (working || sessions.busy) return
+    setWorking(true)
+    try {
+      await sessions.remove(record, true)
+      if (deleteButton.current?.isConnected) { restore.current = 'delete'; setDeleting(false) }
+      onRemoveFinished()
+    } finally { setWorking(false) }
+  }
+  const disabled = sessions.busy || working
   return <li className="saved-session">
-    <div className="saved-session-info"><strong>{readable(record.name, 'Unreadable session')}</strong>
+    <div className="saved-session-info">
+      {editing ? <form className="session-rename" aria-label={`Rename backtest ${label}`} onSubmit={event => { event.preventDefault(); void rename() }} onKeyDown={event => {
+        if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); if (!working) cancelRename() }
+      }}>
+        <input ref={nameInput} maxLength={200} aria-label={`Rename session ${record.id}`} value={name} disabled={disabled} onChange={event => setName(event.target.value)} />
+        <button type="submit" disabled={disabled || !name.trim() || name.trim() === label}>Confirm rename</button>
+        <button type="button" disabled={working} onClick={cancelRename}>Cancel rename</button>
+        {!name.trim() && <span className="form-error" role="status">Name cannot be blank.</span>}
+      </form> : <button ref={nameButton} type="button" className="saved-session-name" aria-label={`Rename backtest ${label}`} title="Click to rename" disabled={disabled || deleting} onClick={() => { setName(label); setEditing(true) }}>{label}</button>}
       <span>Historical period: {readable(record.range?.from, 'Unknown range')} → {readable(record.range?.to, 'Unknown range')} UTC (end exclusive)</span>
       <span>Status: {record.checkpoint?.lifecycle === 'finished' ? 'finished' : readable(record.status, 'Unknown status')} · Replay progress: {percent}%</span>
       <span>Saved {record.savedAt ? time(record.savedAt) : 'Unknown'} · {progress} / {available} candles · {count(record.completedSetups) ?? 'Unknown'} completed setups</span>
+      {deleting && <div className="session-delete-confirmation" role="group" aria-label="Delete backtest confirmation" onKeyDown={event => {
+        if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); if (!working) { restore.current = 'delete'; setDeleting(false) } }
+      }}>
+        <p>Delete “{label}” from local storage on this computer? This removes the saved backtest and cannot be undone in the app.</p>
+        <button type="button" className="danger-action" disabled={disabled} onClick={() => void remove()}>Confirm delete</button>
+        <button ref={cancelDelete} type="button" disabled={working} onClick={() => { restore.current = 'delete'; setDeleting(false) }}>Cancel delete</button>
+      </div>}
     </div>
     <div className="session-actions">
-      <button type="button" disabled={sessions.busy} onClick={() => void sessions.resume(record.id)}>{startup ? 'Resume backtest' : 'Resume session'}</button>
-      <details className="session-administration" open={!startup}><summary>Manage backtest</summary>
-      <label>Session name<input maxLength={200} aria-label={`Rename session ${record.id}`} value={name} onChange={(event) => setName(event.target.value)} /></label>
-      <button type="button" disabled={sessions.busy || !name.trim() || name.trim() === record.name} onClick={() => void sessions.rename(record, name)}>Rename</button>
-      <button type="button" disabled={sessions.busy} onClick={() => void sessions.remove(record)}>Delete</button>
-      </details>
+      <button type="button" disabled={disabled || editing || deleting} onClick={() => void sessions.resume(record.id)}>{startup ? 'Resume backtest' : 'Resume session'}</button>
+      <button ref={deleteButton} type="button" className="session-delete" aria-label={`Delete backtest ${label}`} title={`Delete backtest ${label}`} disabled={disabled || editing || deleting} onClick={() => setDeleting(true)}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7" /></svg>
+      </button>
     </div>
   </li>
 }
+
 export function SessionControls({ sessions, range, timestamp, startup = false }: { sessions: Sessions; range: { from: string; to: string }; timestamp: number | null; startup?: boolean }) {
   const [manage, setManage] = useState(false)
   const heading = useRef<HTMLHeadingElement>(null)
+  const controls = useRef<HTMLElement>(null)
+  const [deleted, setDeleted] = useState<{ id: string; index: number } | null>(null)
+  useLayoutEffect(() => {
+    if (!deleted || sessions.busy) return
+    if (!sessions.sessions.some(record => record.id === deleted.id)) {
+      const names = controls.current?.querySelectorAll<HTMLButtonElement>('.saved-session-name')
+      const target = names?.[Math.min(deleted.index, names.length - 1)]
+        ?? controls.current?.querySelector<HTMLButtonElement>('.startup-new button, .session-heading button')
+      target?.focus()
+    }
+    setDeleted(null)
+  }, [deleted, sessions.busy, sessions.sessions])
   useLayoutEffect(() => { if (startup) heading.current?.focus() }, [startup])
-  return <section className="session-controls" aria-label="Backtest sessions" aria-busy={sessions.busy}>
+  return <section ref={controls} className="session-controls" aria-label="Backtest sessions" aria-busy={sessions.busy}>
     {startup ? <div className="startup-heading"><h2 ref={heading} tabIndex={-1}>Choose a backtest</h2><p>Resume a saved backtest, or start a new one.</p></div> : <><div className="session-heading">
       <label>Session name<input maxLength={200} aria-label="Current session name" value={sessions.name} disabled={!sessions.initialized || sessions.awaitingChoice || sessions.busy || sessions.conflict}
         onChange={(event) => sessions.editName(event.target.value)} /></label>
@@ -65,7 +123,7 @@ export function SessionControls({ sessions, range, timestamp, startup = false }:
     </div>)}</section>}
     {(manage || sessions.awaitingChoice) && <div id="saved-sessions">
       <h2>Saved backtests</h2>
-      {!sessions.sessions.length ? <p>No saved sessions on disk.</p> : <ul className="saved-sessions">{sessions.sessions.map((record) => <SavedSession key={`${record.id}-${record.name}`} record={record} sessions={sessions} startup={startup} />)}</ul>}
+      {!sessions.sessions.length ? <p>No saved sessions on disk.</p> : <ul className="saved-sessions">{sessions.sessions.map((record, index) => <SavedSession key={record.id} record={record} sessions={sessions} startup={startup} onRemoveFinished={() => setDeleted({ id: record.id, index })} />)}</ul>}
     </div>}
     {startup && <div className="startup-new"><button type="button" disabled={sessions.busy || !sessions.initialized} onClick={() => void sessions.fresh()}>New backtest</button><span>Saved backtests stay available.</span></div>}
     {!!sessions.legacySessions.length && <details className="legacy-migration" open={!startup}><summary>Browser sessions to migrate</summary><section aria-label="Import browser sessions">
