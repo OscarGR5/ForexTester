@@ -59,7 +59,7 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, ac
   const unregisterRef = useRef<(() => void) | null>(null)
   const previous = useRef<{ source: readonly Candle[]; count: number; bars: ReplayBars; timeframe: Timeframe; synchronizer: ChartSynchronizer } | null>(null)
 
-  const stopDrag = useStopDrag(container, chartRef, seriesRef, positions, synchronizer, stopInteraction, !!placement)
+  useStopDrag(container, chartRef, seriesRef, stopLines, positions, synchronizer, stopInteraction, !!placement)
 
   useLayoutEffect(() => {
     if (!container.current) return
@@ -262,10 +262,6 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, ac
         </select></label>
         <IndicatorControls key={timeframe} id={id} settings={settings} readiness={readiness} onChange={updateSettings} />
       </div>
-      {stopDrag.choices.length > 1 && <div className="stop-selector" role="group" aria-label="Select overlapping stop-loss">
-        <span>Hold a position button and drag vertically:</span>
-        {stopDrag.choices.map(p => <button key={p.id} onPointerDown={event => stopDrag.begin(p.id, event.nativeEvent)}>{p.id} · {p.direction} · SL {p.stopPrice.toFixed(5)}</button>)}
-      </div>}
       <div className="chart-plot">
         <div ref={container} className="chart-canvas" aria-hidden="true" />
         {placement && onConfirmStop && <DraftStopAnnotation element={draftAnnotation} selected={placement.price !== null} onConfirm={onConfirmStop} disabled={confirmStopDisabled} />}
