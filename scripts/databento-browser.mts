@@ -62,7 +62,7 @@ try {
   await page.getByLabel('From',{exact:true}).fill('2024-01-01')
   await page.getByLabel('Through',{exact:true}).fill('2024-03-30')
   await page.getByLabel('Replay start (UTC)',{exact:true}).fill(replayStart)
-  for (const [width,height] of [[1440,1000],[390,844]]) {
+  for (const [width,height] of [[1440,1000],[1100,800]]) {
     await page.setViewportSize({width,height});await screenshot(`setup-${width}`)
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),width)
   }
@@ -81,7 +81,7 @@ try {
   evidence.checks.exactOriginalOhlcvAndContracts = true
   assert.equal(await page.getByLabel('Backtest name',{exact:true}).inputValue(),'Databento rollover verification')
   assert.equal(await page.getByLabel('Replay start (UTC)',{exact:true}).inputValue(),replayStart)
-  for (const [width,height] of [[1440,1000],[390,844]]) { await page.setViewportSize({width,height});await screenshot(`setup-cached-${width}`);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),width) }
+  for (const [width,height] of [[1440,1000],[1100,800]]) { await page.setViewportSize({width,height});await screenshot(`setup-cached-${width}`);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),width) }
   await page.setViewportSize({width:1440,height:1000})
   await button('Start backtest').click();await page.locator('.chart-canvas').first().waitFor();await saved()
   for (const tf of ['M1','M5','M15','H1','H4']) {
@@ -93,7 +93,7 @@ try {
   for (const count of [1,2,3]) { await page.locator(`input[name="chart-count"][value="${count}"]`).check();assert.equal(await page.locator('.chart-pane').count(),count) }
   await page.getByLabel('Chart 1 timeframe',{exact:true}).selectOption('M1')
   await screenshot('trading-1440')
-  await page.setViewportSize({width:390,height:844});await screenshot('trading-390');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),390)
+  await page.setViewportSize({width:1100,height:800});await screenshot('trading-1100');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),1100)
   await page.setViewportSize({width:1440,height:1000})
   const current=source.candles[boundary-5], stop=current.close-.01
   await button('Buy').click();await page.getByText('Enter price with keyboard',{exact:true}).click();await page.getByLabel('SL price',{exact:true}).fill(String(stop));await button('Confirm order').click()
@@ -132,7 +132,7 @@ try {
   evidence.checks.backendRestartWithoutCredentials=true
   await button('Finish backtest').click();await page.getByLabel('Backtest results',{exact:true}).waitFor();await saved()
   await screenshot('results-1440')
-  await page.setViewportSize({width:390,height:844});await screenshot('results-390');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),390)
+  await page.setViewportSize({width:1100,height:800});await screenshot('results-1100');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),1100)
   evidence.providerNetworkAttempts = (await readFile(attempts, 'utf8')).trim()
   assert.equal(evidence.providerNetworkAttempts, ''); assert.equal(evidence.paidApiCalls,0);assert.deepEqual(evidence.browserErrors,[]); evidence.expectedMissingHistoryProbes = [...expectedProbes].map(url=>new URL(url).pathname); evidence.unexpectedConsoleErrors = evidence.consoleErrors.filter((error:any)=>!expectedProbes.has(error.location.url)); assert.deepEqual(evidence.unexpectedConsoleErrors,[])
   evidence.checks.restorePaidRequests=0

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { CandlestickData, IChartApi, ISeriesApi, LogicalRange, MouseEventParams, UTCTimestamp } from 'lightweight-charts'
-import { ChartSynchronizer, logicalToUtc, utcToLogical, validViewportState } from './chartSync'
+import { ChartSynchronizer, FOLLOW_RIGHT_OFFSET, logicalToUtc, utcToLogical, validViewportState } from './chartSync'
 import { TIMEFRAME_MS, type Timeframe } from './history'
 const candles = (times: number[]): CandlestickData<UTCTimestamp>[] => times.map(time => ({ time: time as UTCTimestamp, open: 1, high: 2, low: 0.5, close: 1.5 }))
 function fake() {
@@ -49,7 +49,7 @@ describe('independent chart navigation', () => {
     expect(f.range().to - f.range().from).toBe(5)
     const before = { ...f.range() }; sync.wheel(0, NaN); expect(f.range()).toEqual(before)
     for (let i = 0; i < 20; i++) sync.wheel(0, 10000)
-    expect(f.range()).toEqual({ from: 0, to: 99 })
+    expect(f.range()).toEqual({ from: -31, to: 80 })
   })
   it('follows only panes still at the replay edge, preserving zoom across market gaps', () => {
     const sync = new ChartSynchronizer(), manual = fake(), follow = fake()
@@ -60,7 +60,7 @@ describe('independent chart navigation', () => {
     sync.update(0, candles(extended), 'M5', () => 0, 100); sync.update(1, candles(extended), 'M5', () => 0, 100)
     sync.advance({ from: 0, to: extended.at(-1)! })
     expect(manual.range()).toEqual({ from: 5, to: 20 })
-    expect(follow.range().to).toBe(100); expect(follow.range().to - follow.range().from).toBeCloseTo(span)
+    expect(follow.range().to).toBe(100 + FOLLOW_RIGHT_OFFSET); expect(follow.range().to - follow.range().from).toBeCloseTo(span)
   })
   it('round trips all panes including unmounted ones through JSON and changed replay bounds', () => {
     const sync = new ChartSynchronizer(), a = fake(), b = fake(); register(sync, 0, a); const stop = register(sync, 1, b)
@@ -68,18 +68,18 @@ describe('independent chart navigation', () => {
     const saved = JSON.parse(JSON.stringify(sync.snapshot())), restored = new ChartSynchronizer({ from: 0, to: 30000 })
     restored.restore(saved); const c = fake(), d = fake(); register(restored, 0, c); register(restored, 1, d)
     expect(c.range()).toEqual(a.range()); expect(d.range()).toEqual(b.range())
-    const third = fake(); register(restored, 2, third, 'H4', times(400, 14400)); expect(third.range()).toEqual({ from: 200, to: 399 })
+    const third = fake(); register(restored, 2, third, 'H4', times(400, 14400)); expect(third.range()).toEqual({ from: 200, to: 399 + FOLLOW_RIGHT_OFFSET })
     expect(validViewportState(saved)).toBe(true)
     expect(validViewportState({ ...saved, charts: { 0: { ...saved.charts[0], logical: { from: 4, to: 1 } } } })).toBe(false)
   })
   it.each([false, true])('restores a legacy shared range with following=%s', following => {
     const sync = new ChartSynchronizer({ from: 0, to: 29700 }); sync.restore({ range: { from: 300, to: 1500 }, following })
     const f = fake(); register(sync, 0, f)
-    expect(f.range()).toEqual(following ? { from: 95, to: 99 } : { from: 1, to: 5 })
+    expect(f.range()).toEqual(following ? { from: 107, to: 111 } : { from: 1, to: 5 })
   })
   it.each(['M1', 'M5', 'M15', 'H1', 'H4', 'D1'] as const)('starts %s with recent observed bars and retains permitted projection', tf => {
     const sync = new ChartSynchronizer(), f = fake(), t = times(400, TIMEFRAME_MS[tf] / 1000)
-    register(sync, 0, f, tf, t); expect(f.range()).toEqual({ from: 200, to: 399 })
+    register(sync, 0, f, tf, t); expect(f.range()).toEqual({ from: 200, to: 399 + FOLLOW_RIGHT_OFFSET })
     sync.update(0, candles(t), tf, () => 26)
     expect(f.range().to).toBe(425)
     sync.wheel(0, -200); expect(f.range().to).toBe(425)
@@ -123,10 +123,42 @@ it('retains an earlier viewport with left whitespace across replay ticks and sav
  expect(sync.snapshot().charts!['0'].following).toBe(false)
  sync.update(0,candles(times(101)),'M5',()=>0,100)
  sync.update(1,candles(times(101)),'M5',()=>0,100)
- expect(first.range()).toEqual({from:-20,to:79});expect(second.range().to).toBe(100)
+ expect(first.range()).toEqual({from:-20,to:79});expect(second.range().to).toBe(112)
  const restored=new ChartSynchronizer();restored.restore(JSON.parse(JSON.stringify(sync.snapshot())))
  const next=fake();register(restored,0,next,'M5',times(101));expect(next.range()).toEqual(first.range())
- sync.activate(0);first.pan({from:1,to:100})
+ sync.activate(0);first.pan({from:13,to:112})
  expect(sync.snapshot().charts!['0'].following).toBe(true)
- sync.update(0,candles(times(102)),'M5',()=>0,101);expect(first.range()).toEqual({from:2,to:101})
+ sync.update(0,candles(times(102)),'M5',()=>0,101);expect(first.range()).toEqual({from:14,to:113})
+})
+
+it('bounds manual future whitespace, keeps it independent and preserves it across ticks and restore', () => {
+ const sync = new ChartSynchronizer(), manual = fake(), follow = fake()
+ register(sync, 0, manual); register(sync, 1, follow)
+ sync.activate(0); manual.pan({from:60,to:159})
+ expect(manual.range().from).toBeCloseTo(39.6); expect(manual.range().to).toBeCloseTo(138.6) // at most 40% of the 99-bar window
+ expect(sync.snapshot().charts!['0'].following).toBe(false)
+ expect(follow.range().to).toBe(111)
+ const manualRange = {...manual.range()}
+ sync.update(0,candles(times(101)),'M5',()=>0,100)
+ sync.update(1,candles(times(101)),'M5',()=>0,100)
+ expect(manual.range()).toEqual(manualRange)
+ expect(follow.range().to).toBe(112)
+ const restored = new ChartSynchronizer(); restored.restore(JSON.parse(JSON.stringify(sync.snapshot())))
+ const next = fake(); register(restored,0,next,'M5',times(101)); expect(next.range()).toEqual(manualRange)
+ sync.wheel(0,-20)
+ expect(manual.range().to).toBeLessThanOrEqual(100 + (manual.range().to-manual.range().from)*0.4)
+ // Returning to the follow offset resumes progression; a larger manual margin does not.
+ sync.activate(0);manual.pan({from:13,to:112})
+ expect(sync.snapshot().charts!['0'].following).toBe(true)
+ sync.update(0,candles(times(102)),'M5',()=>0,101)
+ expect(manual.range().to).toBe(113)
+})
+it('caps a wide future margin at 80 bars and does not manufacture crosshair data in that margin', () => {
+ const sync = new ChartSynchronizer(), source = fake(), target = fake()
+ register(sync,0,source,'M5',times(400)); register(sync,1,target,'M5',times(400))
+ sync.activate(0);source.pan({from:350,to:649})
+ expect(source.range().to).toBe(479)
+ source.pointer(405*300)
+ expect(target.chart.setCrosshairPosition).not.toHaveBeenCalled()
+ expect(target.chart.clearCrosshairPosition).toHaveBeenCalled()
 })

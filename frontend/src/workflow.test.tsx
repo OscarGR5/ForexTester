@@ -253,6 +253,11 @@ it('shows an uncached quote, requires confirmation, and preserves the chosen nam
  await click('Approve paid download — Estimated $0.01');await until(()=>host.querySelector('.phase-trading'))
  expect(paid).toHaveBeenCalledOnce();expect(JSON.parse(paid.mock.calls[0][0].body)).toEqual({quoteId:'fixture-approval',confirm:true})
  expect(host.querySelector('.header-session')?.textContent).toContain('6E research draft')
+ expect(host.querySelector('.pane-toolbar .instrument strong')?.textContent).toBe('EURUSD 6E')
+ expect(host.querySelector('.chart-workspace')?.getAttribute('aria-label')).toBe('EURUSD 6E chart workspace')
+ expect(host.querySelector('.execution-details')?.textContent).toContain('6E trade prices')
+ expect(host.querySelector('.workspace-toolbar')?.textContent).not.toMatch(/Ready for a new setup|Entries fill|Contract mappings/)
+
  await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
  const record=(await disk.storage.list()).sessions[0]
  expect(record.symbol).toBe('6E');expect(record.checkpoint.trading.quote).toHaveProperty('trade')
@@ -557,7 +562,10 @@ it('places trade entry above the charts and renders no empty position area when 
  expect(toolbar.compareDocumentPosition(chartArea) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
  expect(host.querySelector('.trading-dock')).toBeNull()
  expect(host.querySelector('.active-positions')).toBeNull()
- expect(toolbar.textContent).toContain('Ready for a new setup')
+ expect(toolbar.textContent).not.toContain('Ready for a new setup')
+ expect(toolbar.textContent).not.toContain('Entries fill')
+ expect(host.querySelector('.chart-workspace')?.textContent).not.toContain('Contract mappings and rollover events')
+ expect(host.querySelector('.pane-toolbar .instrument strong')?.textContent).toBe('EURUSD')
 })
 it('keeps drafts uncommitted until the on-chart tick is clicked, and retains cancellation and validation', async () => {
  await start(); await click('Buy'); await pick(1.099)
@@ -592,4 +600,25 @@ it('derives two pending entry identities, keeps actual fills and recreates them 
  const first=before.positions[0].id
  await click(`Close ${first}`);await click('Next Candle')
  expect(activeEntryLines().map(line=>line.options().title)).toEqual(['B2'])
+})
+
+it('groups the replay timestamp with Account PnL and discloses execution details from the app header', async () => {
+ await start()
+ const header = host.querySelector('.app-header')!, info = header.querySelector('.execution-details') as HTMLDetailsElement
+ expect(info.open).toBe(false)
+ expect(info.querySelector('summary')?.getAttribute('aria-label')).toBe('Execution details')
+ await act(async () => info.querySelector('summary')!.click())
+ expect(info.open).toBe(true)
+ expect(info.textContent).toContain('net breakeven also includes commissions')
+ expect(info.textContent).toContain('Original legacy bid/ask execution')
+ const timestamp = header.querySelector('time')!
+ expect(timestamp.textContent).toMatch(/2024-01-09 .* UTC/)
+ expect(timestamp.nextElementSibling?.getAttribute('aria-label')).toBe('Account PnL')
+ expect(host.querySelector('.workspace-toolbar time')).toBeNull()
+ const pane = host.querySelector('.pane-toolbar')!
+ expect(pane.querySelector('select')).not.toBeNull()
+ expect(pane.querySelector('.indicator-controls')).not.toBeNull()
+ expect(pane.querySelector('.indicator-readiness')?.textContent).toMatch(/Indicators/)
+ const options = vi.mocked(createChart).mock.calls.at(-1)![1]!
+ expect(options.timeScale).toMatchObject({ fixRightEdge: false, rightOffset: 12 })
 })

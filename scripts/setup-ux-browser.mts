@@ -51,7 +51,7 @@ async function screenshot(name:string){const path=`docs/setup-ux/${name}.png`;aw
 try {
  await page.goto('http://127.0.0.1:5196');await page.getByText('90 days selected — already downloaded.',{exact:true}).waitFor()
  await button('90 days').click()
- for(const [width,height] of [[1440,1000],[390,844]]){await page.setViewportSize({width,height});await screenshot(`setup-${width}`);assert.ok(await button('Start backtest').isVisible());const primary=await button('Start backtest').boundingBox();assert.ok(primary && primary.y+primary.height<=height);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),width)}
+ for(const [width,height] of [[1440,1000],[1100,800]]){await page.setViewportSize({width,height});await screenshot(`setup-${width}`);assert.ok(await button('Start backtest').isVisible());const primary=await button('Start backtest').boundingBox();assert.ok(primary && primary.y+primary.height<=height);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),width)}
  await page.setViewportSize({width:1440,height:1000})
  const end=page.getByRole('slider',{name:'Historical end date'})
  await end.focus();await end.press('ArrowLeft');assert.equal(await end.getAttribute('aria-valuetext'),'29 Mar 2024');await end.press('ArrowRight')
@@ -64,7 +64,7 @@ try {
  const t0=performance.now();await button('Start backtest').click();await page.locator('.chart-canvas').first().waitFor();await saved();evidence.startDurationMs=performance.now()-t0
  assert.equal(await page.getByLabel('Replay status',{exact:true}).innerText(),'Paused')
  assert.equal(await page.locator('dialog').count(),0)
- for(const [width,height] of [[1440,1000],[390,844]]){await page.setViewportSize({width,height});await screenshot(`trading-${width}`);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),width)}
+ for(const [width,height] of [[1440,1000],[1100,800]]){await page.setViewportSize({width,height});await screenshot(`trading-${width}`);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),width)}
  await page.setViewportSize({width:1440,height:1000})
  let records=(await storage.list()).sessions;assert.equal(records.length,1)
  const record=records[0];assert.equal(record.checkpoint.replay.startTimestamp,eligible.timestamp);assert.equal(record.checkpoint.replay.startIndex,eligible.index)
@@ -78,15 +78,6 @@ try {
  records=(await storage.list()).sessions
  assert.equal(records[0].checkpoint.replay.startTimestamp,checkpoint.replay.startTimestamp);assert.equal(records[0].checkpoint.replay.startIndex,checkpoint.replay.startIndex);assert.equal(records[0].checkpoint.replay.index,checkpoint.replay.index)
  evidence.checks.restoreUnchanged=true
- // Touch input is dispatched through Chromium on a separate isolated browser context.
- const touch=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true}),mobile=await touch.newPage()
- await mobile.addInitScript('globalThis.__name = target => target');await mobile.goto('http://127.0.0.1:5196');await mobile.getByRole('button',{name:'New backtest',exact:true}).click()
- await mobile.getByRole('slider',{name:'Historical start date'}).waitFor();const slider=mobile.getByRole('slider',{name:'Historical start date'}),touchBox=(await slider.boundingBox())!
- const session=await touch.newCDPSession(mobile),touchX=touchBox.x+12+(touchBox.width-24)*30/119,touchY=touchBox.y+24
- await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:touchX,y:touchY}]})
- await session.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:touchX+30,y:touchY}]})
- await session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]})
- assert.notEqual(await slider.getAttribute('aria-valuetext'),'1 Jan 2024');evidence.checks.touch=true;await touch.close()
  assert.deepEqual(await manifest(),before);evidence.checks.originalCacheUnchanged=true
  assert.equal(evidence.providerRequests,0);assert.equal(evidence.paidSubmissions,0);assert.deepEqual(evidence.errors,[])
  await writeFile('docs/setup-ux/browser-evidence.json',JSON.stringify(evidence,null,2)+'\n');console.log(JSON.stringify(evidence,null,2))

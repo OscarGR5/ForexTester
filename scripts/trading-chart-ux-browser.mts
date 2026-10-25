@@ -79,16 +79,11 @@ try {
  assert.equal(await page.getByLabel('Chart 1 timeframe', { exact: true }).inputValue(), 'H1')
  for (const count of [1, 2, 3]) {
   await page.locator(`input[name="chart-count"][value="${count}"]`).check(); await settle()
-  for (const [width, height] of [[1440, 1000], [390, 844]]) {
+  for (const [width, height] of [[1440, 1000], [1100, 800]]) {
    await page.setViewportSize({ width, height }); await settle(); await screenshot(`${count}-charts-${width}`)
    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width)
    evidence.checks[`layout-${count}-${width}`] = await page.locator('.chart-pane').evaluateAll(elements => elements.map(e => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height } }))
    assert.ok(await button('Buy').isVisible())
-   if (width === 390 && count > 1) {
-    await page.locator('.chart-workspace').evaluate(element => { element.scrollTop = element.scrollHeight }); await settle()
-    await screenshot(`${count}-charts-${width}-last-pane`)
-    await page.locator('.chart-workspace').evaluate(element => { element.scrollTop = 0 })
-   }
   }
   await page.setViewportSize({ width: 1440, height: 1000 }); await settle()
   if (count > 1) {

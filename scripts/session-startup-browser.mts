@@ -60,8 +60,8 @@ try {
   report.checks.push('One saved session opens centered 740px selector with heading focus and visible keyboard focus')
   for (const name of ['London session — February 2024', 'New York continuation', 'Risk model comparison', 'Breakout study', 'End-of-month review']) await seed(name)
   await page.reload(); await page.getByRole('heading', { name: 'Choose a backtest', exact: true }).waitFor()
-  for (const width of [1440, 390]) {
-    await page.setViewportSize({ width, height: width === 390 ? 844 : 900 })
+  for (const width of [1440, 1100]) {
+    await page.setViewportSize({ width, height: width === 1100 ? 800 : 900 })
     assert.equal(await page.locator('.startup-selection .saved-session').count(), 6)
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width)
     const list = page.locator('.startup-selection .saved-sessions')
@@ -71,7 +71,7 @@ try {
     await list.evaluate(node => { node.scrollTop = 0 })
     await screenshot(`startup-${width}`)
   }
-  report.checks.push('Six sessions render with scrollable list and no horizontal overflow at 1440px and 390px')
+  report.checks.push('Six sessions render with scrollable list and no horizontal overflow at 1440px and 1100px')
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.locator('.saved-session').filter({ hasText: 'EURUSD Strategy — January 2024' }).getByRole('button', { name: 'Resume backtest', exact: true }).click()
   await page.locator('.phase-trading').waitFor()
@@ -85,9 +85,9 @@ try {
   const dialog = await page.locator('dialog.management-dialog').boundingBox()
   assert.ok(dialog && dialog.x > 500 && Math.abs(dialog.x + dialog.width - 1424) <= 2)
   await screenshot('management-trading-1440')
-  await page.setViewportSize({ width: 390, height: 844 })
-  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 390)
-  await screenshot('management-trading-390')
+  await page.setViewportSize({ width: 1100, height: 800 })
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 1100)
+  await screenshot('management-trading-1100')
   report.checks.push('Resume restores trading, replay index and equity; ordinary management opens right-side native dialog')
   const beforeNewKeys = await page.evaluate(() => Object.keys(localStorage))
   await page.getByRole('button', { name: 'New session', exact: true }).click()

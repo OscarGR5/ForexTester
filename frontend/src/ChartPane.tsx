@@ -1,3 +1,4 @@
+import { FOLLOW_RIGHT_OFFSET } from './chartSync'
 import { EntryLines, type EntryOverlay } from './entryOverlays'
 import { DraftStopAnnotation, useDraftStopAnnotation } from './DraftStopAnnotation'
 import { StopLines } from './stopLabels'
@@ -78,7 +79,7 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, se
         horzLine: { color: '#9598a1', style: LineStyle.Dashed, width: 1 },
       },
       rightPriceScale: { borderColor: '#354250' },
-      timeScale: { borderColor: '#354250', timeVisible: true, secondsVisible: false, fixLeftEdge: false, fixRightEdge: true },
+      timeScale: { borderColor: '#354250', timeVisible: true, secondsVisible: false, fixLeftEdge: false, fixRightEdge: false, rightOffset: FOLLOW_RIGHT_OFFSET },
       localization: {
         timeFormatter: (time: Time) => typeof time === 'number'
           ? `${new Date(time * 1000).toISOString().slice(0, 16).replace('T', ' ')} UTC`
@@ -175,7 +176,7 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, se
     const candles = bars.candles
     const required = indicatorWarmupRequirement(settings)
     const completed = Math.max(0, candles.length - (count ? 1 : 0))
-    setReadiness(!required ? '' : completed < required ? `Indicators warming up: ${completed} / ${required} completed ${timeframe} candles. Continue replay or reduce the indicator periods.` : `Indicators ready · ${required}+ completed ${timeframe} candles`)
+    setReadiness(!required ? '' : completed < required ? `Indicators warming up: ${completed} / ${required} completed ${timeframe} candles` : `Indicators ready · ${required}+ completed ${timeframe} candles`)
     performanceValue(`chart.${id}.cursor`, count)
     performanceValue(`chart.${id}.time`, candles.at(-1)?.time ?? 0)
     if (!replace && dirty === candles.length && previousSettings.current === settings) {
@@ -247,18 +248,18 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, se
   useDraftStopAnnotation(draftAnnotation, chartRef, seriesRef, placement?.price ?? null)
 
   return (
-    <section className={`chart-pane${placement ? " placing-stop" : ""}`} aria-label={`Chart ${id + 1}: ${instrument} ${timeframe} ${instrument === '6E' ? 'trade prices' : 'bid'}`}
+    <section className={`chart-pane${placement ? " placing-stop" : ""}`} aria-label={`Chart ${id + 1}: ${instrument === '6E' ? 'EURUSD 6E' : instrument} ${timeframe} ${instrument === '6E' ? 'trade prices' : 'bid'}`}
       onPointerDownCapture={() => synchronizer.activate(id)}
       onPointerMoveCapture={(event) => { if (event.buttons) synchronizer.activate(id) }}>
       <div className="pane-toolbar">
-        <span className="instrument"><strong>{instrument}</strong><span className="bid-label">{instrument === '6E' ? 'Trade' : 'Bid'}</span></span>
+        <span className="instrument"><strong>{instrument === '6E' ? 'EURUSD 6E' : instrument}</strong><span className="bid-label">{instrument === '6E' ? 'Trade' : 'Bid'}</span></span>
         <label>Timeframe <select aria-label={`Chart ${id + 1} timeframe`} value={timeframe}
           onChange={(event) => onTimeframeChange(id, event.target.value as Timeframe)}>
           {timeframe === 'M1' && <option value="M1">M1 (legacy)</option>}
           {VISIBLE_TIMEFRAMES.map((option) => <option key={option} value={option}>{option}</option>)}
         </select></label>
-        {readiness && <span className="indicator-readiness" role="status">{readiness}</span>}
         <IndicatorControls key={timeframe} id={id} settings={settings} onChange={updateSettings} />
+        {readiness && <span className="indicator-readiness" role="status">{readiness}</span>}
       </div>
       {stopDrag.choices.length > 1 && <div className="stop-selector" role="group" aria-label="Select overlapping stop-loss">
         <span>Hold a position button and drag vertically:</span>

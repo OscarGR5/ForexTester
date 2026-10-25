@@ -36,12 +36,8 @@ export function TradingDock({ trading, draft, setDraft, stops, onConfirm }: { on
       <button className="buy-button" disabled={!canOrder || slots >= 2 || !!automaticSetupError(state,'buy',setupId)} onClick={()=>begin('buy')}>Buy</button>
       <button className="sell-button" disabled={!canOrder || slots >= 2 || !!automaticSetupError(state,'sell',setupId)} onClick={()=>begin('sell')}>Sell</button>
       <span>{slots} / 2 slots</span>
-      <span className="setup-status">{setupId ? `Setup ${setupId} · ${state.positions[0]?.direction ?? state.pending[0]?.direction}` : 'Ready for a new setup'}</span>
-      <span className="trading-message">{permission.playing ? 'Pause to trade' : !permission.hasFuture ? 'End of history; positions remain open' : state.symbol === '6E' ? 'Entries fill at the next eligible M1 opening' : 'Entries fill at the next synchronized M1 opening'}</span>
-      <details className="execution-details"><summary>Execution details</summary>
-        {state.symbol === '6E' && <p>6E trade prices · hypothetical forex-style sizing (1 lot = 100,000 EUR). No spread; M1 open fills, high/low stops and gap-open handling. Not exchange-accurate futures or EUR/USD CFD execution.</p>}
-        <p>SL amounts are net at the stop level, including entry and exit commissions. Pending values estimate the next fill from the observed price. Gaps can change the outcome. Entry lines mark the fill price; net breakeven also includes commissions.</p>
-      </details>
+      {setupId && <span className="setup-status">Setup {setupId} · {state.positions[0]?.direction ?? state.pending[0]?.direction}</span>}
+      {(permission.playing || !permission.hasFuture) && <span className="trading-message">{permission.playing ? 'Pause to trade' : 'End of history; positions remain open'}</span>}
     </div>
     {draft && <div className="stop-placement" role="region" aria-label="Place stop-loss">
       <strong>{draft.positionId ? `Modify SL ${draft.positionId}` : `${draft.direction === 'buy' ? 'Buy' : 'Sell'} · slot ${draft.slot}`} · {draft.price === null ? 'Click the price chart to place SL' : `SL ${draft.price.toFixed(5)}`}</strong>

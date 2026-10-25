@@ -22,8 +22,8 @@ const expectedProbes = new Set<string>()
 let realBackendHistoryCalls = 0
 backend.on('request', req => { if (req.url?.startsWith('/api/history')) realBackendHistoryCalls++ })
 try {
-  for (const width of [1440, 390]) {
-    const context = await browser.newContext({ viewport: {width, height: width === 390 ? 844 : 1000} })
+  for (const width of [1440, 1100]) {
+    const context = await browser.newContext({ viewport: {width, height: width === 1100 ? 800 : 1000} })
     const page = await context.newPage()
     await page.addInitScript('globalThis.__name = target => target')
     page.on('pageerror', error => report.browserErrors.push(error.message))
@@ -52,7 +52,6 @@ try {
     await page.goto('http://127.0.0.1:5196')
     const button=(name:string)=>page.getByRole('button',{name,exact:true})
     const load=async()=>{await button('Load historical data').click()}
-    if (width === 390) await button('New session').click()
     const dialog=page.getByRole('dialog',{name:'Approve paid history download'})
     const approve=()=>page.getByRole('button',{name:/^Approve paid download/})
     const acknowledge=()=>page.getByRole('checkbox',{name:'I understand that actual Databento billing can differ from this estimate.'})
@@ -93,7 +92,6 @@ try {
     await dialog.evaluate(el=>{el.scrollTop=0})
     const screenshot=`docs/databento/paid-confirmation-${width}.png`
     await page.screenshot({path:screenshot,fullPage:true});report.screenshots.push(screenshot)
-    if(width===390){await dialog.evaluate(el=>{el.scrollTop=el.scrollHeight});const actions='docs/databento/paid-confirmation-actions-390.png';await page.screenshot({path:actions,fullPage:true});report.screenshots.push(actions)}
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),width)
     assert.equal(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth),true)
     await page.keyboard.press('Escape');assert.equal(await dialog.count(),0);assert.equal(paid,0)

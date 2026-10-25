@@ -1,0 +1,1580 @@
+{
+  "isolatedSessions": "/tmp/forextester-chart-ux-SvMhwP",
+  "providerRequests": 0,
+  "paidSubmissions": 0,
+  "screenshots": [
+    "docs/topbar-tightening/after-1-charts-1440.png",
+    "docs/topbar-tightening/execution-info-1440.png",
+    "docs/topbar-tightening/indicators-open-1-1440.png",
+    "docs/topbar-tightening/after-1-charts-1100.png",
+    "docs/topbar-tightening/execution-info-1100.png",
+    "docs/topbar-tightening/indicators-open-1-1100.png",
+    "docs/topbar-tightening/future-margin-1-0.png",
+    "docs/topbar-tightening/pan-earlier-1-0.png",
+    "docs/topbar-tightening/pan-later-1-0.png",
+    "docs/topbar-tightening/after-2-charts-1440.png",
+    "docs/topbar-tightening/indicators-open-2-1440.png",
+    "docs/topbar-tightening/after-2-charts-1100.png",
+    "docs/topbar-tightening/indicators-open-2-1100.png",
+    "docs/topbar-tightening/future-margin-2-0.png",
+    "docs/topbar-tightening/pan-earlier-2-0.png",
+    "docs/topbar-tightening/future-margin-2-1.png",
+    "docs/topbar-tightening/pan-earlier-2-1.png",
+    "docs/topbar-tightening/after-3-charts-1440.png",
+    "docs/topbar-tightening/indicators-open-3-1440.png",
+    "docs/topbar-tightening/after-3-charts-1100.png",
+    "docs/topbar-tightening/indicators-open-3-1100.png",
+    "docs/topbar-tightening/future-margin-3-0.png",
+    "docs/topbar-tightening/pan-earlier-3-0.png",
+    "docs/topbar-tightening/future-margin-3-1.png",
+    "docs/topbar-tightening/pan-earlier-3-1.png",
+    "docs/topbar-tightening/future-margin-3-2.png",
+    "docs/topbar-tightening/pan-earlier-3-2.png",
+    "docs/topbar-tightening/draft-sl-tick-desktop.png",
+    "docs/topbar-tightening/draft-sl-tick-three-charts.png",
+    "docs/topbar-tightening/one-pending-entry.png",
+    "docs/topbar-tightening/two-pending-entries.png",
+    "docs/topbar-tightening/two-filled-entries.png",
+    "docs/topbar-tightening/margin-with-stops-1440.png",
+    "docs/topbar-tightening/margin-with-stops-1100.png",
+    "docs/topbar-tightening/draft-sl-tick-1440.png",
+    "docs/topbar-tightening/draft-sl-tick-1100.png",
+    "docs/topbar-tightening/entries-2-charts-1440.png",
+    "docs/topbar-tightening/entries-2-charts-1100.png",
+    "docs/topbar-tightening/entries-3-charts-1440.png",
+    "docs/topbar-tightening/entries-3-charts-1100.png",
+    "docs/topbar-tightening/entries-restored-after-backend-restart.png"
+  ],
+  "errors": [],
+  "checks": {
+    "layout-1-1440": {
+      "toolbar": {
+        "x": 0,
+        "y": 48,
+        "width": 1440,
+        "height": 43
+      },
+      "chart": {
+        "x": 8,
+        "y": 123,
+        "width": 1424,
+        "height": 877
+      },
+      "clock": {
+        "x": 929.109375,
+        "y": 15,
+        "width": 122.34375,
+        "height": 17
+      },
+      "pnl": {
+        "x": 1067.453125,
+        "y": 12.5,
+        "width": 178.015625,
+        "height": 22
+      },
+      "buy": {
+        "x": 1279.34375,
+        "y": 54,
+        "width": 39.34375,
+        "height": 30
+      },
+      "replay": {
+        "x": 14,
+        "y": 52,
+        "width": 894.421875,
+        "height": 34
+      },
+      "stability": [
+        {
+          "closed": [
+            {
+              "x": 210.421875,
+              "y": 93,
+              "width": 63,
+              "height": 28
+            },
+            {
+              "x": 281.421875,
+              "y": 93,
+              "width": 85.453125,
+              "height": 28
+            },
+            {
+              "x": 374.875,
+              "y": 100,
+              "width": 1047.125,
+              "height": 14
+            },
+            {
+              "x": 8,
+              "y": 123,
+              "width": 1424,
+              "height": 877
+            }
+          ],
+          "opened": [
+            {
+              "x": 210.421875,
+              "y": 93,
+              "width": 63,
+              "height": 28
+            },
+            {
+              "x": 281.421875,
+              "y": 93,
+              "width": 85.453125,
+              "height": 28
+            },
+            {
+              "x": 374.875,
+              "y": 100,
+              "width": 1047.125,
+              "height": 14
+            },
+            {
+              "x": 8,
+              "y": 123,
+              "width": 1424,
+              "height": 877
+            }
+          ]
+        }
+      ]
+    },
+    "layout-1-1100": {
+      "toolbar": {
+        "x": 0,
+        "y": 54,
+        "width": 1100,
+        "height": 77
+      },
+      "chart": {
+        "x": 8,
+        "y": 163,
+        "width": 1084,
+        "height": 637
+      },
+      "clock": {
+        "x": 674.8125,
+        "y": 18,
+        "width": 122.34375,
+        "height": 17
+      },
+      "pnl": {
+        "x": 809.15625,
+        "y": 6,
+        "width": 100.3125,
+        "height": 41
+      },
+      "buy": {
+        "x": 368.921875,
+        "y": 96,
+        "width": 39.34375,
+        "height": 30
+      },
+      "replay": {
+        "x": 14,
+        "y": 58,
+        "width": 1072,
+        "height": 34
+      },
+      "stability": [
+        {
+          "closed": [
+            {
+              "x": 210.421875,
+              "y": 133,
+              "width": 63,
+              "height": 28
+            },
+            {
+              "x": 281.421875,
+              "y": 133,
+              "width": 85.453125,
+              "height": 28
+            },
+            {
+              "x": 374.875,
+              "y": 140,
+              "width": 707.125,
+              "height": 14
+            },
+            {
+              "x": 8,
+              "y": 163,
+              "width": 1084,
+              "height": 637
+            }
+          ],
+          "opened": [
+            {
+              "x": 210.421875,
+              "y": 133,
+              "width": 63,
+              "height": 28
+            },
+            {
+              "x": 281.421875,
+              "y": 133,
+              "width": 85.453125,
+              "height": 28
+            },
+            {
+              "x": 374.875,
+              "y": 140,
+              "width": 707.125,
+              "height": 14
+            },
+            {
+              "x": 8,
+              "y": 163,
+              "width": 1084,
+              "height": 637
+            }
+          ]
+        }
+      ]
+    },
+    "future-margin-1-0": {
+      "range": {
+        "from": 147,
+        "to": 372
+      },
+      "last": 292,
+      "latest": 1704470400,
+      "plotWidth": 1358,
+      "latestX": 873.287610619469,
+      "offset": 80
+    },
+    "pan-1-0": {
+      "before": {
+        "0": {
+          "from": 147,
+          "to": 372
+        }
+      },
+      "earlier": {
+        "0": {
+          "from": 93.57879234167893,
+          "to": 318.57879234167893
+        }
+      },
+      "later": {
+        "0": {
+          "from": 125.53166421207658,
+          "to": 350.5316642120766
+        }
+      }
+    },
+    "layout-2-1440": {
+      "toolbar": {
+        "x": 0,
+        "y": 48,
+        "width": 1440,
+        "height": 43
+      },
+      "chart": {
+        "x": 8,
+        "y": 123,
+        "width": 710,
+        "height": 877
+      },
+      "clock": {
+        "x": 929.109375,
+        "y": 15,
+        "width": 122.34375,
+        "height": 17
+      },
+      "pnl": {
+        "x": 1067.453125,
+        "y": 12.5,
+        "width": 178.015625,
+        "height": 22
+      },
+      "buy": {
+        "x": 1279.34375,
+        "y": 54,
+        "width": 39.34375,
+        "height": 30
+      },
+      "replay": {
+        "x": 14,
+        "y": 52,
+        "width": 894.421875,
+        "height": 34
+      },
+      "stability": [
+        {
+          "closed": [
+            {
+              "x": 210.421875,
+              "y": 93,
+              "width": 63,
+              "height": 28
+            },
+            {
+              "x": 281.421875,
+              "y": 93,
+              "width": 85.453125,
+              "height": 28
+            },
+            {
+              "x": 374.875,
+              "y": 100,
+              "width": 333.125,
+              "height": 14
+            },
+            {
+              "x": 8,
+              "y": 123,
+              "width": 710,
+              "height": 877
+            }
+          ],
+          "opened": [
+            {
+              "x": 210.421875,
+              "y": 93,
+              "width": 63,
+              "height": 28
+            },
+            {
+              "x": 281.421875,
+              "y": 93,
+              "width": 85.453125,
+              "height": 28
+            },
+            {
+              "x": 374.875,
+              "y": 100,
+              "width": 333.125,
+              "height": 14
+            },
+            {
+              "x": 8,
+              "y": 123,
+              "width": 710,
+              "height": 877
+            }
+          ]
+        },
+        {
+          "closed": [
+            {
+              "x": 924.421875,
+              "y": 93,
+              "width": 63,
+              "height": 28
+            },
+            {
+              "x": 995.421875,
+              "y": 93,
+              "width": 85.453125,
+              "height": 28
+            },
+            {
+              "x": 1088.875,
+              "y": 100,
+              "width": 333.125,
+              "height": 14
+            },
+            {
+              "x": 722,
+              "y": 123,
+              "width": 710,
+              "height": 877
+            }
+          ],
+          "opened": [
+            {
+              "x": 924.421875,
+              "y": 93,
+              "width": 63,
+              "height": 28
+            },
+            {
+              "x": 995.421875,
+              "y": 93,
+              "width": 85.453125,
+              "height": 28
+            },
+            {
+              "x": 1088.875,
+              "y": 100,
+              "width": 333.125,
+              "height": 14
+            },
+            {
+              "x": 722,
+              "y": 123,
+              "width": 710,
+              "height": 877
+            }
+          ]
+        }
+      ]
+    },
+    "layout-2-1100": {
+      "toolbar": {
+        "x": 0,
+        "y": 54,
+        "width": 1100,
+        "height": 77
+      },
+      "chart": {
+        "x": 8,
+        "y": 163,
+        "width": 540,
+        "height": 637
+      },
+      "clock": {
+        "x": 674.8125,
+        "y": 18,
+        "width": 122.34375,
+        "height": 17
+      },
+      "pnl": {
+        "x": 809.15625,
+        "y": 6,
+        "width": 100.3125,
+        "height": 41
+      },
+      "buy": {
+        "x": 368.921875,
+        "y": 96,
+        "width": 39.34375,
+        "height": 30
+      },
+      "replay": {
+        "x": 14,
+        "y": 58,
+        "width": 1072,
+        "height": 34
+      },
+      "stability": [
+        {
+          "closed": [
+            {
+              "x": 210.421875,
+              "y": 133,
+              "width": 63,
+              "height": 28
+            },
+            {
+              "x": 281.421875,
+              "y": 133,
+              "width": 85.453125,
+              "height": 28
+            },
+            {
+              "x": 374.875,
+              "y": 133,
+              "width": 163.125,
+              "height": 28
+            },
+            {
+              "x": 8,
+              "y": 163,
+              "width": 540,
+              "height": 637
+            }
+          ],
+          "opened": [
+            {
+              "x": 210.421875,
+              "y": 133,
+              "width": 63,
+              "height": 28
+            },
+            {
+              "x": 281.421875,
+              "y": 133,
+              "width": 85.453125,
+              "height": 28
+            },
+            {
+              "x": 374.875,
+              "y": 133,
+              "width": 163.125,
+              "height": 28
+            },
+            {
+              "x": 8,
+              "y": 163,
+              "width": 540,
+              "height": 637
+            }
+          ]
+        },
+        {
+          "closed": [
+            {
+              "x": 754.421875,
+              "y": 133,
+              "width": 63,
+              "height": 28
+            },
+            {
+              "x": 825.421875,
+              "y": 133,
+              "width": 85.453125,
+              "height": 28
+            },
+            {
+              "x": 918.875,
+              "y": 133,
+              "width": 163.125,
+              "height": 28
+            },
+            {
+              "x": 552,
+              "y": 163,
+              "width": 540,
+              "height": 637
+            }
+          ],
+          "opened": [
+            {
+              "x": 754.421875,
+              "y": 133,
+              "width": 63,
+              "height": 28
+            },
+            {
+              "x": 825.421875,
+              "y": 133,
+              "width": 85.453125,
+              "height": 28
+            },
+            {
+              "x": 918.875,
+              "y": 133,
+              "width": 163.125,
+              "height": 28
+            },
+            {
+              "x": 552,
+              "y": 163,
+              "width": 540,
+              "height": 637
+            }
+          ]
+        }
+      ]
+    },
+    "future-margin-2-0": {
+      "range": {
+        "from": 147,
+        "to": 372
+      },
+      "last": 292,
+      "latest": 1704470400,
+      "plotWidth": 644,
+      "latestX": 413.6106194690266,
+      "offset": 80
+    },
+    "pan-2-0": {
+      "before": {
+        "0": {
+          "from": 147,
+          "to": 372
+        },
+        "1": {
+          "from": 3305,
+          "to": 3516
+        }
+      },
+      "earlier": {
+        "0": {
+          "from": 90.85093167701865,
+          "to": 315.85093167701865
+        },
+        "1": {
+          "from": 3305,
+          "to": 3516
+        }
+      },
+      "later": {
+        "0": {
+          "from": 124.18944099378882,
+          "to": 349.1894409937888
+        },
+        "1": {
+          "from": 3305,
+          "to": 3516
+        }
+      }
+    },
+    "future-margin-2-1": {
+      "range": {
+        "from": 3373,
+        "to": 3584
+      },
+      "last": 3504,
+      "latest": 1704470400,
+      "plotWidth": 644,
+      "latestX": 398.4622641509434,
+      "offset": 80
+    },
+    "pan-2-1": {
+      "before": {
+        "0": {
+          "from": 124.18944099378882,
+          "to": 349.1894409937888
+        },
+        "1": {
+          "from": 3373,
+          "to": 3584
+        }
+      },
+      "earlier": {
+        "0": {
+          "from": 124.18944099378882,
+          "to": 349.1894409937888
+        },
+        "1": {
+          "from": 3320.3291925465837,
+          "to": 3531.3291925465837
+        }
+      },
+      "later": {
+        "0": {
+          "from": 124.18944099378882,
+          "to": 349.1894409937888
+        },
+        "1": {
+          "from": 3351.6024844720496,
+          "to": 3562.6024844720496
+        }
+      }
+    },
+    "layout-3-1440": {
+      "toolbar": {
+        "x": 0,
+        "y": 48,
+        "width": 1440,
+        "height": 43
+      },
+      "chart": {
+        "x": 8,
+        "y": 123,
+        "width": 710,
+        "height": 877
+      },
+      "clock": {
+        "x": 929.109375,
+        "y": 15,
+        "width": 122.34375,
+        "height": 17
+      },
+      "pnl": {
+        "x": 1067.453125,
+        "y": 12.5,
+        "width": 178.015625,
+        "height": 22
+      },
+      "buy": {
+        "x": 1279.34375,
+        "y": 54,
+        "width": 39.34375,
+        "height": 30
+      },
+      "replay": {
+        "x": 14,
+        "y": 52,
+        "width": 894.421875,
+        "height": 34
+      },
+      "stability": [
+        {
+          "closed": [
+            {
+              "x": 210.421875,
+              "y": 93,
+              "width": 63,
+              "height": 28
+            },
+            {
+              "x": 281.421875,
+              "y": 93,
+              "width": 85.453125,
+              "height": 28
+            },
+            {
+              "x": 374.875,
+              "y": 100,
+              "width": 333.125,
+              "height": 14
+            },
+            {
+              "x": 8,
+              "y": 123,
+              "width": 710,
+              "height": 877
+            }
+          ],
+          "opened": [
+            {
+              "x": 210.421875,
+              "y": 93,
+              "width": 63,
+              "height": 28
+            },
+            {
+              "x": 281.421875,
+              "y": 93,
+              "width": 85.453125,
+              "height": 28
+            },
+            {
+              "x": 374.875,
+              "y": 100,
+              "width": 333.125,
+              "height": 14
+            },
+            {
+              "x": 8,
+              "y": 123,
+              "width": 710,
+              "height": 877
+            }
+          ]
+        },
+        {
+          "closed": [
+            {
+              "x": 924.421875,
+              "y": 93,
+              "width": 63,
+              "height": 28
+            },
+            {
+              "x": 995.421875,
+              "y": 93,
+              "width": 85.453125,
+              "height": 28
+            },
+            {
+              "x": 1088.875,
+              "y": 100,
+              "width": 333.125,
+              "height": 14
+            },
+            {
+              "x": 722,
+              "y": 123,
+              "width": 710,
+              "height": 420.5
+            }
+          ],
+          "opened": [
+            {
+              "x": 924.421875,
+              "y": 93,
+              "width": 63,
+              "height": 28
+            },
+            {
+              "x": 995.421875,
+              "y": 93,
+              "width": 85.453125,
+              "height": 28
+            },
+            {
+              "x": 1088.875,
+              "y": 100,
+              "width": 333.125,
+              "height": 14
+            },
+            {
+              "x": 722,
+              "y": 123,
+              "width": 710,
+              "height": 420.5
+            }
+          ]
+        },
+        {
+          "closed": [
+            {
+              "x": 924.421875,
+              "y": 549.5,
+              "width": 63,
+              "height": 28
+            },
+            {
+              "x": 995.421875,
+              "y": 549.5,
+              "width": 85.453125,
+              "height": 28
+            },
+            {
+              "x": 1088.875,
+              "y": 556.5,
+              "width": 333.125,
+              "height": 14
+            },
+            {
+              "x": 722,
+              "y": 579.5,
+              "width": 710,
+              "height": 420.5
+            }
+          ],
+          "opened": [
+            {
+              "x": 924.421875,
+              "y": 549.5,
+              "width": 63,
+              "height": 28
+            },
+            {
+              "x": 995.421875,
+              "y": 549.5,
+              "width": 85.453125,
+              "height": 28
+            },
+            {
+              "x": 1088.875,
+              "y": 556.5,
+              "width": 333.125,
+              "height": 14
+            },
+            {
+              "x": 722,
+              "y": 579.5,
+              "width": 710,
+              "height": 420.5
+            }
+          ]
+        }
+      ]
+    },
+    "layout-3-1100": {
+      "toolbar": {
+        "x": 0,
+        "y": 54,
+        "width": 1100,
+        "height": 77
+      },
+      "chart": {
+        "x": 8,
+        "y": 163,
+        "width": 540,
+        "height": 637
+      },
+      "clock": {
+        "x": 674.8125,
+        "y": 18,
+        "width": 122.34375,
+        "height": 17
+      },
+      "pnl": {
+        "x": 809.15625,
+        "y": 6,
+        "width": 100.3125,
+        "height": 41
+      },
+      "buy": {
+        "x": 368.921875,
+        "y": 96,
+        "width": 39.34375,
+        "height": 30
+      },
+      "replay": {
+        "x": 14,
+        "y": 58,
+        "width": 1072,
+        "height": 34
+      },
+      "stability": [
+        {
+          "closed": [
+            {
+              "x": 210.421875,
+              "y": 133,
+              "width": 63,
+              "height": 28
+            },
+            {
+              "x": 281.421875,
+              "y": 133,
+              "width": 85.453125,
+              "height": 28
+            },
+            {
+              "x": 374.875,
+              "y": 133,
+              "width": 163.125,
+              "height": 28
+            },
+            {
+              "x": 8,
+              "y": 163,
+              "width": 540,
+              "height": 637
+            }
+          ],
+          "opened": [
+            {
+              "x": 210.421875,
+              "y": 133,
+              "width": 63,
+              "height": 28
+            },
+            {
+              "x": 281.421875,
+              "y": 133,
+              "width": 85.453125,
+              "height": 28
+            },
+            {
+              "x": 374.875,
+              "y": 133,
+              "width": 163.125,
+              "height": 28
+            },
+            {
+              "x": 8,
+              "y": 163,
+              "width": 540,
+              "height": 637
+            }
+          ]
+        },
+        {
+          "closed": [
+            {
+              "x": 754.421875,
+              "y": 133,
+              "width": 63,
+              "height": 28
+            },
+            {
+              "x": 825.421875,
+              "y": 133,
+              "width": 85.453125,
+              "height": 28
+            },
+            {
+              "x": 918.875,
+              "y": 133,
+              "width": 163.125,
+              "height": 28
+            },
+            {
+              "x": 552,
+              "y": 163,
+              "width": 540,
+              "height": 300.5
+            }
+          ],
+          "opened": [
+            {
+              "x": 754.421875,
+              "y": 133,
+              "width": 63,
+              "height": 28
+            },
+            {
+              "x": 825.421875,
+              "y": 133,
+              "width": 85.453125,
+              "height": 28
+            },
+            {
+              "x": 918.875,
+              "y": 133,
+              "width": 163.125,
+              "height": 28
+            },
+            {
+              "x": 552,
+              "y": 163,
+              "width": 540,
+              "height": 300.5
+            }
+          ]
+        },
+        {
+          "closed": [
+            {
+              "x": 754.421875,
+              "y": 469.5,
+              "width": 63,
+              "height": 28
+            },
+            {
+              "x": 825.421875,
+              "y": 469.5,
+              "width": 85.453125,
+              "height": 28
+            },
+            {
+              "x": 918.875,
+              "y": 469.5,
+              "width": 163.125,
+              "height": 28
+            },
+            {
+              "x": 552,
+              "y": 499.5,
+              "width": 540,
+              "height": 300.5
+            }
+          ],
+          "opened": [
+            {
+              "x": 754.421875,
+              "y": 469.5,
+              "width": 63,
+              "height": 28
+            },
+            {
+              "x": 825.421875,
+              "y": 469.5,
+              "width": 85.453125,
+              "height": 28
+            },
+            {
+              "x": 918.875,
+              "y": 469.5,
+              "width": 163.125,
+              "height": 28
+            },
+            {
+              "x": 552,
+              "y": 499.5,
+              "width": 540,
+              "height": 300.5
+            }
+          ]
+        }
+      ]
+    },
+    "future-margin-3-0": {
+      "range": {
+        "from": 147,
+        "to": 372
+      },
+      "last": 292,
+      "latest": 1704470400,
+      "plotWidth": 644,
+      "latestX": 413.6106194690266,
+      "offset": 80
+    },
+    "pan-3-0": {
+      "before": {
+        "0": {
+          "from": 147,
+          "to": 372
+        },
+        "1": {
+          "from": 3351.6024844720496,
+          "to": 3562.6024844720496
+        },
+        "2": {
+          "from": 0,
+          "to": 104
+        }
+      },
+      "earlier": {
+        "0": {
+          "from": 90.85093167701865,
+          "to": 315.85093167701865
+        },
+        "1": {
+          "from": 3351.6024844720496,
+          "to": 3562.6024844720496
+        },
+        "2": {
+          "from": 0,
+          "to": 104
+        }
+      },
+      "later": {
+        "0": {
+          "from": 124.18944099378882,
+          "to": 349.1894409937888
+        },
+        "1": {
+          "from": 3351.6024844720496,
+          "to": 3562.6024844720496
+        },
+        "2": {
+          "from": 0,
+          "to": 104
+        }
+      }
+    },
+    "future-margin-3-1": {
+      "range": {
+        "from": 3374,
+        "to": 3585
+      },
+      "last": 3505,
+      "latest": 1704470700,
+      "plotWidth": 644,
+      "latestX": 398.4622641509434,
+      "offset": 80
+    },
+    "pan-3-1": {
+      "before": {
+        "0": {
+          "from": 124.18944099378882,
+          "to": 349.1894409937888
+        },
+        "1": {
+          "from": 3374,
+          "to": 3585
+        },
+        "2": {
+          "from": 0,
+          "to": 104
+        }
+      },
+      "earlier": {
+        "0": {
+          "from": 124.18944099378882,
+          "to": 349.1894409937888
+        },
+        "1": {
+          "from": 3321.3291925465837,
+          "to": 3532.3291925465837
+        },
+        "2": {
+          "from": 0,
+          "to": 104
+        }
+      },
+      "later": {
+        "0": {
+          "from": 124.18944099378882,
+          "to": 349.1894409937888
+        },
+        "1": {
+          "from": 3352.6024844720496,
+          "to": 3563.6024844720496
+        },
+        "2": {
+          "from": 0,
+          "to": 104
+        }
+      }
+    },
+    "future-margin-3-2": {
+      "range": {
+        "from": 15.599999999999994,
+        "to": 119.6
+      },
+      "last": 78,
+      "latest": 1704470400,
+      "plotWidth": 644,
+      "latestX": 384.7866666666667,
+      "offset": 41.599999999999994
+    },
+    "pan-3-2": {
+      "before": {
+        "0": {
+          "from": 124.18944099378882,
+          "to": 349.1894409937888
+        },
+        "1": {
+          "from": 3352.6024844720496,
+          "to": 3563.6024844720496
+        },
+        "2": {
+          "from": 15.599999999999994,
+          "to": 119.6
+        }
+      },
+      "earlier": {
+        "0": {
+          "from": 124.18944099378882,
+          "to": 349.1894409937888
+        },
+        "1": {
+          "from": 3352.6024844720496,
+          "to": 3563.6024844720496
+        },
+        "2": {
+          "from": -10.486956521739131,
+          "to": 93.51304347826087
+        }
+      },
+      "later": {
+        "0": {
+          "from": 124.18944099378882,
+          "to": 349.1894409937888
+        },
+        "1": {
+          "from": 3352.6024844720496,
+          "to": 3563.6024844720496
+        },
+        "2": {
+          "from": 5.002173913043478,
+          "to": 109.00217391304348
+        }
+      }
+    },
+    "ordering-M5": {
+      "candle": 5,
+      "lines": [
+        {
+          "order": 0,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 1,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 2,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 3,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 4,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 6,
+          "precision": 2,
+          "visible": false
+        }
+      ]
+    },
+    "ordering-M15": {
+      "candle": 5,
+      "lines": [
+        {
+          "order": 0,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 1,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 2,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 3,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 4,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 6,
+          "precision": 2,
+          "visible": false
+        }
+      ]
+    },
+    "ordering-H1": {
+      "candle": 5,
+      "lines": [
+        {
+          "order": 0,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 1,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 2,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 3,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 4,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 6,
+          "precision": 2,
+          "visible": false
+        }
+      ]
+    },
+    "ordering-H4": {
+      "candle": 5,
+      "lines": [
+        {
+          "order": 0,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 1,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 2,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 3,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 4,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 6,
+          "precision": 2,
+          "visible": false
+        }
+      ]
+    },
+    "ordering-D1": {
+      "candle": 5,
+      "lines": [
+        {
+          "order": 0,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 1,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 2,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 3,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 4,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 6,
+          "precision": 2,
+          "visible": false
+        }
+      ]
+    },
+    "filledEntries": [
+      [
+        {
+          "color": "#75c4b5",
+          "price": 1.10055,
+          "lineStyle": 2,
+          "lineWidth": 1,
+          "lineVisible": true,
+          "axisLabelVisible": true,
+          "title": "B1 · B2",
+          "axisLabelColor": "",
+          "axisLabelTextColor": ""
+        }
+      ]
+    ],
+    "margin-with-stops-1440": {
+      "offset": 80,
+      "latestX": 873.287610619469,
+      "plotWidth": 1358,
+      "height": 810,
+      "levels": [
+        {
+          "entry": 520.9268292682948,
+          "stop": 583.579737335837
+        },
+        {
+          "entry": 520.9268292682948,
+          "stop": 582.9425891181968
+        }
+      ],
+      "pointerTime": 1704517200,
+      "hasCandle": false
+    },
+    "margin-with-stops-1100": {
+      "offset": 67.36671575846833,
+      "latestX": 609.1991150442477,
+      "plotWidth": 1018,
+      "height": 528,
+      "levels": [
+        {
+          "entry": 321.7567338282084,
+          "stop": 367.8805938494176
+        },
+        {
+          "entry": 321.7567338282084,
+          "stop": 367.411537645809
+        }
+      ],
+      "pointerTime": 1704517200,
+      "hasCandle": false
+    },
+    "draft-edge-1440": {
+      "annotation": {
+        "x": 1212,
+        "y": 740.015625,
+        "width": 146.203125,
+        "height": 38
+      },
+      "tick": {
+        "x": 1213,
+        "y": 741.015625,
+        "width": 36,
+        "height": 36
+      },
+      "plot": {
+        "x": 8,
+        "y": 215,
+        "width": 1424,
+        "height": 785
+      }
+    },
+    "draft-edge-1100": {
+      "annotation": {
+        "x": 872,
+        "y": 616.015625,
+        "width": 146.203125,
+        "height": 38
+      },
+      "tick": {
+        "x": 873,
+        "y": 617.015625,
+        "width": 36,
+        "height": 36
+      },
+      "plot": {
+        "x": 8,
+        "y": 322,
+        "width": 1084,
+        "height": 478
+      }
+    },
+    "laptopStopConfirmation": true,
+    "visible-entries-2": [
+      {
+        "height": 810,
+        "entries": [
+          520.9268292682948
+        ]
+      },
+      {
+        "height": 607,
+        "entries": [
+          235.538586086206
+        ]
+      }
+    ],
+    "visible-entries-3": [
+      {
+        "height": 528,
+        "entries": [
+          339.34634146341597
+        ]
+      },
+      {
+        "height": 173,
+        "entries": [
+          66.93791976634428
+        ]
+      },
+      {
+        "height": 232,
+        "entries": [
+          148.75121951219572
+        ]
+      }
+    ],
+    "durableRestore": {
+      "entries": [
+        [
+          {
+            "color": "#75c4b5",
+            "price": 1.10055,
+            "lineStyle": 2,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "B1 · B2",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          }
+        ],
+        [
+          {
+            "color": "#75c4b5",
+            "price": 1.10055,
+            "lineStyle": 2,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "B1 · B2",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          }
+        ],
+        [
+          {
+            "color": "#75c4b5",
+            "price": 1.10055,
+            "lineStyle": 2,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "B1 · B2",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          }
+        ]
+      ],
+      "views": {
+        "0": {
+          "from": 134.36671575846833,
+          "to": 359.36671575846833
+        },
+        "1": {
+          "from": 3352.6024844720496,
+          "to": 3563.6024844720496
+        },
+        "2": {
+          "from": 5.002173913043478,
+          "to": 109.00217391304348
+        }
+      }
+    },
+    "cacheUnchanged": true
+  }
+}
