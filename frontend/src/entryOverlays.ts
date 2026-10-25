@@ -13,7 +13,7 @@ export function entryOverlays(state: TradingState): EntryOverlay[] {
     const pending = state.pending.find(p => p.id === stop.id)
     const price = position?.entryPrice ?? (pending ? observedPrice(state.quote, pending.direction) : null)
     return price === null ? [] : [{ id: stop.id, number: stop.number, price, pending: stop.pending,
-      label: `${stop.pending ? 'Pending ' : ''}Entry ${stop.number}${stop.pending ? ' (est.)' : ''}` }]
+      label: `${stop.pending ? 'Pending ' : ''}${(position ?? pending)!.direction === 'buy' ? 'B' : 'S'}${stop.number}${stop.pending ? ' (est.)' : ''}` }]
   })
 }
 

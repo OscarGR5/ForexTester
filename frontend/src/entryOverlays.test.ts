@@ -5,9 +5,10 @@ import { cancelEntry, createTradingState, observeCandle, requestAutomaticEntry }
 
 const permission = { active: true, playing: false, hasFuture: true }
 const candle = { timestamp: 60000, open: 1.1, high: 1.101, low: 1.099, close: 1.1005 }
-function pending() {
+function pending(direction: 'buy' | 'sell' = 'buy') {
   const state = observeCandle({ ...createTradingState(1), symbol: '6E' }, candle, undefined, 'single')
-  return requestAutomaticEntry(requestAutomaticEntry(state, 'buy', .01, 1.09, permission), 'buy', .01, 1.09, permission)
+  const stop = direction === 'buy' ? 1.09 : 1.11
+  return requestAutomaticEntry(requestAutomaticEntry(state, direction, .01, stop, permission), direction, .01, stop, permission)
 }
 function fakeSeries() {
   return { applyOptions: vi.fn(),
@@ -16,15 +17,15 @@ function fakeSeries() {
 }
 
 describe('entry references', () => {
-  it('distinguishes estimated pending prices from actual fills and retains original entry identities', () => {
-    const state = pending()
+  it.each(['buy', 'sell'] as const)('uses compact %s labels through fill and restore, retaining original entry identities', direction => {
+    const state = pending(direction), side = direction === 'buy' ? 'B' : 'S'
     expect(entryOverlays(state).map(entry => [entry.price, entry.label])).toEqual([
-      [1.1005, 'Pending Entry 1 (est.)'], [1.1005, 'Pending Entry 2 (est.)'],
+      [1.1005, `Pending ${side}1 (est.)`], [1.1005, `Pending ${side}2 (est.)`],
     ])
     const second = cancelEntry(state, state.pending[0].id)
     const filled = observeCandle(second, { ...candle, timestamp: 120000, open: 1.1002 }, undefined, 'single')
     const saved = JSON.parse(JSON.stringify(filled))
-    expect(entryOverlays(saved)).toEqual([{ id: state.pending[1].id, number: 2, price: 1.1002, pending: false, label: 'Entry 2' }])
+    expect(entryOverlays(saved)).toEqual([{ id: state.pending[1].id, number: 2, price: 1.1002, pending: false, label: `${side}2` }])
     expect(entryOverlays(observeCandle(saved, { ...candle, timestamp: 180000 }, undefined, 'single'))).toEqual(entryOverlays(saved))
   })
   it('identifies coincident entries on one line and separate fills on two lines, and removes resolved lines', () => {
@@ -32,10 +33,10 @@ describe('entry references', () => {
     const entries = entryOverlays(pending())
     lines.update(entries)
     expect(series.createPriceLine).toHaveBeenCalledTimes(1)
-    expect(series.createPriceLine.mock.results[0].value.options()).toMatchObject({ color: ENTRY_COLOR, lineStyle: 1, title: 'Pending Entry 1 (est.) · Pending Entry 2 (est.)' })
-    const filled = entries.map(entry => ({ ...entry, pending: false, label: `Entry ${entry.number}` }))
+    expect(series.createPriceLine.mock.results[0].value.options()).toMatchObject({ color: ENTRY_COLOR, lineStyle: 1, title: 'Pending B1 (est.) · Pending B2 (est.)' })
+    const filled = entries.map(entry => ({ ...entry, pending: false, label: `B${entry.number}` }))
     lines.update(filled)
-    expect(series.createPriceLine.mock.results[0].value.options()).toMatchObject({ lineStyle: 2, title: 'Entry 1 · Entry 2' })
+    expect(series.createPriceLine.mock.results[0].value.options()).toMatchObject({ lineStyle: 2, title: 'B1 · B2' })
     lines.update([filled[0], { ...filled[1], price: 1.1008 }])
     expect(series.createPriceLine).toHaveBeenCalledTimes(2)
     lines.update([])

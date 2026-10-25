@@ -46,7 +46,7 @@ const saved = () => page.waitForFunction(() => document.querySelector('.save-sta
 const record = async () => { await saved(); return (await storage.list()).sessions[0] }
 async function screenshot(name: string) { const path = `${output}/${name}.png`; await page.screenshot({ path, fullPage: true }); evidence.screenshots.push(path) }
 const ranges = () => page.evaluate(() => Object.fromEntries(Object.entries((globalThis as any).__uxCharts).filter(([id]) => Number(id) < document.querySelectorAll('.chart-pane').length).map(([id, v]: any) => [id, v.chart.timeScale().getVisibleLogicalRange()])))
-const entryLines = () => page.evaluate(() => Object.entries((globalThis as any).__uxCharts).filter(([id]) => Number(id) < document.querySelectorAll('.chart-pane').length).map(([,v]: any) => [...v.lines].map((line: any) => line.options()).filter((o: any) => /Entry /.test(o.title))))
+const entryLines = () => page.evaluate(() => Object.entries((globalThis as any).__uxCharts).filter(([id]) => Number(id) < document.querySelectorAll('.chart-pane').length).map(([,v]: any) => [...v.lines].map((line: any) => line.options()).filter((o: any) => /\b[BS][12]\b/.test(o.title))))
 async function pan(id: number, from: number, to: number) {
  const box = (await page.locator('.chart-canvas').nth(id).boundingBox())!
  await page.mouse.move(box.x + box.width * from, box.y + 100); await page.mouse.down()
@@ -113,17 +113,17 @@ try {
  await page.locator('input[name="chart-count"][value="1"]').check(); await settle()
  await button('Confirm draft stop-loss').click(); await saved()
  assert.equal((await record()).checkpoint.trading.pending.length,1)
- assert.match((await entryLines())[0][0].title,/Pending Entry 1 \(est\.\)/)
+ assert.match((await entryLines())[0][0].title,/Pending B1 \(est\.\)/)
  await screenshot('one-pending-entry')
  await button('Buy').click(); await settle(); await selectStop(stop)
  await button('Confirm draft stop-loss').click(); await saved()
- for (const pane of await entryLines()) { assert.equal(pane.length,1); assert.match(pane[0].title,/Entry 1.*Entry 2/); assert.equal(pane[0].lineStyle,1) }
+ for (const pane of await entryLines()) { assert.equal(pane.length,1); assert.match(pane[0].title,/B1.*B2/); assert.equal(pane[0].lineStyle,1) }
  await screenshot('two-pending-entries'); const pending=(await record()).checkpoint.trading
  await restore(); assert.deepEqual((await record()).checkpoint.trading,pending)
- assert.match((await entryLines())[0][0].title,/Pending Entry 1.*Pending Entry 2/)
+ assert.match((await entryLines())[0][0].title,/Pending B1.*Pending B2/)
  await button('Next Candle').click(); await settle(); await saved()
  const filled=(await record()).checkpoint.trading; assert.equal(filled.positions.length,2)
- for (const pane of await entryLines()) { assert.equal(pane[0].price,filled.positions[0].entryPrice); assert.match(pane[0].title,/Entry 1 · Entry 2/); assert.ok(!pane[0].title.includes('Pending')) }
+ for (const pane of await entryLines()) { assert.equal(pane[0].price,filled.positions[0].entryPrice); assert.match(pane[0].title,/B1 · B2/); assert.ok(!pane[0].title.includes('Pending')) }
  evidence.checks.filledEntries=await entryLines(); await screenshot('two-filled-entries')
  // Existing Modify SL remains explicit: selecting or releasing never commits this draft.
  await button(`Modify SL ${filled.positions[0].id}`).click(); await settle(); await selectStop(stop)
@@ -154,10 +154,10 @@ try {
  for(const count of [2,3]) {
   await page.locator(`input[name="chart-count"][value="${count}"]`).check(); await settle()
   assert.equal((await entryLines()).length,count)
-  const coordinates = await page.evaluate(() => Object.values((globalThis as any).__uxCharts).slice(0,document.querySelectorAll('.chart-pane').length).map((v:any) => ({height:v.chart.panes()[0].getHeight(),entries:[...v.lines].map((l:any)=>l.options()).filter((l:any)=>/Entry /.test(l.title)).map((l:any)=>v.series.priceToCoordinate(l.price))})))
+  const coordinates = await page.evaluate(() => Object.values((globalThis as any).__uxCharts).slice(0,document.querySelectorAll('.chart-pane').length).map((v:any) => ({height:v.chart.panes()[0].getHeight(),entries:[...v.lines].map((l:any)=>l.options()).filter((l:any)=>/\b[BS][12]\b/.test(l.title)).map((l:any)=>v.series.priceToCoordinate(l.price))})))
   for(const pane of coordinates) for(const y of pane.entries) assert.ok(y!==null && y>=0 && y<=pane.height)
   evidence.checks[`visible-entries-${count}`]=coordinates
-  for(const lines of await entryLines()) assert.match(lines.map((l:any)=>l.title).join(' '),/Entry 1.*Entry 2/)
+  for(const lines of await entryLines()) assert.match(lines.map((l:any)=>l.title).join(' '),/B1.*B2/)
   for(const [width,height] of [[1440,1000],[390,844]]) { await page.setViewportSize({width,height}); await settle(); await screenshot(`entries-${count}-charts-${width}`); assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),width) }
  }
  await page.setViewportSize({width:1440,height:1000}); await settle(); await saved()
@@ -166,7 +166,7 @@ try {
  storage=new SessionStorage({directory:join(directory,'sessions')});backend=createApp(new HistoryService(new OfflineClient(),cache,{DATABENTO_TEST_BUDGET_USD:'0'}),()=>new Date(),storage)
  await new Promise<void>(resolve=>backend.listen(5199,'127.0.0.1',resolve));await restore()
  assert.deepEqual((await record()).checkpoint.trading,checkpoint.trading);assert.deepEqual(await ranges(),views)
- for(const lines of await entryLines()) assert.match(lines.map((l:any)=>l.title).join(' '),/Entry 1.*Entry 2/)
+ for(const lines of await entryLines()) assert.match(lines.map((l:any)=>l.title).join(' '),/B1.*B2/)
  await screenshot('entries-restored-after-backend-restart'); evidence.checks.durableRestore={entries:await entryLines(),views}
  assert.deepEqual(await manifest(),before);evidence.checks.cacheUnchanged=true
  assert.equal(evidence.providerRequests,0);assert.equal(evidence.paidSubmissions,0);assert.deepEqual(evidence.errors,[])

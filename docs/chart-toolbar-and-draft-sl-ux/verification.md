@@ -10,7 +10,7 @@ Bollinger and Ichimoku price lines use Lightweight Charts' public `setSeriesOrde
 
 After selecting a draft SL level, the chart shows a tick immediately to the left of its label. The tick and toolbar confirmation call the same validation/commit handler. Selecting a level, moving the pointer or cancelling does not commit a draft. Invalid levels keep the existing message and disable confirmation. The chart rendering lifecycle repositions the HTML control on scale changes and resize; it stays inside the plot, including at its edges. Escape cancels. Existing direct dragging of a confirmed stop retains its valid-release commit behavior.
 
-Aqua entry references distinguish pending observed-price estimates (dotted) from actual fills (dashed). Matching fills share one line identifying both Entry 1 and Entry 2. Different fills have separate lines. Ordinals survive removal of the first entry. These references derive from existing session records without a schema change. Automatic scales include entry prices; manual fixed scales remain respected. Entry price is gross breakeven before commissions, as explained in Execution details.
+Aqua entry references distinguish pending observed-price estimates (dotted) from actual fills (dashed). Matching fills share one line identifying both entries as B1 / B2 for buys or S1 / S2 for sells. Different fills have separate lines. Ordinals survive removal of the first entry. These references derive from existing session records without a schema change. Automatic scales include entry prices; manual fixed scales remain respected. Entry price is gross breakeven before commissions, as explained in Execution details.
 
 Replay and trade entry now share the top workspace toolbar. The sizing mode, risk/volume, Buy/Sell, slot count, setup status and execution context remain labeled. Detailed assumptions are collapsed. Active position rows appear only while needed; there is no bottom dock. Controls wrap at narrow widths and the chart workspace scrolls.
 
@@ -38,6 +38,8 @@ The one-chart flat canvas grows from 727 to 774 px on desktop (+47 px) and from 
 The design detector reported only the existing Inter font and an unchanged paid-download warning border. The terminal's established design is retained.
 
 ## Screenshots
+
+These screenshots capture the original implementation. A follow-up shortened entry labels to B1/B2 for buys and S1/S2 for sells, preserving the aqua color and pending estimate indicators.
 
 | State | Desktop | Mobile |
 | --- | --- | --- |

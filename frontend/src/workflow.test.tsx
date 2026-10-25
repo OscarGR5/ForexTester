@@ -547,7 +547,7 @@ it('removes a confirmed pending stop when its fill is rejected', async () => {
 function activeEntryLines() {
  const series = vi.mocked(chart().addSeries).mock.results[0].value as ISeriesApi<'Candlestick'>
  const removed = vi.mocked(series.removePriceLine).mock.calls.map(([line]) => line)
- return vi.mocked(series.createPriceLine).mock.results.map(result => result.value).filter(line => !removed.includes(line) && /Entry /.test(line.options().title))
+ return vi.mocked(series.createPriceLine).mock.results.map(result => result.value).filter(line => !removed.includes(line) && /\b[BS][12]\b/.test(line.options().title))
 }
 it('places trade entry above the charts and renders no empty position area when flat', async () => {
  await start()
@@ -576,20 +576,20 @@ it('keeps drafts uncommitted until the on-chart tick is clicked, and retains can
 })
 it('derives two pending entry identities, keeps actual fills and recreates them after durable restore', async () => {
  await start(); await order('Buy',1.099)
- expect(activeEntryLines().map(line=>line.options())).toMatchObject([{title:'Pending Entry 1 (est.)',price:1.1003,lineStyle:1}])
+ expect(activeEntryLines().map(line=>line.options())).toMatchObject([{title:'Pending B1 (est.)',price:1.1003,lineStyle:1}])
  await order('Buy',1.098)
- expect(activeEntryLines().map(line=>line.options().title)).toEqual(['Pending Entry 1 (est.) · Pending Entry 2 (est.)'])
+ expect(activeEntryLines().map(line=>line.options().title)).toEqual(['Pending B1 (est.) · Pending B2 (est.)'])
  await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
  await act(async()=>root.unmount());root=createRoot(host);await mount();await click('Resume backtest');await until(()=>host.querySelector('.phase-trading'))
- expect(activeEntryLines()[0].options().title).toContain('Pending Entry 2 (est.)')
+ expect(activeEntryLines()[0].options().title).toContain('Pending B2 (est.)')
  await click('Next Candle')
- expect(activeEntryLines().map(line=>line.options())).toMatchObject([{title:'Entry 1 · Entry 2',price:1.1003,lineStyle:2}])
+ expect(activeEntryLines().map(line=>line.options())).toMatchObject([{title:'B1 · B2',price:1.1003,lineStyle:2}])
  await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
  const before=(await disk.storage.list()).sessions[0].checkpoint.trading
  await act(async()=>root.unmount());root=createRoot(host);await mount();await click('Resume backtest');await until(()=>host.querySelector('.phase-trading'))
- expect(activeEntryLines()[0].options().title).toBe('Entry 1 · Entry 2')
+ expect(activeEntryLines()[0].options().title).toBe('B1 · B2')
  expect(activeEntryLines()[0].options().price).toBe(before.positions[0].entryPrice)
  const first=before.positions[0].id
  await click(`Close ${first}`);await click('Next Candle')
- expect(activeEntryLines().map(line=>line.options().title)).toEqual(['Entry 2'])
+ expect(activeEntryLines().map(line=>line.options().title)).toEqual(['B2'])
 })
