@@ -1,0 +1,30 @@
+{
+  "providerRequests": 0,
+  "paidSubmissions": 0,
+  "screenshots": [
+    "docs/live-draft-sl-and-inline-positions/before-1440.png",
+    "docs/live-draft-sl-and-inline-positions/before-1100.png",
+    "docs/live-draft-sl-and-inline-positions/before-1000.png"
+  ],
+  "errors": [],
+  "checks": {
+    "before-1440": {
+      "x": 0,
+      "y": 50,
+      "width": 1440,
+      "height": 77
+    },
+    "before-1100": {
+      "x": 0,
+      "y": 92,
+      "width": 1100,
+      "height": 119
+    },
+    "before-1000": {
+      "x": 0,
+      "y": 92,
+      "width": 1000,
+      "height": 119
+    }
+  }
+}

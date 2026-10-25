@@ -1,0 +1,1607 @@
+{
+  "providerRequests": 0,
+  "paidSubmissions": 0,
+  "screenshots": [
+    "docs/live-draft-sl-and-inline-positions/live-buy-near-0.png",
+    "docs/live-draft-sl-and-inline-positions/live-buy-far-0.png",
+    "docs/live-draft-sl-and-inline-positions/invalid-buy-0.png",
+    "docs/live-draft-sl-and-inline-positions/live-sell-near-0.png",
+    "docs/live-draft-sl-and-inline-positions/live-sell-far-0.png",
+    "docs/live-draft-sl-and-inline-positions/invalid-sell-0.png",
+    "docs/live-draft-sl-and-inline-positions/live-buy-near-1.png",
+    "docs/live-draft-sl-and-inline-positions/live-buy-far-1.png",
+    "docs/live-draft-sl-and-inline-positions/invalid-buy-1.png",
+    "docs/live-draft-sl-and-inline-positions/live-sell-near-1.png",
+    "docs/live-draft-sl-and-inline-positions/live-sell-far-1.png",
+    "docs/live-draft-sl-and-inline-positions/invalid-sell-1.png",
+    "docs/live-draft-sl-and-inline-positions/live-buy-near-2.png",
+    "docs/live-draft-sl-and-inline-positions/live-buy-far-2.png",
+    "docs/live-draft-sl-and-inline-positions/invalid-buy-2.png",
+    "docs/live-draft-sl-and-inline-positions/live-sell-near-2.png",
+    "docs/live-draft-sl-and-inline-positions/live-sell-far-2.png",
+    "docs/live-draft-sl-and-inline-positions/invalid-sell-2.png",
+    "docs/live-draft-sl-and-inline-positions/one-pending.png",
+    "docs/live-draft-sl-and-inline-positions/mixed-open-pending.png",
+    "docs/live-draft-sl-and-inline-positions/inline-1-1440.png",
+    "docs/live-draft-sl-and-inline-positions/draft-1-1440.png",
+    "docs/live-draft-sl-and-inline-positions/inline-1-1100.png",
+    "docs/live-draft-sl-and-inline-positions/draft-1-1100.png",
+    "docs/live-draft-sl-and-inline-positions/inline-1-1000.png",
+    "docs/live-draft-sl-and-inline-positions/draft-1-1000.png",
+    "docs/live-draft-sl-and-inline-positions/inline-2-1440.png",
+    "docs/live-draft-sl-and-inline-positions/draft-2-1440.png",
+    "docs/live-draft-sl-and-inline-positions/inline-2-1100.png",
+    "docs/live-draft-sl-and-inline-positions/draft-2-1100.png",
+    "docs/live-draft-sl-and-inline-positions/inline-2-1000.png",
+    "docs/live-draft-sl-and-inline-positions/draft-2-1000.png",
+    "docs/live-draft-sl-and-inline-positions/inline-3-1440.png",
+    "docs/live-draft-sl-and-inline-positions/draft-3-1440.png",
+    "docs/live-draft-sl-and-inline-positions/inline-3-1100.png",
+    "docs/live-draft-sl-and-inline-positions/draft-3-1100.png",
+    "docs/live-draft-sl-and-inline-positions/inline-3-1000.png",
+    "docs/live-draft-sl-and-inline-positions/draft-3-1000.png",
+    "docs/live-draft-sl-and-inline-positions/modify-sl-live.png",
+    "docs/live-draft-sl-and-inline-positions/modify-sl-selected.png",
+    "docs/live-draft-sl-and-inline-positions/restored.png",
+    "docs/live-draft-sl-and-inline-positions/historical-review.png",
+    "docs/live-draft-sl-and-inline-positions/two-pending.png"
+  ],
+  "errors": [],
+  "checks": {
+    "live-Buy-0": {
+      "values": [
+        {
+          "text": "Draft SL · 9.8 pips",
+          "price": 1.09997,
+          "x": 1242,
+          "right": 1357.796875,
+          "y": 684.015625,
+          "bottom": 714.015625,
+          "plot": {
+            "x": 8,
+            "y": 175,
+            "right": 1432,
+            "bottom": 1000
+          }
+        },
+        {
+          "text": "Draft SL · 19.9 pips",
+          "price": 1.09896,
+          "x": 1235,
+          "right": 1357.65625,
+          "y": 705.09375,
+          "bottom": 735.09375,
+          "plot": {
+            "x": 8,
+            "y": 175,
+            "right": 1432,
+            "bottom": 1000
+          }
+        }
+      ],
+      "adjusted": {
+        "text": "Draft SL · 16.1 pips",
+        "price": 1.09934,
+        "x": 1199,
+        "right": 1357.65625,
+        "y": 693.15625,
+        "bottom": 731.15625,
+        "plot": {
+          "x": 8,
+          "y": 175,
+          "right": 1432,
+          "bottom": 1000
+        }
+      }
+    },
+    "live-Sell-0": {
+      "values": [
+        {
+          "text": "Draft SL · 10.3 pips",
+          "price": 1.10198,
+          "x": 1235,
+          "right": 1357.65625,
+          "y": 642.0625,
+          "bottom": 672.0625,
+          "plot": {
+            "x": 8,
+            "y": 175,
+            "right": 1432,
+            "bottom": 1000
+          }
+        },
+        {
+          "text": "Draft SL · 20.4 pips",
+          "price": 1.10299,
+          "x": 1235,
+          "right": 1357.65625,
+          "y": 620.984375,
+          "bottom": 650.984375,
+          "plot": {
+            "x": 8,
+            "y": 175,
+            "right": 1432,
+            "bottom": 1000
+          }
+        }
+      ],
+      "adjusted": {
+        "text": "Draft SL · 16.6 pips",
+        "price": 1.10261,
+        "x": 1199,
+        "right": 1357.65625,
+        "y": 624.90625,
+        "bottom": 662.90625,
+        "plot": {
+          "x": 8,
+          "y": 175,
+          "right": 1432,
+          "bottom": 1000
+        }
+      }
+    },
+    "live-Buy-1": {
+      "values": [
+        {
+          "text": "Draft SL · 9.7 pips",
+          "price": 1.09998,
+          "x": 1242,
+          "right": 1357.796875,
+          "y": 409.03125,
+          "bottom": 439.03125,
+          "plot": {
+            "x": 722,
+            "y": 175,
+            "right": 1432,
+            "bottom": 1000
+          }
+        },
+        {
+          "text": "Draft SL · 19.9 pips",
+          "price": 1.09896,
+          "x": 1235,
+          "right": 1357.65625,
+          "y": 440.859375,
+          "bottom": 470.859375,
+          "plot": {
+            "x": 722,
+            "y": 175,
+            "right": 1432,
+            "bottom": 1000
+          }
+        }
+      ],
+      "adjusted": {
+        "text": "Draft SL · 17.3 pips",
+        "price": 1.09922,
+        "x": 1199,
+        "right": 1357.65625,
+        "y": 428.75,
+        "bottom": 466.75,
+        "plot": {
+          "x": 722,
+          "y": 175,
+          "right": 1432,
+          "bottom": 1000
+        }
+      }
+    },
+    "live-Sell-1": {
+      "values": [
+        {
+          "text": "Draft SL · 10.2 pips",
+          "price": 1.10197,
+          "x": 1235,
+          "right": 1357.65625,
+          "y": 346.96875,
+          "bottom": 376.96875,
+          "plot": {
+            "x": 722,
+            "y": 175,
+            "right": 1432,
+            "bottom": 1000
+          }
+        },
+        {
+          "text": "Draft SL · 20.1 pips",
+          "price": 1.10296,
+          "x": 1235,
+          "right": 1357.65625,
+          "y": 316.078125,
+          "bottom": 346.078125,
+          "plot": {
+            "x": 722,
+            "y": 175,
+            "right": 1432,
+            "bottom": 1000
+          }
+        }
+      ],
+      "adjusted": {
+        "text": "Draft SL · 17.5 pips",
+        "price": 1.1027,
+        "x": 1199,
+        "right": 1357.65625,
+        "y": 320.1875,
+        "bottom": 358.1875,
+        "plot": {
+          "x": 722,
+          "y": 175,
+          "right": 1432,
+          "bottom": 1000
+        }
+      }
+    },
+    "live-Buy-2": {
+      "values": [
+        {
+          "text": "Draft SL · 9.7 pips",
+          "price": 1.09998,
+          "x": 1242,
+          "right": 1357.796875,
+          "y": 830.984375,
+          "bottom": 860.984375,
+          "plot": {
+            "x": 722,
+            "y": 605.5,
+            "right": 1432,
+            "bottom": 1000
+          }
+        },
+        {
+          "text": "Draft SL · 19.1 pips",
+          "price": 1.09904,
+          "x": 1235,
+          "right": 1357.65625,
+          "y": 839.984375,
+          "bottom": 869.984375,
+          "plot": {
+            "x": 722,
+            "y": 605.5,
+            "right": 1432,
+            "bottom": 1000
+          }
+        }
+      ],
+      "adjusted": {
+        "text": "Draft SL · 10.7 pips",
+        "price": 1.09988,
+        "x": 1199,
+        "right": 1357.65625,
+        "y": 827.9375,
+        "bottom": 865.9375,
+        "plot": {
+          "x": 722,
+          "y": 605.5,
+          "right": 1432,
+          "bottom": 1000
+        }
+      }
+    },
+    "live-Sell-2": {
+      "values": [
+        {
+          "text": "Draft SL · 10.1 pips",
+          "price": 1.10196,
+          "x": 1235,
+          "right": 1357.65625,
+          "y": 812.03125,
+          "bottom": 842.03125,
+          "plot": {
+            "x": 722,
+            "y": 605.5,
+            "right": 1432,
+            "bottom": 1000
+          }
+        },
+        {
+          "text": "Draft SL · 20.6 pips",
+          "price": 1.10301,
+          "x": 1235,
+          "right": 1357.65625,
+          "y": 801.96875,
+          "bottom": 831.96875,
+          "plot": {
+            "x": 722,
+            "y": 605.5,
+            "right": 1432,
+            "bottom": 1000
+          }
+        }
+      ],
+      "adjusted": {
+        "text": "Draft SL · 12.2 pips",
+        "price": 1.10217,
+        "x": 1199,
+        "right": 1357.65625,
+        "y": 806.015625,
+        "bottom": 844.015625,
+        "plot": {
+          "x": 722,
+          "y": 605.5,
+          "right": 1432,
+          "bottom": 1000
+        }
+      }
+    },
+    "onePending": {
+      "viewport": 1440,
+      "pageWidth": 1440,
+      "toolbar": {
+        "x": 0,
+        "y": 50,
+        "right": 1440,
+        "bottom": 89,
+        "width": 1440,
+        "height": 39
+      },
+      "controls": [
+        {
+          "x": 14,
+          "y": 54,
+          "right": 123.015625,
+          "bottom": 84,
+          "width": 109.015625,
+          "height": 30
+        },
+        {
+          "x": 131.015625,
+          "y": 54,
+          "right": 170.359375,
+          "bottom": 84,
+          "width": 39.34375,
+          "height": 30
+        },
+        {
+          "x": 178.359375,
+          "y": 54,
+          "right": 215.921875,
+          "bottom": 84,
+          "width": 37.5625,
+          "height": 30
+        },
+        {
+          "x": 223.921875,
+          "y": 60.5,
+          "right": 277.671875,
+          "bottom": 77.5,
+          "width": 53.75,
+          "height": 17
+        }
+      ],
+      "positions": [
+        {
+          "x": 285.671875,
+          "y": 54,
+          "right": 661.203125,
+          "bottom": 84,
+          "width": 375.53125,
+          "height": 30
+        }
+      ],
+      "strip": {
+        "x": 285.671875,
+        "y": 54,
+        "right": 1426,
+        "bottom": 84,
+        "width": 1140.328125,
+        "height": 30,
+        "scrollWidth": 1140,
+        "clientWidth": 1140
+      },
+      "data": [
+        "Pending B1Buy · 2-1 · Setup 2-S1Pending SL 1 · 1.09796 · ~29.9 pips · est. -$998.661% riskSL 1 · 1.09796 · ~29.9 pipsCancel entry"
+      ]
+    },
+    "oneOpen": {
+      "viewport": 1440,
+      "pageWidth": 1440,
+      "toolbar": {
+        "x": 0,
+        "y": 50,
+        "right": 1440,
+        "bottom": 89,
+        "width": 1440,
+        "height": 39
+      },
+      "controls": [
+        {
+          "x": 14,
+          "y": 54,
+          "right": 123.015625,
+          "bottom": 84,
+          "width": 109.015625,
+          "height": 30
+        },
+        {
+          "x": 131.015625,
+          "y": 54,
+          "right": 170.359375,
+          "bottom": 84,
+          "width": 39.34375,
+          "height": 30
+        },
+        {
+          "x": 178.359375,
+          "y": 54,
+          "right": 215.921875,
+          "bottom": 84,
+          "width": 37.5625,
+          "height": 30
+        },
+        {
+          "x": 223.921875,
+          "y": 60.5,
+          "right": 277.671875,
+          "bottom": 77.5,
+          "width": 53.75,
+          "height": 17
+        }
+      ],
+      "positions": [
+        {
+          "x": 285.671875,
+          "y": 54,
+          "right": 771.359375,
+          "bottom": 84,
+          "width": 485.6875,
+          "height": 30
+        }
+      ],
+      "strip": {
+        "x": 285.671875,
+        "y": 54,
+        "right": 1426,
+        "bottom": 84,
+        "width": 1140.328125,
+        "height": 30,
+        "scrollWidth": 1140,
+        "clientWidth": 1140
+      },
+      "data": [
+        "B1Buy · 2-1 · Setup 2-S1SL 1 · 1.09796 · 29.4 pips · -$999.60Entry 1.10090 · 3.4 lots3.4 lotsSL 1 · 1.09796 · 29.4 pipsEst. net $0.00 (0.00%)Modify SLClose"
+      ]
+    },
+    "mixed": {
+      "viewport": 1440,
+      "pageWidth": 1440,
+      "toolbar": {
+        "x": 0,
+        "y": 50,
+        "right": 1440,
+        "bottom": 89,
+        "width": 1440,
+        "height": 39
+      },
+      "controls": [
+        {
+          "x": 14,
+          "y": 54,
+          "right": 123.015625,
+          "bottom": 84,
+          "width": 109.015625,
+          "height": 30
+        },
+        {
+          "x": 131.015625,
+          "y": 54,
+          "right": 170.359375,
+          "bottom": 84,
+          "width": 39.34375,
+          "height": 30
+        },
+        {
+          "x": 178.359375,
+          "y": 54,
+          "right": 215.921875,
+          "bottom": 84,
+          "width": 37.5625,
+          "height": 30
+        },
+        {
+          "x": 223.921875,
+          "y": 60.5,
+          "right": 277.671875,
+          "bottom": 77.5,
+          "width": 53.75,
+          "height": 17
+        }
+      ],
+      "positions": [
+        {
+          "x": 285.671875,
+          "y": 54,
+          "right": 771.359375,
+          "bottom": 84,
+          "width": 485.6875,
+          "height": 30
+        },
+        {
+          "x": 783.359375,
+          "y": 54,
+          "right": 1158.890625,
+          "bottom": 84,
+          "width": 375.53125,
+          "height": 30
+        }
+      ],
+      "strip": {
+        "x": 285.671875,
+        "y": 54,
+        "right": 1426,
+        "bottom": 84,
+        "width": 1140.328125,
+        "height": 30,
+        "scrollWidth": 1140,
+        "clientWidth": 1140
+      },
+      "data": [
+        "B1Buy · 2-1 · Setup 2-S1SL 1 · 1.09796 · 29.4 pips · -$999.60Entry 1.10090 · 3.4 lots3.4 lotsSL 1 · 1.09796 · 29.4 pipsEst. net $0.00 (0.00%)Modify SLClose",
+        "Pending B2Buy · 2-2 · Setup 2-S1Pending SL 2 · 1.09781 · ~30.9 pips · est. -$998.071% riskSL 2 · 1.09781 · ~30.9 pipsCancel entry"
+      ]
+    },
+    "inline-1-1440": {
+      "viewport": 1440,
+      "pageWidth": 1440,
+      "toolbar": {
+        "x": 0,
+        "y": 50,
+        "right": 1440,
+        "bottom": 89,
+        "width": 1440,
+        "height": 39
+      },
+      "controls": [
+        {
+          "x": 14,
+          "y": 54,
+          "right": 123.015625,
+          "bottom": 84,
+          "width": 109.015625,
+          "height": 30
+        },
+        {
+          "x": 131.015625,
+          "y": 54,
+          "right": 170.359375,
+          "bottom": 84,
+          "width": 39.34375,
+          "height": 30
+        },
+        {
+          "x": 178.359375,
+          "y": 54,
+          "right": 215.921875,
+          "bottom": 84,
+          "width": 37.5625,
+          "height": 30
+        },
+        {
+          "x": 223.921875,
+          "y": 60.5,
+          "right": 277.671875,
+          "bottom": 77.5,
+          "width": 53.75,
+          "height": 17
+        }
+      ],
+      "positions": [
+        {
+          "x": 285.671875,
+          "y": 54,
+          "right": 778.234375,
+          "bottom": 84,
+          "width": 492.5625,
+          "height": 30
+        },
+        {
+          "x": 790.234375,
+          "y": 54,
+          "right": 1289.65625,
+          "bottom": 84,
+          "width": 499.421875,
+          "height": 30
+        }
+      ],
+      "strip": {
+        "x": 285.671875,
+        "y": 54,
+        "right": 1426,
+        "bottom": 84,
+        "width": 1140.328125,
+        "height": 30,
+        "scrollWidth": 1140,
+        "clientWidth": 1140
+      },
+      "data": [
+        "B1Buy · 2-1 · Setup 2-S1SL 1 · 1.09796 · 29.4 pips · -$999.60Entry 1.10090 · 3.4 lots3.4 lotsSL 1 · 1.09796 · 29.4 pipsEst. net $68.00 (0.07%)Modify SLClose",
+        "B2Buy · 2-2 · Setup 2-S1SL 2 · 1.09781 · 30.9 pips · -$998.07Entry 1.10090 · 3.23 lots3.23 lotsSL 2 · 1.09781 · 30.9 pipsEst. net $64.60 (0.06%)Modify SLClose"
+      ]
+    },
+    "inline-1-1100": {
+      "viewport": 1100,
+      "pageWidth": 1100,
+      "toolbar": {
+        "x": 0,
+        "y": 92,
+        "right": 1100,
+        "bottom": 141,
+        "width": 1100,
+        "height": 49
+      },
+      "controls": [
+        {
+          "x": 14,
+          "y": 101,
+          "right": 123.015625,
+          "bottom": 131,
+          "width": 109.015625,
+          "height": 30
+        },
+        {
+          "x": 131.015625,
+          "y": 101,
+          "right": 170.359375,
+          "bottom": 131,
+          "width": 39.34375,
+          "height": 30
+        },
+        {
+          "x": 178.359375,
+          "y": 101,
+          "right": 215.921875,
+          "bottom": 131,
+          "width": 37.5625,
+          "height": 30
+        },
+        {
+          "x": 223.921875,
+          "y": 107.5,
+          "right": 277.671875,
+          "bottom": 124.5,
+          "width": 53.75,
+          "height": 17
+        }
+      ],
+      "positions": [
+        {
+          "x": 285.671875,
+          "y": 96,
+          "right": 778.234375,
+          "bottom": 126,
+          "width": 492.5625,
+          "height": 30
+        },
+        {
+          "x": 790.234375,
+          "y": 96,
+          "right": 1289.65625,
+          "bottom": 126,
+          "width": 499.421875,
+          "height": 30
+        }
+      ],
+      "strip": {
+        "x": 285.671875,
+        "y": 96,
+        "right": 1086,
+        "bottom": 136,
+        "width": 800.328125,
+        "height": 40,
+        "scrollWidth": 1004,
+        "clientWidth": 800
+      },
+      "data": [
+        "B1Buy · 2-1 · Setup 2-S1SL 1 · 1.09796 · 29.4 pips · -$999.60Entry 1.10090 · 3.4 lots3.4 lotsSL 1 · 1.09796 · 29.4 pipsEst. net $68.00 (0.07%)Modify SLClose",
+        "B2Buy · 2-2 · Setup 2-S1SL 2 · 1.09781 · 30.9 pips · -$998.07Entry 1.10090 · 3.23 lots3.23 lotsSL 2 · 1.09781 · 30.9 pipsEst. net $64.60 (0.06%)Modify SLClose"
+      ]
+    },
+    "scroll-1-1100": {
+      "wheel": 204,
+      "keyboard": 40,
+      "mouse": 40
+    },
+    "inline-1-1000": {
+      "viewport": 1000,
+      "pageWidth": 1000,
+      "toolbar": {
+        "x": 0,
+        "y": 92,
+        "right": 1000,
+        "bottom": 141,
+        "width": 1000,
+        "height": 49
+      },
+      "controls": [
+        {
+          "x": 14,
+          "y": 101,
+          "right": 123.015625,
+          "bottom": 131,
+          "width": 109.015625,
+          "height": 30
+        },
+        {
+          "x": 131.015625,
+          "y": 101,
+          "right": 170.359375,
+          "bottom": 131,
+          "width": 39.34375,
+          "height": 30
+        },
+        {
+          "x": 178.359375,
+          "y": 101,
+          "right": 215.921875,
+          "bottom": 131,
+          "width": 37.5625,
+          "height": 30
+        },
+        {
+          "x": 223.921875,
+          "y": 107.5,
+          "right": 277.671875,
+          "bottom": 124.5,
+          "width": 53.75,
+          "height": 17
+        }
+      ],
+      "positions": [
+        {
+          "x": 285.671875,
+          "y": 96,
+          "right": 778.234375,
+          "bottom": 126,
+          "width": 492.5625,
+          "height": 30
+        },
+        {
+          "x": 790.234375,
+          "y": 96,
+          "right": 1289.65625,
+          "bottom": 126,
+          "width": 499.421875,
+          "height": 30
+        }
+      ],
+      "strip": {
+        "x": 285.671875,
+        "y": 96,
+        "right": 986,
+        "bottom": 136,
+        "width": 700.328125,
+        "height": 40,
+        "scrollWidth": 1004,
+        "clientWidth": 700
+      },
+      "data": [
+        "B1Buy · 2-1 · Setup 2-S1SL 1 · 1.09796 · 29.4 pips · -$999.60Entry 1.10090 · 3.4 lots3.4 lotsSL 1 · 1.09796 · 29.4 pipsEst. net $68.00 (0.07%)Modify SLClose",
+        "B2Buy · 2-2 · Setup 2-S1SL 2 · 1.09781 · 30.9 pips · -$998.07Entry 1.10090 · 3.23 lots3.23 lotsSL 2 · 1.09781 · 30.9 pipsEst. net $64.60 (0.06%)Modify SLClose"
+      ]
+    },
+    "scroll-1-1000": {
+      "wheel": 240,
+      "keyboard": 40,
+      "mouse": 40
+    },
+    "inline-2-1440": {
+      "viewport": 1440,
+      "pageWidth": 1440,
+      "toolbar": {
+        "x": 0,
+        "y": 50,
+        "right": 1440,
+        "bottom": 89,
+        "width": 1440,
+        "height": 39
+      },
+      "controls": [
+        {
+          "x": 14,
+          "y": 54,
+          "right": 123.015625,
+          "bottom": 84,
+          "width": 109.015625,
+          "height": 30
+        },
+        {
+          "x": 131.015625,
+          "y": 54,
+          "right": 170.359375,
+          "bottom": 84,
+          "width": 39.34375,
+          "height": 30
+        },
+        {
+          "x": 178.359375,
+          "y": 54,
+          "right": 215.921875,
+          "bottom": 84,
+          "width": 37.5625,
+          "height": 30
+        },
+        {
+          "x": 223.921875,
+          "y": 60.5,
+          "right": 277.671875,
+          "bottom": 77.5,
+          "width": 53.75,
+          "height": 17
+        }
+      ],
+      "positions": [
+        {
+          "x": 285.671875,
+          "y": 54,
+          "right": 778.234375,
+          "bottom": 84,
+          "width": 492.5625,
+          "height": 30
+        },
+        {
+          "x": 790.234375,
+          "y": 54,
+          "right": 1289.65625,
+          "bottom": 84,
+          "width": 499.421875,
+          "height": 30
+        }
+      ],
+      "strip": {
+        "x": 285.671875,
+        "y": 54,
+        "right": 1426,
+        "bottom": 84,
+        "width": 1140.328125,
+        "height": 30,
+        "scrollWidth": 1140,
+        "clientWidth": 1140
+      },
+      "data": [
+        "B1Buy · 2-1 · Setup 2-S1SL 1 · 1.09796 · 29.4 pips · -$999.60Entry 1.10090 · 3.4 lots3.4 lotsSL 1 · 1.09796 · 29.4 pipsEst. net $68.00 (0.07%)Modify SLClose",
+        "B2Buy · 2-2 · Setup 2-S1SL 2 · 1.09781 · 30.9 pips · -$998.07Entry 1.10090 · 3.23 lots3.23 lotsSL 2 · 1.09781 · 30.9 pipsEst. net $64.60 (0.06%)Modify SLClose"
+      ]
+    },
+    "inline-2-1100": {
+      "viewport": 1100,
+      "pageWidth": 1100,
+      "toolbar": {
+        "x": 0,
+        "y": 92,
+        "right": 1100,
+        "bottom": 141,
+        "width": 1100,
+        "height": 49
+      },
+      "controls": [
+        {
+          "x": 14,
+          "y": 101,
+          "right": 123.015625,
+          "bottom": 131,
+          "width": 109.015625,
+          "height": 30
+        },
+        {
+          "x": 131.015625,
+          "y": 101,
+          "right": 170.359375,
+          "bottom": 131,
+          "width": 39.34375,
+          "height": 30
+        },
+        {
+          "x": 178.359375,
+          "y": 101,
+          "right": 215.921875,
+          "bottom": 131,
+          "width": 37.5625,
+          "height": 30
+        },
+        {
+          "x": 223.921875,
+          "y": 107.5,
+          "right": 277.671875,
+          "bottom": 124.5,
+          "width": 53.75,
+          "height": 17
+        }
+      ],
+      "positions": [
+        {
+          "x": 285.671875,
+          "y": 96,
+          "right": 778.234375,
+          "bottom": 126,
+          "width": 492.5625,
+          "height": 30
+        },
+        {
+          "x": 790.234375,
+          "y": 96,
+          "right": 1289.65625,
+          "bottom": 126,
+          "width": 499.421875,
+          "height": 30
+        }
+      ],
+      "strip": {
+        "x": 285.671875,
+        "y": 96,
+        "right": 1086,
+        "bottom": 136,
+        "width": 800.328125,
+        "height": 40,
+        "scrollWidth": 1004,
+        "clientWidth": 800
+      },
+      "data": [
+        "B1Buy · 2-1 · Setup 2-S1SL 1 · 1.09796 · 29.4 pips · -$999.60Entry 1.10090 · 3.4 lots3.4 lotsSL 1 · 1.09796 · 29.4 pipsEst. net $68.00 (0.07%)Modify SLClose",
+        "B2Buy · 2-2 · Setup 2-S1SL 2 · 1.09781 · 30.9 pips · -$998.07Entry 1.10090 · 3.23 lots3.23 lotsSL 2 · 1.09781 · 30.9 pipsEst. net $64.60 (0.06%)Modify SLClose"
+      ]
+    },
+    "scroll-2-1100": {
+      "wheel": 204,
+      "keyboard": 40,
+      "mouse": 40
+    },
+    "inline-2-1000": {
+      "viewport": 1000,
+      "pageWidth": 1000,
+      "toolbar": {
+        "x": 0,
+        "y": 92,
+        "right": 1000,
+        "bottom": 141,
+        "width": 1000,
+        "height": 49
+      },
+      "controls": [
+        {
+          "x": 14,
+          "y": 101,
+          "right": 123.015625,
+          "bottom": 131,
+          "width": 109.015625,
+          "height": 30
+        },
+        {
+          "x": 131.015625,
+          "y": 101,
+          "right": 170.359375,
+          "bottom": 131,
+          "width": 39.34375,
+          "height": 30
+        },
+        {
+          "x": 178.359375,
+          "y": 101,
+          "right": 215.921875,
+          "bottom": 131,
+          "width": 37.5625,
+          "height": 30
+        },
+        {
+          "x": 223.921875,
+          "y": 107.5,
+          "right": 277.671875,
+          "bottom": 124.5,
+          "width": 53.75,
+          "height": 17
+        }
+      ],
+      "positions": [
+        {
+          "x": 285.671875,
+          "y": 96,
+          "right": 778.234375,
+          "bottom": 126,
+          "width": 492.5625,
+          "height": 30
+        },
+        {
+          "x": 790.234375,
+          "y": 96,
+          "right": 1289.65625,
+          "bottom": 126,
+          "width": 499.421875,
+          "height": 30
+        }
+      ],
+      "strip": {
+        "x": 285.671875,
+        "y": 96,
+        "right": 986,
+        "bottom": 136,
+        "width": 700.328125,
+        "height": 40,
+        "scrollWidth": 1004,
+        "clientWidth": 700
+      },
+      "data": [
+        "B1Buy · 2-1 · Setup 2-S1SL 1 · 1.09796 · 29.4 pips · -$999.60Entry 1.10090 · 3.4 lots3.4 lotsSL 1 · 1.09796 · 29.4 pipsEst. net $68.00 (0.07%)Modify SLClose",
+        "B2Buy · 2-2 · Setup 2-S1SL 2 · 1.09781 · 30.9 pips · -$998.07Entry 1.10090 · 3.23 lots3.23 lotsSL 2 · 1.09781 · 30.9 pipsEst. net $64.60 (0.06%)Modify SLClose"
+      ]
+    },
+    "scroll-2-1000": {
+      "wheel": 240,
+      "keyboard": 40,
+      "mouse": 40
+    },
+    "inline-3-1440": {
+      "viewport": 1440,
+      "pageWidth": 1440,
+      "toolbar": {
+        "x": 0,
+        "y": 50,
+        "right": 1440,
+        "bottom": 89,
+        "width": 1440,
+        "height": 39
+      },
+      "controls": [
+        {
+          "x": 14,
+          "y": 54,
+          "right": 123.015625,
+          "bottom": 84,
+          "width": 109.015625,
+          "height": 30
+        },
+        {
+          "x": 131.015625,
+          "y": 54,
+          "right": 170.359375,
+          "bottom": 84,
+          "width": 39.34375,
+          "height": 30
+        },
+        {
+          "x": 178.359375,
+          "y": 54,
+          "right": 215.921875,
+          "bottom": 84,
+          "width": 37.5625,
+          "height": 30
+        },
+        {
+          "x": 223.921875,
+          "y": 60.5,
+          "right": 277.671875,
+          "bottom": 77.5,
+          "width": 53.75,
+          "height": 17
+        }
+      ],
+      "positions": [
+        {
+          "x": 285.671875,
+          "y": 54,
+          "right": 778.234375,
+          "bottom": 84,
+          "width": 492.5625,
+          "height": 30
+        },
+        {
+          "x": 790.234375,
+          "y": 54,
+          "right": 1289.65625,
+          "bottom": 84,
+          "width": 499.421875,
+          "height": 30
+        }
+      ],
+      "strip": {
+        "x": 285.671875,
+        "y": 54,
+        "right": 1426,
+        "bottom": 84,
+        "width": 1140.328125,
+        "height": 30,
+        "scrollWidth": 1140,
+        "clientWidth": 1140
+      },
+      "data": [
+        "B1Buy · 2-1 · Setup 2-S1SL 1 · 1.09796 · 29.4 pips · -$999.60Entry 1.10090 · 3.4 lots3.4 lotsSL 1 · 1.09796 · 29.4 pipsEst. net $68.00 (0.07%)Modify SLClose",
+        "B2Buy · 2-2 · Setup 2-S1SL 2 · 1.09781 · 30.9 pips · -$998.07Entry 1.10090 · 3.23 lots3.23 lotsSL 2 · 1.09781 · 30.9 pipsEst. net $64.60 (0.06%)Modify SLClose"
+      ]
+    },
+    "inline-3-1100": {
+      "viewport": 1100,
+      "pageWidth": 1100,
+      "toolbar": {
+        "x": 0,
+        "y": 92,
+        "right": 1100,
+        "bottom": 141,
+        "width": 1100,
+        "height": 49
+      },
+      "controls": [
+        {
+          "x": 14,
+          "y": 101,
+          "right": 123.015625,
+          "bottom": 131,
+          "width": 109.015625,
+          "height": 30
+        },
+        {
+          "x": 131.015625,
+          "y": 101,
+          "right": 170.359375,
+          "bottom": 131,
+          "width": 39.34375,
+          "height": 30
+        },
+        {
+          "x": 178.359375,
+          "y": 101,
+          "right": 215.921875,
+          "bottom": 131,
+          "width": 37.5625,
+          "height": 30
+        },
+        {
+          "x": 223.921875,
+          "y": 107.5,
+          "right": 277.671875,
+          "bottom": 124.5,
+          "width": 53.75,
+          "height": 17
+        }
+      ],
+      "positions": [
+        {
+          "x": 285.671875,
+          "y": 96,
+          "right": 778.234375,
+          "bottom": 126,
+          "width": 492.5625,
+          "height": 30
+        },
+        {
+          "x": 790.234375,
+          "y": 96,
+          "right": 1289.65625,
+          "bottom": 126,
+          "width": 499.421875,
+          "height": 30
+        }
+      ],
+      "strip": {
+        "x": 285.671875,
+        "y": 96,
+        "right": 1086,
+        "bottom": 136,
+        "width": 800.328125,
+        "height": 40,
+        "scrollWidth": 1004,
+        "clientWidth": 800
+      },
+      "data": [
+        "B1Buy · 2-1 · Setup 2-S1SL 1 · 1.09796 · 29.4 pips · -$999.60Entry 1.10090 · 3.4 lots3.4 lotsSL 1 · 1.09796 · 29.4 pipsEst. net $68.00 (0.07%)Modify SLClose",
+        "B2Buy · 2-2 · Setup 2-S1SL 2 · 1.09781 · 30.9 pips · -$998.07Entry 1.10090 · 3.23 lots3.23 lotsSL 2 · 1.09781 · 30.9 pipsEst. net $64.60 (0.06%)Modify SLClose"
+      ]
+    },
+    "scroll-3-1100": {
+      "wheel": 204,
+      "keyboard": 40,
+      "mouse": 40
+    },
+    "inline-3-1000": {
+      "viewport": 1000,
+      "pageWidth": 1000,
+      "toolbar": {
+        "x": 0,
+        "y": 92,
+        "right": 1000,
+        "bottom": 141,
+        "width": 1000,
+        "height": 49
+      },
+      "controls": [
+        {
+          "x": 14,
+          "y": 101,
+          "right": 123.015625,
+          "bottom": 131,
+          "width": 109.015625,
+          "height": 30
+        },
+        {
+          "x": 131.015625,
+          "y": 101,
+          "right": 170.359375,
+          "bottom": 131,
+          "width": 39.34375,
+          "height": 30
+        },
+        {
+          "x": 178.359375,
+          "y": 101,
+          "right": 215.921875,
+          "bottom": 131,
+          "width": 37.5625,
+          "height": 30
+        },
+        {
+          "x": 223.921875,
+          "y": 107.5,
+          "right": 277.671875,
+          "bottom": 124.5,
+          "width": 53.75,
+          "height": 17
+        }
+      ],
+      "positions": [
+        {
+          "x": 285.671875,
+          "y": 96,
+          "right": 778.234375,
+          "bottom": 126,
+          "width": 492.5625,
+          "height": 30
+        },
+        {
+          "x": 790.234375,
+          "y": 96,
+          "right": 1289.65625,
+          "bottom": 126,
+          "width": 499.421875,
+          "height": 30
+        }
+      ],
+      "strip": {
+        "x": 285.671875,
+        "y": 96,
+        "right": 986,
+        "bottom": 136,
+        "width": 700.328125,
+        "height": 40,
+        "scrollWidth": 1004,
+        "clientWidth": 700
+      },
+      "data": [
+        "B1Buy · 2-1 · Setup 2-S1SL 1 · 1.09796 · 29.4 pips · -$999.60Entry 1.10090 · 3.4 lots3.4 lotsSL 1 · 1.09796 · 29.4 pipsEst. net $68.00 (0.07%)Modify SLClose",
+        "B2Buy · 2-2 · Setup 2-S1SL 2 · 1.09781 · 30.9 pips · -$998.07Entry 1.10090 · 3.23 lots3.23 lotsSL 2 · 1.09781 · 30.9 pipsEst. net $64.60 (0.06%)Modify SLClose"
+      ]
+    },
+    "scroll-3-1000": {
+      "wheel": 240,
+      "keyboard": 40,
+      "mouse": 40
+    },
+    "playback-1440": {
+      "viewport": 1440,
+      "pageWidth": 1440,
+      "toolbar": {
+        "x": 0,
+        "y": 50,
+        "right": 1440,
+        "bottom": 93,
+        "width": 1440,
+        "height": 43
+      },
+      "controls": [
+        {
+          "x": 14,
+          "y": 56,
+          "right": 123.015625,
+          "bottom": 86,
+          "width": 109.015625,
+          "height": 30
+        },
+        {
+          "x": 131.015625,
+          "y": 56,
+          "right": 170.359375,
+          "bottom": 86,
+          "width": 39.34375,
+          "height": 30
+        },
+        {
+          "x": 178.359375,
+          "y": 56,
+          "right": 215.921875,
+          "bottom": 86,
+          "width": 37.5625,
+          "height": 30
+        },
+        {
+          "x": 223.921875,
+          "y": 62.5,
+          "right": 277.671875,
+          "bottom": 79.5,
+          "width": 53.75,
+          "height": 17
+        },
+        {
+          "x": 1338.890625,
+          "y": 62,
+          "right": 1426,
+          "bottom": 80,
+          "width": 87.109375,
+          "height": 18
+        }
+      ],
+      "positions": [
+        {
+          "x": 285.671875,
+          "y": 56,
+          "right": 785.953125,
+          "bottom": 86,
+          "width": 500.28125,
+          "height": 30
+        },
+        {
+          "x": 797.953125,
+          "y": 56,
+          "right": 1305.09375,
+          "bottom": 86,
+          "width": 507.140625,
+          "height": 30
+        }
+      ],
+      "strip": {
+        "x": 285.671875,
+        "y": 56,
+        "right": 1330.890625,
+        "bottom": 86,
+        "width": 1045.21875,
+        "height": 30,
+        "scrollWidth": 1045,
+        "clientWidth": 1045
+      },
+      "data": [
+        "B1Buy · 2-1 · Setup 2-S1SL 1 · 1.09796 · 29.4 pips · -$999.60Entry 1.10090 · 3.4 lots3.4 lotsSL 1 · 1.09796 · 29.4 pipsEst. net $-51.00 (-0.05%)Modify SLClose",
+        "B2Buy · 2-2 · Setup 2-S1SL 2 · 1.09781 · 30.9 pips · -$998.07Entry 1.10090 · 3.23 lots3.23 lotsSL 2 · 1.09781 · 30.9 pipsEst. net $-48.45 (-0.05%)Modify SLClose"
+      ]
+    },
+    "playback-1000": {
+      "viewport": 1000,
+      "pageWidth": 1000,
+      "toolbar": {
+        "x": 0,
+        "y": 92,
+        "right": 1000,
+        "bottom": 141,
+        "width": 1000,
+        "height": 49
+      },
+      "controls": [
+        {
+          "x": 14,
+          "y": 101,
+          "right": 123.015625,
+          "bottom": 131,
+          "width": 109.015625,
+          "height": 30
+        },
+        {
+          "x": 131.015625,
+          "y": 101,
+          "right": 170.359375,
+          "bottom": 131,
+          "width": 39.34375,
+          "height": 30
+        },
+        {
+          "x": 178.359375,
+          "y": 101,
+          "right": 215.921875,
+          "bottom": 131,
+          "width": 37.5625,
+          "height": 30
+        },
+        {
+          "x": 223.921875,
+          "y": 107.5,
+          "right": 277.671875,
+          "bottom": 124.5,
+          "width": 53.75,
+          "height": 17
+        },
+        {
+          "x": 898.890625,
+          "y": 107,
+          "right": 986,
+          "bottom": 125,
+          "width": 87.109375,
+          "height": 18
+        }
+      ],
+      "positions": [
+        {
+          "x": 285.671875,
+          "y": 96,
+          "right": 792.8125,
+          "bottom": 126,
+          "width": 507.140625,
+          "height": 30
+        },
+        {
+          "x": 804.8125,
+          "y": 96,
+          "right": 1318.8125,
+          "bottom": 126,
+          "width": 514,
+          "height": 30
+        }
+      ],
+      "strip": {
+        "x": 285.671875,
+        "y": 96,
+        "right": 890.890625,
+        "bottom": 136,
+        "width": 605.21875,
+        "height": 40,
+        "scrollWidth": 1033,
+        "clientWidth": 605
+      },
+      "data": [
+        "B1Buy · 2-1 · Setup 2-S1SL 1 · 1.09796 · 29.4 pips · -$999.60Entry 1.10090 · 3.4 lots3.4 lotsSL 1 · 1.09796 · 29.4 pipsEst. net $-272.00 (-0.27%)Modify SLClose",
+        "B2Buy · 2-2 · Setup 2-S1SL 2 · 1.09781 · 30.9 pips · -$998.07Entry 1.10090 · 3.23 lots3.23 lotsSL 2 · 1.09781 · 30.9 pipsEst. net $-258.40 (-0.26%)Modify SLClose"
+      ]
+    },
+    "confirmedDrag": true,
+    "restored": {
+      "viewport": 1440,
+      "pageWidth": 1440,
+      "toolbar": {
+        "x": 0,
+        "y": 50,
+        "right": 1440,
+        "bottom": 89,
+        "width": 1440,
+        "height": 39
+      },
+      "controls": [
+        {
+          "x": 14,
+          "y": 54,
+          "right": 123.015625,
+          "bottom": 84,
+          "width": 109.015625,
+          "height": 30
+        },
+        {
+          "x": 131.015625,
+          "y": 54,
+          "right": 170.359375,
+          "bottom": 84,
+          "width": 39.34375,
+          "height": 30
+        },
+        {
+          "x": 178.359375,
+          "y": 54,
+          "right": 215.921875,
+          "bottom": 84,
+          "width": 37.5625,
+          "height": 30
+        },
+        {
+          "x": 223.921875,
+          "y": 60.5,
+          "right": 277.671875,
+          "bottom": 77.5,
+          "width": 53.75,
+          "height": 17
+        }
+      ],
+      "positions": [
+        {
+          "x": 285.671875,
+          "y": 54,
+          "right": 792.8125,
+          "bottom": 84,
+          "width": 507.140625,
+          "height": 30
+        },
+        {
+          "x": 804.8125,
+          "y": 54,
+          "right": 1318.8125,
+          "bottom": 84,
+          "width": 514,
+          "height": 30
+        }
+      ],
+      "strip": {
+        "x": 285.671875,
+        "y": 54,
+        "right": 1426,
+        "bottom": 84,
+        "width": 1140.328125,
+        "height": 30,
+        "scrollWidth": 1140,
+        "clientWidth": 1140
+      },
+      "data": [
+        "B1Buy · 2-1 · Setup 2-S1SL 1 · 1.09831 · 25.9 pips · -$880.60Entry 1.10090 · 3.4 lots3.4 lotsSL 1 · 1.09831 · 25.9 pipsEst. net $-272.00 (-0.27%)Modify SLClose",
+        "B2Buy · 2-2 · Setup 2-S1SL 2 · 1.09781 · 30.9 pips · -$998.07Entry 1.10090 · 3.23 lots3.23 lotsSL 2 · 1.09781 · 30.9 pipsEst. net $-258.40 (-0.26%)Modify SLClose"
+      ]
+    },
+    "twoPending": {
+      "viewport": 1440,
+      "pageWidth": 1440,
+      "toolbar": {
+        "x": 0,
+        "y": 50,
+        "right": 1440,
+        "bottom": 89,
+        "width": 1440,
+        "height": 39
+      },
+      "controls": [
+        {
+          "x": 14,
+          "y": 54,
+          "right": 123.015625,
+          "bottom": 84,
+          "width": 109.015625,
+          "height": 30
+        },
+        {
+          "x": 131.015625,
+          "y": 54,
+          "right": 170.359375,
+          "bottom": 84,
+          "width": 39.34375,
+          "height": 30
+        },
+        {
+          "x": 178.359375,
+          "y": 54,
+          "right": 215.921875,
+          "bottom": 84,
+          "width": 37.5625,
+          "height": 30
+        },
+        {
+          "x": 223.921875,
+          "y": 60.5,
+          "right": 277.671875,
+          "bottom": 77.5,
+          "width": 53.75,
+          "height": 17
+        }
+      ],
+      "positions": [
+        {
+          "x": 285.671875,
+          "y": 54,
+          "right": 661.203125,
+          "bottom": 84,
+          "width": 375.53125,
+          "height": 30
+        },
+        {
+          "x": 673.203125,
+          "y": 54,
+          "right": 1048.734375,
+          "bottom": 84,
+          "width": 375.53125,
+          "height": 30
+        }
+      ],
+      "strip": {
+        "x": 285.671875,
+        "y": 54,
+        "right": 1426,
+        "bottom": 84,
+        "width": 1140.328125,
+        "height": 30,
+        "scrollWidth": 1140,
+        "clientWidth": 1140
+      },
+      "data": [
+        "Pending B1Buy · 2-3 · Setup 2-S2Pending SL 1 · 1.09734 · ~29.6 pips · est. -$997.521% riskSL 1 · 1.09734 · ~29.6 pipsCancel entry",
+        "Pending B2Buy · 2-4 · Setup 2-S2Pending SL 2 · 1.09724 · ~30.6 pips · est. -$997.561% riskSL 2 · 1.09724 · ~30.6 pipsCancel entry"
+      ]
+    },
+    "actions": true,
+    "cacheUnchanged": true
+  }
+}

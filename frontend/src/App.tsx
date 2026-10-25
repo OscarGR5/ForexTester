@@ -13,7 +13,7 @@ import { flushSync } from 'react-dom'
 import { PaidDownloadDialog } from './PaidDownloadDialog'
 import { ManagementDialog } from './ManagementDialog'
 import { ChartPane } from './ChartPane'
-import { draftEstimate, TradingDock, type StopDraft } from './TradingDock'
+import { draftEstimate, draftObservedPrice, TradingDock, type StopDraft } from './TradingDock'
 import { accountPnl, selectedRange, shiftDate } from './workflow'
 import { lifecycleOf, type Lifecycle } from './sessionTypes'
 import { commissionConfigError } from './commissions'
@@ -83,8 +83,10 @@ export function App() {
   const stops = useMemo(() => stopOverlays(trading.state, stopPreview), [trading.state, stopPreview])
   const entries = useMemo(() => entryOverlays(trading.state), [trading.state])
   const draftInvalid = replay.reviewing || !draft || !canRequestOrder(trading.permission) || !!draftEstimate(trading.state, draft).error
+  const confirmedDraft = useRef<StopDraft | null>(null)
   const confirmDraft = () => {
-    if (!draft || draft.price === null || draftInvalid) return
+    if (!draft || draft.price === null || draftInvalid || confirmedDraft.current === draft) return
+    confirmedDraft.current = draft
     if (draft.positionId) trading.modifyStop(draft.positionId, draft.price)
     else trading.enterAutomatic(draft.direction, draft.sizing, draft.price)
     setDraft(null)
@@ -376,7 +378,7 @@ export function App() {
               setStopError(error)
               if (!error) trading.modifyStop(positionId, price)
               return error
-            } }} source={chartSource} count={Math.max(0, replay.displayCount - chartOffset)} synchronizer={synchronizer} onTimeframeChange={changeTimeframe} settings={indicatorSettings[id][timeframe]!} onSettingsChange={changeSettings} placement={draft} onPick={pickStop}/>)}</div></div>
+            } }} source={chartSource} count={Math.max(0, replay.displayCount - chartOffset)} synchronizer={synchronizer} onTimeframeChange={changeTimeframe} settings={indicatorSettings[id][timeframe]!} onSettingsChange={changeSettings} placement={draft} draftReference={draft ? draftObservedPrice(trading.state, draft) : null} onPick={pickStop}/>)}</div></div>
         {stopPreview && (() => {
           const position = trading.state.positions.find(p => p.id === stopPreview.id)
           const error = position ? stopModificationError(trading.state, position, stopPreview.price, trading.permission) : 'Position is no longer open.'
