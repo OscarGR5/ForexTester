@@ -5,7 +5,7 @@ import { StopLines } from './stopLabels'
 import type { StopOverlay } from './stopOverlays'
 import { useStopDrag, type StopInteraction } from './useStopDrag'
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { CandlestickSeries, CrosshairMode, ColorType, LineStyle, createChart, type IChartApi, type IPriceLine, type ISeriesApi, type Time, type MouseEventParams } from 'lightweight-charts'
+import { CandlestickSeries, CrosshairMode, ColorType, LineStyle, createChart, type IChartApi, type ISeriesApi, type Time } from 'lightweight-charts'
 import { ChartTimeSlots } from './chartTimeSlots'
 import { performanceStart, performanceEnd, performanceCount, performanceValue } from './replayPerformance'
 import { readUi, validPriceView, writeUi, type PriceView } from './uiPreferences'
@@ -35,6 +35,7 @@ interface ChartPaneProps {
   onConfirmStop?: () => void
   confirmStopDisabled?: boolean
   positions: Position[]
+  draftReference?: number | null
   placement: StopDraft | null
   onPick: (price: number) => void
   settings: IndicatorSettings
@@ -42,7 +43,7 @@ interface ChartPaneProps {
   onTimeframeChange: (id: number, timeframe: Timeframe) => void
 }
 
-export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, active = false, reviewing = false, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, stops, placement, onPick, stopInteraction, entries = [], onConfirmStop, confirmStopDisabled }: ChartPaneProps) {
+export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, active = false, reviewing = false, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, stops, placement, draftReference = null, onPick, stopInteraction, entries = [], onConfirmStop, confirmStopDisabled }: ChartPaneProps) {
   const [readiness, setReadiness] = useState('')
   const container = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
@@ -246,28 +247,7 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, ac
     return () => { if (timer) clearTimeout(timer); save(); element?.removeEventListener('pointerup', schedule); element?.removeEventListener('wheel', schedule); window.removeEventListener('pagehide', save); document.removeEventListener('visibilitychange', save) }
   }, [sessionId, id, timeframe])
 
-  useLayoutEffect(() => {
-    const chart = chartRef.current!, series = seriesRef.current!
-    if (!placement) return
-    let line: IPriceLine | null = null
-    const preview = (price: number) => {
-      const options = { price, color: '#85c8d4', lineWidth: 2 as const, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: placement.price === null ? 'Draft SL' : '' }
-      if (line) line.applyOptions(options); else line = series.createPriceLine(options)
-    }
-    if (placement.price !== null && placement.price > 0) preview(placement.price)
-    const getPrice = (event: MouseEventParams<Time>) => {
-      if (!event.point || event.paneIndex !== 0 || event.point.y < 0) return null
-      const price = series.coordinateToPrice(event.point.y)
-      return price !== null && Number.isFinite(price) && price > 0 ? Math.round(price * 100000) / 100000 : null
-    }
-    const move = (event: MouseEventParams<Time>) => { const price = getPrice(event); if (placement.price === null && price !== null) preview(price) }
-    const click = (event: MouseEventParams<Time>) => { const price = getPrice(event); if (placement.price === null && price !== null) onPick(price) }
-    chart.applyOptions({ handleScroll: false, handleScale: false })
-    chart.subscribeCrosshairMove(move); chart.subscribeClick(click)
-    return () => { chart.unsubscribeCrosshairMove(move); chart.unsubscribeClick(click); if (line) series.removePriceLine(line); chart.applyOptions({ handleScroll: true, handleScale: { mouseWheel: false, pinch: true, axisPressedMouseMove: true, axisDoubleClickReset: true } }) }
-  }, [placement, onPick])
-
-  useDraftStopAnnotation(draftAnnotation, chartRef, seriesRef, placement?.price ?? null)
+  useDraftStopAnnotation(draftAnnotation, container, chartRef, seriesRef, placement, draftReference, onPick)
 
   return (
     <section data-active={active} className={`chart-pane${placement ? " placing-stop" : ""}`} aria-label={`Chart ${id + 1}: ${instrument === '6E' ? 'EURUSD 6E' : instrument} ${timeframe} ${instrument === '6E' ? 'trade prices' : 'bid'}`}
@@ -288,7 +268,7 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, ac
       </div>}
       <div className="chart-plot">
         <div ref={container} className="chart-canvas" aria-hidden="true" />
-        {placement?.price != null && onConfirmStop && <DraftStopAnnotation element={draftAnnotation} price={placement.price} onConfirm={onConfirmStop} disabled={confirmStopDisabled} />}
+        {placement && onConfirmStop && <DraftStopAnnotation element={draftAnnotation} selected={placement.price !== null} onConfirm={onConfirmStop} disabled={confirmStopDisabled} />}
       </div>
     </section>
   )

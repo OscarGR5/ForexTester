@@ -637,10 +637,11 @@ it('places trade entry above the charts and renders no empty position area when 
 it('keeps drafts uncommitted until the on-chart tick is clicked, and retains cancellation and validation', async () => {
  await start(); await click('Buy'); await pick(1.099)
  const annotation = host.querySelector('.draft-stop-annotation')!
- expect(annotation.textContent).toContain('Draft SL 1.09900')
+ expect(annotation.textContent).toContain('Draft SL · 13.0 pips')
  expect(annotation.firstElementChild?.getAttribute('aria-label')).toBe('Confirm draft stop-loss')
  expect(host.querySelector('[data-order-id]')).toBeNull()
- await click('Confirm draft stop-loss')
+ const tick = button('Confirm draft stop-loss'), toolbarConfirm = button('Confirm order')
+ await act(async () => { tick.click(); toolbarConfirm.click(); tick.click() })
  expect(host.querySelectorAll('[data-order-id]')).toHaveLength(1)
  expect(host.querySelector('.draft-stop-annotation')).toBeNull()
  await click('Buy'); await pick(1.2)
@@ -876,4 +877,39 @@ it('preserves all storage and startup fieldset guards after moving replay into t
  vi.mocked(window.confirm).mockReturnValueOnce(false)
  await act(async () => release())
  expect(button('Next Candle').matches(':disabled')).toBe(false)
+})
+
+it('keeps pending, mixed and two open records inside the entry row with full accessible IDs and working actions', async () => {
+ await start(); await order('Buy', 1.099)
+ const strip = () => host.querySelector('.dock-controls .active-positions')!
+ expect(strip().getAttribute('tabindex')).toBe('0')
+ expect(strip().querySelectorAll('[data-order-id]')).toHaveLength(1)
+ await click('Next Candle')
+ expect(strip().querySelectorAll('[data-position-id]')).toHaveLength(1)
+ await order('Buy', 1.098)
+ expect(strip().querySelectorAll('[data-position-id]')).toHaveLength(1)
+ expect(strip().querySelectorAll('[data-order-id]')).toHaveLength(1)
+ await click('Next Candle')
+ const records = [...strip().querySelectorAll('[data-position-id]')]
+ expect(records).toHaveLength(2)
+ for (const record of records) {
+  const id = record.getAttribute('data-position-id')!
+  expect(record.querySelector('summary')!.getAttribute('aria-label')).toContain(id)
+  expect(record.querySelector('.position-detail-text')!.textContent).toContain(id)
+  expect(record.textContent).toMatch(/SL [12].*pips.*Est. net/)
+ }
+ const first = records[0].getAttribute('data-position-id')!
+ await click('Play')
+ expect(host.querySelector('.dock-controls .trading-message')!.textContent).toBe('Pause to trade')
+ expect(button(`Modify SL ${first}`).disabled).toBe(true)
+ expect(button(`Close ${first}`).disabled).toBe(true)
+ await click('Pause')
+ await click(`Modify SL ${first}`); await pick(1.0995)
+ const tick = button('Confirm draft stop-loss'), confirm = button('Confirm SL change')
+ await act(async () => { tick.click(); confirm.click(); tick.click() })
+ await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
+ const trading = (await disk.storage.list()).sessions[0].checkpoint.trading
+ expect(trading.positions.find(p => p.id === first)!.stopModifications).toHaveLength(1)
+ await click(`Close ${first}`); await click('Next Candle')
+ expect(strip().querySelectorAll('[data-position-id]')).toHaveLength(1)
 })

@@ -382,7 +382,7 @@ button:disabled { opacity: 0.45; cursor: default; }
 .dock-controls input { width: 60px; }
 .dock-controls input, .dock-controls select, .header-replay select { min-height: 30px; padding: 4px 6px; }
 .workspace-toolbar button { min-height: 30px; padding: 4px 8px; }
-.stop-placement, .active-positions, .trading-toolbar > .form-error { flex-basis: 100%; }
+.stop-placement, .trading-toolbar > .form-error { flex-basis: 100%; }
 .execution-details { position: relative; flex: none; font-size: 12px; }
 .execution-details > summary { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 4px; cursor: pointer; color: #b2b5be; list-style: none; }
 .execution-details > summary::-webkit-details-marker { display: none; }
@@ -430,8 +430,22 @@ button:disabled { opacity: 0.45; cursor: default; }
 .replay-state { display: flex; flex-direction: column; gap: 2px; min-width: 132px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .header-replay .replay-status { min-width: 0; min-height: 15px; font-size: 12px; }
 .header-replay .replay-progress { margin: 0; font-size: 11px; }
-.dock-controls { margin-left: 0; flex: 1 1 100%; }
-.active-positions { width: 100%; }
+/* Entry controls stay fixed; only position information can scroll horizontally. */
+.dock-controls { margin-left: 0; flex: 1 1 100%; min-width: 0; flex-wrap: nowrap; gap: 8px; }
+.dock-controls > label, .dock-controls > button, .dock-controls > span { flex: none; white-space: nowrap; }
+.active-positions { display: flex; flex: 1 1 0; min-width: 0; width: auto; flex-wrap: nowrap; align-items: center; gap: 12px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; }
+.active-positions > div { display: flex; flex: none; flex-wrap: nowrap; gap: 8px; padding: 0; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.active-positions .position-stop { color: #ef9a9a; }
+.active-positions .positive, .entry-buy { color: #75c4b5; }
+.active-positions .negative, .entry-sell { color: #e2a2a6; }
+.position-details > summary { cursor: pointer; padding: 6px 0; }
+.position-detail-text { position: fixed; z-index: 9; top: auto; left: 14px; margin-top: 8px; padding: 12px; background: #1e2935; border: 1px solid #4a596b; white-space: normal; max-width: calc(100vw - 28px); box-shadow: 0 8px 24px #0008; line-height: 1.5; }
+.draft-stop-annotation { min-height: 30px; padding-left: 8px; touch-action: none; }
+.draft-stop-annotation:has(.confirm-draft-stop:not([hidden])) { padding-left: 0; }
+.draft-stop-annotation[data-invalid="true"] { border-color: #e2a2a6; color: #e2a2a6; }
+.confirm-draft-stop[hidden] { display: none; }
+.draft-stop-annotation > span { overflow-wrap: anywhere; white-space: normal; cursor: ns-resize; font-variant-numeric: tabular-nums; }
+
 @media (max-width: 1350px) {
   .phase-trading .app-header { grid-template-columns: max-content minmax(120px, 1fr) 30px 220px max-content; }
   .phase-trading .execution-popover { left: auto; right: 0; }

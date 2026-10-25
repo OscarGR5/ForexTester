@@ -5,10 +5,14 @@ import type { useTrading } from './useTrading'
 import { activeSetupId, canRequestOrder, entryRequestError, automaticSetupError, stopModificationError, markPosition, combinedRisk, type Direction, type TradingState } from './trading'
 import { plannedRisk, sizeFromRisk, type EntrySizing } from './risk'
 export interface StopDraft { direction: Direction; sizing: EntrySizing; setupId: string | null; positionId?: string; slot: number; price: number | null }
+export function draftObservedPrice(state: TradingState, draft: StopDraft): number | null {
+  const price = draft.positionId ? quoteCandle(state.quote, draft.direction === 'buy' ? 'bid' : 'ask')?.close ?? null
+    : observedPrice(state.quote, draft.direction)
+  return price !== null && Number.isFinite(price) && price > 0 ? price : null
+}
 export function draftEstimate(state: TradingState, draft: StopDraft) {
   const position = state.positions.find(p => p.id === draft.positionId)
-  const price = position ? quoteCandle(state.quote, draft.direction === 'buy' ? 'bid' : 'ask')?.close ?? null
-    : observedPrice(state.quote, draft.direction)
+  const price = draftObservedPrice(state, draft)
   const stop = draft.price
   if (!stop || !Number.isFinite(stop) || stop <= 0) return { error: 'Click the price chart to select a stop-loss.', lots: null, risk: null }
   if (price === null) return { error: state.symbol === '6E' ? 'Current trade-price candle unavailable.' : 'Current bid/ask quote unavailable.', lots: null, risk: null }
@@ -30,13 +34,34 @@ export function TradingDock({ reviewing = false, trading, draft, setDraft, stops
   const begin = (direction: Direction) => setDraft({ direction, sizing: { mode: 'risk', riskPercent: Number(risk) }, setupId, slot: slots + 1, price: null })
   return <section className="trading-toolbar" aria-label="Simulated trading">
     <div className="dock-controls">
-      <label>Risk per entry (%)<input aria-label="Risk per entry (%)" type="number" min="0" max="100" step="any" value={risk} onChange={e=>setRisk(e.target.value)} disabled={!!draft}/></label>
+      <label>Risk (%)<input aria-label="Risk per entry (%)" type="number" min="0" max="100" step="any" value={risk} onChange={e=>setRisk(e.target.value)} disabled={!!draft}/></label>
 
       <button className="buy-button" disabled={!canOrder || slots >= 2 || !!automaticSetupError(state,'buy',setupId)} onClick={()=>begin('buy')}>Buy</button>
       <button className="sell-button" disabled={!canOrder || slots >= 2 || !!automaticSetupError(state,'sell',setupId)} onClick={()=>begin('sell')}>Sell</button>
       <span>{slots} / 2 slots</span>
-      {setupId && <span className="setup-status">Setup {setupId} · {state.positions[0]?.direction ?? state.pending[0]?.direction}</span>}
-      {(permission.playing || !permission.hasFuture) && <span className="trading-message">{permission.playing ? 'Pause to trade' : 'End of history; positions remain open'}</span>}
+    {!reviewing && slots > 0 && <div className="active-positions" role="region" aria-label="Pending and open positions" tabIndex={0}>
+      {stops.map(stop => {
+        const position = state.positions.find(p => p.id === stop.id)
+        const pending = state.pending.find(p => p.id === stop.id)
+        const entry = position ?? pending
+        if (!entry) return null
+        const identity = `${entry.direction === 'buy' ? 'B' : 'S'}${stop.number}`
+        const mark = position ? markPosition(position, state.quote) : null
+        return <div key={entry.id} data-position-id={position?.id} data-order-id={pending?.id}>
+          <details className="position-details"><summary aria-label={`${pending ? 'Pending' : 'Open'} ${entry.direction} ${entry.id} details`}><strong className={entry.direction === 'buy' ? 'entry-buy' : 'entry-sell'}>{pending ? 'Pending ' : ''}{identity}</strong></summary>
+            <div className="position-detail-text">{entry.direction === 'buy' ? 'Buy' : 'Sell'} · {entry.id} · Setup {entry.setupId}<br/>{stop.label}{position && <><br/>Entry {position.entryPrice.toFixed(5)} · {position.lots} lots</>}</div>
+          </details>
+          <span>{position ? `${position.lots} lots` : entry.mode === 'risk' ? `${entry.requestedRiskPercent}% risk` : `${entry.lots} lots`}</span>
+          <span className="position-stop">SL {stop.number} · {stop.price.toFixed(5)} · {stop.pips === null ? 'Distance unavailable' : `${pending ? '~' : ''}${stop.pips.toFixed(1)} pips`}</span>
+          {position && <span className={mark ? mark.estimatedNetPnlUsd < 0 ? 'negative' : 'positive' : ''}>{mark ? `Est. net $${mark.estimatedNetPnlUsd.toFixed(2)} (${(mark.estimatedNetPnlUsd/state.account.referenceBalance*100).toFixed(2)}%)` : 'PnL unavailable'}</span>}
+          {pending ? <button disabled={!canOrder} onClick={()=>trading.cancel(entry.id)} aria-label={`Cancel entry ${entry.id}`}>Cancel entry</button> : <>
+            <button disabled={!canOrder || position!.closeRequestedAt !== null} onClick={()=>setDraft({direction:entry.direction,sizing:position!.lots,setupId:entry.setupId,positionId:entry.id,slot:stop.number,price:null})} aria-label={`Modify SL ${entry.id}`}>Modify SL</button>
+            <button disabled={!canOrder || position!.closeRequestedAt !== null} onClick={()=>trading.close(entry.id)} aria-label={`Close ${entry.id}`}>{position!.closeRequestedAt !== null ? 'Close pending' : 'Close'}</button>
+          </>}
+        </div>
+      })}
+    </div>}
+    {(permission.playing || !permission.hasFuture) && <span className="trading-message">{permission.playing ? 'Pause to trade' : 'End of history; positions remain open'}</span>}
     </div>
     {draft && <div className="stop-placement" role="region" aria-label="Place stop-loss">
       <strong>{draft.positionId ? `Modify SL ${draft.positionId}` : `${draft.direction === 'buy' ? 'Buy' : 'Sell'} · slot ${draft.slot}`} · {draft.price === null ? 'Click the price chart to place SL' : `SL ${draft.price.toFixed(5)}`}</strong>
@@ -45,14 +70,6 @@ export function TradingDock({ reviewing = false, trading, draft, setDraft, stops
       <button onClick={()=>setDraft(null)}>Cancel placement</button>
       {draft.price !== null && <button onClick={()=>setDraft({...draft,price:null})}>Choose another level</button>}
       <details><summary>Enter price with keyboard</summary><label>SL price<input aria-label="SL price" type="number" step="0.00001" value={draft.price ?? ''} onChange={e=>setDraft({...draft,price:e.target.value ? Number(e.target.value) : null})}/></label></details>
-    </div>}
-    {!reviewing && slots > 0 && <div className="active-positions">
-      {state.pending.map(p=><div key={p.id} data-order-id={p.id}><strong>Pending {p.direction} · {p.id}</strong><span>{stops.find(stop => stop.id === p.id)?.label} · {p.mode === 'risk' ? `${p.requestedRiskPercent}% risk` : `${p.lots} lots`}</span><button disabled={!canOrder} onClick={()=>trading.cancel(p.id)} aria-label={`Cancel entry ${p.id}`}>Cancel entry</button></div>)}
-      {state.positions.map((p,i)=>{ const mark=markPosition(p,state.quote); return <div key={p.id} data-position-id={p.id}>
-        <strong>{p.direction === 'buy' ? 'Buy' : 'Sell'} · {p.id}</strong><span>{p.lots} lots · {stops.find(stop => stop.id === p.id)?.label}</span><span>{mark ? `Est. net $${mark.estimatedNetPnlUsd.toFixed(2)} (${(mark.estimatedNetPnlUsd/state.account.referenceBalance*100).toFixed(2)}%)` : 'PnL unavailable'}</span>
-        <button disabled={!canOrder || p.closeRequestedAt !== null} onClick={()=>setDraft({direction:p.direction,sizing:p.lots,setupId:p.setupId,positionId:p.id,slot:i+1,price:null})} aria-label={`Modify SL ${p.id}`}>Modify SL</button>
-        <button disabled={!canOrder || p.closeRequestedAt !== null} onClick={()=>trading.close(p.id)} aria-label={`Close ${p.id}`}>{p.closeRequestedAt !== null ? 'Close pending' : 'Close'}</button>
-      </div>})}
     </div>}
     {!reviewing && state.rejected.at(-1)?.rejectedAt === state.observedTimestamp && <p className="form-error" role="alert">Entry rejected: {state.rejected.at(-1)?.reason}</p>}
   </section>
