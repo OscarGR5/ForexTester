@@ -1,0 +1,658 @@
+{
+  "isolatedSessions": "/tmp/forextester-chart-ux-vRlNzU",
+  "providerRequests": 0,
+  "paidSubmissions": 0,
+  "screenshots": [
+    "docs/chart-toolbar-and-draft-sl-ux/after-1-charts-1440.png",
+    "docs/chart-toolbar-and-draft-sl-ux/after-1-charts-390.png",
+    "docs/chart-toolbar-and-draft-sl-ux/pan-earlier-1-0.png",
+    "docs/chart-toolbar-and-draft-sl-ux/pan-later-1-0.png",
+    "docs/chart-toolbar-and-draft-sl-ux/after-2-charts-1440.png",
+    "docs/chart-toolbar-and-draft-sl-ux/after-2-charts-390.png",
+    "docs/chart-toolbar-and-draft-sl-ux/pan-earlier-2-0.png",
+    "docs/chart-toolbar-and-draft-sl-ux/pan-earlier-2-1.png",
+    "docs/chart-toolbar-and-draft-sl-ux/after-3-charts-1440.png",
+    "docs/chart-toolbar-and-draft-sl-ux/after-3-charts-390.png",
+    "docs/chart-toolbar-and-draft-sl-ux/pan-earlier-3-0.png",
+    "docs/chart-toolbar-and-draft-sl-ux/pan-earlier-3-1.png",
+    "docs/chart-toolbar-and-draft-sl-ux/pan-earlier-3-2.png",
+    "docs/chart-toolbar-and-draft-sl-ux/draft-sl-tick-desktop.png",
+    "docs/chart-toolbar-and-draft-sl-ux/draft-sl-tick-three-charts.png",
+    "docs/chart-toolbar-and-draft-sl-ux/one-pending-entry.png",
+    "docs/chart-toolbar-and-draft-sl-ux/two-pending-entries.png",
+    "docs/chart-toolbar-and-draft-sl-ux/two-filled-entries.png",
+    "docs/chart-toolbar-and-draft-sl-ux/draft-sl-tick-1440.png",
+    "docs/chart-toolbar-and-draft-sl-ux/draft-sl-tick-390.png",
+    "docs/chart-toolbar-and-draft-sl-ux/entries-2-charts-1440.png",
+    "docs/chart-toolbar-and-draft-sl-ux/entries-2-charts-390.png",
+    "docs/chart-toolbar-and-draft-sl-ux/entries-3-charts-1440.png",
+    "docs/chart-toolbar-and-draft-sl-ux/entries-3-charts-390.png",
+    "docs/chart-toolbar-and-draft-sl-ux/entries-restored-after-backend-restart.png"
+  ],
+  "errors": [],
+  "checks": {
+    "layout-1-1440": {
+      "toolbar": {
+        "x": 0,
+        "y": 54,
+        "width": 1440,
+        "height": 97
+      },
+      "chart": {
+        "x": 8,
+        "y": 226,
+        "width": 1424,
+        "height": 774
+      }
+    },
+    "layout-1-390": {
+      "toolbar": {
+        "x": 0,
+        "y": 81,
+        "width": 390,
+        "height": 308
+      },
+      "chart": {
+        "x": 0,
+        "y": 453,
+        "width": 390,
+        "height": 391
+      }
+    },
+    "pan-1-0": {
+      "before": {
+        "0": {
+          "from": 93,
+          "to": 318
+        }
+      },
+      "earlier": {
+        "0": {
+          "from": 39.578792341678934,
+          "to": 264.57879234167893
+        }
+      },
+      "later": {
+        "0": {
+          "from": 71.53166421207658,
+          "to": 296.5316642120766
+        }
+      }
+    },
+    "layout-2-1440": {
+      "toolbar": {
+        "x": 0,
+        "y": 54,
+        "width": 1440,
+        "height": 97
+      },
+      "chart": {
+        "x": 8,
+        "y": 226,
+        "width": 710,
+        "height": 774
+      }
+    },
+    "layout-2-390": {
+      "toolbar": {
+        "x": 0,
+        "y": 81,
+        "width": 390,
+        "height": 308
+      },
+      "chart": {
+        "x": 0,
+        "y": 453,
+        "width": 390,
+        "height": 774
+      }
+    },
+    "pan-2-0": {
+      "before": {
+        "0": {
+          "from": 71.53166421207658,
+          "to": 296.5316642120766
+        },
+        "1": {
+          "from": 3305,
+          "to": 3504
+        }
+      },
+      "earlier": {
+        "0": {
+          "from": 15.382595889095228,
+          "to": 240.38259588909523
+        },
+        "1": {
+          "from": 3305,
+          "to": 3504
+        }
+      },
+      "later": {
+        "0": {
+          "from": 48.7211052058654,
+          "to": 273.7211052058654
+        },
+        "1": {
+          "from": 3305,
+          "to": 3504
+        }
+      }
+    },
+    "pan-2-1": {
+      "before": {
+        "0": {
+          "from": 48.7211052058654,
+          "to": 273.7211052058654
+        },
+        "1": {
+          "from": 3305,
+          "to": 3504
+        }
+      },
+      "earlier": {
+        "0": {
+          "from": 48.7211052058654,
+          "to": 273.7211052058654
+        },
+        "1": {
+          "from": 3255.3105590062114,
+          "to": 3454.3105590062114
+        }
+      },
+      "later": {
+        "0": {
+          "from": 48.7211052058654,
+          "to": 273.7211052058654
+        },
+        "1": {
+          "from": 3284.813664596273,
+          "to": 3483.813664596273
+        }
+      }
+    },
+    "layout-3-1440": {
+      "toolbar": {
+        "x": 0,
+        "y": 54,
+        "width": 1440,
+        "height": 97
+      },
+      "chart": {
+        "x": 8,
+        "y": 226,
+        "width": 710,
+        "height": 774
+      }
+    },
+    "layout-3-390": {
+      "toolbar": {
+        "x": 0,
+        "y": 81,
+        "width": 390,
+        "height": 308
+      },
+      "chart": {
+        "x": 0,
+        "y": 453,
+        "width": 390,
+        "height": 774
+      }
+    },
+    "pan-3-0": {
+      "before": {
+        "0": {
+          "from": 48.7211052058654,
+          "to": 273.7211052058654
+        },
+        "1": {
+          "from": 3284.813664596273,
+          "to": 3483.813664596273
+        },
+        "2": {
+          "from": 0,
+          "to": 104
+        }
+      },
+      "earlier": {
+        "0": {
+          "from": -7.427963117115951,
+          "to": 217.57203688288405
+        },
+        "1": {
+          "from": 3284.813664596273,
+          "to": 3483.813664596273
+        },
+        "2": {
+          "from": 0,
+          "to": 104
+        }
+      },
+      "later": {
+        "0": {
+          "from": 25.91054619965422,
+          "to": 250.91054619965422
+        },
+        "1": {
+          "from": 3284.813664596273,
+          "to": 3483.813664596273
+        },
+        "2": {
+          "from": 0,
+          "to": 104
+        }
+      }
+    },
+    "pan-3-1": {
+      "before": {
+        "0": {
+          "from": 25.91054619965422,
+          "to": 250.91054619965422
+        },
+        "1": {
+          "from": 3284.813664596273,
+          "to": 3483.813664596273
+        },
+        "2": {
+          "from": 0,
+          "to": 104
+        }
+      },
+      "earlier": {
+        "0": {
+          "from": 25.91054619965422,
+          "to": 250.91054619965422
+        },
+        "1": {
+          "from": 3235.1242236024846,
+          "to": 3434.1242236024846
+        },
+        "2": {
+          "from": 0,
+          "to": 104
+        }
+      },
+      "later": {
+        "0": {
+          "from": 25.91054619965422,
+          "to": 250.91054619965422
+        },
+        "1": {
+          "from": 3264.6273291925463,
+          "to": 3463.6273291925463
+        },
+        "2": {
+          "from": 0,
+          "to": 104
+        }
+      }
+    },
+    "pan-3-2": {
+      "before": {
+        "0": {
+          "from": 25.91054619965422,
+          "to": 250.91054619965422
+        },
+        "1": {
+          "from": 3264.6273291925463,
+          "to": 3463.6273291925463
+        },
+        "2": {
+          "from": 0,
+          "to": 104
+        }
+      },
+      "earlier": {
+        "0": {
+          "from": 25.91054619965422,
+          "to": 250.91054619965422
+        },
+        "1": {
+          "from": 3264.6273291925463,
+          "to": 3463.6273291925463
+        },
+        "2": {
+          "from": -26.086956521739125,
+          "to": 77.91304347826087
+        }
+      },
+      "later": {
+        "0": {
+          "from": 25.91054619965422,
+          "to": 250.91054619965422
+        },
+        "1": {
+          "from": 3264.6273291925463,
+          "to": 3463.6273291925463
+        },
+        "2": {
+          "from": -10.597826086956516,
+          "to": 93.40217391304348
+        }
+      }
+    },
+    "ordering-M5": {
+      "candle": 5,
+      "lines": [
+        {
+          "order": 0,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 1,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 2,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 3,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 4,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 6,
+          "precision": 2,
+          "visible": false
+        }
+      ]
+    },
+    "ordering-M15": {
+      "candle": 5,
+      "lines": [
+        {
+          "order": 0,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 1,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 2,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 3,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 4,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 6,
+          "precision": 2,
+          "visible": false
+        }
+      ]
+    },
+    "ordering-H1": {
+      "candle": 5,
+      "lines": [
+        {
+          "order": 0,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 1,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 2,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 3,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 4,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 6,
+          "precision": 2,
+          "visible": false
+        }
+      ]
+    },
+    "ordering-H4": {
+      "candle": 5,
+      "lines": [
+        {
+          "order": 0,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 1,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 2,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 3,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 4,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 6,
+          "precision": 2,
+          "visible": false
+        }
+      ]
+    },
+    "ordering-D1": {
+      "candle": 5,
+      "lines": [
+        {
+          "order": 0,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 1,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 2,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 3,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 4,
+          "precision": 5,
+          "visible": true
+        },
+        {
+          "order": 6,
+          "precision": 2,
+          "visible": false
+        }
+      ]
+    },
+    "filledEntries": [
+      [
+        {
+          "color": "#75c4b5",
+          "price": 1.10075,
+          "lineStyle": 2,
+          "lineWidth": 1,
+          "lineVisible": true,
+          "axisLabelVisible": true,
+          "title": "Entry 1 · Entry 2",
+          "axisLabelColor": "",
+          "axisLabelTextColor": ""
+        }
+      ]
+    ],
+    "draft-edge-1440": {
+      "annotation": {
+        "x": 1212,
+        "y": 790.078125,
+        "width": 146.203125,
+        "height": 38
+      },
+      "tick": {
+        "x": 1213,
+        "y": 791.078125,
+        "width": 36,
+        "height": 36
+      },
+      "plot": {
+        "x": 8,
+        "y": 312,
+        "width": 1424,
+        "height": 688
+      }
+    },
+    "draft-edge-390": {
+      "annotation": {
+        "x": 162,
+        "y": 705.453125,
+        "width": 154.203125,
+        "height": 46
+      },
+      "tick": {
+        "x": 163,
+        "y": 706.453125,
+        "width": 44,
+        "height": 44
+      },
+      "plot": {
+        "x": 0,
+        "y": 490,
+        "width": 390,
+        "height": 354
+      }
+    },
+    "mobileTouchConfirmation": true,
+    "visible-entries-2": [
+      {
+        "height": 714,
+        "entries": [
+          478.00965794768877
+        ]
+      },
+      {
+        "height": 535,
+        "entries": [
+          107.00000000000006
+        ]
+      }
+    ],
+    "visible-entries-3": [
+      {
+        "height": 728,
+        "entries": [
+          487.3955734406466
+        ]
+      },
+      {
+        "height": 545,
+        "entries": [
+          108.99999999999994
+        ]
+      },
+      {
+        "height": 728,
+        "entries": [
+          464.30994371482404
+        ]
+      }
+    ],
+    "durableRestore": {
+      "entries": [
+        [
+          {
+            "color": "#75c4b5",
+            "price": 1.10075,
+            "lineStyle": 2,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "Entry 1 · Entry 2",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          }
+        ],
+        [
+          {
+            "color": "#75c4b5",
+            "price": 1.10075,
+            "lineStyle": 2,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "Entry 1 · Entry 2",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          }
+        ],
+        [
+          {
+            "color": "#75c4b5",
+            "price": 1.10075,
+            "lineStyle": 2,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "Entry 1 · Entry 2",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          }
+        ]
+      ],
+      "views": {
+        "0": {
+          "from": 25.910546199679402,
+          "to": 250.91054619967937
+        },
+        "1": {
+          "from": 3264.6273291925463,
+          "to": 3463.6273291925463
+        },
+        "2": {
+          "from": -10.597826086956516,
+          "to": 93.40217391304348
+        }
+      }
+    },
+    "cacheUnchanged": true
+  }
+}

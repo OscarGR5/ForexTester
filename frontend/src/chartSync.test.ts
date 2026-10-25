@@ -28,7 +28,7 @@ describe('independent chart navigation', () => {
     expect(logicalToUtc([0, 300, 900], -1, 300)).toBe(-300)
     expect(utcToLogical([0, 300, 900], 1200, 300)).toBe(3)
   })
-  it.each([2, 3])('keeps zoom and pan local in a %i-chart layout and ignores resize callbacks', count => {
+  it.each([1, 2, 3])('keeps zoom and pan local in a %i-chart layout and ignores resize callbacks', count => {
     const sync = new ChartSynchronizer(), charts = Array.from({ length: count }, fake)
     charts.forEach((f, id) => register(sync, id, f))
     const before = charts.map(f => ({ ...f.range() }))
@@ -114,4 +114,19 @@ describe('free crosshair synchronization', () => {
     source.pointer(600); expect(target.chart.setCrosshairPosition).toHaveBeenCalledTimes(calls)
     sync.suspendCrosshair(false); source.pointer(600); expect(target.chart.setCrosshairPosition).toHaveBeenCalledTimes(calls + 1)
   })
+})
+
+it('retains an earlier viewport with left whitespace across replay ticks and save/restore', () => {
+ const sync = new ChartSynchronizer(), first = fake(), second = fake()
+ register(sync,0,first);register(sync,1,second)
+ sync.activate(0);first.pan({from:-20,to:79})
+ expect(sync.snapshot().charts!['0'].following).toBe(false)
+ sync.update(0,candles(times(101)),'M5',()=>0,100)
+ sync.update(1,candles(times(101)),'M5',()=>0,100)
+ expect(first.range()).toEqual({from:-20,to:79});expect(second.range().to).toBe(100)
+ const restored=new ChartSynchronizer();restored.restore(JSON.parse(JSON.stringify(sync.snapshot())))
+ const next=fake();register(restored,0,next,'M5',times(101));expect(next.range()).toEqual(first.range())
+ sync.activate(0);first.pan({from:1,to:100})
+ expect(sync.snapshot().charts!['0'].following).toBe(true)
+ sync.update(0,candles(times(102)),'M5',()=>0,101);expect(first.range()).toEqual({from:2,to:101})
 })

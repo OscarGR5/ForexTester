@@ -184,9 +184,9 @@ export class ChartSynchronizer {
     const sameStep = view.step === entry.step && view.logical
     const width = Math.max(1, Math.min(last + entry.projectedBars,
       sameStep ? view.logical!.to - view.logical!.from : utcToLogical(entry.times, view.range.to, entry.step) - utcToLogical(entry.times, view.range.from, entry.step)))
-    const to = view.following ? last + entry.projectedBars : Math.max(width, Math.min(last + entry.projectedBars,
+    const to = view.following ? last + entry.projectedBars : Math.max(Math.min(5, width), Math.min(last + entry.projectedBars,
       sameStep ? view.logical!.to : utcToLogical(entry.times, view.range.to, entry.step)))
-    const next = { from: Math.max(0, to - width), to }
+    const next = { from: to - width, to }
     const current = entry.chart.timeScale().getVisibleLogicalRange()
     if (!current || Math.abs(current.from - next.from) > 0.001 || Math.abs(current.to - next.to) > 0.001) {
       const setting = entry.setting; entry.setting = true

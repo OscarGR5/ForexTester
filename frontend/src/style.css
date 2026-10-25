@@ -44,7 +44,7 @@ button:disabled { opacity: 0.45; cursor: default; }
 .chart-pane { display: flex; min-height: 300px; flex-direction: column; overflow: hidden; border: 1px solid #354250; border-radius: 4px; }
 .pane-toolbar { display: flex; min-height: 40px; align-items: center; justify-content: space-between; gap: 12px; padding: 3px 10px; background: #1e2935; }
 .pane-toolbar label { display: flex; align-items: center; gap: 8px; color: #a7b3c1; font-size: 0.85rem; }
-.chart-canvas { position: relative; flex: 1; min-height: 0; }
+.chart-canvas { position: relative; flex: 1; min-height: 0; min-width: 0; width: 100%; }
 .chart-message { position: absolute; z-index: 2; top: 50%; left: 50%; max-width: min(90%, 460px); transform: translate(-50%, -50%); padding: 18px 24px; border: 1px solid #354250; border-radius: 6px; background: #1e2935; box-shadow: 0 6px 28px #0007; text-align: center; color: #e5eaf0; }
 .chart-message p { margin: 0 0 12px; }
 .chart-note { margin: 0; color: #8b9baa; font-size: 0.8rem; }
@@ -260,12 +260,12 @@ button:disabled { opacity: 0.45; cursor: default; }
 .pane-toolbar { position: relative; min-height: 32px; padding: 1px 10px; flex-wrap: nowrap; }.pane-toolbar select, .indicator-controls summary { min-height: 28px; padding-top: 2px; padding-bottom: 2px; }.instrument strong { font-size: 13px; }
 .pane-toolbar:has(.indicator-controls[open]) { flex-wrap: nowrap; }.indicator-controls[open] { flex-basis: auto; }.indicator-options { position: absolute; top: 32px; right: 0; z-index: 5; width: min(720px, 100%); max-height: 300px; padding: 12px; background: #1e2935; border: 1px solid #4a596b; box-shadow: 0 8px 24px #0008; }
 .placing-stop .chart-canvas, .placing-stop .chart-canvas * { cursor: crosshair !important; }
-.trading-dock { flex: none; padding: 8px 14px; border-top: 1px solid #354250; background: #171e28; font-size: 12px; }.dock-controls { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: end; }.dock-controls label { display: flex; flex-direction: column; gap: 4px; }.dock-controls input { width: 96px; }.dock-controls select { max-width: 180px; }.dock-controls .trading-message { margin-left: auto; color: #b2b5be; align-self: center; }.buy-button { background: #254d46; border-color: #75c4b5; }.sell-button { background: #54383e; border-color: #e2a2a6; }
+.trading-toolbar { flex: none; padding: 4px 14px 8px; background: #171e28; font-size: 12px; }.dock-controls { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: end; }.dock-controls label { display: flex; flex-direction: row; align-items: center; gap: 8px; }.dock-controls input { width: 96px; }.dock-controls select { max-width: 180px; }.dock-controls .trading-message { margin-left: auto; color: #b2b5be; align-self: center; }.buy-button { background: #254d46; border-color: #75c4b5; }.sell-button { background: #54383e; border-color: #e2a2a6; }
 .active-positions { display: flex; flex-wrap: wrap; gap: 8px 20px; }.active-positions > div { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-top: 8px; }.active-positions span { color: #b2b5be; }.active-positions button { min-height: 28px; padding: 3px 8px; }.stop-placement { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 0; color: #c5dce1; }.stop-placement details summary { cursor: pointer; }.stop-placement input { width: 130px; }.stop-placement > span { max-width: 500px; line-height: 1.5; }
 .management-dialog { position: fixed; inset: 60px 16px 16px auto; margin: 0; width: min(760px, calc(100% - 32px)); max-height: calc(100dvh - 76px); overflow: auto; z-index: 20; background: #171e28; color: #e5eaf0; border: 1px solid #4a596b; box-shadow: 0 12px 40px #0009; }.close-management { display: block; margin: 0 0 12px auto; }.session-controls { border: 0; padding: 8px; }.critical-save { padding: 8px 16px; }
 .results-workspace { overflow-y: auto; padding: 28px; }.results-heading { display: flex; align-items: center; justify-content: space-between; }.results-heading h2 { margin: 0; font-size: 26px; }.results-disclosure { color: #b2b5be; font-size: 13px; line-height: 1.6; }.results-workspace .trading-journal { border: 0; padding: 16px 0; background: none; }.results-workspace .equity-panel { margin-top: 24px; }
 @media (max-width: 700px) {
-  .app-header { padding: 8px 12px; gap: 10px; flex-wrap: wrap; }.header-session { flex-basis: 45%; }.app-header > button { margin-left: auto; }.account-pnl { order: 3; flex-basis: 100%; justify-content: space-between; }.setup-workspace { padding: 24px 16px; }.setup-grid { grid-template-columns: 1fr; gap: 28px; }.setup-footer { align-items: start; flex-direction: column; }.setup-footer > div { max-width: 100%; }.setup-footer > button { width: 100%; }.setup-workspace input { font-size: 16px; }.replay-strip { gap: 6px; padding: 6px 8px; }.replay-strip .layout-controls { margin-left: 0; }.replay-progress { display: none; }.replay-clock { font-size: 12px; }.phase-trading .workspace-controls { overflow-y: auto; }.phase-trading .chart-workspace { min-height: 330px; }.chart-stack { padding: 0; }.pane-toolbar { gap: 4px; padding: 0 6px; }.pane-toolbar label { font-size: 11px; gap: 4px; }.indicator-controls { font-size: 11px; }.trading-dock { padding: 8px; }.dock-controls { gap: 6px; }.dock-controls .trading-message { flex-basis: 100%; margin: 0; font-size: 11px; }.results-workspace { padding: 20px 12px; }.active-positions { gap: 4px; }.management-dialog { inset: 8px; width: auto; max-height: calc(100dvh - 16px); }
+  .app-header { padding: 8px 12px; gap: 10px; flex-wrap: wrap; }.header-session { flex-basis: 45%; }.app-header > button { margin-left: auto; }.account-pnl { order: 3; flex-basis: 100%; justify-content: space-between; }.setup-workspace { padding: 24px 16px; }.setup-grid { grid-template-columns: 1fr; gap: 28px; }.setup-footer { align-items: start; flex-direction: column; }.setup-footer > div { max-width: 100%; }.setup-footer > button { width: 100%; }.setup-workspace input { font-size: 16px; }.replay-strip { gap: 6px; padding: 6px 8px; }.replay-strip .layout-controls { margin-left: 0; }.replay-progress { display: none; }.replay-clock { font-size: 12px; }.phase-trading .workspace-controls { overflow-y: auto; }.phase-trading .chart-workspace { min-height: 330px; }.chart-stack { padding: 0; }.pane-toolbar { gap: 4px; padding: 0 6px; }.pane-toolbar label { font-size: 11px; gap: 4px; }.indicator-controls { font-size: 11px; }.trading-toolbar { padding: 8px; }.dock-controls { gap: 6px; }.dock-controls .trading-message { flex-basis: 100%; margin: 0; font-size: 11px; }.results-workspace { padding: 20px 12px; }.active-positions { gap: 4px; }.management-dialog { inset: 8px; width: auto; max-height: calc(100dvh - 16px); }
 }
 .setup-grid { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
 .setup-grid > section, .account-fields > label, .period-fields > label { min-width: 0; }
@@ -427,5 +427,27 @@ button:disabled { opacity: 0.45; cursor: default; }
   .chart-stack.charts-2, .chart-stack.charts-3 { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-auto-rows: minmax(300px, 1fr); height: auto; min-height: 100%; }
   .charts-3 > .chart-pane:first-child { grid-row: auto; }
   .phase-trading .chart-workspace { overflow: auto; }
-  .trading-dock { flex-shrink: 0; }
+  .trading-toolbar { flex-shrink: 0; }
+}
+
+/* Replay and order entry share a compact header; chart space has no bottom dock. */
+.workspace-toolbar { flex: none; background: #171e28; border-bottom: 1px solid #354250; }
+.workspace-toolbar .replay-strip { padding-bottom: 4px; }
+.dock-controls { align-items: center; }
+.dock-controls .setup-status { color: #b2b5be; }
+.execution-details { position: relative; margin-left: auto; }
+.execution-details summary { cursor: pointer; padding: 8px 0; color: #b2b5be; }
+.execution-details[open] { flex-basis: 100%; }
+.execution-details p { max-width: 100ch; line-height: 1.5; margin: 4px 0 8px; }
+.active-positions > div { gap: 8px; padding-top: 4px; }
+.chart-plot { position: relative; display: flex; flex: 1; min-height: 0; min-width: 0; }
+.draft-stop-annotation { position: absolute; z-index: 3; display: flex; align-items: center; gap: 8px; padding-right: 8px; background: #171e28; border: 1px solid #85c8d4; border-radius: 4px; color: #c5e9ef; font-size: 12px; white-space: nowrap; }
+.draft-stop-annotation[hidden] { display: none; }
+.draft-stop-annotation > span { overflow: hidden; text-overflow: ellipsis; }
+.draft-stop-price { font-variant-numeric: tabular-nums; }
+.confirm-draft-stop { display: grid; place-items: center; min-width: 36px; min-height: 36px; padding: 4px; color: #f2f7f8; background: #315e60; border: 0; border-radius: 2px 0 0 2px; }
+@media (max-width: 700px) {
+  .dock-controls label { flex-direction: column; align-items: start; gap: 4px; }
+  .execution-details { margin-left: 0; }
+  .confirm-draft-stop { min-width: 44px; min-height: 44px; }
 }

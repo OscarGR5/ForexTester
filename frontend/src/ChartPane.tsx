@@ -1,3 +1,5 @@
+import { EntryLines, type EntryOverlay } from './entryOverlays'
+import { DraftStopAnnotation, useDraftStopAnnotation } from './DraftStopAnnotation'
 import { StopLines } from './stopLabels'
 import type { StopOverlay } from './stopOverlays'
 import { useStopDrag, type StopInteraction } from './useStopDrag'
@@ -26,6 +28,9 @@ interface ChartPaneProps {
   synchronizer: ChartSynchronizer
   stopInteraction?: StopInteraction
   stops: StopOverlay[]
+  entries?: EntryOverlay[]
+  onConfirmStop?: () => void
+  confirmStopDisabled?: boolean
   positions: Position[]
   placement: StopDraft | null
   onPick: (price: number) => void
@@ -34,7 +39,7 @@ interface ChartPaneProps {
   onTimeframeChange: (id: number, timeframe: Timeframe) => void
 }
 
-export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, stops, placement, onPick, stopInteraction }: ChartPaneProps) {
+export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, stops, placement, onPick, stopInteraction, entries = [], onConfirmStop, confirmStopDisabled }: ChartPaneProps) {
   const [readiness, setReadiness] = useState('')
   const container = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
@@ -44,6 +49,8 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, se
   const indicatorsRef = useRef<IndicatorSeries | null>(null)
   const savePriceRef = useRef<(() => void) | null>(null)
   const stopLines = useRef<StopLines | null>(null)
+  const draftAnnotation = useRef<HTMLDivElement>(null)
+  const entryLines = useRef<EntryLines | null>(null)
   const previousSettings = useRef<IndicatorSettings | null>(null)
   const unregisterRef = useRef<(() => void) | null>(null)
   const previous = useRef<{ source: readonly Candle[]; count: number; bars: ReplayBars; timeframe: Timeframe; synchronizer: ChartSynchronizer } | null>(null)
@@ -71,7 +78,7 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, se
         horzLine: { color: '#9598a1', style: LineStyle.Dashed, width: 1 },
       },
       rightPriceScale: { borderColor: '#354250' },
-      timeScale: { borderColor: '#354250', timeVisible: true, secondsVisible: false, fixLeftEdge: true, fixRightEdge: true },
+      timeScale: { borderColor: '#354250', timeVisible: true, secondsVisible: false, fixLeftEdge: false, fixRightEdge: true },
       localization: {
         timeFormatter: (time: Time) => typeof time === 'number'
           ? `${new Date(time * 1000).toISOString().slice(0, 16).replace('T', ' ')} UTC`
@@ -85,6 +92,7 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, se
       priceFormat: { type: 'price', precision: 5, minMove: 0.00001 },
     })
     stopLines.current = new StopLines(series)
+    entryLines.current = new EntryLines(series)
     chartRef.current = chart
     seriesRef.current = series
     timeSlots.current = new ChartTimeSlots(chart)
@@ -97,6 +105,8 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, se
       indicatorsRef.current = null
       timeSlots.current = null
       previousSettings.current = null
+      entryLines.current?.dispose()
+      entryLines.current = null
       stopLines.current?.dispose()
       stopLines.current = null
       chart.remove()
@@ -193,6 +203,8 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, se
     stopLines.current!.update(stops)
   }, [stops])
 
+  useLayoutEffect(() => { entryLines.current!.update(entries) }, [entries])
+
   useEffect(() => {
     const scale = seriesRef.current!.priceScale()
     const stored = readUi(sessionId, `price:${id}:${timeframe}`, null as PriceView | null, (v): v is PriceView | null => v === null || validPriceView(v))
@@ -216,7 +228,7 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, se
     if (!placement) return
     let line: IPriceLine | null = null
     const preview = (price: number) => {
-      const options = { price, color: '#85c8d4', lineWidth: 2 as const, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: 'Draft SL' }
+      const options = { price, color: '#85c8d4', lineWidth: 2 as const, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: placement.price === null ? 'Draft SL' : '' }
       if (line) line.applyOptions(options); else line = series.createPriceLine(options)
     }
     if (placement.price !== null && placement.price > 0) preview(placement.price)
@@ -231,6 +243,8 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, se
     chart.subscribeCrosshairMove(move); chart.subscribeClick(click)
     return () => { chart.unsubscribeCrosshairMove(move); chart.unsubscribeClick(click); if (line) series.removePriceLine(line); chart.applyOptions({ handleScroll: true, handleScale: { mouseWheel: false, pinch: true, axisPressedMouseMove: true, axisDoubleClickReset: true } }) }
   }, [placement, onPick])
+
+  useDraftStopAnnotation(draftAnnotation, chartRef, seriesRef, placement?.price ?? null)
 
   return (
     <section className={`chart-pane${placement ? " placing-stop" : ""}`} aria-label={`Chart ${id + 1}: ${instrument} ${timeframe} ${instrument === '6E' ? 'trade prices' : 'bid'}`}
@@ -250,7 +264,10 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, se
         <span>Hold a position button and drag vertically:</span>
         {stopDrag.choices.map(p => <button key={p.id} onPointerDown={event => stopDrag.begin(p.id, event.nativeEvent)}>{p.id} · {p.direction} · SL {p.stopPrice.toFixed(5)}</button>)}
       </div>}
-      <div ref={container} className="chart-canvas" aria-hidden="true" />
+      <div className="chart-plot">
+        <div ref={container} className="chart-canvas" aria-hidden="true" />
+        {placement?.price != null && onConfirmStop && <DraftStopAnnotation element={draftAnnotation} price={placement.price} onConfirm={onConfirmStop} disabled={confirmStopDisabled} />}
+      </div>
     </section>
   )
 })

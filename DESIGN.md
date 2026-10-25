@@ -73,7 +73,7 @@ components:
     padding: "6px 10px"
   results-navigation:
     padding: "12px 0"
-  trading-dock:
+  trading-toolbar:
     backgroundColor: "{colors.surface}"
     typography: "{typography.compact}"
     padding: "8px 14px"
@@ -99,17 +99,21 @@ Slate backgrounds separate the application canvas, chart, controls, and toolbars
 
 Muted aqua identifies ready states, positive PnL, and realized performance. Restrained red identifies negative PnL and errors; amber identifies coverage warnings and the cash curve. Buy and Sell have tinted surfaces plus explicit labels. Focus uses the brighter aqua outline.
 
-Chart series keep their own observed conventions: white up candles, blue (`#2962ff`) down candles, white borders and wicks, no grid, and a dashed gray crosshair. Confirmed stop lines use salmon (`#ef9a9a`), with explicit SL 1 / SL 2 labels. Pending stops are dashed; active stops are solid. Draft stops use the focus color. Chart annotations show identity, pip distance and signed net outcome without duplicating the exact price on the Y-axis. Nearby labels remain apart with connectors to their lines. SL numbering follows original entry-ID order within each setup, including resolved entries, so SL 2 retains its identity when SL 1 leaves. Distances use the existing forex-style pip (0.0001) convention, including 6E-derived sessions; amounts show net stop-level outcomes including commissions, with pending values marked as estimates. Do not reinterpret candle direction as the interface's positive/negative palette.
+Chart series keep their own observed conventions: white up candles, blue (`#2962ff`) down candles, white borders and wicks, no grid, and a dashed gray crosshair. Confirmed stop lines use salmon (`#ef9a9a`), with explicit SL 1 / SL 2 labels. Pending stops are dashed; active stops are solid. Draft stops use the focus color. Entry references use aqua horizontal lines with Entry 1 / Entry 2 labels. Pending entries are dotted, explicitly estimated from the observed quote; filled entries are dashed at their actual durable fill price. Coincident entries share a line with both identities. Automatic price scales include entry references; fixed manual ranges are respected. The entry level is gross breakeven before commissions.
+
+Bollinger and Ichimoku price lines render behind candle bodies and wicks through native series ordering. The cloud retains its bottom rendering layer. Wheel zoom stays right-anchored; click-hold dragging pans each chart independently. The left edge is free, the future edge remains bounded, and manual views persist without replay-follow until recentered at the latest edge.
+
+Chart annotations show identity, pip distance and signed net outcome without duplicating the exact price on the Y-axis. Nearby labels remain apart with connectors to their lines. SL numbering follows original entry-ID order within each setup, including resolved entries, so SL 2 retains its identity when SL 1 leaves. Distances use the existing forex-style pip (0.0001) convention, including 6E-derived sessions; amounts show net stop-level outcomes including commissions, with pending values marked as estimates. Do not reinterpret candle direction as the interface's positive/negative palette.
 
 ## Typography
 
 Keep the existing `Inter, system-ui, sans-serif` stack without adding a font download. Controls inherit it; charts retain their chart-library typography. Time, prices, PnL, tables, and statistics use tabular numerals where styled by the application.
 
-Setup uses a 28px heading; Results uses 26px. The app name and Setup section titles use 17px. Supporting copy and labels are mainly 12–14px; Trading dock text is 12px. Mobile Setup and dock entry fields use 16px text. Financial units and UTC remain visible in labels.
+Setup uses a 28px heading; Results uses 26px. The app name and Setup section titles use 17px. Supporting copy and labels are mainly 12–14px; Trading toolbar text is 12px. Mobile Setup and trading entry fields use 16px text. Financial units and UTC remain visible in labels.
 
 ## Layout
 
-The shell fills `100dvh`, with a compact header and phase-specific content. Desktop Trading gives remaining height to one chart, two equal columns, or a large left chart beside two stacked right charts. A replay strip sits above and the trading dock stays below. At 900px and below, panes stack inside a scrolling chart workspace, with at least 300px per pane. Chart panes have no outer card border or rounded corners; narrow 4px gaps separate them. Pane toolbars reserve 32px for controls and a second row for indicator readiness.
+The shell fills `100dvh`, with a compact header and phase-specific content. Desktop Trading gives remaining height to one chart, two equal columns, or a large left chart beside two stacked right charts. Replay and trading controls share a compact toolbar above the charts. No permanent bottom dock remains; active positions add compact rows only while pending or open. At 900px and below, panes stack inside a scrolling chart workspace, with at least 300px per pane. Chart panes have no outer card border or rounded corners; narrow 4px gaps separate them. Pane toolbars reserve 32px for controls and a second row for indicator readiness.
 
 Setup is centered at a maximum 1080px width, with 36px 32px padding. Its vertical hierarchy is Historical period, Trading account, then collapsed Advanced settings. Dates, the daily history timeline, presets, and readiness lead the first viewport; account and advanced controls follow in a scrolling form. The Start backtest footer remains visible outside that scroll area. Results uses 28px padding, flat statistic groups, and section dividers. Results scrolls independently of the header.
 
@@ -133,7 +137,7 @@ Setup's responsive daily timeline uses two labeled range handles, explicit From 
 
 Results navigation uses three labeled buttons with `aria-pressed`; the active button has the action surface and focus-color border. Chart layout uses native radio inputs. Indicator settings expand as a bounded overlay attached to the pane toolbar.
 
-The trading dock groups sizing, Buy/Sell, slot count, and execution context. Entries automatically join the single active setup, with at most two same-direction submissions before it resolves. Stop placement adds a labeled review area with estimate, confirm, cancel, and keyboard price entry. Open and pending positions remain compact inline records. Preserve these explicit actions and status labels. Existing stops also support vertical dragging within a 7px hit target while paused. Overlapping stops open a position-ID chooser; hold the chosen button and drag. Show draft price and risk without saving, commit on valid release, and cancel on Escape or pointer cancellation. Keep Modify SL and keyboard price entry available.
+The top trading toolbar groups sizing, Buy/Sell, slot count, setup status, and execution context. Execution assumptions and the distinction between entry price and commission-adjusted breakeven remain available in collapsed Execution details. Entries automatically join the single active setup, with at most two same-direction submissions before it resolves. Stop placement adds a labeled review area with estimate, confirm, cancel, and keyboard price entry. Once a level is selected, a keyboard-accessible on-chart tick sits immediately left of its draft label, inside the plot boundary. It uses the same validation as the toolbar confirmation. Escape cancels the draft. On mobile the chart and its confirmation can be scrolled into view. Open and pending positions remain compact inline records. Preserve these explicit actions and status labels. Existing stops also support vertical dragging within a 7px hit target while paused. Overlapping stops open a position-ID chooser; hold the chosen button and drag. Show draft price and risk without saving, commit on valid release, and cancel on Escape or pointer cancellation. Keep Modify SL and keyboard price entry available.
 
 Session management opens in a native dialog positioned at the right on desktop and inset 8px on mobile. Results statistics are unboxed; charts and tables follow their section headings and explanatory text.
 

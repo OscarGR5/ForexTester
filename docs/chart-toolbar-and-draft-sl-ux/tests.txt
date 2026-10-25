@@ -1,0 +1,15 @@
+
+> test
+> vitest run --maxWorkers=2
+
+
+ RUN  v5.0.5 /home/admin/Documents/Trading/ForexTester
+
+
+ Test Files  48 passed (48)
+      Tests  610 passed (610)
+   Start at  08:40:28
+   Duration  49.72s (tests 87%, environment 9%, import 3%, transform 1%)
+
+    Isolate  48 workers spawned · ~363ms startup each (spawn + environment, per file)
+             at least ~8.34s faster with isolate: false — reuses workers across files instead of one per file

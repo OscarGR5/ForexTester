@@ -1,0 +1,24 @@
+{
+  "isolatedSessions": "/tmp/forextester-chart-ux-RQG6Bb",
+  "providerRequests": 0,
+  "paidSubmissions": 0,
+  "screenshots": [
+    "docs/chart-toolbar-and-draft-sl-ux/before-1440.png",
+    "docs/chart-toolbar-and-draft-sl-ux/before-390.png"
+  ],
+  "errors": [],
+  "checks": {
+    "before-1440": {
+      "x": 8,
+      "y": 181,
+      "width": 1424,
+      "height": 727
+    },
+    "before-390": {
+      "x": 0,
+      "y": 296,
+      "width": 390,
+      "height": 356
+    }
+  }
+}
