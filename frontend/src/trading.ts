@@ -336,6 +336,17 @@ export function markPosition(position: Position, quote: Quote | null) {
     estimatedNetPnlUsd: gross.usd - position.entryCommissionUsd - estimatedExitCommissionUsd }
 }
 
+export function combinedOpenPnl(state: Pick<TradingState, 'positions' | 'quote' | 'account'>) {
+  if (!state.positions.length || !Number.isFinite(state.account.referenceBalance) || state.account.referenceBalance <= 0) return null
+  let estimatedNetPnlUsd = 0
+  for (const position of state.positions) {
+    const mark = markPosition(position, state.quote)
+    if (!mark || !Number.isFinite(mark.estimatedNetPnlUsd)) return null
+    estimatedNetPnlUsd += mark.estimatedNetPnlUsd
+  }
+  return { estimatedNetPnlUsd, percent: estimatedNetPnlUsd / state.account.referenceBalance * 100 }
+}
+
 export function formatTradingNumber(value: number, digits: number): string {
   const rounded = value.toFixed(digits)
   return Number(rounded) === 0 ? (0).toFixed(digits) : rounded

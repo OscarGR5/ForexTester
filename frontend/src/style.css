@@ -432,10 +432,12 @@ button:disabled { opacity: 0.45; cursor: default; }
 /* Entry controls stay fixed; only position information can scroll horizontally. */
 .dock-controls { margin-left: 0; flex: 1 1 100%; min-width: 0; flex-wrap: nowrap; gap: 8px; }
 .dock-controls > label, .dock-controls > button, .dock-controls > span { flex: none; white-space: nowrap; }
-.active-positions { display: flex; flex: 1 1 0; min-width: 0; width: auto; flex-wrap: nowrap; align-items: center; gap: 12px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; }
+.active-positions { display: flex; flex: 1 1 0; min-width: 0; width: auto; flex-wrap: nowrap; align-items: center; gap: 12px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
 .active-positions > div { display: flex; flex: none; flex-wrap: nowrap; gap: 8px; padding: 0; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.active-positions .positive, .entry-buy { color: #75c4b5; }
-.active-positions .negative, .entry-sell { color: #e2a2a6; }
+.active-positions .positive, .open-total .positive, .entry-buy { color: #75c4b5; }
+.active-positions .negative, .open-total .negative, .entry-sell { color: #e2a2a6; }
+.open-total { display: flex; flex: none; align-items: center; gap: 6px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.open-total > span { color: #b2b5be; }
 .draft-stop-annotation { min-height: 30px; padding-left: 8px; touch-action: none; }
 .draft-stop-annotation:has(.confirm-draft-stop:not([hidden])) { padding-left: 0; }
 .draft-stop-annotation[data-invalid="true"] { border-color: #e2a2a6; color: #e2a2a6; }

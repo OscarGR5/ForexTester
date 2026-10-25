@@ -1,8 +1,9 @@
 import type { StopOverlay } from './stopOverlays'
 import { observedPrice, quoteCandle } from './trading'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { useTradeKeyboard } from './useTradeKeyboard'
 import type { useTrading } from './useTrading'
-import { activeSetupId, canRequestOrder, entryRequestError, automaticSetupError, stopModificationError, markPosition, combinedRisk, type Direction, type TradingState } from './trading'
+import { activeSetupId, canRequestOrder, entryRequestError, automaticSetupError, stopModificationError, markPosition, combinedOpenPnl, combinedRisk, type Direction, type TradingState } from './trading'
 import { plannedRisk, sizeFromRisk, type EntrySizing } from './risk'
 export interface StopDraft { direction: Direction; sizing: EntrySizing; setupId: string | null; positionId?: string; slot: number; price: number | null }
 export function draftObservedPrice(state: TradingState, draft: StopDraft): number | null {
@@ -25,19 +26,22 @@ export function draftEstimate(state: TradingState, draft: StopDraft) {
       (!lots ? 'The selected risk rounds below the minimum lot size.' : risk! > combinedRisk(state).remainingUsd + 1e-7 ? 'Estimated risk exceeds the remaining combined risk budget.' : null)
   return { error, lots, risk }
 }
-export function TradingDock({ reviewing = false, trading, draft, setDraft, stops, onConfirm }: { reviewing?: boolean; onConfirm: () => void; stops: StopOverlay[]; trading: ReturnType<typeof useTrading>; draft: StopDraft | null; setDraft: (draft: StopDraft | null) => void }) {
+export function TradingDock({ reviewing = false, shortcutsBlocked = false, trading, draft, setDraft, stops, onConfirm }: { reviewing?: boolean; shortcutsBlocked?: boolean; onConfirm: () => void; stops: StopOverlay[]; trading: ReturnType<typeof useTrading>; draft: StopDraft | null; setDraft: (draft: StopDraft | null) => void }) {
   const { state, permission } = trading
   const [risk, setRisk] = useState('1')
+  const buy = useRef<HTMLButtonElement>(null), sell = useRef<HTMLButtonElement>(null)
+  useTradeKeyboard({ buy, sell, blocked: shortcutsBlocked || reviewing || !!draft })
   const canOrder = canRequestOrder(permission), slots = state.pending.length + state.positions.length
   const setupId = activeSetupId(state)
   const estimate = draft ? draftEstimate(state, draft) : null
+  const total = combinedOpenPnl(state)
   const begin = (direction: Direction) => setDraft({ direction, sizing: { mode: 'risk', riskPercent: Number(risk) }, setupId, slot: slots + 1, price: null })
   return <section className="trading-toolbar" aria-label="Simulated trading">
     <div className="dock-controls">
       <label>Risk (%)<input aria-label="Risk per entry (%)" type="number" min="0" max="100" step="any" value={risk} onChange={e=>setRisk(e.target.value)} disabled={!!draft}/></label>
 
-      <button className="buy-button" disabled={!canOrder || slots >= 2 || !!automaticSetupError(state,'buy',setupId)} onClick={()=>begin('buy')}>Buy</button>
-      <button className="sell-button" disabled={!canOrder || slots >= 2 || !!automaticSetupError(state,'sell',setupId)} onClick={()=>begin('sell')}>Sell</button>
+      <button ref={buy} className="buy-button" aria-keyshortcuts="B" disabled={!canOrder || slots >= 2 || !!automaticSetupError(state,'buy',setupId)} onClick={()=>begin('buy')}>Buy</button>
+      <button ref={sell} className="sell-button" aria-keyshortcuts="S" disabled={!canOrder || slots >= 2 || !!automaticSetupError(state,'sell',setupId)} onClick={()=>begin('sell')}>Sell</button>
       <span>{slots} / 2 slots</span>
     {!reviewing && slots > 0 && <div className="active-positions" role="region" aria-label="Pending and open positions" tabIndex={0}>
       {stops.map(stop => {
@@ -56,6 +60,10 @@ export function TradingDock({ reviewing = false, trading, draft, setDraft, stops
           </>}
         </div>
       })}
+    </div>}
+    {!reviewing && state.positions.length > 0 && <div className="open-total" aria-label="Open total">
+      <span>Open total</span>
+      <strong className={total ? total.estimatedNetPnlUsd < 0 ? 'negative' : 'positive' : ''}>{total ? `${total.estimatedNetPnlUsd < 0 ? '-' : ''}$${Math.abs(total.estimatedNetPnlUsd).toFixed(2)} (${total.percent.toFixed(2)}%)` : 'PnL unavailable'}</strong>
     </div>}
     {(permission.playing || !permission.hasFuture) && <span className="trading-message">{permission.playing ? 'Pause to trade' : 'End of history; positions remain open'}</span>}
     </div>

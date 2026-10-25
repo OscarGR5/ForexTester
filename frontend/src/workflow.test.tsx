@@ -18,6 +18,7 @@ import { recordDigest, historyFingerprint } from './sessionCodec'
 import { sessionHistory, sessionSimulation } from './sessionFixtures'
 import { createEquityLedger } from './equity'
 import { lifecycleOf } from './sessionTypes'
+import { combinedOpenPnl, markPosition } from './trading'
 vi.mock('lightweight-charts', () => ({
   CrosshairMode: { Normal: 0 }, CandlestickSeries: {}, LineSeries: {}, LineStyle: { Solid: 0, Dashed: 2, Dotted: 1 }, ColorType: { Solid: 'solid' },
   createChart: vi.fn(() => {
@@ -925,3 +926,119 @@ async function dragStop(from: number, to: number) {
  await act(async()=>{pointer('pointerdown',from);pointer('pointermove',to);pointer('pointerup',to)})
  prices.mockRestore();coordinates.mockRestore()
 }
+
+async function tradeKey(key = 'b', target: EventTarget = window, init: KeyboardEventInit = {}) {
+ const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init })
+ await act(async () => target.dispatchEvent(event))
+ return event
+}
+it.each(['b', 's'])('confirms initial and second %s entries through the existing SL workflow, preserving risk and enforcing setup limits', async key => {
+ await start(); await input('Risk per entry (%)', '.4')
+ const stop = key === 'b' ? 1.097 : 1.103
+ expect((await tradeKey(key)).defaultPrevented).toBe(true)
+ expect(host.querySelector('.stop-placement')?.textContent).toContain(`${key === 'b' ? 'Buy' : 'Sell'} · slot 1`)
+ expect(host.querySelector('.active-positions')).toBeNull()
+ await pick(stop)
+ expect(host.querySelector('.active-positions')).toBeNull()
+ expect((await tradeKey(key)).defaultPrevented).toBe(false)
+ await click('Confirm order')
+ expect(host.querySelector('.active-positions')?.textContent).toContain('0.4% risk')
+ const other = key === 'b' ? 's' : 'b'
+ expect((await tradeKey(other)).defaultPrevented).toBe(false)
+ await click('Next Candle')
+ await input('Risk per entry (%)', '.2')
+ expect((await tradeKey(key.toUpperCase())).defaultPrevented).toBe(true)
+ expect(host.querySelector('.stop-placement')?.textContent).toContain('slot 2')
+ await pick(stop); await click('Confirm order')
+ expect(host.querySelector('.active-positions')?.textContent).toContain('0.2% risk')
+ for (const letter of ['b', 's']) expect((await tradeKey(letter)).defaultPrevented).toBe(false)
+ await click('Next Candle'); await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
+ const state = (await disk.storage.list()).sessions[0].checkpoint.trading
+ expect(state.pending).toHaveLength(0); expect(state.positions).toHaveLength(2)
+ expect(state.setups).toHaveLength(1)
+ expect(state.positions[0].setupId).toBe(state.positions[1].setupId)
+ expect(state.positions.map(p => p.requestedRiskPercent)).toEqual([.4, .2])
+})
+it('blocks trade keys for editing, panels, playback, historical review, draft placement, dragging, and finished lifecycle', async () => {
+ await mount(); expect((await tradeKey()).defaultPrevented).toBe(false); await load()
+ const risk = host.querySelector<HTMLInputElement>('[aria-label="Risk per entry (%)"]')!
+ risk.focus(); expect((await tradeKey()).defaultPrevented).toBe(false); risk.blur()
+ for (const selector of ['.indicator-controls', '.execution-details']) {
+  const panel = host.querySelector<HTMLDetailsElement>(selector)!
+  await act(async () => { panel.open = true })
+  expect((await tradeKey()).defaultPrevented).toBe(false)
+  await act(async () => { panel.open = false })
+ }
+ await click('Sessions / settings'); expect((await tradeKey()).defaultPrevented).toBe(false); await click('Close management')
+ await click('Play'); expect((await tradeKey()).defaultPrevented).toBe(false); await click('Pause')
+ await tradeKey('b'); await act(async () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })))
+ expect(host.querySelector('.stop-placement')).toBeNull()
+ await select('Chart 1 timeframe', 'M5')
+ await order('Buy', 1.097)
+ expect(host.querySelectorAll('.active-positions [data-order-id]'), host.textContent!).toHaveLength(1)
+ expect((await shortcut('ArrowRight')).defaultPrevented, host.textContent!).toBe(true)
+ expect(host.querySelectorAll('.active-positions [data-position-id]'), host.textContent!).toHaveLength(1)
+ await shortcut('ArrowLeft')
+ expect(host.querySelector('.history-review')).not.toBeNull()
+ expect((await tradeKey()).defaultPrevented).toBe(false)
+ await click('Return to current replay')
+ expect(host.querySelectorAll('.active-positions [data-position-id]')).toHaveLength(1)
+ expect(button('Buy').matches(':disabled')).toBe(false)
+ const canvas = host.querySelector<HTMLElement>('.chart-canvas')!, series = chartForCanvas(canvas).addSeries.mock.results[0].value as ISeriesApi<'Candlestick'>
+ vi.spyOn(series, 'priceToCoordinate').mockReturnValue(100 as ReturnType<typeof series.priceToCoordinate>)
+ vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, width: 800, height: 500 } as DOMRect)
+ Object.assign(canvas, { setPointerCapture: () => {}, hasPointerCapture: () => false, releasePointerCapture: () => {} })
+ const pointer = new MouseEvent('pointerdown', { bubbles: true, cancelable: true, clientX: 80, clientY: 100, button: 0 })
+ Object.defineProperty(pointer, 'pointerId', { value: 1 })
+ await act(async () => canvas.dispatchEvent(pointer))
+ expect(host.querySelector('.stop-drag-status')).not.toBeNull()
+ expect((await tradeKey()).defaultPrevented).toBe(false)
+ await act(async () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })))
+ expect(host.querySelector('.stop-drag-status')).toBeNull()
+ await click('Finish backtest'); await until(() => host.querySelector('.phase-finished'))
+ expect((await tradeKey()).defaultPrevented).toBe(false)
+})
+it('trade shortcuts respect every session guard and an outstanding finish confirmation', async () => {
+ await start()
+ const original = persistence.useSessionPersistence
+ let guards: Partial<ReturnType<typeof original>> = {}
+ vi.spyOn(persistence, 'useSessionPersistence').mockImplementation(options => ({ ...original(options), ...guards }))
+ for (const guard of [{ initialized: false }, { busy: true }, { conflict: true }, { awaitingChoice: true }]) {
+  guards = guard; await act(async () => root.render(<StrictMode><App/></StrictMode>))
+  for (const key of ['b', 's']) expect((await tradeKey(key)).defaultPrevented).toBe(false)
+  expect(host.querySelector('.stop-placement')).toBeNull()
+ }
+ let release!: () => void
+ guards = { flush: () => new Promise<void>(resolve => { release = resolve }) }
+ await act(async () => root.render(<StrictMode><App/></StrictMode>))
+ await click('Finish backtest'); expect((await tradeKey()).defaultPrevented).toBe(false)
+ vi.mocked(window.confirm).mockReturnValueOnce(false)
+ await act(async () => release())
+ expect((await tradeKey()).defaultPrevented).toBe(true)
+})
+it('updates individual and combined net PnL through quotes, close, journal and saved-session restoration', async () => {
+ await start(); await order('Buy', 1.097); await click('Next Candle')
+ await order('Buy', 1.096); await click('Next Candle')
+ const total = () => host.querySelector('.open-total strong')!.textContent
+ const firstTotal = total()
+ await click('Next Candle'); expect(total()).not.toBe(firstTotal)
+ await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
+ let saved = (await disk.storage.list()).sessions[0], state = saved.checkpoint.trading
+ const first = state.positions[0].id
+ const accountBefore = host.querySelector('[aria-label="Account PnL"]')!.textContent
+ expect(combinedOpenPnl(state)!.estimatedNetPnlUsd).toBeCloseTo(state.positions.reduce((sum, p) => sum + markPosition(p, state.quote)!.estimatedNetPnlUsd, 0), 10)
+ await click(`Close ${first}`); await click('Next Candle'); await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
+ saved = (await disk.storage.list()).sessions[0]; state = saved.checkpoint.trading
+ expect(state.closed).toHaveLength(1); expect(state.positions).toHaveLength(1)
+ const individual = host.querySelector('.active-positions [data-position-id] span.positive, .active-positions [data-position-id] span.negative')!.textContent!
+ expect(individual.replace('Est. net ', '')).toBe(total())
+ expect(host.querySelector('[aria-label="Account PnL"]')!.textContent).not.toBe(accountBefore)
+ const expectedTotal = total(), account = host.querySelector('[aria-label="Account PnL"]')!.textContent
+ await act(async () => root.unmount()); root = createRoot(host); await mount(); await click('Resume backtest'); await until(() => host.querySelector('.phase-trading'))
+ expect(total()).toBe(expectedTotal)
+ expect(host.querySelector('[aria-label="Account PnL"]')!.textContent).toBe(account)
+ await click('Finish backtest'); await until(() => host.querySelector('.phase-finished'))
+ await until(() => !button('Journal').matches(':disabled')); await click('Journal'); await select('Journal view', 'positions')
+ expect(host.querySelector('.journal-table-scroll')!.textContent).toContain(first)
+ await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
+})
