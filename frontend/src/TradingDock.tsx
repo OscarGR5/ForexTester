@@ -35,6 +35,7 @@ export function TradingDock({ reviewing = false, shortcutsBlocked = false, tradi
   const setupId = activeSetupId(state)
   const estimate = draft ? draftEstimate(state, draft) : null
   const total = combinedOpenPnl(state)
+  const closable = state.positions.filter(position => position.closeRequestedAt === null)
   const begin = (direction: Direction) => setDraft({ direction, sizing: { mode: 'risk', riskPercent: Number(risk) }, setupId, slot: slots + 1, price: null })
   return <section className="trading-toolbar" aria-label="Simulated trading">
     <div className="dock-controls">
@@ -43,6 +44,15 @@ export function TradingDock({ reviewing = false, shortcutsBlocked = false, tradi
       <button ref={buy} className="buy-button" aria-keyshortcuts="B" disabled={!canOrder || slots >= 2 || !!automaticSetupError(state,'buy',setupId)} onClick={()=>begin('buy')}>Buy</button>
       <button ref={sell} className="sell-button" aria-keyshortcuts="S" disabled={!canOrder || slots >= 2 || !!automaticSetupError(state,'sell',setupId)} onClick={()=>begin('sell')}>Sell</button>
       <span>{slots} / 2 slots</span>
+    {draft && <div className="stop-placement" role="region" aria-label="Place stop-loss" tabIndex={0}>
+      <div className="placement-status" tabIndex={0} aria-label="Placement status">
+      <strong>{draft.positionId ? `Modify SL ${draft.positionId}` : `${draft.direction === 'buy' ? 'Buy' : 'Sell'} · slot ${draft.slot}`} · {draft.price === null ? 'Click the price chart to place SL' : `SL ${draft.price.toFixed(5)}`}</strong>
+      {estimate?.error ? <span className="form-error" role="status">{estimate.error}</span> : <span>{draft.positionId ? 'Position risk preview:' : 'Observed-price estimate:'} {estimate?.lots?.toFixed(2)} lots · ${estimate?.risk?.toFixed(2)} risk ({((estimate?.risk ?? 0)/state.account.referenceBalance*100).toFixed(2)}%). {draft.positionId ? 'Effective after the current M1 candle.' : 'Final size checked at entry.'}</span>}
+      </div>
+      <button aria-label={draft.positionId ? 'Confirm SL change' : 'Confirm order'} disabled={!canOrder || !!estimate?.error} onClick={onConfirm}>Confirm</button>
+      <button aria-label="Cancel placement" onClick={()=>setDraft(null)}>Cancel</button>
+      <details><summary aria-label="Enter price with keyboard" title="Enter price with keyboard">Type SL</summary><label>SL price<input aria-label="SL price" type="number" step="0.00001" value={draft.price ?? ''} onChange={e=>setDraft({...draft,price:e.target.value ? Number(e.target.value) : null})}/></label></details>
+    </div>}
     {!reviewing && slots > 0 && <div className="active-positions" role="region" aria-label="Pending and open positions" tabIndex={0}>
       {stops.map(stop => {
         const position = state.positions.find(p => p.id === stop.id)
@@ -65,15 +75,12 @@ export function TradingDock({ reviewing = false, shortcutsBlocked = false, tradi
       <span>Open total</span>
       <strong className={total ? total.estimatedNetPnlUsd < 0 ? 'negative' : 'positive' : ''}>{total ? `${total.estimatedNetPnlUsd < 0 ? '-' : ''}$${Math.abs(total.estimatedNetPnlUsd).toFixed(2)} (${total.percent.toFixed(2)}%)` : 'PnL unavailable'}</strong>
     </div>}
+    {!reviewing && state.positions.length > 0 && <button className="close-all" disabled={!canOrder || closable.length === 0} onClick={() => {
+      // Stable entry-ID order, using exactly the same queued close action as each record.
+      for (const position of [...closable].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0)) trading.close(position.id)
+    }}>Close all</button>}
     {(permission.playing || !permission.hasFuture) && <span className="trading-message">{permission.playing ? 'Pause to trade' : 'End of history; positions remain open'}</span>}
     </div>
-    {draft && <div className="stop-placement" role="region" aria-label="Place stop-loss">
-      <strong>{draft.positionId ? `Modify SL ${draft.positionId}` : `${draft.direction === 'buy' ? 'Buy' : 'Sell'} · slot ${draft.slot}`} · {draft.price === null ? 'Click the price chart to place SL' : `SL ${draft.price.toFixed(5)}`}</strong>
-      {estimate?.error ? <span className="form-error" role="status">{estimate.error}</span> : <span>{draft.positionId ? 'Position risk preview:' : 'Observed-price estimate:'} {estimate?.lots?.toFixed(2)} lots · ${estimate?.risk?.toFixed(2)} risk ({((estimate?.risk ?? 0)/state.account.referenceBalance*100).toFixed(2)}%). {draft.positionId ? 'Effective after the current M1 candle.' : 'Final size checked at entry.'}</span>}
-      <button disabled={!canOrder || !!estimate?.error} onClick={onConfirm}>{draft.positionId ? 'Confirm SL change' : 'Confirm order'}</button>
-      <button onClick={()=>setDraft(null)}>Cancel placement</button>
-      <details><summary>Enter price with keyboard</summary><label>SL price<input aria-label="SL price" type="number" step="0.00001" value={draft.price ?? ''} onChange={e=>setDraft({...draft,price:e.target.value ? Number(e.target.value) : null})}/></label></details>
-    </div>}
     {!reviewing && state.rejected.at(-1)?.rejectedAt === state.observedTimestamp && <p className="form-error" role="alert">Entry rejected: {state.rejected.at(-1)?.reason}</p>}
   </section>
 }

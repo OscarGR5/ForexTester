@@ -230,9 +230,9 @@ export function useSessionPersistence(options: Options) {
       channel.current?.postMessage({ id: record.id, revision: record.revision + 1 })
     } catch (reason) { report(reason) }
   }
-  async function remove(record: SessionRecord) {
+  async function remove(record: SessionRecord, confirmed = false) {
     if (switching.current || busyRef.current) return
-    if (!window.confirm(`Delete “${record.name}” from saved backtests? It cannot be resumed afterward. This cannot be undone in the app.`)) return
+    if (!confirmed && !window.confirm(`Delete “${record.name}” from local storage on this computer? It cannot be resumed afterward. This cannot be undone in the app.`)) return
     switching.current = true; setBusy(true)
     try {
       if (record.id === active.current?.id) {

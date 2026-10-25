@@ -1574,7 +1574,7 @@ describe('session lifecycle and workspace hydration', () => {
     await waitForStartup()
     await until(() => host.querySelectorAll('.saved-session').length === 2)
     const original = [...host.querySelectorAll('.saved-session')].find((row) => row.textContent?.includes('2024-01-09 → 2024-01-10'))!
-    await click(original.querySelector('button')!); await until(() => replayStatus() === 'Paused' && recordCount('Open positions') === 1)
+    await click(original.querySelector<HTMLButtonElement>('.session-actions > button')!); await until(() => replayStatus() === 'Paused' && recordCount('Open positions') === 1)
     expect(host.querySelector('time')!.textContent).toContain('2024-01-09 01:00')
   })
 })
