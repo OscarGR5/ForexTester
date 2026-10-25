@@ -99,7 +99,7 @@ Slate backgrounds separate the application canvas, chart, controls, and toolbars
 
 Muted aqua identifies ready states, positive PnL, and realized performance. Restrained red identifies negative PnL and errors; amber identifies coverage warnings and the cash curve. Buy and Sell have tinted surfaces plus explicit labels. Focus uses the brighter aqua outline.
 
-Chart series keep their own observed conventions: white up candles, blue (`#2962ff`) down candles, white borders and wicks, no grid, and a dashed gray crosshair. Existing stop lines alternate salmon (`#ef9a9a`) and amber; draft stops use the focus color. Do not reinterpret candle direction as the interface's positive/negative palette.
+Chart series keep their own observed conventions: white up candles, blue (`#2962ff`) down candles, white borders and wicks, no grid, and a dashed gray crosshair. Confirmed stop lines use salmon (`#ef9a9a`), with explicit SL 1 / SL 2 labels. Pending stops are dashed; active stops are solid. Draft stops use the focus color. Chart annotations keep nearby stop labels apart while the price axis retains exact values. Distances use the existing forex-style pip (0.0001) convention, including 6E-derived sessions; amounts show net stop-level outcomes including commissions, with pending values marked as estimates. Do not reinterpret candle direction as the interface's positive/negative palette.
 
 ## Typography
 

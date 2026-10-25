@@ -1172,7 +1172,8 @@ describe('stop-loss controls and chart lifecycle', () => {
     await click(button('Load Data'))
     expect(recordCount('Closed trades')).toBe(0)
     expect(recordCount('Open positions')).toBe(0)
-    expect(activeCharts[0].value.addSeries.mock.results[0].value.removePriceLine).toHaveBeenCalledTimes(1)
+    // The same-candle exit removes its confirmed pending line; reload removes the survivor.
+    expect(activeCharts[0].value.addSeries.mock.results[0].value.removePriceLine).toHaveBeenCalledTimes(2)
     await act(async () => vi.advanceTimersByTime(1000))
     expect(replayStatus()).toBe('Ready')
   })

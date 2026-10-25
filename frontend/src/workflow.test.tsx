@@ -6,7 +6,7 @@ import { setTimeout as delay } from 'node:timers/promises'
 import { StrictMode, act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { createChart, type CandlestickData, type UTCTimestamp } from 'lightweight-charts'
+import { createChart, type CandlestickData, type ISeriesApi, type UTCTimestamp } from 'lightweight-charts'
 import { App } from './App'
 import { selectedRange, shiftDate, accountPnl } from './workflow'
 import { PreferenceTabGuard } from './uiPreferenceCleanup'
@@ -18,7 +18,7 @@ import { sessionHistory, sessionSimulation } from './sessionFixtures'
 import { createEquityLedger } from './equity'
 import { lifecycleOf } from './sessionTypes'
 vi.mock('lightweight-charts', () => ({
-  CrosshairMode: { Normal: 0 }, CandlestickSeries: {}, LineSeries: {}, LineStyle: { Dashed: 2, Dotted: 1 }, ColorType: { Solid: 'solid' },
+  CrosshairMode: { Normal: 0 }, CandlestickSeries: {}, LineSeries: {}, LineStyle: { Solid: 0, Dashed: 2, Dotted: 1 }, ColorType: { Solid: 'solid' },
   createChart: vi.fn(() => {
     let range = { from: 0, to: 2 }
     const scale = { getVisibleLogicalRange: () => range, fitContent: vi.fn(),
@@ -42,7 +42,7 @@ vi.mock('lightweight-charts', () => ({
         else values.push({ ...candle })
       }),
       data: () => values,
-      attachPrimitive: vi.fn(), detachPrimitive: vi.fn(), createPriceLine: vi.fn((options) => ({ applyOptions: vi.fn(), options: () => options })), removePriceLine: vi.fn(),
+      attachPrimitive: vi.fn(), detachPrimitive: vi.fn(), createPriceLine: vi.fn((options) => ({ applyOptions: vi.fn(next => Object.assign(options, next)), options: () => options })), removePriceLine: vi.fn(),
       priceScale: () => priceScale, coordinateToPrice: (y: number) => y / 100000,
     }
     }
@@ -479,4 +479,48 @@ it('preserves the production rollover blocker after one-click startup',async()=>
  expect(host.querySelector('[aria-label="Replay status"]')?.textContent).toBe('Rollover blocked')
  expect(button('Next Candle').disabled).toBe(true);expect(button('Play').disabled).toBe(true)
  await until(()=>host.querySelector('.save-state')?.textContent==='Saved');expect((await disk.storage.list()).sessions[0].checkpoint.replay.timestamp).toBe(beginning+60000)
+})
+
+function activeStopLines() {
+ const series = vi.mocked(chart().addSeries).mock.results[0].value as ISeriesApi<'Candlestick'>
+ const removed = vi.mocked(series.removePriceLine).mock.calls.map(([line]) => line)
+ return vi.mocked(series.createPriceLine).mock.results.map(result => result.value).filter(line => !removed.includes(line))
+}
+it('keeps confirmed pending stops visible before a candle and retains the line object on activation', async () => {
+ await start(); await order('Buy', 1.099)
+ const [line] = activeStopLines(); expect(line.options()).toMatchObject({ price: 1.099, color: '#ef9a9a', lineStyle: 2, axisLabelVisible: true })
+ expect(host.querySelector('[data-order-id]')?.textContent).toContain('Pending SL 1 · 1.09900 · ~')
+ await click('Next Candle'); expect(activeStopLines()).toEqual([line]); expect(line.options()).toMatchObject({ lineStyle: 0 })
+ expect(host.querySelector('[data-position-id]')?.textContent).toContain('SL 1 · 1.09900 · 13.0 pips')
+})
+it('restores both pending stops from durable session state and removes a cancelled one immediately', async () => {
+ await start(); await order('Buy', 1.099); await order('Buy', 1.098)
+ expect(activeStopLines()).toHaveLength(2)
+ await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
+ const before = (await disk.storage.list()).sessions[0].checkpoint
+ expect(before.trading.pending).toHaveLength(2)
+ await act(async () => root.unmount()); root = createRoot(host); await mount(); await click('Resume backtest'); await until(() => host.querySelector('.phase-trading'))
+ expect(activeStopLines().map(line => line.options().price)).toEqual([1.099, 1.098])
+ expect(host.querySelectorAll('[data-order-id]')).toHaveLength(2)
+ expect(host.textContent).toContain('Pending SL 2 · 1.09800')
+ await click(`Cancel entry ${before.trading.pending[0].id}`); expect(activeStopLines()).toHaveLength(1)
+ expect(activeStopLines()[0].options().price).toBe(1.098)
+ await click('Next Candle'); expect(activeStopLines()).toHaveLength(1)
+ expect(host.querySelectorAll('[data-position-id]')).toHaveLength(1)
+})
+it('removes a confirmed pending stop when its fill is rejected', async () => {
+ const underlying = globalThis.fetch
+ vi.stubGlobal('fetch', async (path: string, options?: RequestInit) => {
+  const response = await underlying(path, options)
+  if (!path.startsWith('/api/history?')) return response
+  const data = await response.json()
+  for (const side of ['bid', 'ask']) {
+   const next = data[side].find((bar: { timestamp: number }) => bar.timestamp === beginning + 60000)
+   Object.assign(next, { open: 1.101, high: 1.1012, low: 1.1009, close: 1.1011 })
+  }
+  return new Response(JSON.stringify(data))
+ })
+ await start(); await order('Sell', 1.1005); expect(activeStopLines()).toHaveLength(1)
+ await click('Next Candle'); expect(activeStopLines()).toHaveLength(0)
+ expect(host.textContent).toContain('Entry rejected:')
 })

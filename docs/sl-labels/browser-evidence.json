@@ -1,0 +1,674 @@
+{
+  "isolatedSessions": "/tmp/forextester-sl-labels-04cCNX",
+  "providerRequests": 0,
+  "paidSubmissions": 0,
+  "screenshots": [
+    "docs/sl-labels/draft-sl.png",
+    "docs/sl-labels/one-pending-before-fill.png",
+    "docs/sl-labels/one-active-sl.png",
+    "docs/sl-labels/draft-sl.png",
+    "docs/sl-labels/active-and-pending.png",
+    "docs/sl-labels/two-close-active-sls.png",
+    "docs/sl-labels/drag-cancel-preview.png",
+    "docs/sl-labels/drag-2-1-preview.png",
+    "docs/sl-labels/drag-2-2-preview.png",
+    "docs/sl-labels/two-modified-sls.png",
+    "docs/sl-labels/two-sls-2-panes.png",
+    "docs/sl-labels/two-sls-3-panes.png",
+    "docs/sl-labels/two-sls-mobile.png",
+    "docs/sl-labels/draft-sl.png",
+    "docs/sl-labels/draft-sl.png",
+    "docs/sl-labels/two-pending-before-fill.png",
+    "docs/sl-labels/pending-restored-after-backend-restart.png"
+  ],
+  "errors": [],
+  "checks": {
+    "pendingBeforeCandle": [
+      {
+        "stops": [
+          {
+            "id": "2-1",
+            "number": 1,
+            "price": 1.10049,
+            "pending": true,
+            "pips": 4.60000000000127,
+            "netUsd": -5.30000000000127,
+            "label": "Pending SL 1 · 1.10049 · ~4.6 pips · est. -$5.30"
+          }
+        ],
+        "lines": [
+          {
+            "color": "#ef9a9a",
+            "price": 1.10049,
+            "lineStyle": 2,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          }
+        ],
+        "rows": [
+          {
+            "id": "2-1",
+            "y": 415.0517073170739
+          }
+        ]
+      }
+    ],
+    "activeAndPending": [
+      {
+        "stops": [
+          {
+            "id": "2-1",
+            "number": 1,
+            "price": 1.10049,
+            "pending": false,
+            "pips": 4.100000000000215,
+            "netUsd": -4.800000000000215,
+            "label": "SL 1 · 1.10049 · 4.1 pips · -$4.80"
+          },
+          {
+            "id": "2-2",
+            "number": 2,
+            "price": 1.1005,
+            "pending": true,
+            "pips": 3.9999999999995595,
+            "netUsd": -4.69999999999956,
+            "label": "Pending SL 2 · 1.10050 · ~4.0 pips · est. -$4.70"
+          }
+        ],
+        "lines": [
+          {
+            "color": "#ef9a9a",
+            "price": 1.10049,
+            "lineStyle": 0,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          },
+          {
+            "color": "#ef9a9a",
+            "price": 1.1005,
+            "lineStyle": 2,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          }
+        ],
+        "rows": [
+          {
+            "id": "2-1",
+            "y": 415.0517073170739
+          },
+          {
+            "id": "2-2",
+            "y": 414.88292682926794
+          }
+        ]
+      }
+    ],
+    "twoActive": [
+      {
+        "stops": [
+          {
+            "id": "2-1",
+            "number": 1,
+            "price": 1.10049,
+            "pending": false,
+            "pips": 4.100000000000215,
+            "netUsd": -4.800000000000215,
+            "label": "SL 1 · 1.10049 · 4.1 pips · -$4.80"
+          },
+          {
+            "id": "2-2",
+            "number": 2,
+            "price": 1.1005,
+            "pending": false,
+            "pips": 3.9999999999995595,
+            "netUsd": -4.69999999999956,
+            "label": "SL 2 · 1.10050 · 4.0 pips · -$4.70"
+          }
+        ],
+        "lines": [
+          {
+            "color": "#ef9a9a",
+            "price": 1.10049,
+            "lineStyle": 0,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          },
+          {
+            "color": "#ef9a9a",
+            "price": 1.1005,
+            "lineStyle": 0,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          }
+        ],
+        "rows": [
+          {
+            "id": "2-1",
+            "y": 415.0517073170739
+          },
+          {
+            "id": "2-2",
+            "y": 414.88292682926794
+          }
+        ]
+      }
+    ],
+    "modified": [
+      {
+        "stops": [
+          {
+            "id": "2-1",
+            "number": 1,
+            "price": 1.0988,
+            "pending": false,
+            "pips": 20.999999999999908,
+            "netUsd": -21.69999999999991,
+            "label": "SL 1 · 1.09880 · 21.0 pips · -$21.70"
+          },
+          {
+            "id": "2-2",
+            "number": 2,
+            "price": 1.09832,
+            "pending": false,
+            "pips": 25.800000000000267,
+            "netUsd": -26.500000000000266,
+            "label": "SL 2 · 1.09832 · 25.8 pips · -$26.50"
+          }
+        ],
+        "lines": [
+          {
+            "color": "#ef9a9a",
+            "price": 1.0988,
+            "lineStyle": 0,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          },
+          {
+            "color": "#ef9a9a",
+            "price": 1.09832,
+            "lineStyle": 0,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          }
+        ],
+        "rows": [
+          {
+            "id": "2-1",
+            "y": 443.5756097560977
+          },
+          {
+            "id": "2-2",
+            "y": 451.67707317073246
+          }
+        ]
+      }
+    ],
+    "twoPending": [
+      {
+        "stops": [
+          {
+            "id": "2-3",
+            "number": 1,
+            "price": 1.09777,
+            "pending": true,
+            "pips": 29.799999999999827,
+            "netUsd": -30.49999999999983,
+            "label": "Pending SL 1 · 1.09777 · ~29.8 pips · est. -$30.50"
+          },
+          {
+            "id": "2-4",
+            "number": 2,
+            "price": 1.09766,
+            "pending": true,
+            "pips": 30.89999999999815,
+            "netUsd": -31.599999999998154,
+            "label": "Pending SL 2 · 1.09766 · ~30.9 pips · est. -$31.60"
+          }
+        ],
+        "lines": [
+          {
+            "color": "#ef9a9a",
+            "price": 1.09777,
+            "lineStyle": 2,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          },
+          {
+            "color": "#ef9a9a",
+            "price": 1.09766,
+            "lineStyle": 2,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          }
+        ],
+        "rows": [
+          {
+            "id": "2-3",
+            "y": 460.96000000000157
+          },
+          {
+            "id": "2-4",
+            "y": 462.8165853658524
+          }
+        ]
+      },
+      {
+        "stops": [
+          {
+            "id": "2-3",
+            "number": 1,
+            "price": 1.09777,
+            "pending": true,
+            "pips": 29.799999999999827,
+            "netUsd": -30.49999999999983,
+            "label": "Pending SL 1 · 1.09777 · ~29.8 pips · est. -$30.50"
+          },
+          {
+            "id": "2-4",
+            "number": 2,
+            "price": 1.09766,
+            "pending": true,
+            "pips": 30.89999999999815,
+            "netUsd": -31.599999999998154,
+            "label": "Pending SL 2 · 1.09766 · ~30.9 pips · est. -$31.60"
+          }
+        ],
+        "lines": [
+          {
+            "color": "#ef9a9a",
+            "price": 1.09777,
+            "lineStyle": 2,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          },
+          {
+            "color": "#ef9a9a",
+            "price": 1.09766,
+            "lineStyle": 2,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          }
+        ],
+        "rows": [
+          {
+            "id": "2-3",
+            "y": 110.6628914294051
+          },
+          {
+            "id": "2-4",
+            "y": 111.85501222463506
+          }
+        ]
+      },
+      {
+        "stops": [
+          {
+            "id": "2-3",
+            "number": 1,
+            "price": 1.09777,
+            "pending": true,
+            "pips": 29.799999999999827,
+            "netUsd": -30.49999999999983,
+            "label": "Pending SL 1 · 1.09777 · ~29.8 pips · est. -$30.50"
+          },
+          {
+            "id": "2-4",
+            "number": 2,
+            "price": 1.09766,
+            "pending": true,
+            "pips": 30.89999999999815,
+            "netUsd": -31.599999999998154,
+            "label": "Pending SL 2 · 1.09766 · ~30.9 pips · est. -$31.60"
+          }
+        ],
+        "lines": [
+          {
+            "color": "#ef9a9a",
+            "price": 1.09777,
+            "lineStyle": 2,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          },
+          {
+            "color": "#ef9a9a",
+            "price": 1.09766,
+            "lineStyle": 2,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          }
+        ],
+        "rows": [
+          {
+            "id": "2-3",
+            "y": 198.56615384615455
+          },
+          {
+            "id": "2-4",
+            "y": 199.36525328330154
+          }
+        ]
+      }
+    ],
+    "pendingRestored": [
+      {
+        "stops": [
+          {
+            "id": "2-3",
+            "number": 1,
+            "price": 1.09777,
+            "pending": true,
+            "pips": 29.799999999999827,
+            "netUsd": -30.49999999999983,
+            "label": "Pending SL 1 · 1.09777 · ~29.8 pips · est. -$30.50"
+          },
+          {
+            "id": "2-4",
+            "number": 2,
+            "price": 1.09766,
+            "pending": true,
+            "pips": 30.89999999999815,
+            "netUsd": -31.599999999998154,
+            "label": "Pending SL 2 · 1.09766 · ~30.9 pips · est. -$31.60"
+          }
+        ],
+        "lines": [
+          {
+            "color": "#ef9a9a",
+            "price": 1.09777,
+            "lineStyle": 2,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          },
+          {
+            "color": "#ef9a9a",
+            "price": 1.09766,
+            "lineStyle": 2,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          }
+        ],
+        "rows": [
+          {
+            "id": "2-3",
+            "y": 460.96000000000157
+          },
+          {
+            "id": "2-4",
+            "y": 462.8165853658524
+          }
+        ]
+      },
+      {
+        "stops": [
+          {
+            "id": "2-3",
+            "number": 1,
+            "price": 1.09777,
+            "pending": true,
+            "pips": 29.799999999999827,
+            "netUsd": -30.49999999999983,
+            "label": "Pending SL 1 · 1.09777 · ~29.8 pips · est. -$30.50"
+          },
+          {
+            "id": "2-4",
+            "number": 2,
+            "price": 1.09766,
+            "pending": true,
+            "pips": 30.89999999999815,
+            "netUsd": -31.599999999998154,
+            "label": "Pending SL 2 · 1.09766 · ~30.9 pips · est. -$31.60"
+          }
+        ],
+        "lines": [
+          {
+            "color": "#ef9a9a",
+            "price": 1.09777,
+            "lineStyle": 2,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          },
+          {
+            "color": "#ef9a9a",
+            "price": 1.09766,
+            "lineStyle": 2,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          }
+        ],
+        "rows": [
+          {
+            "id": "2-3",
+            "y": 110.6628914294051
+          },
+          {
+            "id": "2-4",
+            "y": 111.85501222463506
+          }
+        ]
+      },
+      {
+        "stops": [
+          {
+            "id": "2-3",
+            "number": 1,
+            "price": 1.09777,
+            "pending": true,
+            "pips": 29.799999999999827,
+            "netUsd": -30.49999999999983,
+            "label": "Pending SL 1 · 1.09777 · ~29.8 pips · est. -$30.50"
+          },
+          {
+            "id": "2-4",
+            "number": 2,
+            "price": 1.09766,
+            "pending": true,
+            "pips": 30.89999999999815,
+            "netUsd": -31.599999999998154,
+            "label": "Pending SL 2 · 1.09766 · ~30.9 pips · est. -$31.60"
+          }
+        ],
+        "lines": [
+          {
+            "color": "#ef9a9a",
+            "price": 1.09777,
+            "lineStyle": 2,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          },
+          {
+            "color": "#ef9a9a",
+            "price": 1.09766,
+            "lineStyle": 2,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          }
+        ],
+        "rows": [
+          {
+            "id": "2-3",
+            "y": 198.56615384615455
+          },
+          {
+            "id": "2-4",
+            "y": 199.36525328330154
+          }
+        ]
+      }
+    ],
+    "cancelPending": [
+      {
+        "stops": [
+          {
+            "id": "2-4",
+            "number": 1,
+            "price": 1.09766,
+            "pending": true,
+            "pips": 30.89999999999815,
+            "netUsd": -31.599999999998154,
+            "label": "Pending SL 1 · 1.09766 · ~30.9 pips · est. -$31.60"
+          }
+        ],
+        "lines": [
+          {
+            "color": "#ef9a9a",
+            "price": 1.09766,
+            "lineStyle": 2,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          }
+        ],
+        "rows": [
+          {
+            "id": "2-4",
+            "y": 462.8165853658524
+          }
+        ]
+      },
+      {
+        "stops": [
+          {
+            "id": "2-4",
+            "number": 1,
+            "price": 1.09766,
+            "pending": true,
+            "pips": 30.89999999999815,
+            "netUsd": -31.599999999998154,
+            "label": "Pending SL 1 · 1.09766 · ~30.9 pips · est. -$31.60"
+          }
+        ],
+        "lines": [
+          {
+            "color": "#ef9a9a",
+            "price": 1.09766,
+            "lineStyle": 2,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          }
+        ],
+        "rows": [
+          {
+            "id": "2-4",
+            "y": 111.85501222463506
+          }
+        ]
+      },
+      {
+        "stops": [
+          {
+            "id": "2-4",
+            "number": 1,
+            "price": 1.09766,
+            "pending": true,
+            "pips": 30.89999999999815,
+            "netUsd": -31.599999999998154,
+            "label": "Pending SL 1 · 1.09766 · ~30.9 pips · est. -$31.60"
+          }
+        ],
+        "lines": [
+          {
+            "color": "#ef9a9a",
+            "price": 1.09766,
+            "lineStyle": 2,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          }
+        ],
+        "rows": [
+          {
+            "id": "2-4",
+            "y": 199.36525328330154
+          }
+        ]
+      }
+    ],
+    "cacheUnchanged": true
+  }
+}
