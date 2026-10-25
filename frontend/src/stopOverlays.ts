@@ -12,14 +12,19 @@ export interface StopOverlay {
   pips: number | null
   netUsd: number | null
   label: string
+  annotation: string
 }
 
 // Presentation only. Pending estimates use the observed quote, never future bars.
-// Entry IDs keep ordering stable when a pending order becomes a position.
-export function stopOverlays(state: Pick<TradingState, 'positions' | 'pending' | 'quote' | 'commission'>, preview?: StopPreview | null): StopOverlay[] {
+// Include resolved entries in the setup's original submission order, so removing
+// SL 1 cannot renumber SL 2. Existing IDs survive fill, close, cancel and restore.
+export function stopOverlays(state: Pick<TradingState, 'positions' | 'pending' | 'closed' | 'cancelled' | 'rejected' | 'quote' | 'commission'>, preview?: StopPreview | null): StopOverlay[] {
+  const entries = [...state.positions, ...state.pending, ...state.closed, ...state.cancelled, ...state.rejected]
+  const entryOrder = (id: string) => Number(id.split('-').at(-1))
   return [...state.positions, ...state.pending]
-    .sort((a, b) => Number(a.id.split('-').at(-1)) - Number(b.id.split('-').at(-1)))
-    .map((entry, index) => {
+    .sort((a, b) => entryOrder(a.id) - entryOrder(b.id))
+    .map((entry) => {
+      const number = entries.filter(other => other.setupId === entry.setupId && entryOrder(other.id) < entryOrder(entry.id)).length + 1
       const position = state.positions.find(position => position.id === entry.id)
       const pending = !position
       const price = !pending && preview?.id === entry.id ? preview.price : entry.stopPrice
@@ -34,7 +39,10 @@ export function stopOverlays(state: Pick<TradingState, 'positions' | 'pending' |
       const pips = outcome ? Math.abs(outcome.pips) : null
       const netUsd = outcome ? outcome.usd - fees : null
       const money = netUsd === null ? null : `${netUsd < 0 ? '-' : netUsd > 0 ? '+' : ''}$${formatTradingNumber(Math.abs(netUsd), 2)}`
-      const label = `${pending ? 'Pending ' : ''}SL ${index + 1} · ${price.toFixed(5)} · ${pips === null ? 'entry pending' : `${pending ? '~' : ''}${formatTradingNumber(pips, 1)} pips · ${pending ? 'est. ' : ''}${money}`}`
-      return { id: entry.id, number: index + 1, price, pending, pips, netUsd, label }
+      const identity = `${pending ? 'Pending ' : ''}SL ${number}`
+      const outcomeText = pips === null ? 'entry pending' : `${pending ? '~' : ''}${formatTradingNumber(pips, 1)} pips · ${pending ? 'est. ' : ''}${money}`
+      const label = `${identity} · ${price.toFixed(5)} · ${outcomeText}`
+      const annotation = `${identity} · ${outcomeText}`
+      return { id: entry.id, number, price, pending, pips, netUsd, label, annotation }
     })
 }

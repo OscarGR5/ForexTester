@@ -505,8 +505,27 @@ it('restores both pending stops from durable session state and removes a cancell
  expect(host.textContent).toContain('Pending SL 2 · 1.09800')
  await click(`Cancel entry ${before.trading.pending[0].id}`); expect(activeStopLines()).toHaveLength(1)
  expect(activeStopLines()[0].options().price).toBe(1.098)
+ expect(host.querySelector('[data-order-id]')?.textContent).toContain('Pending SL 2 · 1.09800')
  await click('Next Candle'); expect(activeStopLines()).toHaveLength(1)
  expect(host.querySelectorAll('[data-position-id]')).toHaveLength(1)
+ expect(host.querySelector('[data-position-id]')?.textContent).toContain('SL 2 · 1.09800')
+})
+it('keeps SL 2 after SL 1 closes and after restoring the existing checkpoint format', async () => {
+ await start(); await order('Buy', 1.099); await order('Buy', 1.098); await click('Next Candle')
+ const [first, second] = [...host.querySelectorAll('[data-position-id]')].map(row => row.getAttribute('data-position-id')!)
+ await click(`Close ${first}`); await click('Next Candle')
+ expect(host.querySelectorAll('[data-position-id]')).toHaveLength(1)
+ expect(host.querySelector(`[data-position-id="${second}"]`)?.textContent).toContain('SL 2 · 1.09800')
+ await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
+ const before = (await disk.storage.list()).sessions[0]
+ await act(async () => root.unmount()); root = createRoot(host); await mount(); await click('Resume backtest'); await until(() => host.querySelector('.phase-trading'))
+ expect(host.querySelector(`[data-position-id="${second}"]`)?.textContent).toContain('SL 2 · 1.09800')
+ expect(activeStopLines()).toHaveLength(1)
+ await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
+ const after = (await disk.storage.list()).sessions[0]
+ expect(after.schemaVersion).toBe(before.schemaVersion)
+ expect(after.historyId).toBe(before.historyId)
+ expect(after.checkpoint.trading).toEqual(before.checkpoint.trading)
 })
 it('removes a confirmed pending stop when its fill is rejected', async () => {
  const underlying = globalThis.fetch

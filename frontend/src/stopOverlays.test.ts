@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { LineStyle, type ISeriesApi, type SeriesAttachedParameter, type IPrimitivePaneRenderer } from 'lightweight-charts'
-import { createTradingState, observeCandle, requestAutomaticEntry, cancelEntry, modifyStop, grossPnl, type TradingState } from './trading'
+import { createTradingState, observeCandle, requestAutomaticEntry, cancelEntry, requestClose, modifyStop, grossPnl, type TradingState } from './trading'
 import { STOP_COLOR, stopOverlays } from './stopOverlays'
 import { StopLabels, StopLines, stopLabelRows } from './stopLabels'
 const permission = { active: true, playing: false, hasFuture: true }
@@ -20,6 +20,7 @@ describe('stop annotations', () => {
   it('shows ordinal, price, existing pip distance and net stop outcome including fees', () => {
     const [stop] = stopOverlays(filled())
     expect(stop.label).toBe('SL 1 · 1.09900 · 10.0 pips · -$10.70')
+    expect(stop.annotation).toBe('SL 1 · 10.0 pips · -$10.70')
     expect(stop.pips).toBeCloseTo(10); expect(stop.netUsd).toBeCloseTo(-10.7)
   })
   it('keeps two lines red with explicit distinct labels and visible axis prices', () => {
@@ -42,6 +43,7 @@ describe('stop annotations', () => {
     const before = stopOverlays(state); lines.update(before)
     expect(before).toHaveLength(2); expect(before.every(stop => stop.pending)).toBe(true)
     expect(before[0].label).toBe('Pending SL 1 · 1.09900 · ~12.0 pips · est. -$12.70')
+    expect(before[0].annotation).toBe('Pending SL 1 · ~12.0 pips · est. -$12.70')
     expect(series.createPriceLine.mock.calls.every(([options]) => options.lineStyle === LineStyle.Dashed)).toBe(true)
     const active = stopOverlays(observeCandle(state, { ...candle, timestamp: 120000 }, undefined, 'single')); lines.update(active)
     expect(active.map(stop => [stop.id, stop.number, stop.price])).toEqual(before.map(stop => [stop.id, stop.number, stop.price]))
@@ -75,6 +77,53 @@ describe('stop annotations', () => {
     expect(stopOverlays(JSON.parse(JSON.stringify(state)) as TradingState)).toEqual(stopOverlays(state))
     expect(stopOverlays({ ...filled(), pending: [] })[0].label).toContain('SL 1')
   })
+  it('retains SL 2 after cancelling SL 1, through pending restore and fill', () => {
+    const before = pending(true), second = before.pending[1]
+    const cancelled = cancelEntry(before, before.pending[0].id)
+    const restored = JSON.parse(JSON.stringify(cancelled)) as TradingState
+    expect(stopOverlays(restored)).toEqual([expect.objectContaining({ id: second.id, number: 2, annotation: expect.stringMatching(/^Pending SL 2 ·/) })])
+    const active = observeCandle(restored, { ...candle, timestamp: 120000 }, undefined, 'single')
+    expect(stopOverlays(active)).toEqual([expect.objectContaining({ id: second.id, number: 2, annotation: expect.stringMatching(/^SL 2 ·/) })])
+  })
+  it.each(['pending', 'open'] as const)('retains SL 2 while %s after SL 1 closes and after restore', state => {
+    let current = observeCandle(createTradingState(), candle, candle)
+    current = requestAutomaticEntry(current, 'buy', .1, 1.099, permission)
+    current = observeCandle(current, { ...candle, timestamp: 120000 }, { ...candle, timestamp: 120000 })
+    current = requestAutomaticEntry(current, 'buy', .1, 1.098, permission)
+    const first = current.positions[0], second = current.pending[0]
+    if (state === 'open') current = requestClose(current, first.id, permission)
+    // In legacy sessions, a bid-side stop can close SL 1 while a missing ask
+    // keeps the second entry pending. With synchronized quotes it fills normally.
+    current = observeCandle(current, { ...candle, timestamp: 180000, low: state === 'pending' ? 1.0989 : candle.low }, state === 'open' ? { ...candle, timestamp: 180000 } : undefined)
+    expect(current.closed.map(entry => entry.id)).toEqual([first.id])
+    expect(current[state === 'pending' ? 'pending' : 'positions'].map(entry => entry.id)).toEqual([second.id])
+    expect(stopOverlays(current)).toEqual([expect.objectContaining({ id: second.id, number: 2, pending: state === 'pending' })])
+    expect(stopOverlays(JSON.parse(JSON.stringify(current)))).toEqual(stopOverlays(current))
+  })
+  it('retains SL 2 after SL 1 exits at its stop', () => {
+    let current = requestAutomaticEntry(initial(), 'buy', .1, 1.0995, permission)
+    current = requestAutomaticEntry(current, 'buy', .1, 1.099, permission)
+    current = observeCandle(current, { ...candle, timestamp: 120000 }, undefined, 'single')
+    const second = current.positions[1]
+    current = observeCandle(current, { ...candle, timestamp: 180000, low: 1.0994 }, undefined, 'single')
+    expect(current.closed[0].exitReason).toBe('stop_loss')
+    expect(stopOverlays(current)).toEqual([expect.objectContaining({ id: second.id, number: 2 })])
+  })
+  it('counts rejected setup entries and orders numeric IDs rather than record arrays or quote times', () => {
+    let current = requestAutomaticEntry(initial(), 'buy', .1, 1.099, permission)
+    current = requestAutomaticEntry(current, 'buy', .1, 1.098, permission)
+    current = observeCandle(current, { ...candle, timestamp: 120000, open: 1.0985, low: 1.0984 }, undefined, 'single')
+    expect(current.rejected).toHaveLength(1)
+    current = { ...current, positions: current.positions.map(p => ({ ...p, id: '1-10' })), rejected: current.rejected.map(p => ({ ...p, id: '1-9' })) }
+    expect(stopOverlays(current)[0]).toMatchObject({ id: '1-10', number: 2 })
+  })
+  it('starts each new setup at SL 1 regardless of prior setup entries and ID gaps', () => {
+    let current = filled()
+    current = observeCandle(requestClose(current, current.positions[0].id, permission), { ...candle, timestamp: 180000 }, undefined, 'single')
+    current = requestAutomaticEntry({ ...current, nextId: 12 }, 'buy', .1, 1.099, permission)
+    expect(current.pending[0].setupId).not.toBe(current.closed[0].setupId)
+    expect(stopOverlays(current)[0]).toMatchObject({ id: '1-12', number: 1 })
+  })
 })
 describe('stop label rendering', () => {
   it.each([0, 1, 50, 99, 100])('separates coincident labels at pane y=%s with exact price anchors', y => {
@@ -90,7 +139,8 @@ describe('stop label rendering', () => {
     const context = { save: vi.fn(), restore: vi.fn(), measureText: () => ({ width: 300 }), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), stroke: vi.fn(), fillRect: vi.fn(), fillText: vi.fn() }
     const target = { useMediaCoordinateSpace: (draw: (scope: unknown) => void) => draw({ context, mediaSize: { width: 500, height: 100 } }) } as unknown as Parameters<IPrimitivePaneRenderer['draw']>[0]
     const draw = () => labels.paneViews()[0].renderer()!.draw(target)
-    draw(); expect(context.fillText.mock.calls.map(call => call[0])).toEqual(stopOverlays(filled(true)).map(stop => stop.label))
+    draw(); expect(context.fillText.mock.calls.map(call => call[0])).toEqual(['SL 1 · 10.0 pips · -$10.70', expect.stringMatching(/^SL 2 · 9\.0 pips · -\$\d+\.\d{2}$/)])
+    expect(context.fillText.mock.calls.every(([text]) => !/1\.099\d{2}/.test(text))).toBe(true)
     expect(context.fillText.mock.calls[0][2]).not.toBe(context.fillText.mock.calls[1][2])
     coordinate.mockReturnValue(-10); draw(); expect(context.fillText).toHaveBeenCalledTimes(2)
     coordinate.mockReturnValue(null); draw(); expect(context.fillText).toHaveBeenCalledTimes(2)

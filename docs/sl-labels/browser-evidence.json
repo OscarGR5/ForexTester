@@ -1,5 +1,5 @@
 {
-  "isolatedSessions": "/tmp/forextester-sl-labels-04cCNX",
+  "isolatedSessions": "/tmp/forextester-sl-labels-MUumtE",
   "providerRequests": 0,
   "paidSubmissions": 0,
   "screenshots": [
@@ -16,10 +16,14 @@
     "docs/sl-labels/two-sls-2-panes.png",
     "docs/sl-labels/two-sls-3-panes.png",
     "docs/sl-labels/two-sls-mobile.png",
+    "docs/sl-labels/sl-2-after-sl-1-close.png",
     "docs/sl-labels/draft-sl.png",
     "docs/sl-labels/draft-sl.png",
     "docs/sl-labels/two-pending-before-fill.png",
-    "docs/sl-labels/pending-restored-after-backend-restart.png"
+    "docs/sl-labels/pending-restored-after-backend-restart.png",
+    "docs/sl-labels/sl-2-after-sl-1-cancel.png",
+    "docs/sl-labels/sl-2-restored-after-cancel.png",
+    "docs/sl-labels/sl-2-filled-after-cancel.png"
   ],
   "errors": [],
   "checks": {
@@ -33,8 +37,12 @@
             "pending": true,
             "pips": 4.60000000000127,
             "netUsd": -5.30000000000127,
-            "label": "Pending SL 1 · 1.10049 · ~4.6 pips · est. -$5.30"
+            "label": "Pending SL 1 · 1.10049 · ~4.6 pips · est. -$5.30",
+            "annotation": "Pending SL 1 · ~4.6 pips · est. -$5.30"
           }
+        ],
+        "annotationText": [
+          "Pending SL 1 · ~4.6 pips · est. -$5.30"
         ],
         "lines": [
           {
@@ -67,7 +75,8 @@
             "pending": false,
             "pips": 4.100000000000215,
             "netUsd": -4.800000000000215,
-            "label": "SL 1 · 1.10049 · 4.1 pips · -$4.80"
+            "label": "SL 1 · 1.10049 · 4.1 pips · -$4.80",
+            "annotation": "SL 1 · 4.1 pips · -$4.80"
           },
           {
             "id": "2-2",
@@ -76,8 +85,13 @@
             "pending": true,
             "pips": 3.9999999999995595,
             "netUsd": -4.69999999999956,
-            "label": "Pending SL 2 · 1.10050 · ~4.0 pips · est. -$4.70"
+            "label": "Pending SL 2 · 1.10050 · ~4.0 pips · est. -$4.70",
+            "annotation": "Pending SL 2 · ~4.0 pips · est. -$4.70"
           }
+        ],
+        "annotationText": [
+          "Pending SL 2 · ~4.0 pips · est. -$4.70",
+          "SL 1 · 4.1 pips · -$4.80"
         ],
         "lines": [
           {
@@ -125,7 +139,8 @@
             "pending": false,
             "pips": 4.100000000000215,
             "netUsd": -4.800000000000215,
-            "label": "SL 1 · 1.10049 · 4.1 pips · -$4.80"
+            "label": "SL 1 · 1.10049 · 4.1 pips · -$4.80",
+            "annotation": "SL 1 · 4.1 pips · -$4.80"
           },
           {
             "id": "2-2",
@@ -134,8 +149,13 @@
             "pending": false,
             "pips": 3.9999999999995595,
             "netUsd": -4.69999999999956,
-            "label": "SL 2 · 1.10050 · 4.0 pips · -$4.70"
+            "label": "SL 2 · 1.10050 · 4.0 pips · -$4.70",
+            "annotation": "SL 2 · 4.0 pips · -$4.70"
           }
+        ],
+        "annotationText": [
+          "SL 2 · 4.0 pips · -$4.70",
+          "SL 1 · 4.1 pips · -$4.80"
         ],
         "lines": [
           {
@@ -183,7 +203,8 @@
             "pending": false,
             "pips": 20.999999999999908,
             "netUsd": -21.69999999999991,
-            "label": "SL 1 · 1.09880 · 21.0 pips · -$21.70"
+            "label": "SL 1 · 1.09880 · 21.0 pips · -$21.70",
+            "annotation": "SL 1 · 21.0 pips · -$21.70"
           },
           {
             "id": "2-2",
@@ -192,8 +213,13 @@
             "pending": false,
             "pips": 25.800000000000267,
             "netUsd": -26.500000000000266,
-            "label": "SL 2 · 1.09832 · 25.8 pips · -$26.50"
+            "label": "SL 2 · 1.09832 · 25.8 pips · -$26.50",
+            "annotation": "SL 2 · 25.8 pips · -$26.50"
           }
+        ],
+        "annotationText": [
+          "SL 1 · 21.0 pips · -$21.70",
+          "SL 2 · 25.8 pips · -$26.50"
         ],
         "lines": [
           {
@@ -231,32 +257,148 @@
         ]
       }
     ],
+    "sl2AfterFirstCloses": [
+      {
+        "stops": [
+          {
+            "id": "2-2",
+            "number": 2,
+            "price": 1.09832,
+            "pending": false,
+            "pips": 25.800000000000267,
+            "netUsd": -26.500000000000266,
+            "label": "SL 2 · 1.09832 · 25.8 pips · -$26.50",
+            "annotation": "SL 2 · 25.8 pips · -$26.50"
+          }
+        ],
+        "annotationText": [
+          "SL 2 · 25.8 pips · -$26.50"
+        ],
+        "lines": [
+          {
+            "color": "#ef9a9a",
+            "price": 1.09832,
+            "lineStyle": 0,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          }
+        ],
+        "rows": [
+          {
+            "id": "2-2",
+            "y": 451.67707317073246
+          }
+        ]
+      },
+      {
+        "stops": [
+          {
+            "id": "2-2",
+            "number": 2,
+            "price": 1.09832,
+            "pending": false,
+            "pips": 25.800000000000267,
+            "netUsd": -26.500000000000266,
+            "label": "SL 2 · 1.09832 · 25.8 pips · -$26.50",
+            "annotation": "SL 2 · 25.8 pips · -$26.50"
+          }
+        ],
+        "annotationText": [
+          "SL 2 · 25.8 pips · -$26.50"
+        ],
+        "lines": [
+          {
+            "color": "#ef9a9a",
+            "price": 1.09832,
+            "lineStyle": 0,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          }
+        ],
+        "rows": [
+          {
+            "id": "2-2",
+            "y": 104.70228745324563
+          }
+        ]
+      },
+      {
+        "stops": [
+          {
+            "id": "2-2",
+            "number": 2,
+            "price": 1.09832,
+            "pending": false,
+            "pips": 25.800000000000267,
+            "netUsd": -26.500000000000266,
+            "label": "SL 2 · 1.09832 · 25.8 pips · -$26.50",
+            "annotation": "SL 2 · 25.8 pips · -$26.50"
+          }
+        ],
+        "annotationText": [
+          "SL 2 · 25.8 pips · -$26.50"
+        ],
+        "lines": [
+          {
+            "color": "#ef9a9a",
+            "price": 1.09832,
+            "lineStyle": 0,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          }
+        ],
+        "rows": [
+          {
+            "id": "2-2",
+            "y": 194.5706566604131
+          }
+        ]
+      }
+    ],
     "twoPending": [
       {
         "stops": [
           {
             "id": "2-3",
             "number": 1,
-            "price": 1.09777,
+            "price": 1.09712,
             "pending": true,
             "pips": 29.799999999999827,
             "netUsd": -30.49999999999983,
-            "label": "Pending SL 1 · 1.09777 · ~29.8 pips · est. -$30.50"
+            "label": "Pending SL 1 · 1.09712 · ~29.8 pips · est. -$30.50",
+            "annotation": "Pending SL 1 · ~29.8 pips · est. -$30.50"
           },
           {
             "id": "2-4",
             "number": 2,
-            "price": 1.09766,
+            "price": 1.09701,
             "pending": true,
-            "pips": 30.89999999999815,
-            "netUsd": -31.599999999998154,
-            "label": "Pending SL 2 · 1.09766 · ~30.9 pips · est. -$31.60"
+            "pips": 30.90000000000037,
+            "netUsd": -31.60000000000037,
+            "label": "Pending SL 2 · 1.09701 · ~30.9 pips · est. -$31.60",
+            "annotation": "Pending SL 2 · ~30.9 pips · est. -$31.60"
           }
+        ],
+        "annotationText": [
+          "Pending SL 1 · ~29.8 pips · est. -$30.50",
+          "Pending SL 2 · ~30.9 pips · est. -$31.60"
         ],
         "lines": [
           {
             "color": "#ef9a9a",
-            "price": 1.09777,
+            "price": 1.09712,
             "lineStyle": 2,
             "lineWidth": 1,
             "lineVisible": true,
@@ -267,7 +409,7 @@
           },
           {
             "color": "#ef9a9a",
-            "price": 1.09766,
+            "price": 1.09701,
             "lineStyle": 2,
             "lineWidth": 1,
             "lineVisible": true,
@@ -280,11 +422,11 @@
         "rows": [
           {
             "id": "2-3",
-            "y": 460.96000000000157
+            "y": 471.93073170731554
           },
           {
             "id": "2-4",
-            "y": 462.8165853658524
+            "y": 473.78731707317013
           }
         ]
       },
@@ -293,26 +435,32 @@
           {
             "id": "2-3",
             "number": 1,
-            "price": 1.09777,
+            "price": 1.09712,
             "pending": true,
             "pips": 29.799999999999827,
             "netUsd": -30.49999999999983,
-            "label": "Pending SL 1 · 1.09777 · ~29.8 pips · est. -$30.50"
+            "label": "Pending SL 1 · 1.09712 · ~29.8 pips · est. -$30.50",
+            "annotation": "Pending SL 1 · ~29.8 pips · est. -$30.50"
           },
           {
             "id": "2-4",
             "number": 2,
-            "price": 1.09766,
+            "price": 1.09701,
             "pending": true,
-            "pips": 30.89999999999815,
-            "netUsd": -31.599999999998154,
-            "label": "Pending SL 2 · 1.09766 · ~30.9 pips · est. -$31.60"
+            "pips": 30.90000000000037,
+            "netUsd": -31.60000000000037,
+            "label": "Pending SL 2 · 1.09701 · ~30.9 pips · est. -$31.60",
+            "annotation": "Pending SL 2 · ~30.9 pips · est. -$31.60"
           }
+        ],
+        "annotationText": [
+          "Pending SL 1 · ~29.8 pips · est. -$30.50",
+          "Pending SL 2 · ~30.9 pips · est. -$31.60"
         ],
         "lines": [
           {
             "color": "#ef9a9a",
-            "price": 1.09777,
+            "price": 1.09712,
             "lineStyle": 2,
             "lineWidth": 1,
             "lineVisible": true,
@@ -323,7 +471,7 @@
           },
           {
             "color": "#ef9a9a",
-            "price": 1.09766,
+            "price": 1.09701,
             "lineStyle": 2,
             "lineWidth": 1,
             "lineVisible": true,
@@ -336,11 +484,11 @@
         "rows": [
           {
             "id": "2-3",
-            "y": 110.6628914294051
+            "y": 117.70724158304547
           },
           {
             "id": "2-4",
-            "y": 111.85501222463506
+            "y": 118.89936237827784
           }
         ]
       },
@@ -349,26 +497,32 @@
           {
             "id": "2-3",
             "number": 1,
-            "price": 1.09777,
+            "price": 1.09712,
             "pending": true,
             "pips": 29.799999999999827,
             "netUsd": -30.49999999999983,
-            "label": "Pending SL 1 · 1.09777 · ~29.8 pips · est. -$30.50"
+            "label": "Pending SL 1 · 1.09712 · ~29.8 pips · est. -$30.50",
+            "annotation": "Pending SL 1 · ~29.8 pips · est. -$30.50"
           },
           {
             "id": "2-4",
             "number": 2,
-            "price": 1.09766,
+            "price": 1.09701,
             "pending": true,
-            "pips": 30.89999999999815,
-            "netUsd": -31.599999999998154,
-            "label": "Pending SL 2 · 1.09766 · ~30.9 pips · est. -$31.60"
+            "pips": 30.90000000000037,
+            "netUsd": -31.60000000000037,
+            "label": "Pending SL 2 · 1.09701 · ~30.9 pips · est. -$31.60",
+            "annotation": "Pending SL 2 · ~30.9 pips · est. -$31.60"
           }
+        ],
+        "annotationText": [
+          "Pending SL 1 · ~29.8 pips · est. -$30.50",
+          "Pending SL 2 · ~30.9 pips · est. -$31.60"
         ],
         "lines": [
           {
             "color": "#ef9a9a",
-            "price": 1.09777,
+            "price": 1.09712,
             "lineStyle": 2,
             "lineWidth": 1,
             "lineVisible": true,
@@ -379,7 +533,7 @@
           },
           {
             "color": "#ef9a9a",
-            "price": 1.09766,
+            "price": 1.09701,
             "lineStyle": 2,
             "lineWidth": 1,
             "lineVisible": true,
@@ -392,11 +546,11 @@
         "rows": [
           {
             "id": "2-3",
-            "y": 198.56615384615455
+            "y": 203.2881050656654
           },
           {
             "id": "2-4",
-            "y": 199.36525328330154
+            "y": 204.08720450281402
           }
         ]
       }
@@ -407,26 +561,32 @@
           {
             "id": "2-3",
             "number": 1,
-            "price": 1.09777,
+            "price": 1.09712,
             "pending": true,
             "pips": 29.799999999999827,
             "netUsd": -30.49999999999983,
-            "label": "Pending SL 1 · 1.09777 · ~29.8 pips · est. -$30.50"
+            "label": "Pending SL 1 · 1.09712 · ~29.8 pips · est. -$30.50",
+            "annotation": "Pending SL 1 · ~29.8 pips · est. -$30.50"
           },
           {
             "id": "2-4",
             "number": 2,
-            "price": 1.09766,
+            "price": 1.09701,
             "pending": true,
-            "pips": 30.89999999999815,
-            "netUsd": -31.599999999998154,
-            "label": "Pending SL 2 · 1.09766 · ~30.9 pips · est. -$31.60"
+            "pips": 30.90000000000037,
+            "netUsd": -31.60000000000037,
+            "label": "Pending SL 2 · 1.09701 · ~30.9 pips · est. -$31.60",
+            "annotation": "Pending SL 2 · ~30.9 pips · est. -$31.60"
           }
+        ],
+        "annotationText": [
+          "Pending SL 1 · ~29.8 pips · est. -$30.50",
+          "Pending SL 2 · ~30.9 pips · est. -$31.60"
         ],
         "lines": [
           {
             "color": "#ef9a9a",
-            "price": 1.09777,
+            "price": 1.09712,
             "lineStyle": 2,
             "lineWidth": 1,
             "lineVisible": true,
@@ -437,7 +597,7 @@
           },
           {
             "color": "#ef9a9a",
-            "price": 1.09766,
+            "price": 1.09701,
             "lineStyle": 2,
             "lineWidth": 1,
             "lineVisible": true,
@@ -450,11 +610,11 @@
         "rows": [
           {
             "id": "2-3",
-            "y": 460.96000000000157
+            "y": 471.93073170731554
           },
           {
             "id": "2-4",
-            "y": 462.8165853658524
+            "y": 473.78731707317013
           }
         ]
       },
@@ -463,26 +623,32 @@
           {
             "id": "2-3",
             "number": 1,
-            "price": 1.09777,
+            "price": 1.09712,
             "pending": true,
             "pips": 29.799999999999827,
             "netUsd": -30.49999999999983,
-            "label": "Pending SL 1 · 1.09777 · ~29.8 pips · est. -$30.50"
+            "label": "Pending SL 1 · 1.09712 · ~29.8 pips · est. -$30.50",
+            "annotation": "Pending SL 1 · ~29.8 pips · est. -$30.50"
           },
           {
             "id": "2-4",
             "number": 2,
-            "price": 1.09766,
+            "price": 1.09701,
             "pending": true,
-            "pips": 30.89999999999815,
-            "netUsd": -31.599999999998154,
-            "label": "Pending SL 2 · 1.09766 · ~30.9 pips · est. -$31.60"
+            "pips": 30.90000000000037,
+            "netUsd": -31.60000000000037,
+            "label": "Pending SL 2 · 1.09701 · ~30.9 pips · est. -$31.60",
+            "annotation": "Pending SL 2 · ~30.9 pips · est. -$31.60"
           }
+        ],
+        "annotationText": [
+          "Pending SL 1 · ~29.8 pips · est. -$30.50",
+          "Pending SL 2 · ~30.9 pips · est. -$31.60"
         ],
         "lines": [
           {
             "color": "#ef9a9a",
-            "price": 1.09777,
+            "price": 1.09712,
             "lineStyle": 2,
             "lineWidth": 1,
             "lineVisible": true,
@@ -493,7 +659,7 @@
           },
           {
             "color": "#ef9a9a",
-            "price": 1.09766,
+            "price": 1.09701,
             "lineStyle": 2,
             "lineWidth": 1,
             "lineVisible": true,
@@ -506,11 +672,11 @@
         "rows": [
           {
             "id": "2-3",
-            "y": 110.6628914294051
+            "y": 117.70724158304547
           },
           {
             "id": "2-4",
-            "y": 111.85501222463506
+            "y": 118.89936237827784
           }
         ]
       },
@@ -519,26 +685,32 @@
           {
             "id": "2-3",
             "number": 1,
-            "price": 1.09777,
+            "price": 1.09712,
             "pending": true,
             "pips": 29.799999999999827,
             "netUsd": -30.49999999999983,
-            "label": "Pending SL 1 · 1.09777 · ~29.8 pips · est. -$30.50"
+            "label": "Pending SL 1 · 1.09712 · ~29.8 pips · est. -$30.50",
+            "annotation": "Pending SL 1 · ~29.8 pips · est. -$30.50"
           },
           {
             "id": "2-4",
             "number": 2,
-            "price": 1.09766,
+            "price": 1.09701,
             "pending": true,
-            "pips": 30.89999999999815,
-            "netUsd": -31.599999999998154,
-            "label": "Pending SL 2 · 1.09766 · ~30.9 pips · est. -$31.60"
+            "pips": 30.90000000000037,
+            "netUsd": -31.60000000000037,
+            "label": "Pending SL 2 · 1.09701 · ~30.9 pips · est. -$31.60",
+            "annotation": "Pending SL 2 · ~30.9 pips · est. -$31.60"
           }
+        ],
+        "annotationText": [
+          "Pending SL 1 · ~29.8 pips · est. -$30.50",
+          "Pending SL 2 · ~30.9 pips · est. -$31.60"
         ],
         "lines": [
           {
             "color": "#ef9a9a",
-            "price": 1.09777,
+            "price": 1.09712,
             "lineStyle": 2,
             "lineWidth": 1,
             "lineVisible": true,
@@ -549,7 +721,7 @@
           },
           {
             "color": "#ef9a9a",
-            "price": 1.09766,
+            "price": 1.09701,
             "lineStyle": 2,
             "lineWidth": 1,
             "lineVisible": true,
@@ -562,11 +734,11 @@
         "rows": [
           {
             "id": "2-3",
-            "y": 198.56615384615455
+            "y": 203.2881050656654
           },
           {
             "id": "2-4",
-            "y": 199.36525328330154
+            "y": 204.08720450281402
           }
         ]
       }
@@ -576,18 +748,22 @@
         "stops": [
           {
             "id": "2-4",
-            "number": 1,
-            "price": 1.09766,
+            "number": 2,
+            "price": 1.09701,
             "pending": true,
-            "pips": 30.89999999999815,
-            "netUsd": -31.599999999998154,
-            "label": "Pending SL 1 · 1.09766 · ~30.9 pips · est. -$31.60"
+            "pips": 30.90000000000037,
+            "netUsd": -31.60000000000037,
+            "label": "Pending SL 2 · 1.09701 · ~30.9 pips · est. -$31.60",
+            "annotation": "Pending SL 2 · ~30.9 pips · est. -$31.60"
           }
+        ],
+        "annotationText": [
+          "Pending SL 2 · ~30.9 pips · est. -$31.60"
         ],
         "lines": [
           {
             "color": "#ef9a9a",
-            "price": 1.09766,
+            "price": 1.09701,
             "lineStyle": 2,
             "lineWidth": 1,
             "lineVisible": true,
@@ -600,7 +776,7 @@
         "rows": [
           {
             "id": "2-4",
-            "y": 462.8165853658524
+            "y": 473.78731707317013
           }
         ]
       },
@@ -608,18 +784,22 @@
         "stops": [
           {
             "id": "2-4",
-            "number": 1,
-            "price": 1.09766,
+            "number": 2,
+            "price": 1.09701,
             "pending": true,
-            "pips": 30.89999999999815,
-            "netUsd": -31.599999999998154,
-            "label": "Pending SL 1 · 1.09766 · ~30.9 pips · est. -$31.60"
+            "pips": 30.90000000000037,
+            "netUsd": -31.60000000000037,
+            "label": "Pending SL 2 · 1.09701 · ~30.9 pips · est. -$31.60",
+            "annotation": "Pending SL 2 · ~30.9 pips · est. -$31.60"
           }
+        ],
+        "annotationText": [
+          "Pending SL 2 · ~30.9 pips · est. -$31.60"
         ],
         "lines": [
           {
             "color": "#ef9a9a",
-            "price": 1.09766,
+            "price": 1.09701,
             "lineStyle": 2,
             "lineWidth": 1,
             "lineVisible": true,
@@ -632,7 +812,7 @@
         "rows": [
           {
             "id": "2-4",
-            "y": 111.85501222463506
+            "y": 118.89936237827784
           }
         ]
       },
@@ -640,18 +820,22 @@
         "stops": [
           {
             "id": "2-4",
-            "number": 1,
-            "price": 1.09766,
+            "number": 2,
+            "price": 1.09701,
             "pending": true,
-            "pips": 30.89999999999815,
-            "netUsd": -31.599999999998154,
-            "label": "Pending SL 1 · 1.09766 · ~30.9 pips · est. -$31.60"
+            "pips": 30.90000000000037,
+            "netUsd": -31.60000000000037,
+            "label": "Pending SL 2 · 1.09701 · ~30.9 pips · est. -$31.60",
+            "annotation": "Pending SL 2 · ~30.9 pips · est. -$31.60"
           }
+        ],
+        "annotationText": [
+          "Pending SL 2 · ~30.9 pips · est. -$31.60"
         ],
         "lines": [
           {
             "color": "#ef9a9a",
-            "price": 1.09766,
+            "price": 1.09701,
             "lineStyle": 2,
             "lineWidth": 1,
             "lineVisible": true,
@@ -664,7 +848,227 @@
         "rows": [
           {
             "id": "2-4",
-            "y": 199.36525328330154
+            "y": 204.08720450281402
+          }
+        ]
+      }
+    ],
+    "sl2RestoredAfterCancel": [
+      {
+        "stops": [
+          {
+            "id": "2-4",
+            "number": 2,
+            "price": 1.09701,
+            "pending": true,
+            "pips": 30.90000000000037,
+            "netUsd": -31.60000000000037,
+            "label": "Pending SL 2 · 1.09701 · ~30.9 pips · est. -$31.60",
+            "annotation": "Pending SL 2 · ~30.9 pips · est. -$31.60"
+          }
+        ],
+        "annotationText": [
+          "Pending SL 2 · ~30.9 pips · est. -$31.60"
+        ],
+        "lines": [
+          {
+            "color": "#ef9a9a",
+            "price": 1.09701,
+            "lineStyle": 2,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          }
+        ],
+        "rows": [
+          {
+            "id": "2-4",
+            "y": 473.78731707317013
+          }
+        ]
+      },
+      {
+        "stops": [
+          {
+            "id": "2-4",
+            "number": 2,
+            "price": 1.09701,
+            "pending": true,
+            "pips": 30.90000000000037,
+            "netUsd": -31.60000000000037,
+            "label": "Pending SL 2 · 1.09701 · ~30.9 pips · est. -$31.60",
+            "annotation": "Pending SL 2 · ~30.9 pips · est. -$31.60"
+          }
+        ],
+        "annotationText": [
+          "Pending SL 2 · ~30.9 pips · est. -$31.60"
+        ],
+        "lines": [
+          {
+            "color": "#ef9a9a",
+            "price": 1.09701,
+            "lineStyle": 2,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          }
+        ],
+        "rows": [
+          {
+            "id": "2-4",
+            "y": 118.89936237827784
+          }
+        ]
+      },
+      {
+        "stops": [
+          {
+            "id": "2-4",
+            "number": 2,
+            "price": 1.09701,
+            "pending": true,
+            "pips": 30.90000000000037,
+            "netUsd": -31.60000000000037,
+            "label": "Pending SL 2 · 1.09701 · ~30.9 pips · est. -$31.60",
+            "annotation": "Pending SL 2 · ~30.9 pips · est. -$31.60"
+          }
+        ],
+        "annotationText": [
+          "Pending SL 2 · ~30.9 pips · est. -$31.60"
+        ],
+        "lines": [
+          {
+            "color": "#ef9a9a",
+            "price": 1.09701,
+            "lineStyle": 2,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          }
+        ],
+        "rows": [
+          {
+            "id": "2-4",
+            "y": 204.08720450281402
+          }
+        ]
+      }
+    ],
+    "sl2FilledAfterCancel": [
+      {
+        "stops": [
+          {
+            "id": "2-4",
+            "number": 2,
+            "price": 1.09701,
+            "pending": false,
+            "pips": 30.90000000000037,
+            "netUsd": -31.60000000000037,
+            "label": "SL 2 · 1.09701 · 30.9 pips · -$31.60",
+            "annotation": "SL 2 · 30.9 pips · -$31.60"
+          }
+        ],
+        "annotationText": [
+          "SL 2 · 30.9 pips · -$31.60"
+        ],
+        "lines": [
+          {
+            "color": "#ef9a9a",
+            "price": 1.09701,
+            "lineStyle": 0,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          }
+        ],
+        "rows": [
+          {
+            "id": "2-4",
+            "y": 473.78731707317013
+          }
+        ]
+      },
+      {
+        "stops": [
+          {
+            "id": "2-4",
+            "number": 2,
+            "price": 1.09701,
+            "pending": false,
+            "pips": 30.90000000000037,
+            "netUsd": -31.60000000000037,
+            "label": "SL 2 · 1.09701 · 30.9 pips · -$31.60",
+            "annotation": "SL 2 · 30.9 pips · -$31.60"
+          }
+        ],
+        "annotationText": [
+          "SL 2 · 30.9 pips · -$31.60"
+        ],
+        "lines": [
+          {
+            "color": "#ef9a9a",
+            "price": 1.09701,
+            "lineStyle": 0,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          }
+        ],
+        "rows": [
+          {
+            "id": "2-4",
+            "y": 118.89936237827784
+          }
+        ]
+      },
+      {
+        "stops": [
+          {
+            "id": "2-4",
+            "number": 2,
+            "price": 1.09701,
+            "pending": false,
+            "pips": 30.90000000000037,
+            "netUsd": -31.60000000000037,
+            "label": "SL 2 · 1.09701 · 30.9 pips · -$31.60",
+            "annotation": "SL 2 · 30.9 pips · -$31.60"
+          }
+        ],
+        "annotationText": [
+          "SL 2 · 30.9 pips · -$31.60"
+        ],
+        "lines": [
+          {
+            "color": "#ef9a9a",
+            "price": 1.09701,
+            "lineStyle": 0,
+            "lineWidth": 1,
+            "lineVisible": true,
+            "axisLabelVisible": true,
+            "title": "",
+            "axisLabelColor": "",
+            "axisLabelTextColor": ""
+          }
+        ],
+        "rows": [
+          {
+            "id": "2-4",
+            "y": 204.08720450281402
           }
         ]
       }

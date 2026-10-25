@@ -31,7 +31,7 @@ await new Promise<void>(resolve => backend.listen(5199, '127.0.0.1', resolve))
 const vite = await createServer({ configFile: false, root: 'frontend', cacheDir: join(directory, 'vite'),
  plugins: [{ name: 'chart-ux-observation', transform(code, id) {
   if (!id.endsWith('/ChartPane.tsx')) return
-  return code.replace('stopLines.current = new StopLines(series)', `globalThis.__uxCharts ??= {}; const record = { chart, series, lines: new Set(), primitive: null }; globalThis.__uxCharts[id] = record; const create = series.createPriceLine.bind(series), remove = series.removePriceLine.bind(series), attach = series.attachPrimitive.bind(series); series.createPriceLine = options => { const line = create(options); record.lines.add(line); return line; }; series.removePriceLine = line => { record.lines.delete(line); remove(line); }; series.attachPrimitive = primitive => { if ('setData' in primitive) record.primitive = primitive; attach(primitive); }; stopLines.current = new StopLines(series)`)
+  return code.replace('stopLines.current = new StopLines(series)', `globalThis.__uxCharts ??= {}; const record = { chart, series, lines: new Set(), primitive: null, annotationText: [] }; globalThis.__uxCharts[id] = record; const create = series.createPriceLine.bind(series), remove = series.removePriceLine.bind(series), attach = series.attachPrimitive.bind(series); series.createPriceLine = options => { const line = create(options); record.lines.add(line); return line; }; series.removePriceLine = line => { record.lines.delete(line); remove(line); }; series.attachPrimitive = primitive => { if ('setData' in primitive) { record.primitive = primitive; const renderer = primitive.paneViews()[0].renderer(), draw = renderer.draw.bind(renderer); renderer.draw = target => { record.annotationText = []; draw({ useMediaCoordinateSpace: action => target.useMediaCoordinateSpace(scope => { const nativeFillText = scope.context.fillText; scope.context.fillText = function(text, ...args) { record.annotationText.push(text); return nativeFillText.call(this, text, ...args); }; try { action(scope); } finally { scope.context.fillText = nativeFillText; } }) }); }; } attach(primitive); }; stopLines.current = new StopLines(series)`)
 
  } }], server: { watch: null, hmr: false, host: '127.0.0.1', port: 5198, strictPort: true, proxy: { '/api': { target: 'http://127.0.0.1:5199', changeOrigin: false } } } })
 await vite.listen()
@@ -49,9 +49,23 @@ async function screenshot(name: string) { const path = `${output}/${name}.png`; 
 async function chartStops() {
  return page.evaluate(() => Object.values((globalThis as any).__uxCharts).slice(0, document.querySelectorAll('.chart-pane').length).map((record: any) => ({
   stops: record.primitive.stops,
+  annotationText: record.annotationText,
   lines: [...record.lines].map((line: any) => line.options()),
   rows: record.primitive.stops.map((stop: any) => ({ id: stop.id, y: record.series.priceToCoordinate(stop.price) })),
  })))
+}
+async function verifyAnnotations(number?: number) {
+ await settle()
+ for (const pane of await chartStops()) {
+  assert.equal(pane.annotationText.length, pane.stops.length)
+  assert.deepEqual([...pane.annotationText].sort(), pane.stops.map((stop: any) => stop.annotation).sort())
+  for (const stop of pane.stops) {
+   assert.ok(!stop.annotation.includes(stop.price.toFixed(5)), 'Canvas must not duplicate the axis price')
+   assert.match(stop.annotation, /SL [12] · ~?[\d.]+ pips · (?:est\. )?[+-]\$[\d.]+/)
+   if (number !== undefined) assert.equal(stop.number, number)
+   assert.ok(pane.lines.some((line: any) => line.price === stop.price && line.axisLabelVisible && line.title === '' && line.color === '#ef9a9a'))
+  }
+ }
 }
 async function point(price: number, chartId = 0) {
  const box = (await page.locator('.chart-canvas').nth(chartId).boundingBox())!
@@ -104,13 +118,14 @@ try {
   assert.equal(pane.stops.length, 1); assert.equal(pane.stops[0].pending, true); assert.match(pane.stops[0].label, /^Pending SL 1 .*pips.*est\./)
   assert.equal(pane.lines[0].axisLabelVisible, true); assert.equal(pane.lines[0].lineStyle, 2)
  }
+ await verifyAnnotations(1)
  evidence.checks.pendingBeforeCandle = await chartStops(); await screenshot('one-pending-before-fill')
  await button('Next Candle').click(); await saved()
  const activeOne = (await record()).checkpoint.trading
  assert.equal(activeOne.positions.length, 1); assert.equal(activeOne.pending.length, 0)
  assert.equal((await chartStops())[0].stops[0].id, pendingOne.trading.pending[0].id)
  assert.equal((await chartStops())[0].stops[0].pending, false)
- await screenshot('one-active-sl')
+ await verifyAnnotations(1); await screenshot('one-active-sl')
  await order(activeOne.positions[0].stopPrice)
  evidence.checks.activeAndPending = await chartStops(); await screenshot('active-and-pending')
  await button('Next Candle').click(); await saved()
@@ -120,7 +135,7 @@ try {
   assert.equal(pane.stops.length, 2); assert.match(pane.stops[0].label, /^SL 1 /); assert.match(pane.stops[1].label, /^SL 2 /)
   assert.ok(pane.lines.every((line: any) => line.color === '#ef9a9a' && line.lineStyle === 0))
  }
- await screenshot('two-close-active-sls'); evidence.checks.twoActive = await chartStops()
+ await verifyAnnotations(); await screenshot('two-close-active-sls'); evidence.checks.twoActive = await chartStops()
  await drag(first, 8, true); await drag(first, 12); await drag(second, 20)
  await screenshot('two-modified-sls'); evidence.checks.modified = await chartStops()
  // Check all pane layouts with real chart rendering and the same confirmed stops.
@@ -132,8 +147,12 @@ try {
  await page.setViewportSize({ width: 390, height: 844 }); await settle(); await screenshot('two-sls-mobile')
  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 390)
  await page.setViewportSize({ width: 1440, height: 1000 }); await settle()
- for (const id of [first, second]) await button(`Close ${id}`).click()
- await button('Next Candle').click(); await saved(); assert.equal((await record()).checkpoint.trading.positions.length, 0)
+ await button(`Close ${first}`).click(); await button('Next Candle').click(); await saved()
+ assert.equal((await record()).checkpoint.trading.positions.length, 1)
+ await verifyAnnotations(2)
+ evidence.checks.sl2AfterFirstCloses = await chartStops(); await screenshot('sl-2-after-sl-1-close')
+ await button(`Close ${second}`).click(); await button('Next Candle').click(); await saved()
+ assert.equal((await record()).checkpoint.trading.positions.length, 0)
  // Two independently confirmed pending stops survive a backend restart and refresh.
  const now = (await record()).checkpoint.trading.quote!.trade!.close
  await order(now - .003); await order(now - .0031)
@@ -151,10 +170,18 @@ try {
  await screenshot('pending-restored-after-backend-restart'); evidence.checks.pendingRestored = await chartStops()
  await button(`Cancel entry ${checkpoint.trading.pending[0].id}`).click(); await saved()
  for (const pane of await chartStops()) assert.equal(pane.stops.length, 1)
- evidence.checks.cancelPending = await chartStops()
+ await verifyAnnotations(2)
+ evidence.checks.cancelPending = await chartStops(); await screenshot('sl-2-after-sl-1-cancel')
+ const cancelled = (await record()).checkpoint
+ await page.reload(); await button('Resume backtest').click(); await page.locator('.chart-canvas').first().waitFor(); await saved()
+ assert.deepEqual((await record()).checkpoint.trading, cancelled.trading)
+ await verifyAnnotations(2)
+ evidence.checks.sl2RestoredAfterCancel = await chartStops(); await screenshot('sl-2-restored-after-cancel')
  await button('Next Candle').click(); await saved()
  state = (await record()).checkpoint.trading; assert.equal(state.positions.length, 1); assert.equal(state.pending.length, 0)
  for (const pane of await chartStops()) { assert.equal(pane.stops.length, 1); assert.equal(pane.stops[0].pending, false) }
+ await verifyAnnotations(2)
+ evidence.checks.sl2FilledAfterCancel = await chartStops(); await screenshot('sl-2-filled-after-cancel')
  assert.deepEqual(await manifest(), before); evidence.checks.cacheUnchanged = true
  assert.equal(evidence.providerRequests, 0); assert.equal(evidence.paidSubmissions, 0); assert.deepEqual(evidence.errors, [])
  await writeFile(`${output}/browser-evidence.json`, JSON.stringify(evidence, null, 2) + '\n'); console.log(JSON.stringify({ checks: Object.keys(evidence.checks), providerRequests: evidence.providerRequests, paidSubmissions: evidence.paidSubmissions, errors: evidence.errors }, null, 2))

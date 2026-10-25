@@ -28,7 +28,7 @@ export class StopLabels implements ISeriesPrimitive {
       context.font = '12px Inter, system-ui, sans-serif'
       context.textBaseline = 'middle'
       for (const { stop, y, center } of stopLabelRows(this.stops, price => this.series!.priceToCoordinate(price), mediaSize.height)) {
-        const width = Math.min(mediaSize.width - 24, context.measureText(stop.label).width + 16)
+        const width = Math.min(mediaSize.width - 24, context.measureText(stop.annotation).width + 16)
         const x = mediaSize.width - width - 12
         context.strokeStyle = STOP_COLOR
         context.lineWidth = 1
@@ -36,7 +36,7 @@ export class StopLabels implements ISeriesPrimitive {
         context.fillStyle = '#171e28'
         context.fillRect(x, center - 11, width, 22)
         context.fillStyle = STOP_COLOR
-        context.fillText(stop.label, x + 8, center, width - 16)
+        context.fillText(stop.annotation, x + 8, center, width - 16)
       }
       context.restore()
     }),
