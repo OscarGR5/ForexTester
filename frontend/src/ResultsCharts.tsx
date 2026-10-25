@@ -32,23 +32,31 @@ function useWidth() {
   return { ref, width }
 }
 
-// One path per series, even for a long, discontinuous M1 history.
+// Two bounded SVG paths per series. Bridges join real endpoints only; they
+// never become observations, hover targets, or inputs to financial calculations.
 export function timelinePath(points: readonly EquityPoint[], value: (p: EquityPoint) => number | null, x: (timestamp: number) => number, y: (value: number) => number, flatGaps?: ReadonlySet<number>) {
-  let drawing = false
-  let previousValue: number | null = null
-  const commands: string[] = []
+  let previous: { coordinate: string } | null = null
+  let missing = false
+  const solid: string[] = [], bridges: string[] = []
   for (const point of points) {
     const v = value(point)
-    if ((point.clockGap && (!flatGaps?.has(point.timestamp) || previousValue !== v)) || v === null || !Number.isFinite(v)) drawing = false
-    if (v !== null && Number.isFinite(v)) {
-      commands.push(`${drawing ? 'L' : 'M'}${x(point.timestamp).toFixed(2)},${y(v).toFixed(2)}`)
-      // A dot makes isolated observations visible without bridging gaps.
-      if (!drawing) commands.push('l0,0')
-      drawing = true
+    if (point.clockGap && !flatGaps?.has(point.timestamp)) missing = true
+    if (point.equityUsd === null || !Number.isFinite(point.equityUsd) || v === null || !Number.isFinite(v)) {
+      missing = true
+      continue
     }
-    previousValue = v
+    const coordinate = `${x(point.timestamp).toFixed(2)},${y(v).toFixed(2)}`
+    if (previous && missing) {
+      bridges.push(`M${previous.coordinate} L${coordinate}`)
+      solid.push(`M${coordinate} l0,0`)
+    } else {
+      solid.push(`${previous ? 'L' : 'M'}${coordinate}`)
+      if (!previous) solid.push('l0,0')
+    }
+    previous = { coordinate }
+    missing = false
   }
-  return commands.join(' ')
+  return { solid: solid.join(' '), bridges: bridges.join(' ') }
 }
 
 export function nearestObservation(points: readonly EquityPoint[], timestamp: number, flatGaps?: ReadonlySet<number>): EquityPoint | null {
@@ -114,8 +122,12 @@ const Timeline = memo(function Timeline({ points, domainStart, flatGaps, width, 
         return <g key={ratio}><line className="results-gridline" x1={left} x2={width - right} y1={y} y2={y} /><text x={left - 10} y={y + 4} textAnchor="end">{format(value)}</text></g>
       })}
       <line className="chart-baseline" x1={left} x2={width - right} y1={geometry.y(geometry.baseline)} y2={geometry.y(geometry.baseline)} />
-      <path className={mode === 'equity' ? 'results-equity-line' : 'results-peak-line'} d={geometry.primary} />
-      {geometry.secondary !== null && <path className="results-start-line" d={geometry.secondary} />}
+      <path className={mode === 'equity' ? 'results-equity-line' : 'results-peak-line'} d={geometry.primary.solid} />
+      <path className={`${mode === 'equity' ? 'results-equity-line' : 'results-peak-line'} results-gap-bridge`} d={geometry.primary.bridges} />
+      {geometry.secondary !== null && <>
+        <path className="results-start-line" d={geometry.secondary.solid} />
+        <path className="results-start-line results-gap-bridge" d={geometry.secondary.bridges} />
+      </>}
       {point && <g><line className="results-crosshair" x1={x(point.timestamp)} x2={x(point.timestamp)} y1={top} y2={height - bottom} />
         {geometry.value(point) !== null && <circle className={mode === 'equity' ? 'net-point' : 'results-peak-dot'} cx={x(point.timestamp)} cy={geometry.y(geometry.value(point)!)} r="3" />}</g>}
       <text x={left} y={height - 10}>{new Date(first).toISOString().slice(0, 10)}</text>
@@ -178,7 +190,7 @@ export const ResultsCharts = memo(function ResultsCharts({ ledger, positions, re
   const months = useMemo(() => monthlyPerformance(observations, referenceBalance, start, endpoint), [observations, referenceBalance, start, endpoint])
   return <div className="results-performance-grid">
     <section className="results-chart-panel results-account-chart" aria-label="Account Equity"><div ref={ref}>
-      <div className="results-panel-heading"><h3>Account Equity <Help text="M1 mark-to-market equity includes incurred commissions and available unrealized PnL. Return uses fixed initial capital. Missing marks and clock gaps with exposure break the lines; confirmed flat account values connect. The view starts the UTC day before the first fill. Full-resolution observations determine every drawdown KPI." /></h3>
+      <div className="results-panel-heading"><h3>Account Equity <Help text="M1 mark-to-market equity includes incurred commissions and available unrealized PnL. Return uses fixed initial capital. Lines connect recorded values directly. Dashed bridges span missing marks or clock gaps with exposure; confirmed flat account values connect solidly. Bridges contain no intermediate valuations. The view starts the UTC day before the first fill. Full-resolution observations determine every drawdown KPI." /></h3>
         <div className="results-unit-toggle" role="group" aria-label="Equity chart units"><button aria-pressed={unit === 'percent'} onClick={() => setUnit('percent')}>%</button><button aria-pressed={unit === 'usd'} onClick={() => setUnit('usd')}>USD</button></div></div>
       <Timeline points={points} domainStart={domainStart} flatGaps={flatGaps} width={width} referenceBalance={referenceBalance} mode="equity" unit={unit} hoverTime={hoverTime} onHover={setHoverTime} />
     </div></section>

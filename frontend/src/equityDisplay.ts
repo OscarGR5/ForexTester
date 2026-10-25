@@ -74,7 +74,12 @@ export function downsampleEquity(points: readonly EquityPoint[], pixels: number)
     }
     if (point.cashUsd < points[cashMin].cashUsd) cashMin = index
     if (point.cashUsd > points[cashMax].cashUsd) cashMax = index
-    if (point.clockGap || (index && (point.equityUsd === null) !== (points[index - 1].equityUsd === null))) {
+    // Preserve validity transitions for each displayed series, including invalid
+    // numeric marks and unavailable peak percentages at nonpositive equity.
+    const valid = (value: number | null) => value !== null && Number.isFinite(value)
+    if (point.clockGap || (index && (
+      valid(point.equityUsd) !== valid(points[index - 1].equityUsd)
+      || valid(point.drawdownPercent) !== valid(points[index - 1].drawdownPercent)))) {
       selected.add(index); if (index) selected.add(index - 1)
     }
   }

@@ -51,7 +51,7 @@ it.each(['weekend', 'holiday'])('connects a confirmed constant no-position %s ga
   const observations = [point(start), point(start + 3 * day, { clockGap: true })]
   const gaps = flatEquityGaps(observations, [])
   for (const value of [(p: EquityPoint) => p.equityUsd, (p: EquityPoint) => p.drawdownPercent, (p: EquityPoint) => p.equityUsd! / 10000 - 1]) {
-    expect(timelinePath(observations, value, t => (t - start) / day, v => v, gaps)).toContain('L3.00,')
+    expect(timelinePath(observations, value, t => (t - start) / day, v => v, gaps).solid).toContain('L3.00,')
   }
   expect(observations[1].clockGap).toBe(true)
   const hovered = nearestObservation(observations, start + day, gaps)
@@ -68,11 +68,13 @@ it.each([
   { name: 'invalid valuation', positions: [], change: { equityUsd: NaN } },
   { name: 'cash/commission changed', positions: [], change: { cashUsd: 9999 } },
   { name: 'equity changed', positions: [], change: { equityUsd: 9999 } },
-] as const)('preserves a clock gap with $name', ({ positions, change }) => {
+] as const)('classifies unconfirmed clock gaps with $name', ({ positions, change }) => {
   const observations = [point(start), point(start + 3 * day, { ...change, missingSides: [...(change.missingSides ?? [])], clockGap: true })]
   const gaps = flatEquityGaps(observations, positions)
   expect(gaps.size).toBe(0)
-  expect(timelinePath(observations, p => p.equityUsd, t => t, v => v, gaps)).not.toContain('L')
+  const path = timelinePath(observations, p => p.equityUsd, t => t, v => v, gaps)
+  expect(path.solid).not.toContain('L')
+  expect(path.bridges.includes('L')).toBe(!('equityUsd' in change) || (change.equityUsd !== null && Number.isFinite(change.equityUsd)))
   expect(nearestObservation(observations, start + day, gaps)).toBeNull()
 })
 
@@ -81,7 +83,7 @@ it('requires both observations and the requested drawdown values to be valid', (
   expect(flatEquityGaps(missing, []).size).toBe(0)
   const observations = [point(start, { drawdownPercent: null }), point(start + day, { clockGap: true })]
   const gaps = flatEquityGaps(observations, [])
-  expect(timelinePath(observations, p => p.drawdownPercent, t => t, v => v, gaps)).not.toContain('L')
+  expect(timelinePath(observations, p => p.drawdownPercent, t => t, v => v, gaps).bridges).toBe('')
 })
 
 it('allows previously closed positions and an exit accounted for at the left endpoint', () => {
@@ -99,6 +101,52 @@ it('keeps real gap neighbors and extrema with bounded geometry for a 90-day M1 l
   expect(sampled.length).toBeLessThan(2800)
   expect(sampled).toContain(all[5999]); expect(sampled).toContain(all[6000])
   const path = timelinePath(sampled, p => p.equityUsd, t => (t - start) / day, v => v, gaps)
-  expect(path.match(/M/g)).toHaveLength(1); expect(path).not.toMatch(/NaN|Infinity/)
+  expect(path.solid.match(/M/g)).toHaveLength(1); expect(path.bridges).toBe(''); expect(path.solid).not.toMatch(/NaN|Infinity/)
   expect(ledger.count).toBe(129600)
+})
+
+it('connects every pair of valid fixture observations using only real endpoints for all four displays', async () => {
+  const { resultsContinuityFixture } = await import('../../tests/resultsContinuityFixture')
+  const { returnPercent, startingDeficit } = await import('./resultsAnalytics')
+  const { ledger, points, positions } = resultsContinuityFixture()
+  const before = JSON.stringify(ledger), kpis = equityPerformance(ledger, 10000)
+  const window = equityWindow(points, positions), gaps = flatEquityGaps(window, positions)
+  expect(equityWindowStart(points, positions)).toBe(Date.UTC(2024, 0, 4))
+  for (const width of [1100, 1440]) {
+    const sampled = downsampleEquity(window, width)
+    for (const value of [
+      (p: EquityPoint) => p.equityUsd,
+      (p: EquityPoint) => returnPercent(p.equityUsd, 10000),
+      (p: EquityPoint) => p.drawdownPercent === null ? null : -p.drawdownPercent,
+      (p: EquityPoint) => { const d = startingDeficit(p, 10000); return d === null ? null : -d },
+    ]) {
+      const path = timelinePath(sampled, value, t => t, v => v, gaps)
+      const valid = sampled.filter(p => p.equityUsd !== null && value(p) !== null)
+      const edges = [...(path.solid + ' ' + path.bridges).matchAll(/L([\d.-]+),([\d.-]+)/g)]
+      expect(edges).toHaveLength(valid.length - 1)
+      expect(path.bridges.match(/M/g)).toHaveLength(4) // entry clock gap, exposed weekend, M1 hole, unavailable marks
+      expect(path.solid).toContain('L' + points[13].timestamp.toFixed(2) + ',')
+      for (const match of edges) {
+        expect(valid.some(p => p.timestamp.toFixed(2) === match[1] && value(p)!.toFixed(2) === match[2])).toBe(true)
+      }
+      expect(path.bridges).not.toMatch(/NaN|Infinity/)
+    }
+  }
+  expect(JSON.stringify(ledger)).toBe(before)
+  expect(equityPerformance(ledger, 10000)).toEqual(kpis)
+  expect(equityObservations(ledger)).toEqual(points)
+  expect(points).toHaveLength(15)
+})
+
+it('does not bridge absent endpoints, and retains invalid and drawdown-only gaps during downsampling', () => {
+  const observations = Array.from({ length: 10000 }, (_, i) => point(start + i * 60000))
+  observations[4000] = point(start + 4000 * 60000, { equityUsd: NaN })
+  observations[6000] = point(start + 6000 * 60000, { drawdownPercent: null })
+  const sampled = downsampleEquity(observations, 10)
+  for (const i of [3999, 4000, 4001, 5999, 6000, 6001]) expect(sampled).toContain(observations[i])
+  expect(timelinePath(sampled, p => p.equityUsd, t => t, v => v).bridges.match(/M/g)).toHaveLength(1)
+  expect(timelinePath(sampled, p => p.drawdownPercent, t => t, v => v).bridges.match(/M/g)).toHaveLength(2)
+  for (const points of [[], [point(start, { equityUsd: null }), point(start + day)], [point(start), point(start + day, { equityUsd: null })]]) {
+    expect(timelinePath(points, p => p.equityUsd, t => t, v => v).bridges).toBe('')
+  }
 })
