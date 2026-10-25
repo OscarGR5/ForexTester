@@ -1,0 +1,11 @@
+
+> typecheck
+> npm run typecheck --workspaces
+
+
+> @forextester/frontend@0.1.0 typecheck
+> tsc --noEmit
+
+
+> @forextester/backend@0.1.0 typecheck
+> tsc --noEmit

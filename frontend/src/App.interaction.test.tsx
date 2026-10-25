@@ -22,7 +22,7 @@ vi.mock('lightweight-charts', () => ({
     let autoScale = true, priceRange = { from: 1.09, to: 1.11 }
     const priceScale = { applyOptions: vi.fn((next: { autoScale?: boolean }) => { if (typeof next.autoScale === 'boolean') autoScale = next.autoScale }), options: () => ({ autoScale }), getVisibleRange: () => priceRange, setVisibleRange: vi.fn((next: typeof priceRange) => { priceRange = next }) }
     return {
-      applyOptions: vi.fn(), setData: vi.fn((next: typeof values) => { values = next.map((candle) => ({ ...candle })) }),
+      setSeriesOrder: vi.fn(), applyOptions: vi.fn(), setData: vi.fn((next: typeof values) => { values = next.map((candle) => ({ ...candle })) }),
       update: vi.fn((candle: typeof values[number], historical = false) => {
         if (historical) {
           const index = values.findIndex((value) => value.time === candle.time)

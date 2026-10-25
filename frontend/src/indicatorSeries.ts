@@ -66,6 +66,9 @@ export class IndicatorSeries {
           priceFormat: { type: 'price', precision: oscillator ? 2 : 5, minMove: oscillator ? 0.01 : 0.00001 },
           ...(oscillator ? { autoscaleInfoProvider: () => ({ priceRange: { minValue: 0, maxValue: 100 } }) } : {}),
         }, oscillator ? 1 : 0)
+        // Public pane ordering keeps price overlays below candle bodies and wicks.
+        // All price overlays use the same five-decimal price formatter.
+        if (!oscillator) series.setSeriesOrder(0)
         series.applyOptions({ title: '' })
         line = { series, data: [] }
         this.lines.set(key, line)

@@ -9,7 +9,7 @@ export function fakeChart() {
  const series: {title:string;values: {time:number;value?:number}[];setData:ReturnType<typeof vi.fn>}[]=[]
  const chart={
   addSeries: (_type:unknown,options:{title:string})=>{
-   const line={applyOptions:vi.fn(),title:options.title,values:[] as {time:number;value?:number}[],setData:vi.fn(),
+   const line={setSeriesOrder:vi.fn(),applyOptions:vi.fn(),title:options.title,values:[] as {time:number;value?:number}[],setData:vi.fn(),
     update(point:{time:number;value?:number},historical=false){
      const at=line.values.findIndex(p=>p.time===point.time)
      if(at>=0)line.values[at]={...point}
@@ -94,4 +94,20 @@ it('rebuilds exact custom Bollinger settings and visibility when settings change
   expect(line.values.map(p => p.time)).toEqual(expected[line.title as 'upper'].map(p => p.time))
   for (let i = 0; i < line.values.length; i++) expect(line.values[i].value).toBeCloseTo(expected[line.title as 'upper'][i].value, 8)
  }
+})
+
+it.each(['M5','M15','H1','H4','D1'] as const)('orders every price overlay behind candles on %s, including re-enabled lines', timeframe => {
+ const {chart,series}=fakeChart(),manager=new IndicatorSeries(chart)
+ const settings=defaultIndicatorSettings()
+ settings.bollinger.enabled=true;settings.bollinger2.enabled=true;settings.ichimoku.enabled=true;settings.stochastic.enabled=true
+ const candles=toBidChartCandles({bid:source},timeframe)
+ manager.update(candles,settings,timeframe,true)
+ const priceLines=series.filter(line=>!['k','d'].includes(line.title))
+ expect(priceLines.length).toBeGreaterThan(6)
+ for(const line of priceLines) expect((line as any).setSeriesOrder).toHaveBeenCalledWith(0)
+ for(const line of series.filter(line=>['k','d'].includes(line.title))) expect((line as any).setSeriesOrder).not.toHaveBeenCalled()
+ const disabled={...settings,bollinger:{...settings.bollinger,enabled:false}}
+ manager.update(candles,disabled,timeframe,true);manager.update(candles,settings,timeframe,true)
+ for(const line of series.slice(-3)) expect((line as any).setSeriesOrder).toHaveBeenCalledWith(0)
+ manager.dispose()
 })

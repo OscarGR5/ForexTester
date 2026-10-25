@@ -1,3 +1,4 @@
+import { entryOverlays } from './entryOverlays'
 import { stopOverlays } from './stopOverlays'
 import { canRequestOrder, stopModificationError } from './trading'
 import { plannedRisk } from './risk'
@@ -10,7 +11,7 @@ import { flushSync } from 'react-dom'
 import { PaidDownloadDialog } from './PaidDownloadDialog'
 import { ManagementDialog } from './ManagementDialog'
 import { ChartPane } from './ChartPane'
-import { TradingDock, type StopDraft } from './TradingDock'
+import { draftEstimate, TradingDock, type StopDraft } from './TradingDock'
 import { accountPnl, selectedRange, shiftDate } from './workflow'
 import { lifecycleOf, type Lifecycle } from './sessionTypes'
 import { commissionConfigError } from './commissions'
@@ -75,6 +76,14 @@ export function App() {
   const replay = useReplay(history ? source : null, startIndex, hydration ? { replay: hydration.checkpoint.replay, epoch: hydration.checkpoint.trading.session } : null)
   const trading = useTrading(history, replay, hydration)
   const stops = useMemo(() => stopOverlays(trading.state, stopPreview), [trading.state, stopPreview])
+  const entries = useMemo(() => entryOverlays(trading.state), [trading.state])
+  const draftInvalid = !draft || !canRequestOrder(trading.permission) || !!draftEstimate(trading.state, draft).error
+  const confirmDraft = () => {
+    if (!draft || draft.price === null || draftInvalid) return
+    if (draft.positionId) trading.modifyStop(draft.positionId, draft.price)
+    else trading.enterAutomatic(draft.direction, draft.sizing, draft.price)
+    setDraft(null)
+  }
   const chartOffset = useMemo(() => {
     if (!history || !isSinglePrice(history) || !history.candles[startIndex]) return 0
     let index = startIndex
@@ -319,15 +328,18 @@ export function App() {
       </section>}
       {lifecycle === 'setup' && confirming && quote && quote.tradingFrom === from && quote.to === to && <PaidDownloadDialog key={quote.id} quote={quote} onCancel={()=>{setConfirming(false);setQuote(null);setDownloadNotice('Download cancelled. No paid request submitted and no additional budget reserved.')}} onApprove={()=>void confirmDownload()}/>}
       {lifecycle === 'trading' && <>
+        <div className="workspace-toolbar" role="region" aria-label="Trading workspace controls">
         <div className="replay-strip" role="group" aria-label="Market replay"><strong>{historyLabel(history)}</strong><time className="replay-clock">{replay.timestamp === null ? 'Awaiting replay' : new Date(replay.timestamp).toISOString().slice(0,16).replace('T',' ') + ' UTC'}</time>
           <button disabled={!replay.canPlay} onClick={()=>{setDraft(null);replay.play()}}>Play</button><button disabled={!replay.canPause} onClick={replay.pause}>Pause</button><button disabled={!replay.canNext} onClick={()=>{setDraft(null);replay.next()}}>Next Candle</button>
           <label>Speed<select aria-label="Replay speed" value={replay.speed} onChange={e=>replay.setSpeed(Number(e.target.value) as 1|10|100)}>{[1,10,100].map(s=><option key={s} value={s}>{s}×</option>)}</select></label>
           {chartLayout}<span aria-label="Replay status" className="replay-status">{replay.status}</span><span className="replay-progress" aria-label="Replay progress">{replay.revealed-replay.startIndex} / {replay.total-replay.startIndex} candles</span><button onClick={()=>void finish()}>{replay.complete ? 'Review Results' : 'Finish backtest'}</button>
         </div>
+        <TradingDock stops={stops} key={`${sessions.activeId}-${trading.state.session}`} trading={trading} draft={draft} setDraft={setDraft} onConfirm={confirmDraft}/>
+        </div>
         {replay.blocked && <p className="coverage-warning" role="alert">Replay blocked at contract rollover. No positions, stops or pending orders were executed across the boundary. Finish this backtest or select a replay start after the rollover. A carry/roll policy requires project-lead approval.</p>}
         {history && isSinglePrice(history) && <details className="chart-note"><summary>Contract mappings and rollover events</summary>{history.contracts.map(c=><p key={c.from}>{c.from} to {c.to} (exclusive): {c.rawSymbol} · instrument {c.instrumentId}</p>)}</details>}
         <div className="chart-workspace" aria-label={`${history?.symbol ?? '6E'} chart workspace`}><div className={`chart-stack charts-${chartCount}`}>
-          {timeframes.slice(0,chartCount).map((timeframe,id)=><ChartPane key={id} instrument={history?.symbol ?? '6E'} id={id} timeframe={timeframe} sessionId={sessions.activeId} positions={trading.state.positions} stops={stops} stopInteraction={{ enabled: canRequestOrder(trading.permission) && !draft,
+          {timeframes.slice(0,chartCount).map((timeframe,id)=><ChartPane key={id} instrument={history?.symbol ?? '6E'} id={id} timeframe={timeframe} sessionId={sessions.activeId} positions={trading.state.positions} entries={entries} onConfirmStop={confirmDraft} confirmStopDisabled={draftInvalid} stops={stops} stopInteraction={{ enabled: canRequestOrder(trading.permission) && !draft,
             preview: stopPreview, onPreview: setStopPreview, onCommit: (positionId, price) => {
               const position = trading.state.positions.find(p => p.id === positionId)
               const error = position ? stopModificationError(trading.state, position, price, trading.permission) : 'Position is no longer open.'
@@ -341,7 +353,6 @@ export function App() {
           return <p className={`stop-drag-status${error ? ' form-error' : ''}`} role="status">{stopPreview.id} · SL {stopPreview.price.toFixed(5)} · {error ?? `Risk $${plannedRisk({ ...position!, stopPrice: stopPreview.price }).toFixed(2)} · Effective after the current M1 candle. Release to apply; Escape to cancel.`}</p>
         })()}
         {stopError && <p className="stop-drag-status form-error" role="alert">{stopError}<button onClick={() => setStopError(null)}>Dismiss</button></p>}
-        <TradingDock stops={stops} key={`${sessions.activeId}-${trading.state.session}`} trading={trading} draft={draft} setDraft={setDraft}/>
       </>}
       {lifecycle === 'finished' && <section className="results-workspace" aria-label="Backtest results"><div className="results-heading"><h2>Backtest results</h2><button onClick={sessions.save}>Save now</button></div>
         <p className="chart-note">{historyLabel(history)} · {history && isSinglePrice(history) ? 'Hypothetical forex-style sizing; simplified trade-price fills.' : 'Original legacy execution model.'}</p><p className="results-disclosure">{trading.state.positions.length} positions remain open · {trading.state.pending.length} entries pending. Account PnL includes open equity; journal statistics use completed trades. No exits were created when finishing.</p>

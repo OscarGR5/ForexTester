@@ -21,7 +21,7 @@ vi.mock('lightweight-charts', () => ({
   CrosshairMode: { Normal: 0 }, CandlestickSeries: {}, LineSeries: {}, LineStyle: { Solid: 0, Dashed: 2, Dotted: 1 }, ColorType: { Solid: 'solid' },
   createChart: vi.fn(() => {
     let range = { from: 0, to: 2 }
-    const scale = { getVisibleLogicalRange: () => range, fitContent: vi.fn(),
+    const scale = { getVisibleLogicalRange: () => range, width: () => 800, fitContent: vi.fn(),
       setVisibleLogicalRange: (next: typeof range) => { range = next },
       subscribeVisibleLogicalRangeChange: vi.fn(), unsubscribeVisibleLogicalRangeChange: vi.fn() }
     const makeSeries = () => {
@@ -29,7 +29,7 @@ vi.mock('lightweight-charts', () => ({
     let autoScale = true, priceRange = { from: 1.09, to: 1.11 }
     const priceScale = { applyOptions: vi.fn((next: { autoScale?: boolean }) => { if (typeof next.autoScale === 'boolean') autoScale = next.autoScale }), options: () => ({ autoScale }), getVisibleRange: () => priceRange, setVisibleRange: vi.fn((next: typeof priceRange) => { priceRange = next }) }
     return {
-      applyOptions: vi.fn(), setData: vi.fn((next: typeof values) => { values = next.map((candle) => ({ ...candle })) }),
+      setSeriesOrder: vi.fn(), applyOptions: vi.fn(), setData: vi.fn((next: typeof values) => { values = next.map((candle) => ({ ...candle })) }),
       update: vi.fn((candle: typeof values[number], historical = false) => {
         if (historical) {
           const index = values.findIndex((value) => value.time === candle.time)
@@ -43,12 +43,12 @@ vi.mock('lightweight-charts', () => ({
       }),
       data: () => values,
       attachPrimitive: vi.fn(), detachPrimitive: vi.fn(), createPriceLine: vi.fn((options) => ({ applyOptions: vi.fn(next => Object.assign(options, next)), options: () => options })), removePriceLine: vi.fn(),
-      priceScale: () => priceScale, coordinateToPrice: (y: number) => y / 100000,
+      priceScale: () => priceScale, coordinateToPrice: (y: number) => y / 100000, priceToCoordinate: (price: number) => price * 100000,
     }
     }
     return {
       applyOptions: vi.fn(), subscribeClick: vi.fn(), unsubscribeClick: vi.fn(), addSeries: vi.fn(makeSeries), removeSeries: vi.fn(), remove: vi.fn(),
-      panes: () => [{ setStretchFactor: vi.fn() }, { setStretchFactor: vi.fn() }],
+      panes: () => [{ getHeight: () => 500, setStretchFactor: vi.fn() }, { setStretchFactor: vi.fn() }],
       timeScale: () => scale,
       subscribeCrosshairMove: vi.fn(), unsubscribeCrosshairMove: vi.fn(),
       setCrosshairPosition: vi.fn(), clearCrosshairPosition: vi.fn(),
@@ -484,7 +484,7 @@ it('preserves the production rollover blocker after one-click startup',async()=>
 function activeStopLines() {
  const series = vi.mocked(chart().addSeries).mock.results[0].value as ISeriesApi<'Candlestick'>
  const removed = vi.mocked(series.removePriceLine).mock.calls.map(([line]) => line)
- return vi.mocked(series.createPriceLine).mock.results.map(result => result.value).filter(line => !removed.includes(line))
+ return vi.mocked(series.createPriceLine).mock.results.map(result => result.value).filter(line => !removed.includes(line) && line.options().color === '#ef9a9a')
 }
 it('keeps confirmed pending stops visible before a candle and retains the line object on activation', async () => {
  await start(); await order('Buy', 1.099)
@@ -542,4 +542,54 @@ it('removes a confirmed pending stop when its fill is rejected', async () => {
  await start(); await order('Sell', 1.1005); expect(activeStopLines()).toHaveLength(1)
  await click('Next Candle'); expect(activeStopLines()).toHaveLength(0)
  expect(host.textContent).toContain('Entry rejected:')
+})
+
+function activeEntryLines() {
+ const series = vi.mocked(chart().addSeries).mock.results[0].value as ISeriesApi<'Candlestick'>
+ const removed = vi.mocked(series.removePriceLine).mock.calls.map(([line]) => line)
+ return vi.mocked(series.createPriceLine).mock.results.map(result => result.value).filter(line => !removed.includes(line) && /\b[BS][12]\b/.test(line.options().title))
+}
+it('places trade entry above the charts and renders no empty position area when flat', async () => {
+ await start()
+ const toolbar = host.querySelector('.workspace-toolbar')!, chartArea = host.querySelector('.chart-workspace')!
+ expect(toolbar.contains(button('Buy'))).toBe(true)
+ expect(toolbar.contains(host.querySelector('[aria-label="Sizing mode"]'))).toBe(true)
+ expect(toolbar.compareDocumentPosition(chartArea) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+ expect(host.querySelector('.trading-dock')).toBeNull()
+ expect(host.querySelector('.active-positions')).toBeNull()
+ expect(toolbar.textContent).toContain('Ready for a new setup')
+})
+it('keeps drafts uncommitted until the on-chart tick is clicked, and retains cancellation and validation', async () => {
+ await start(); await click('Buy'); await pick(1.099)
+ const annotation = host.querySelector('.draft-stop-annotation')!
+ expect(annotation.textContent).toContain('Draft SL 1.09900')
+ expect(annotation.firstElementChild?.getAttribute('aria-label')).toBe('Confirm draft stop-loss')
+ expect(host.querySelector('[data-order-id]')).toBeNull()
+ await click('Confirm draft stop-loss')
+ expect(host.querySelectorAll('[data-order-id]')).toHaveLength(1)
+ expect(host.querySelector('.draft-stop-annotation')).toBeNull()
+ await click('Buy'); await pick(1.2)
+ expect(button('Confirm draft stop-loss').disabled).toBe(true)
+ await click('Confirm draft stop-loss'); expect(host.querySelectorAll('[data-order-id]')).toHaveLength(1)
+ await act(async () => window.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'})))
+ expect(host.querySelector('.draft-stop-annotation')).toBeNull()
+})
+it('derives two pending entry identities, keeps actual fills and recreates them after durable restore', async () => {
+ await start(); await order('Buy',1.099)
+ expect(activeEntryLines().map(line=>line.options())).toMatchObject([{title:'Pending B1 (est.)',price:1.1003,lineStyle:1}])
+ await order('Buy',1.098)
+ expect(activeEntryLines().map(line=>line.options().title)).toEqual(['Pending B1 (est.) · Pending B2 (est.)'])
+ await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
+ await act(async()=>root.unmount());root=createRoot(host);await mount();await click('Resume backtest');await until(()=>host.querySelector('.phase-trading'))
+ expect(activeEntryLines()[0].options().title).toContain('Pending B2 (est.)')
+ await click('Next Candle')
+ expect(activeEntryLines().map(line=>line.options())).toMatchObject([{title:'B1 · B2',price:1.1003,lineStyle:2}])
+ await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
+ const before=(await disk.storage.list()).sessions[0].checkpoint.trading
+ await act(async()=>root.unmount());root=createRoot(host);await mount();await click('Resume backtest');await until(()=>host.querySelector('.phase-trading'))
+ expect(activeEntryLines()[0].options().title).toBe('B1 · B2')
+ expect(activeEntryLines()[0].options().price).toBe(before.positions[0].entryPrice)
+ const first=before.positions[0].id
+ await click(`Close ${first}`);await click('Next Candle')
+ expect(activeEntryLines().map(line=>line.options().title)).toEqual(['B2'])
 })
