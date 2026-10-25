@@ -1,11 +1,14 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
 
-export function shortcutBlocked(event: KeyboardEvent): boolean {
-  if (!event.shiftKey || event.ctrlKey || event.altKey || event.metaKey || event.isComposing || event.defaultPrevented) return true
-  if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return true
+export function keyboardContextBlocked(event: KeyboardEvent): boolean {
   const editing = (element: EventTarget | null) => element instanceof Element && !!element.closest('input, select, textarea, [contenteditable]:not([contenteditable="false"])')
   return editing(event.target) || editing(document.activeElement) ||
     !!document.querySelector('dialog[open], [role="dialog"], .indicator-controls[open], .execution-details[open], .stop-selector, .placing-stop')
+}
+
+export function shortcutBlocked(event: KeyboardEvent): boolean {
+  return !event.shiftKey || event.ctrlKey || event.altKey || event.metaKey || event.isComposing || event.defaultPrevented ||
+    (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') || keyboardContextBlocked(event)
 }
 
 export function useReplayKeyboard(options: {

@@ -1,0 +1,30 @@
+
+> build
+> npm run build --workspaces
+
+
+> @forextester/frontend@0.1.0 build
+> npm run typecheck && vite build
+
+
+> @forextester/frontend@0.1.0 typecheck
+> tsc --noEmit
+
+vite v8.3.5 building client environment for production...
+transforming...
+✓ 161 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.48 kB │ gzip:   0.30 kB
+dist/assets/index-BwHZxv8Z.css   32.96 kB │ gzip:   6.76 kB
+dist/assets/index-DuS73pXn.js   573.78 kB │ gzip: 179.50 kB
+
+✓ built in 457ms
+[plugin builtin:vite-reporter]
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+> @forextester/backend@0.1.0 build
+> tsc -p tsconfig.build.json

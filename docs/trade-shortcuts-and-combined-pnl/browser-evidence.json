@@ -1,0 +1,3920 @@
+{
+  "isolatedSessions": "/tmp/forextester-trade-shortcuts-ewlDaN",
+  "providerRequests": 0,
+  "paidSubmissions": 0,
+  "screenshots": [
+    "docs/trade-shortcuts-and-combined-pnl/sell-keyboard-draft.png",
+    "docs/trade-shortcuts-and-combined-pnl/buy-keyboard-first-draft.png",
+    "docs/trade-shortcuts-and-combined-pnl/buy-keyboard-second-draft.png",
+    "docs/trade-shortcuts-and-combined-pnl/two-open-1-1440.png",
+    "docs/trade-shortcuts-and-combined-pnl/two-open-1-1100.png",
+    "docs/trade-shortcuts-and-combined-pnl/two-open-1-1000.png",
+    "docs/trade-shortcuts-and-combined-pnl/two-open-2-1440.png",
+    "docs/trade-shortcuts-and-combined-pnl/two-open-2-1100.png",
+    "docs/trade-shortcuts-and-combined-pnl/two-open-2-1000.png",
+    "docs/trade-shortcuts-and-combined-pnl/two-open-3-1440.png",
+    "docs/trade-shortcuts-and-combined-pnl/two-open-3-1100.png",
+    "docs/trade-shortcuts-and-combined-pnl/two-open-3-1000.png",
+    "docs/trade-shortcuts-and-combined-pnl/restored-two-open.png",
+    "docs/trade-shortcuts-and-combined-pnl/one-open-after-close.png",
+    "docs/trade-shortcuts-and-combined-pnl/sell-keyboard-confirmation.png"
+  ],
+  "errors": [],
+  "checks": {
+    "empty-1-1440": {
+      "layout": {
+        "viewport": 1440,
+        "pageWidth": 1440,
+        "toolbar": {
+          "x": 0,
+          "y": 50,
+          "right": 1440,
+          "bottom": 89,
+          "width": 1440,
+          "height": 39
+        },
+        "controls": [
+          {
+            "x": 14,
+            "y": 54,
+            "right": 123.015625,
+            "bottom": 84,
+            "width": 109.015625,
+            "height": 30
+          },
+          {
+            "x": 131.015625,
+            "y": 54,
+            "right": 170.359375,
+            "bottom": 84,
+            "width": 39.34375,
+            "height": 30
+          },
+          {
+            "x": 178.359375,
+            "y": 54,
+            "right": 215.921875,
+            "bottom": 84,
+            "width": 37.5625,
+            "height": 30
+          },
+          {
+            "x": 223.921875,
+            "y": 60.5,
+            "right": 277.671875,
+            "bottom": 77.5,
+            "width": 53.75,
+            "height": 17
+          }
+        ],
+        "positions": [],
+        "strip": null,
+        "total": null
+      }
+    },
+    "empty-1-1100": {
+      "layout": {
+        "viewport": 1100,
+        "pageWidth": 1100,
+        "toolbar": {
+          "x": 0,
+          "y": 92,
+          "right": 1100,
+          "bottom": 131,
+          "width": 1100,
+          "height": 39
+        },
+        "controls": [
+          {
+            "x": 14,
+            "y": 96,
+            "right": 123.015625,
+            "bottom": 126,
+            "width": 109.015625,
+            "height": 30
+          },
+          {
+            "x": 131.015625,
+            "y": 96,
+            "right": 170.359375,
+            "bottom": 126,
+            "width": 39.34375,
+            "height": 30
+          },
+          {
+            "x": 178.359375,
+            "y": 96,
+            "right": 215.921875,
+            "bottom": 126,
+            "width": 37.5625,
+            "height": 30
+          },
+          {
+            "x": 223.921875,
+            "y": 102.5,
+            "right": 277.671875,
+            "bottom": 119.5,
+            "width": 53.75,
+            "height": 17
+          }
+        ],
+        "positions": [],
+        "strip": null,
+        "total": null
+      }
+    },
+    "empty-1-1000": {
+      "layout": {
+        "viewport": 1000,
+        "pageWidth": 1000,
+        "toolbar": {
+          "x": 0,
+          "y": 92,
+          "right": 1000,
+          "bottom": 131,
+          "width": 1000,
+          "height": 39
+        },
+        "controls": [
+          {
+            "x": 14,
+            "y": 96,
+            "right": 123.015625,
+            "bottom": 126,
+            "width": 109.015625,
+            "height": 30
+          },
+          {
+            "x": 131.015625,
+            "y": 96,
+            "right": 170.359375,
+            "bottom": 126,
+            "width": 39.34375,
+            "height": 30
+          },
+          {
+            "x": 178.359375,
+            "y": 96,
+            "right": 215.921875,
+            "bottom": 126,
+            "width": 37.5625,
+            "height": 30
+          },
+          {
+            "x": 223.921875,
+            "y": 102.5,
+            "right": 277.671875,
+            "bottom": 119.5,
+            "width": 53.75,
+            "height": 17
+          }
+        ],
+        "positions": [],
+        "strip": null,
+        "total": null
+      }
+    },
+    "empty-2-1440": {
+      "layout": {
+        "viewport": 1440,
+        "pageWidth": 1440,
+        "toolbar": {
+          "x": 0,
+          "y": 50,
+          "right": 1440,
+          "bottom": 89,
+          "width": 1440,
+          "height": 39
+        },
+        "controls": [
+          {
+            "x": 14,
+            "y": 54,
+            "right": 123.015625,
+            "bottom": 84,
+            "width": 109.015625,
+            "height": 30
+          },
+          {
+            "x": 131.015625,
+            "y": 54,
+            "right": 170.359375,
+            "bottom": 84,
+            "width": 39.34375,
+            "height": 30
+          },
+          {
+            "x": 178.359375,
+            "y": 54,
+            "right": 215.921875,
+            "bottom": 84,
+            "width": 37.5625,
+            "height": 30
+          },
+          {
+            "x": 223.921875,
+            "y": 60.5,
+            "right": 277.671875,
+            "bottom": 77.5,
+            "width": 53.75,
+            "height": 17
+          }
+        ],
+        "positions": [],
+        "strip": null,
+        "total": null
+      }
+    },
+    "empty-2-1100": {
+      "layout": {
+        "viewport": 1100,
+        "pageWidth": 1100,
+        "toolbar": {
+          "x": 0,
+          "y": 92,
+          "right": 1100,
+          "bottom": 131,
+          "width": 1100,
+          "height": 39
+        },
+        "controls": [
+          {
+            "x": 14,
+            "y": 96,
+            "right": 123.015625,
+            "bottom": 126,
+            "width": 109.015625,
+            "height": 30
+          },
+          {
+            "x": 131.015625,
+            "y": 96,
+            "right": 170.359375,
+            "bottom": 126,
+            "width": 39.34375,
+            "height": 30
+          },
+          {
+            "x": 178.359375,
+            "y": 96,
+            "right": 215.921875,
+            "bottom": 126,
+            "width": 37.5625,
+            "height": 30
+          },
+          {
+            "x": 223.921875,
+            "y": 102.5,
+            "right": 277.671875,
+            "bottom": 119.5,
+            "width": 53.75,
+            "height": 17
+          }
+        ],
+        "positions": [],
+        "strip": null,
+        "total": null
+      }
+    },
+    "empty-2-1000": {
+      "layout": {
+        "viewport": 1000,
+        "pageWidth": 1000,
+        "toolbar": {
+          "x": 0,
+          "y": 92,
+          "right": 1000,
+          "bottom": 131,
+          "width": 1000,
+          "height": 39
+        },
+        "controls": [
+          {
+            "x": 14,
+            "y": 96,
+            "right": 123.015625,
+            "bottom": 126,
+            "width": 109.015625,
+            "height": 30
+          },
+          {
+            "x": 131.015625,
+            "y": 96,
+            "right": 170.359375,
+            "bottom": 126,
+            "width": 39.34375,
+            "height": 30
+          },
+          {
+            "x": 178.359375,
+            "y": 96,
+            "right": 215.921875,
+            "bottom": 126,
+            "width": 37.5625,
+            "height": 30
+          },
+          {
+            "x": 223.921875,
+            "y": 102.5,
+            "right": 277.671875,
+            "bottom": 119.5,
+            "width": 53.75,
+            "height": 17
+          }
+        ],
+        "positions": [],
+        "strip": null,
+        "total": null
+      }
+    },
+    "empty-3-1440": {
+      "layout": {
+        "viewport": 1440,
+        "pageWidth": 1440,
+        "toolbar": {
+          "x": 0,
+          "y": 50,
+          "right": 1440,
+          "bottom": 89,
+          "width": 1440,
+          "height": 39
+        },
+        "controls": [
+          {
+            "x": 14,
+            "y": 54,
+            "right": 123.015625,
+            "bottom": 84,
+            "width": 109.015625,
+            "height": 30
+          },
+          {
+            "x": 131.015625,
+            "y": 54,
+            "right": 170.359375,
+            "bottom": 84,
+            "width": 39.34375,
+            "height": 30
+          },
+          {
+            "x": 178.359375,
+            "y": 54,
+            "right": 215.921875,
+            "bottom": 84,
+            "width": 37.5625,
+            "height": 30
+          },
+          {
+            "x": 223.921875,
+            "y": 60.5,
+            "right": 277.671875,
+            "bottom": 77.5,
+            "width": 53.75,
+            "height": 17
+          }
+        ],
+        "positions": [],
+        "strip": null,
+        "total": null
+      }
+    },
+    "empty-3-1100": {
+      "layout": {
+        "viewport": 1100,
+        "pageWidth": 1100,
+        "toolbar": {
+          "x": 0,
+          "y": 92,
+          "right": 1100,
+          "bottom": 131,
+          "width": 1100,
+          "height": 39
+        },
+        "controls": [
+          {
+            "x": 14,
+            "y": 96,
+            "right": 123.015625,
+            "bottom": 126,
+            "width": 109.015625,
+            "height": 30
+          },
+          {
+            "x": 131.015625,
+            "y": 96,
+            "right": 170.359375,
+            "bottom": 126,
+            "width": 39.34375,
+            "height": 30
+          },
+          {
+            "x": 178.359375,
+            "y": 96,
+            "right": 215.921875,
+            "bottom": 126,
+            "width": 37.5625,
+            "height": 30
+          },
+          {
+            "x": 223.921875,
+            "y": 102.5,
+            "right": 277.671875,
+            "bottom": 119.5,
+            "width": 53.75,
+            "height": 17
+          }
+        ],
+        "positions": [],
+        "strip": null,
+        "total": null
+      }
+    },
+    "empty-3-1000": {
+      "layout": {
+        "viewport": 1000,
+        "pageWidth": 1000,
+        "toolbar": {
+          "x": 0,
+          "y": 92,
+          "right": 1000,
+          "bottom": 131,
+          "width": 1000,
+          "height": 39
+        },
+        "controls": [
+          {
+            "x": 14,
+            "y": 96,
+            "right": 123.015625,
+            "bottom": 126,
+            "width": 109.015625,
+            "height": 30
+          },
+          {
+            "x": 131.015625,
+            "y": 96,
+            "right": 170.359375,
+            "bottom": 126,
+            "width": 39.34375,
+            "height": 30
+          },
+          {
+            "x": 178.359375,
+            "y": 96,
+            "right": 215.921875,
+            "bottom": 126,
+            "width": 37.5625,
+            "height": 30
+          },
+          {
+            "x": 223.921875,
+            "y": 102.5,
+            "right": 277.671875,
+            "bottom": 119.5,
+            "width": 53.75,
+            "height": 17
+          }
+        ],
+        "positions": [],
+        "strip": null,
+        "total": null
+      }
+    },
+    "typing-number": true,
+    "modifier-Control+b": true,
+    "modifier-Alt+b": true,
+    "modifier-Meta+s": true,
+    "heldKey": true,
+    "panel-Execution details": true,
+    "panel-Indicators": true,
+    "management": true,
+    "sellAndEscape": true,
+    "buy-keyboard-first-draft": {
+      "key": "b",
+      "pips": "Draft SL · 29.9 pips",
+      "draft": {
+        "direction": "buy",
+        "sizing": {
+          "mode": "risk",
+          "riskPercent": 0.5
+        },
+        "setupId": null,
+        "slot": 1,
+        "price": null
+      },
+      "pending": [
+        {
+          "id": "2-1",
+          "setupId": "2-S1",
+          "direction": "buy",
+          "mode": "risk",
+          "lots": null,
+          "requestedRiskPercent": 0.5,
+          "requestedRiskUsd": 500,
+          "stopPrice": 1.09815,
+          "requestedAt": 1704470400000
+        }
+      ],
+      "beforeOpenCount": 0
+    },
+    "firstFill": {
+      "individual": [
+        "Est. net -$12.67 (-0.01%)"
+      ],
+      "total": "-$12.67 (-0.01%)",
+      "net": -12.67,
+      "color": "rgb(226, 162, 166)",
+      "openIds": [
+        "2-1"
+      ],
+      "account": "Account PnL\n$-6.34 · -0.01%"
+    },
+    "opposite-direction": true,
+    "playback": true,
+    "historical-review": true,
+    "shiftArrows": true,
+    "confirmed-stop-drag": true,
+    "buy-keyboard-second-draft": {
+      "key": "B",
+      "pips": "Draft SL · 36.4 pips",
+      "draft": {
+        "direction": "buy",
+        "sizing": {
+          "mode": "risk",
+          "riskPercent": 0.35
+        },
+        "setupId": "2-S1",
+        "slot": 2,
+        "price": null
+      },
+      "pending": [
+        {
+          "id": "2-2",
+          "setupId": "2-S1",
+          "direction": "buy",
+          "mode": "risk",
+          "lots": null,
+          "requestedRiskPercent": 0.35,
+          "requestedRiskUsd": 349.99999999999994,
+          "stopPrice": 1.09765,
+          "requestedAt": 1704470520000
+        }
+      ],
+      "beforeOpenCount": 1
+    },
+    "mixedOpenPending": {
+      "individual": [
+        "Est. net $23.53 (0.02%)"
+      ],
+      "total": "$23.53 (0.02%)",
+      "net": 23.529999999996008,
+      "color": "rgb(117, 196, 181)",
+      "openIds": [
+        "2-1"
+      ],
+      "account": "Account PnL\n$29.86 · 0.03%"
+    },
+    "two-slots": true,
+    "liveUpdate": {
+      "before": {
+        "individual": [
+          "Est. net -$39.82 (-0.04%)",
+          "Est. net -$42.42 (-0.04%)"
+        ],
+        "total": "-$82.24 (-0.08%)",
+        "net": -82.24000000002442,
+        "color": "rgb(226, 162, 166)",
+        "openIds": [
+          "2-1",
+          "2-2"
+        ],
+        "account": "Account PnL\n$-72.37 · -0.07%"
+      },
+      "after": {
+        "individual": [
+          "Est. net -$401.82 (-0.40%)",
+          "Est. net -$244.42 (-0.24%)"
+        ],
+        "total": "-$646.24 (-0.65%)",
+        "net": -646.2400000000249,
+        "color": "rgb(226, 162, 166)",
+        "openIds": [
+          "2-1",
+          "2-2"
+        ],
+        "account": "Account PnL\n$-636.37 · -0.64%"
+      }
+    },
+    "two-open-1-1440": {
+      "layout": {
+        "viewport": 1440,
+        "pageWidth": 1440,
+        "toolbar": {
+          "x": 0,
+          "y": 50,
+          "right": 1440,
+          "bottom": 89,
+          "width": 1440,
+          "height": 39
+        },
+        "controls": [
+          {
+            "x": 14,
+            "y": 54,
+            "right": 123.015625,
+            "bottom": 84,
+            "width": 109.015625,
+            "height": 30
+          },
+          {
+            "x": 131.015625,
+            "y": 54,
+            "right": 170.359375,
+            "bottom": 84,
+            "width": 39.34375,
+            "height": 30
+          },
+          {
+            "x": 178.359375,
+            "y": 54,
+            "right": 215.921875,
+            "bottom": 84,
+            "width": 37.5625,
+            "height": 30
+          },
+          {
+            "x": 223.921875,
+            "y": 60.5,
+            "right": 277.671875,
+            "bottom": 77.5,
+            "width": 53.75,
+            "height": 17
+          }
+        ],
+        "positions": [
+          {
+            "x": 285.671875,
+            "y": 54,
+            "right": 561.328125,
+            "bottom": 84,
+            "width": 275.65625,
+            "height": 30
+          },
+          {
+            "x": 573.328125,
+            "y": 54,
+            "right": 848.984375,
+            "bottom": 84,
+            "width": 275.65625,
+            "height": 30
+          }
+        ],
+        "strip": {
+          "x": 285.671875,
+          "y": 54,
+          "right": 1253.90625,
+          "bottom": 84,
+          "width": 968.234375,
+          "height": 30,
+          "scrollWidth": 968,
+          "clientWidth": 968,
+          "scrollLeftAfterKeyboard": 0
+        },
+        "total": {
+          "x": 1261.90625,
+          "y": 60.5,
+          "right": 1426,
+          "bottom": 77.5,
+          "width": 164.09375,
+          "height": 17
+        }
+      },
+      "pnl": {
+        "individual": [
+          "Est. net -$401.82 (-0.40%)",
+          "Est. net -$244.42 (-0.24%)"
+        ],
+        "total": "-$646.24 (-0.65%)",
+        "net": -646.2400000000249,
+        "color": "rgb(226, 162, 166)",
+        "openIds": [
+          "2-1",
+          "2-2"
+        ],
+        "account": "Account PnL\n$-636.37 · -0.64%"
+      }
+    },
+    "two-open-1-1100": {
+      "layout": {
+        "viewport": 1100,
+        "pageWidth": 1100,
+        "toolbar": {
+          "x": 0,
+          "y": 92,
+          "right": 1100,
+          "bottom": 131,
+          "width": 1100,
+          "height": 39
+        },
+        "controls": [
+          {
+            "x": 14,
+            "y": 96,
+            "right": 123.015625,
+            "bottom": 126,
+            "width": 109.015625,
+            "height": 30
+          },
+          {
+            "x": 131.015625,
+            "y": 96,
+            "right": 170.359375,
+            "bottom": 126,
+            "width": 39.34375,
+            "height": 30
+          },
+          {
+            "x": 178.359375,
+            "y": 96,
+            "right": 215.921875,
+            "bottom": 126,
+            "width": 37.5625,
+            "height": 30
+          },
+          {
+            "x": 223.921875,
+            "y": 102.5,
+            "right": 277.671875,
+            "bottom": 119.5,
+            "width": 53.75,
+            "height": 17
+          }
+        ],
+        "positions": [
+          {
+            "x": 285.671875,
+            "y": 96,
+            "right": 561.328125,
+            "bottom": 126,
+            "width": 275.65625,
+            "height": 30
+          },
+          {
+            "x": 573.328125,
+            "y": 96,
+            "right": 848.984375,
+            "bottom": 126,
+            "width": 275.65625,
+            "height": 30
+          }
+        ],
+        "strip": {
+          "x": 285.671875,
+          "y": 96,
+          "right": 913.90625,
+          "bottom": 126,
+          "width": 628.234375,
+          "height": 30,
+          "scrollWidth": 628,
+          "clientWidth": 628,
+          "scrollLeftAfterKeyboard": 0
+        },
+        "total": {
+          "x": 921.90625,
+          "y": 102.5,
+          "right": 1086,
+          "bottom": 119.5,
+          "width": 164.09375,
+          "height": 17
+        }
+      },
+      "pnl": {
+        "individual": [
+          "Est. net -$401.82 (-0.40%)",
+          "Est. net -$244.42 (-0.24%)"
+        ],
+        "total": "-$646.24 (-0.65%)",
+        "net": -646.2400000000249,
+        "color": "rgb(226, 162, 166)",
+        "openIds": [
+          "2-1",
+          "2-2"
+        ],
+        "account": "Account PnL\n$-636.37 · -0.64%"
+      }
+    },
+    "two-open-1-1000": {
+      "layout": {
+        "viewport": 1000,
+        "pageWidth": 1000,
+        "toolbar": {
+          "x": 0,
+          "y": 92,
+          "right": 1000,
+          "bottom": 131,
+          "width": 1000,
+          "height": 39
+        },
+        "controls": [
+          {
+            "x": 14,
+            "y": 96,
+            "right": 123.015625,
+            "bottom": 126,
+            "width": 109.015625,
+            "height": 30
+          },
+          {
+            "x": 131.015625,
+            "y": 96,
+            "right": 170.359375,
+            "bottom": 126,
+            "width": 39.34375,
+            "height": 30
+          },
+          {
+            "x": 178.359375,
+            "y": 96,
+            "right": 215.921875,
+            "bottom": 126,
+            "width": 37.5625,
+            "height": 30
+          },
+          {
+            "x": 223.921875,
+            "y": 102.5,
+            "right": 277.671875,
+            "bottom": 119.5,
+            "width": 53.75,
+            "height": 17
+          }
+        ],
+        "positions": [
+          {
+            "x": 285.671875,
+            "y": 96,
+            "right": 561.328125,
+            "bottom": 126,
+            "width": 275.65625,
+            "height": 30
+          },
+          {
+            "x": 573.328125,
+            "y": 96,
+            "right": 848.984375,
+            "bottom": 126,
+            "width": 275.65625,
+            "height": 30
+          }
+        ],
+        "strip": {
+          "x": 285.671875,
+          "y": 96,
+          "right": 813.90625,
+          "bottom": 126,
+          "width": 528.234375,
+          "height": 30,
+          "scrollWidth": 563,
+          "clientWidth": 528,
+          "scrollLeftAfterKeyboard": 35
+        },
+        "total": {
+          "x": 821.90625,
+          "y": 102.5,
+          "right": 986,
+          "bottom": 119.5,
+          "width": 164.09375,
+          "height": 17
+        }
+      },
+      "pnl": {
+        "individual": [
+          "Est. net -$401.82 (-0.40%)",
+          "Est. net -$244.42 (-0.24%)"
+        ],
+        "total": "-$646.24 (-0.65%)",
+        "net": -646.2400000000249,
+        "color": "rgb(226, 162, 166)",
+        "openIds": [
+          "2-1",
+          "2-2"
+        ],
+        "account": "Account PnL\n$-636.37 · -0.64%"
+      }
+    },
+    "two-open-2-1440": {
+      "layout": {
+        "viewport": 1440,
+        "pageWidth": 1440,
+        "toolbar": {
+          "x": 0,
+          "y": 50,
+          "right": 1440,
+          "bottom": 89,
+          "width": 1440,
+          "height": 39
+        },
+        "controls": [
+          {
+            "x": 14,
+            "y": 54,
+            "right": 123.015625,
+            "bottom": 84,
+            "width": 109.015625,
+            "height": 30
+          },
+          {
+            "x": 131.015625,
+            "y": 54,
+            "right": 170.359375,
+            "bottom": 84,
+            "width": 39.34375,
+            "height": 30
+          },
+          {
+            "x": 178.359375,
+            "y": 54,
+            "right": 215.921875,
+            "bottom": 84,
+            "width": 37.5625,
+            "height": 30
+          },
+          {
+            "x": 223.921875,
+            "y": 60.5,
+            "right": 277.671875,
+            "bottom": 77.5,
+            "width": 53.75,
+            "height": 17
+          }
+        ],
+        "positions": [
+          {
+            "x": 285.671875,
+            "y": 54,
+            "right": 561.328125,
+            "bottom": 84,
+            "width": 275.65625,
+            "height": 30
+          },
+          {
+            "x": 573.328125,
+            "y": 54,
+            "right": 848.984375,
+            "bottom": 84,
+            "width": 275.65625,
+            "height": 30
+          }
+        ],
+        "strip": {
+          "x": 285.671875,
+          "y": 54,
+          "right": 1253.90625,
+          "bottom": 84,
+          "width": 968.234375,
+          "height": 30,
+          "scrollWidth": 968,
+          "clientWidth": 968,
+          "scrollLeftAfterKeyboard": 0
+        },
+        "total": {
+          "x": 1261.90625,
+          "y": 60.5,
+          "right": 1426,
+          "bottom": 77.5,
+          "width": 164.09375,
+          "height": 17
+        }
+      },
+      "pnl": {
+        "individual": [
+          "Est. net -$401.82 (-0.40%)",
+          "Est. net -$244.42 (-0.24%)"
+        ],
+        "total": "-$646.24 (-0.65%)",
+        "net": -646.2400000000249,
+        "color": "rgb(226, 162, 166)",
+        "openIds": [
+          "2-1",
+          "2-2"
+        ],
+        "account": "Account PnL\n$-636.37 · -0.64%"
+      }
+    },
+    "two-open-2-1100": {
+      "layout": {
+        "viewport": 1100,
+        "pageWidth": 1100,
+        "toolbar": {
+          "x": 0,
+          "y": 92,
+          "right": 1100,
+          "bottom": 131,
+          "width": 1100,
+          "height": 39
+        },
+        "controls": [
+          {
+            "x": 14,
+            "y": 96,
+            "right": 123.015625,
+            "bottom": 126,
+            "width": 109.015625,
+            "height": 30
+          },
+          {
+            "x": 131.015625,
+            "y": 96,
+            "right": 170.359375,
+            "bottom": 126,
+            "width": 39.34375,
+            "height": 30
+          },
+          {
+            "x": 178.359375,
+            "y": 96,
+            "right": 215.921875,
+            "bottom": 126,
+            "width": 37.5625,
+            "height": 30
+          },
+          {
+            "x": 223.921875,
+            "y": 102.5,
+            "right": 277.671875,
+            "bottom": 119.5,
+            "width": 53.75,
+            "height": 17
+          }
+        ],
+        "positions": [
+          {
+            "x": 285.671875,
+            "y": 96,
+            "right": 561.328125,
+            "bottom": 126,
+            "width": 275.65625,
+            "height": 30
+          },
+          {
+            "x": 573.328125,
+            "y": 96,
+            "right": 848.984375,
+            "bottom": 126,
+            "width": 275.65625,
+            "height": 30
+          }
+        ],
+        "strip": {
+          "x": 285.671875,
+          "y": 96,
+          "right": 913.90625,
+          "bottom": 126,
+          "width": 628.234375,
+          "height": 30,
+          "scrollWidth": 628,
+          "clientWidth": 628,
+          "scrollLeftAfterKeyboard": 0
+        },
+        "total": {
+          "x": 921.90625,
+          "y": 102.5,
+          "right": 1086,
+          "bottom": 119.5,
+          "width": 164.09375,
+          "height": 17
+        }
+      },
+      "pnl": {
+        "individual": [
+          "Est. net -$401.82 (-0.40%)",
+          "Est. net -$244.42 (-0.24%)"
+        ],
+        "total": "-$646.24 (-0.65%)",
+        "net": -646.2400000000249,
+        "color": "rgb(226, 162, 166)",
+        "openIds": [
+          "2-1",
+          "2-2"
+        ],
+        "account": "Account PnL\n$-636.37 · -0.64%"
+      }
+    },
+    "two-open-2-1000": {
+      "layout": {
+        "viewport": 1000,
+        "pageWidth": 1000,
+        "toolbar": {
+          "x": 0,
+          "y": 92,
+          "right": 1000,
+          "bottom": 131,
+          "width": 1000,
+          "height": 39
+        },
+        "controls": [
+          {
+            "x": 14,
+            "y": 96,
+            "right": 123.015625,
+            "bottom": 126,
+            "width": 109.015625,
+            "height": 30
+          },
+          {
+            "x": 131.015625,
+            "y": 96,
+            "right": 170.359375,
+            "bottom": 126,
+            "width": 39.34375,
+            "height": 30
+          },
+          {
+            "x": 178.359375,
+            "y": 96,
+            "right": 215.921875,
+            "bottom": 126,
+            "width": 37.5625,
+            "height": 30
+          },
+          {
+            "x": 223.921875,
+            "y": 102.5,
+            "right": 277.671875,
+            "bottom": 119.5,
+            "width": 53.75,
+            "height": 17
+          }
+        ],
+        "positions": [
+          {
+            "x": 285.671875,
+            "y": 96,
+            "right": 561.328125,
+            "bottom": 126,
+            "width": 275.65625,
+            "height": 30
+          },
+          {
+            "x": 573.328125,
+            "y": 96,
+            "right": 848.984375,
+            "bottom": 126,
+            "width": 275.65625,
+            "height": 30
+          }
+        ],
+        "strip": {
+          "x": 285.671875,
+          "y": 96,
+          "right": 813.90625,
+          "bottom": 126,
+          "width": 528.234375,
+          "height": 30,
+          "scrollWidth": 563,
+          "clientWidth": 528,
+          "scrollLeftAfterKeyboard": 35
+        },
+        "total": {
+          "x": 821.90625,
+          "y": 102.5,
+          "right": 986,
+          "bottom": 119.5,
+          "width": 164.09375,
+          "height": 17
+        }
+      },
+      "pnl": {
+        "individual": [
+          "Est. net -$401.82 (-0.40%)",
+          "Est. net -$244.42 (-0.24%)"
+        ],
+        "total": "-$646.24 (-0.65%)",
+        "net": -646.2400000000249,
+        "color": "rgb(226, 162, 166)",
+        "openIds": [
+          "2-1",
+          "2-2"
+        ],
+        "account": "Account PnL\n$-636.37 · -0.64%"
+      }
+    },
+    "two-open-3-1440": {
+      "layout": {
+        "viewport": 1440,
+        "pageWidth": 1440,
+        "toolbar": {
+          "x": 0,
+          "y": 50,
+          "right": 1440,
+          "bottom": 89,
+          "width": 1440,
+          "height": 39
+        },
+        "controls": [
+          {
+            "x": 14,
+            "y": 54,
+            "right": 123.015625,
+            "bottom": 84,
+            "width": 109.015625,
+            "height": 30
+          },
+          {
+            "x": 131.015625,
+            "y": 54,
+            "right": 170.359375,
+            "bottom": 84,
+            "width": 39.34375,
+            "height": 30
+          },
+          {
+            "x": 178.359375,
+            "y": 54,
+            "right": 215.921875,
+            "bottom": 84,
+            "width": 37.5625,
+            "height": 30
+          },
+          {
+            "x": 223.921875,
+            "y": 60.5,
+            "right": 277.671875,
+            "bottom": 77.5,
+            "width": 53.75,
+            "height": 17
+          }
+        ],
+        "positions": [
+          {
+            "x": 285.671875,
+            "y": 54,
+            "right": 561.328125,
+            "bottom": 84,
+            "width": 275.65625,
+            "height": 30
+          },
+          {
+            "x": 573.328125,
+            "y": 54,
+            "right": 848.984375,
+            "bottom": 84,
+            "width": 275.65625,
+            "height": 30
+          }
+        ],
+        "strip": {
+          "x": 285.671875,
+          "y": 54,
+          "right": 1253.90625,
+          "bottom": 84,
+          "width": 968.234375,
+          "height": 30,
+          "scrollWidth": 968,
+          "clientWidth": 968,
+          "scrollLeftAfterKeyboard": 0
+        },
+        "total": {
+          "x": 1261.90625,
+          "y": 60.5,
+          "right": 1426,
+          "bottom": 77.5,
+          "width": 164.09375,
+          "height": 17
+        }
+      },
+      "pnl": {
+        "individual": [
+          "Est. net -$401.82 (-0.40%)",
+          "Est. net -$244.42 (-0.24%)"
+        ],
+        "total": "-$646.24 (-0.65%)",
+        "net": -646.2400000000249,
+        "color": "rgb(226, 162, 166)",
+        "openIds": [
+          "2-1",
+          "2-2"
+        ],
+        "account": "Account PnL\n$-636.37 · -0.64%"
+      }
+    },
+    "two-open-3-1100": {
+      "layout": {
+        "viewport": 1100,
+        "pageWidth": 1100,
+        "toolbar": {
+          "x": 0,
+          "y": 92,
+          "right": 1100,
+          "bottom": 131,
+          "width": 1100,
+          "height": 39
+        },
+        "controls": [
+          {
+            "x": 14,
+            "y": 96,
+            "right": 123.015625,
+            "bottom": 126,
+            "width": 109.015625,
+            "height": 30
+          },
+          {
+            "x": 131.015625,
+            "y": 96,
+            "right": 170.359375,
+            "bottom": 126,
+            "width": 39.34375,
+            "height": 30
+          },
+          {
+            "x": 178.359375,
+            "y": 96,
+            "right": 215.921875,
+            "bottom": 126,
+            "width": 37.5625,
+            "height": 30
+          },
+          {
+            "x": 223.921875,
+            "y": 102.5,
+            "right": 277.671875,
+            "bottom": 119.5,
+            "width": 53.75,
+            "height": 17
+          }
+        ],
+        "positions": [
+          {
+            "x": 285.671875,
+            "y": 96,
+            "right": 561.328125,
+            "bottom": 126,
+            "width": 275.65625,
+            "height": 30
+          },
+          {
+            "x": 573.328125,
+            "y": 96,
+            "right": 848.984375,
+            "bottom": 126,
+            "width": 275.65625,
+            "height": 30
+          }
+        ],
+        "strip": {
+          "x": 285.671875,
+          "y": 96,
+          "right": 913.90625,
+          "bottom": 126,
+          "width": 628.234375,
+          "height": 30,
+          "scrollWidth": 628,
+          "clientWidth": 628,
+          "scrollLeftAfterKeyboard": 0
+        },
+        "total": {
+          "x": 921.90625,
+          "y": 102.5,
+          "right": 1086,
+          "bottom": 119.5,
+          "width": 164.09375,
+          "height": 17
+        }
+      },
+      "pnl": {
+        "individual": [
+          "Est. net -$401.82 (-0.40%)",
+          "Est. net -$244.42 (-0.24%)"
+        ],
+        "total": "-$646.24 (-0.65%)",
+        "net": -646.2400000000249,
+        "color": "rgb(226, 162, 166)",
+        "openIds": [
+          "2-1",
+          "2-2"
+        ],
+        "account": "Account PnL\n$-636.37 · -0.64%"
+      }
+    },
+    "two-open-3-1000": {
+      "layout": {
+        "viewport": 1000,
+        "pageWidth": 1000,
+        "toolbar": {
+          "x": 0,
+          "y": 92,
+          "right": 1000,
+          "bottom": 131,
+          "width": 1000,
+          "height": 39
+        },
+        "controls": [
+          {
+            "x": 14,
+            "y": 96,
+            "right": 123.015625,
+            "bottom": 126,
+            "width": 109.015625,
+            "height": 30
+          },
+          {
+            "x": 131.015625,
+            "y": 96,
+            "right": 170.359375,
+            "bottom": 126,
+            "width": 39.34375,
+            "height": 30
+          },
+          {
+            "x": 178.359375,
+            "y": 96,
+            "right": 215.921875,
+            "bottom": 126,
+            "width": 37.5625,
+            "height": 30
+          },
+          {
+            "x": 223.921875,
+            "y": 102.5,
+            "right": 277.671875,
+            "bottom": 119.5,
+            "width": 53.75,
+            "height": 17
+          }
+        ],
+        "positions": [
+          {
+            "x": 285.671875,
+            "y": 96,
+            "right": 561.328125,
+            "bottom": 126,
+            "width": 275.65625,
+            "height": 30
+          },
+          {
+            "x": 573.328125,
+            "y": 96,
+            "right": 848.984375,
+            "bottom": 126,
+            "width": 275.65625,
+            "height": 30
+          }
+        ],
+        "strip": {
+          "x": 285.671875,
+          "y": 96,
+          "right": 813.90625,
+          "bottom": 126,
+          "width": 528.234375,
+          "height": 30,
+          "scrollWidth": 563,
+          "clientWidth": 528,
+          "scrollLeftAfterKeyboard": 35
+        },
+        "total": {
+          "x": 821.90625,
+          "y": 102.5,
+          "right": 986,
+          "bottom": 119.5,
+          "width": 164.09375,
+          "height": 17
+        }
+      },
+      "pnl": {
+        "individual": [
+          "Est. net -$401.82 (-0.40%)",
+          "Est. net -$244.42 (-0.24%)"
+        ],
+        "total": "-$646.24 (-0.65%)",
+        "net": -646.2400000000249,
+        "color": "rgb(226, 162, 166)",
+        "openIds": [
+          "2-1",
+          "2-2"
+        ],
+        "account": "Account PnL\n$-636.37 · -0.64%"
+      }
+    },
+    "savedReload": true,
+    "closedOne": {
+      "individual": [
+        "Est. net -$269.67 (-0.27%)"
+      ],
+      "total": "-$269.67 (-0.27%)",
+      "net": -269.6699999999936,
+      "color": "rgb(226, 162, 166)",
+      "openIds": [
+        "2-2"
+      ],
+      "account": "Account PnL\n$-658.90 · -0.66%"
+    },
+    "one-open-1-1440": {
+      "layout": {
+        "viewport": 1440,
+        "pageWidth": 1440,
+        "toolbar": {
+          "x": 0,
+          "y": 50,
+          "right": 1440,
+          "bottom": 89,
+          "width": 1440,
+          "height": 39
+        },
+        "controls": [
+          {
+            "x": 14,
+            "y": 54,
+            "right": 123.015625,
+            "bottom": 84,
+            "width": 109.015625,
+            "height": 30
+          },
+          {
+            "x": 131.015625,
+            "y": 54,
+            "right": 170.359375,
+            "bottom": 84,
+            "width": 39.34375,
+            "height": 30
+          },
+          {
+            "x": 178.359375,
+            "y": 54,
+            "right": 215.921875,
+            "bottom": 84,
+            "width": 37.5625,
+            "height": 30
+          },
+          {
+            "x": 223.921875,
+            "y": 60.5,
+            "right": 277.671875,
+            "bottom": 77.5,
+            "width": 53.75,
+            "height": 17
+          }
+        ],
+        "positions": [
+          {
+            "x": 285.671875,
+            "y": 54,
+            "right": 561.328125,
+            "bottom": 84,
+            "width": 275.65625,
+            "height": 30
+          }
+        ],
+        "strip": {
+          "x": 285.671875,
+          "y": 54,
+          "right": 1253.90625,
+          "bottom": 84,
+          "width": 968.234375,
+          "height": 30,
+          "scrollWidth": 968,
+          "clientWidth": 968,
+          "scrollLeftAfterKeyboard": 0
+        },
+        "total": {
+          "x": 1261.90625,
+          "y": 60.5,
+          "right": 1426,
+          "bottom": 77.5,
+          "width": 164.09375,
+          "height": 17
+        }
+      },
+      "pnl": {
+        "individual": [
+          "Est. net -$269.67 (-0.27%)"
+        ],
+        "total": "-$269.67 (-0.27%)",
+        "net": -269.6699999999936,
+        "color": "rgb(226, 162, 166)",
+        "openIds": [
+          "2-2"
+        ],
+        "account": "Account PnL\n$-658.90 · -0.66%"
+      }
+    },
+    "one-open-1-1100": {
+      "layout": {
+        "viewport": 1100,
+        "pageWidth": 1100,
+        "toolbar": {
+          "x": 0,
+          "y": 92,
+          "right": 1100,
+          "bottom": 131,
+          "width": 1100,
+          "height": 39
+        },
+        "controls": [
+          {
+            "x": 14,
+            "y": 96,
+            "right": 123.015625,
+            "bottom": 126,
+            "width": 109.015625,
+            "height": 30
+          },
+          {
+            "x": 131.015625,
+            "y": 96,
+            "right": 170.359375,
+            "bottom": 126,
+            "width": 39.34375,
+            "height": 30
+          },
+          {
+            "x": 178.359375,
+            "y": 96,
+            "right": 215.921875,
+            "bottom": 126,
+            "width": 37.5625,
+            "height": 30
+          },
+          {
+            "x": 223.921875,
+            "y": 102.5,
+            "right": 277.671875,
+            "bottom": 119.5,
+            "width": 53.75,
+            "height": 17
+          }
+        ],
+        "positions": [
+          {
+            "x": 285.671875,
+            "y": 96,
+            "right": 561.328125,
+            "bottom": 126,
+            "width": 275.65625,
+            "height": 30
+          }
+        ],
+        "strip": {
+          "x": 285.671875,
+          "y": 96,
+          "right": 913.90625,
+          "bottom": 126,
+          "width": 628.234375,
+          "height": 30,
+          "scrollWidth": 628,
+          "clientWidth": 628,
+          "scrollLeftAfterKeyboard": 0
+        },
+        "total": {
+          "x": 921.90625,
+          "y": 102.5,
+          "right": 1086,
+          "bottom": 119.5,
+          "width": 164.09375,
+          "height": 17
+        }
+      },
+      "pnl": {
+        "individual": [
+          "Est. net -$269.67 (-0.27%)"
+        ],
+        "total": "-$269.67 (-0.27%)",
+        "net": -269.6699999999936,
+        "color": "rgb(226, 162, 166)",
+        "openIds": [
+          "2-2"
+        ],
+        "account": "Account PnL\n$-658.90 · -0.66%"
+      }
+    },
+    "one-open-1-1000": {
+      "layout": {
+        "viewport": 1000,
+        "pageWidth": 1000,
+        "toolbar": {
+          "x": 0,
+          "y": 92,
+          "right": 1000,
+          "bottom": 131,
+          "width": 1000,
+          "height": 39
+        },
+        "controls": [
+          {
+            "x": 14,
+            "y": 96,
+            "right": 123.015625,
+            "bottom": 126,
+            "width": 109.015625,
+            "height": 30
+          },
+          {
+            "x": 131.015625,
+            "y": 96,
+            "right": 170.359375,
+            "bottom": 126,
+            "width": 39.34375,
+            "height": 30
+          },
+          {
+            "x": 178.359375,
+            "y": 96,
+            "right": 215.921875,
+            "bottom": 126,
+            "width": 37.5625,
+            "height": 30
+          },
+          {
+            "x": 223.921875,
+            "y": 102.5,
+            "right": 277.671875,
+            "bottom": 119.5,
+            "width": 53.75,
+            "height": 17
+          }
+        ],
+        "positions": [
+          {
+            "x": 285.671875,
+            "y": 96,
+            "right": 561.328125,
+            "bottom": 126,
+            "width": 275.65625,
+            "height": 30
+          }
+        ],
+        "strip": {
+          "x": 285.671875,
+          "y": 96,
+          "right": 813.90625,
+          "bottom": 126,
+          "width": 528.234375,
+          "height": 30,
+          "scrollWidth": 528,
+          "clientWidth": 528,
+          "scrollLeftAfterKeyboard": 0
+        },
+        "total": {
+          "x": 821.90625,
+          "y": 102.5,
+          "right": 986,
+          "bottom": 119.5,
+          "width": 164.09375,
+          "height": 17
+        }
+      },
+      "pnl": {
+        "individual": [
+          "Est. net -$269.67 (-0.27%)"
+        ],
+        "total": "-$269.67 (-0.27%)",
+        "net": -269.6699999999936,
+        "color": "rgb(226, 162, 166)",
+        "openIds": [
+          "2-2"
+        ],
+        "account": "Account PnL\n$-658.90 · -0.66%"
+      }
+    },
+    "one-open-2-1440": {
+      "layout": {
+        "viewport": 1440,
+        "pageWidth": 1440,
+        "toolbar": {
+          "x": 0,
+          "y": 50,
+          "right": 1440,
+          "bottom": 89,
+          "width": 1440,
+          "height": 39
+        },
+        "controls": [
+          {
+            "x": 14,
+            "y": 54,
+            "right": 123.015625,
+            "bottom": 84,
+            "width": 109.015625,
+            "height": 30
+          },
+          {
+            "x": 131.015625,
+            "y": 54,
+            "right": 170.359375,
+            "bottom": 84,
+            "width": 39.34375,
+            "height": 30
+          },
+          {
+            "x": 178.359375,
+            "y": 54,
+            "right": 215.921875,
+            "bottom": 84,
+            "width": 37.5625,
+            "height": 30
+          },
+          {
+            "x": 223.921875,
+            "y": 60.5,
+            "right": 277.671875,
+            "bottom": 77.5,
+            "width": 53.75,
+            "height": 17
+          }
+        ],
+        "positions": [
+          {
+            "x": 285.671875,
+            "y": 54,
+            "right": 561.328125,
+            "bottom": 84,
+            "width": 275.65625,
+            "height": 30
+          }
+        ],
+        "strip": {
+          "x": 285.671875,
+          "y": 54,
+          "right": 1253.90625,
+          "bottom": 84,
+          "width": 968.234375,
+          "height": 30,
+          "scrollWidth": 968,
+          "clientWidth": 968,
+          "scrollLeftAfterKeyboard": 0
+        },
+        "total": {
+          "x": 1261.90625,
+          "y": 60.5,
+          "right": 1426,
+          "bottom": 77.5,
+          "width": 164.09375,
+          "height": 17
+        }
+      },
+      "pnl": {
+        "individual": [
+          "Est. net -$269.67 (-0.27%)"
+        ],
+        "total": "-$269.67 (-0.27%)",
+        "net": -269.6699999999936,
+        "color": "rgb(226, 162, 166)",
+        "openIds": [
+          "2-2"
+        ],
+        "account": "Account PnL\n$-658.90 · -0.66%"
+      }
+    },
+    "one-open-2-1100": {
+      "layout": {
+        "viewport": 1100,
+        "pageWidth": 1100,
+        "toolbar": {
+          "x": 0,
+          "y": 92,
+          "right": 1100,
+          "bottom": 131,
+          "width": 1100,
+          "height": 39
+        },
+        "controls": [
+          {
+            "x": 14,
+            "y": 96,
+            "right": 123.015625,
+            "bottom": 126,
+            "width": 109.015625,
+            "height": 30
+          },
+          {
+            "x": 131.015625,
+            "y": 96,
+            "right": 170.359375,
+            "bottom": 126,
+            "width": 39.34375,
+            "height": 30
+          },
+          {
+            "x": 178.359375,
+            "y": 96,
+            "right": 215.921875,
+            "bottom": 126,
+            "width": 37.5625,
+            "height": 30
+          },
+          {
+            "x": 223.921875,
+            "y": 102.5,
+            "right": 277.671875,
+            "bottom": 119.5,
+            "width": 53.75,
+            "height": 17
+          }
+        ],
+        "positions": [
+          {
+            "x": 285.671875,
+            "y": 96,
+            "right": 561.328125,
+            "bottom": 126,
+            "width": 275.65625,
+            "height": 30
+          }
+        ],
+        "strip": {
+          "x": 285.671875,
+          "y": 96,
+          "right": 913.90625,
+          "bottom": 126,
+          "width": 628.234375,
+          "height": 30,
+          "scrollWidth": 628,
+          "clientWidth": 628,
+          "scrollLeftAfterKeyboard": 0
+        },
+        "total": {
+          "x": 921.90625,
+          "y": 102.5,
+          "right": 1086,
+          "bottom": 119.5,
+          "width": 164.09375,
+          "height": 17
+        }
+      },
+      "pnl": {
+        "individual": [
+          "Est. net -$269.67 (-0.27%)"
+        ],
+        "total": "-$269.67 (-0.27%)",
+        "net": -269.6699999999936,
+        "color": "rgb(226, 162, 166)",
+        "openIds": [
+          "2-2"
+        ],
+        "account": "Account PnL\n$-658.90 · -0.66%"
+      }
+    },
+    "one-open-2-1000": {
+      "layout": {
+        "viewport": 1000,
+        "pageWidth": 1000,
+        "toolbar": {
+          "x": 0,
+          "y": 92,
+          "right": 1000,
+          "bottom": 131,
+          "width": 1000,
+          "height": 39
+        },
+        "controls": [
+          {
+            "x": 14,
+            "y": 96,
+            "right": 123.015625,
+            "bottom": 126,
+            "width": 109.015625,
+            "height": 30
+          },
+          {
+            "x": 131.015625,
+            "y": 96,
+            "right": 170.359375,
+            "bottom": 126,
+            "width": 39.34375,
+            "height": 30
+          },
+          {
+            "x": 178.359375,
+            "y": 96,
+            "right": 215.921875,
+            "bottom": 126,
+            "width": 37.5625,
+            "height": 30
+          },
+          {
+            "x": 223.921875,
+            "y": 102.5,
+            "right": 277.671875,
+            "bottom": 119.5,
+            "width": 53.75,
+            "height": 17
+          }
+        ],
+        "positions": [
+          {
+            "x": 285.671875,
+            "y": 96,
+            "right": 561.328125,
+            "bottom": 126,
+            "width": 275.65625,
+            "height": 30
+          }
+        ],
+        "strip": {
+          "x": 285.671875,
+          "y": 96,
+          "right": 813.90625,
+          "bottom": 126,
+          "width": 528.234375,
+          "height": 30,
+          "scrollWidth": 528,
+          "clientWidth": 528,
+          "scrollLeftAfterKeyboard": 0
+        },
+        "total": {
+          "x": 821.90625,
+          "y": 102.5,
+          "right": 986,
+          "bottom": 119.5,
+          "width": 164.09375,
+          "height": 17
+        }
+      },
+      "pnl": {
+        "individual": [
+          "Est. net -$269.67 (-0.27%)"
+        ],
+        "total": "-$269.67 (-0.27%)",
+        "net": -269.6699999999936,
+        "color": "rgb(226, 162, 166)",
+        "openIds": [
+          "2-2"
+        ],
+        "account": "Account PnL\n$-658.90 · -0.66%"
+      }
+    },
+    "one-open-3-1440": {
+      "layout": {
+        "viewport": 1440,
+        "pageWidth": 1440,
+        "toolbar": {
+          "x": 0,
+          "y": 50,
+          "right": 1440,
+          "bottom": 89,
+          "width": 1440,
+          "height": 39
+        },
+        "controls": [
+          {
+            "x": 14,
+            "y": 54,
+            "right": 123.015625,
+            "bottom": 84,
+            "width": 109.015625,
+            "height": 30
+          },
+          {
+            "x": 131.015625,
+            "y": 54,
+            "right": 170.359375,
+            "bottom": 84,
+            "width": 39.34375,
+            "height": 30
+          },
+          {
+            "x": 178.359375,
+            "y": 54,
+            "right": 215.921875,
+            "bottom": 84,
+            "width": 37.5625,
+            "height": 30
+          },
+          {
+            "x": 223.921875,
+            "y": 60.5,
+            "right": 277.671875,
+            "bottom": 77.5,
+            "width": 53.75,
+            "height": 17
+          }
+        ],
+        "positions": [
+          {
+            "x": 285.671875,
+            "y": 54,
+            "right": 561.328125,
+            "bottom": 84,
+            "width": 275.65625,
+            "height": 30
+          }
+        ],
+        "strip": {
+          "x": 285.671875,
+          "y": 54,
+          "right": 1253.90625,
+          "bottom": 84,
+          "width": 968.234375,
+          "height": 30,
+          "scrollWidth": 968,
+          "clientWidth": 968,
+          "scrollLeftAfterKeyboard": 0
+        },
+        "total": {
+          "x": 1261.90625,
+          "y": 60.5,
+          "right": 1426,
+          "bottom": 77.5,
+          "width": 164.09375,
+          "height": 17
+        }
+      },
+      "pnl": {
+        "individual": [
+          "Est. net -$269.67 (-0.27%)"
+        ],
+        "total": "-$269.67 (-0.27%)",
+        "net": -269.6699999999936,
+        "color": "rgb(226, 162, 166)",
+        "openIds": [
+          "2-2"
+        ],
+        "account": "Account PnL\n$-658.90 · -0.66%"
+      }
+    },
+    "one-open-3-1100": {
+      "layout": {
+        "viewport": 1100,
+        "pageWidth": 1100,
+        "toolbar": {
+          "x": 0,
+          "y": 92,
+          "right": 1100,
+          "bottom": 131,
+          "width": 1100,
+          "height": 39
+        },
+        "controls": [
+          {
+            "x": 14,
+            "y": 96,
+            "right": 123.015625,
+            "bottom": 126,
+            "width": 109.015625,
+            "height": 30
+          },
+          {
+            "x": 131.015625,
+            "y": 96,
+            "right": 170.359375,
+            "bottom": 126,
+            "width": 39.34375,
+            "height": 30
+          },
+          {
+            "x": 178.359375,
+            "y": 96,
+            "right": 215.921875,
+            "bottom": 126,
+            "width": 37.5625,
+            "height": 30
+          },
+          {
+            "x": 223.921875,
+            "y": 102.5,
+            "right": 277.671875,
+            "bottom": 119.5,
+            "width": 53.75,
+            "height": 17
+          }
+        ],
+        "positions": [
+          {
+            "x": 285.671875,
+            "y": 96,
+            "right": 561.328125,
+            "bottom": 126,
+            "width": 275.65625,
+            "height": 30
+          }
+        ],
+        "strip": {
+          "x": 285.671875,
+          "y": 96,
+          "right": 913.90625,
+          "bottom": 126,
+          "width": 628.234375,
+          "height": 30,
+          "scrollWidth": 628,
+          "clientWidth": 628,
+          "scrollLeftAfterKeyboard": 0
+        },
+        "total": {
+          "x": 921.90625,
+          "y": 102.5,
+          "right": 1086,
+          "bottom": 119.5,
+          "width": 164.09375,
+          "height": 17
+        }
+      },
+      "pnl": {
+        "individual": [
+          "Est. net -$269.67 (-0.27%)"
+        ],
+        "total": "-$269.67 (-0.27%)",
+        "net": -269.6699999999936,
+        "color": "rgb(226, 162, 166)",
+        "openIds": [
+          "2-2"
+        ],
+        "account": "Account PnL\n$-658.90 · -0.66%"
+      }
+    },
+    "one-open-3-1000": {
+      "layout": {
+        "viewport": 1000,
+        "pageWidth": 1000,
+        "toolbar": {
+          "x": 0,
+          "y": 92,
+          "right": 1000,
+          "bottom": 131,
+          "width": 1000,
+          "height": 39
+        },
+        "controls": [
+          {
+            "x": 14,
+            "y": 96,
+            "right": 123.015625,
+            "bottom": 126,
+            "width": 109.015625,
+            "height": 30
+          },
+          {
+            "x": 131.015625,
+            "y": 96,
+            "right": 170.359375,
+            "bottom": 126,
+            "width": 39.34375,
+            "height": 30
+          },
+          {
+            "x": 178.359375,
+            "y": 96,
+            "right": 215.921875,
+            "bottom": 126,
+            "width": 37.5625,
+            "height": 30
+          },
+          {
+            "x": 223.921875,
+            "y": 102.5,
+            "right": 277.671875,
+            "bottom": 119.5,
+            "width": 53.75,
+            "height": 17
+          }
+        ],
+        "positions": [
+          {
+            "x": 285.671875,
+            "y": 96,
+            "right": 561.328125,
+            "bottom": 126,
+            "width": 275.65625,
+            "height": 30
+          }
+        ],
+        "strip": {
+          "x": 285.671875,
+          "y": 96,
+          "right": 813.90625,
+          "bottom": 126,
+          "width": 528.234375,
+          "height": 30,
+          "scrollWidth": 528,
+          "clientWidth": 528,
+          "scrollLeftAfterKeyboard": 0
+        },
+        "total": {
+          "x": 821.90625,
+          "y": 102.5,
+          "right": 986,
+          "bottom": 119.5,
+          "width": 164.09375,
+          "height": 17
+        }
+      },
+      "pnl": {
+        "individual": [
+          "Est. net -$269.67 (-0.27%)"
+        ],
+        "total": "-$269.67 (-0.27%)",
+        "net": -269.6699999999936,
+        "color": "rgb(226, 162, 166)",
+        "openIds": [
+          "2-2"
+        ],
+        "account": "Account PnL\n$-658.90 · -0.66%"
+      }
+    },
+    "closedAll": true,
+    "sell-keyboard-confirmation": {
+      "key": "s",
+      "pips": "Draft SL · 30.0 pips",
+      "draft": {
+        "direction": "sell",
+        "sizing": {
+          "mode": "risk",
+          "riskPercent": 1
+        },
+        "setupId": null,
+        "slot": 1,
+        "price": null
+      },
+      "pending": [
+        {
+          "id": "2-3",
+          "setupId": "2-S2",
+          "direction": "sell",
+          "mode": "risk",
+          "lots": null,
+          "requestedRiskPercent": 1,
+          "requestedRiskUsd": 1000,
+          "stopPrice": 1.1017,
+          "requestedAt": 1704474060000
+        }
+      ],
+      "beforeOpenCount": 0
+    },
+    "sellFill": {
+      "individual": [
+        "Est. net -$6.14 (-0.01%)"
+      ],
+      "total": "-$6.14 (-0.01%)",
+      "net": -6.140000000035773,
+      "color": "rgb(226, 162, 166)",
+      "openIds": [
+        "2-3"
+      ],
+      "account": "Account PnL\n$-652.79 · -0.65%"
+    },
+    "cacheUnchanged": true
+  },
+  "keyboardEvents": [
+    {
+      "key": "b",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "INPUT",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "Control",
+      "repeat": false,
+      "ctrl": true,
+      "alt": false,
+      "meta": false,
+      "target": "BODY",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "b",
+      "repeat": false,
+      "ctrl": true,
+      "alt": false,
+      "meta": false,
+      "target": "BODY",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "Alt",
+      "repeat": false,
+      "ctrl": false,
+      "alt": true,
+      "meta": false,
+      "target": "BODY",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "b",
+      "repeat": false,
+      "ctrl": false,
+      "alt": true,
+      "meta": false,
+      "target": "BODY",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "Meta",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": true,
+      "target": "BODY",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "s",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": true,
+      "target": "BODY",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "b",
+      "repeat": true,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "b",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "SUMMARY",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "b",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "SUMMARY",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "b",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BUTTON",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "s",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BODY",
+      "prevented": true,
+      "draft": {
+        "direction": "sell",
+        "slot": 1
+      }
+    },
+    {
+      "key": "Escape",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BODY",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "b",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BODY",
+      "prevented": true,
+      "draft": {
+        "direction": "buy",
+        "slot": 1
+      }
+    },
+    {
+      "key": "b",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BODY",
+      "prevented": false,
+      "draft": {
+        "direction": "buy",
+        "slot": 1
+      }
+    },
+    {
+      "key": "b",
+      "repeat": true,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BODY",
+      "prevented": false,
+      "draft": {
+        "direction": "buy",
+        "slot": 1
+      }
+    },
+    {
+      "key": "s",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BODY",
+      "prevented": false,
+      "draft": {
+        "direction": "buy",
+        "slot": 1
+      }
+    },
+    {
+      "key": "s",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BUTTON",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "b",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BODY",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "Shift",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BODY",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "ArrowLeft",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BODY",
+      "prevented": true,
+      "draft": null
+    },
+    {
+      "key": "b",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BODY",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "Shift",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BODY",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "ArrowRight",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BODY",
+      "prevented": true,
+      "draft": null
+    },
+    {
+      "key": "b",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BODY",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "Escape",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BODY",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "B",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BODY",
+      "prevented": true,
+      "draft": {
+        "direction": "buy",
+        "slot": 2
+      }
+    },
+    {
+      "key": "B",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BODY",
+      "prevented": false,
+      "draft": {
+        "direction": "buy",
+        "slot": 2
+      }
+    },
+    {
+      "key": "B",
+      "repeat": true,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BODY",
+      "prevented": false,
+      "draft": {
+        "direction": "buy",
+        "slot": 2
+      }
+    },
+    {
+      "key": "s",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BODY",
+      "prevented": false,
+      "draft": {
+        "direction": "buy",
+        "slot": 2
+      }
+    },
+    {
+      "key": "b",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BODY",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "Shift",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BODY",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "ArrowRight",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BODY",
+      "prevented": true,
+      "draft": null
+    },
+    {
+      "key": "Tab",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "DIV",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "Tab",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BUTTON",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "Tab",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "DIV",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "Tab",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BUTTON",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "ArrowRight",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "DIV",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "ArrowRight",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "DIV",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "Tab",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "DIV",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "Tab",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BUTTON",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "Tab",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "DIV",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "Tab",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BUTTON",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "Tab",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "DIV",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "Tab",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BUTTON",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "ArrowRight",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "DIV",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "ArrowRight",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "DIV",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "Tab",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "DIV",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "Tab",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BUTTON",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "Tab",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "DIV",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "Tab",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BUTTON",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "Tab",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "DIV",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "Tab",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BUTTON",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "ArrowRight",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "DIV",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "ArrowRight",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "DIV",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "Tab",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "DIV",
+      "prevented": false,
+      "draft": null
+    },
+    {
+      "key": "Tab",
+      "repeat": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "target": "BUTTON",
+      "prevented": false,
+      "draft": null
+    }
+  ],
+  "cacheManifest": [
+    [
+      "02feba79e0d8abd083da28fc131dd6804342ee028b039eb44a25a8cf2b2e09b2.json",
+      "9b48d58a56a59628788c2b2af0a3f74628a045bafade9ce9e8c2dfce209ad918"
+    ],
+    [
+      "060f0a9b7c18f1e2ab1a61c15e88519115c2ea900189bfa87c51e36e0a53963a.json",
+      "d70d006df6b35671d13675a65c8a02776f4ae367ec3c398aa2f206671224ac8c"
+    ],
+    [
+      "06e499dc09a223c0b0ea5be3c31b631334496ba49be7acdf748c0df394348189.json",
+      "a457d64d04637abb8d372680f19e2fb1a24920a8f30b4f76098412ebdf97a476"
+    ],
+    [
+      "08aaca40a735fed0c210dcabbb8b6d2ad43f81d9cfa7f054275df6a5c7cb7d82.json",
+      "50d4e36d831f84844c0a2422ff6df9ccd36cdfafd6ea88b5043238d5ff79799c"
+    ],
+    [
+      "0bf33d18d4dfc1822ffa297dcd7f9639976a8c1a2f3b3621d21d4678fa84f8d8.json",
+      "3e6bb3f84467bfafcfa007e0065dc7d0e52d50bf6b5cd5eb8599908f5c035917"
+    ],
+    [
+      "114e85e45b4480bbf901e90636278580a66d9ad419b7dcd142a2375ed42d9fa0.json",
+      "0466566983c75eacec11b01365d98c7bea1f924d5c9174b3a0ec248ae55c747f"
+    ],
+    [
+      "119d06963ed1566bbe95c672a686233e1f49263f9da53ff20123cd3fc17bd809.json",
+      "f0ce8ccae65488892d8afc601313b919ffcaa5e38a46d24514589ad62f318090"
+    ],
+    [
+      "131f321fc5207f5ba0c259747256e53db8234694787cc79f424ed3d47dad8bd8.json",
+      "7036ea780b898b2edf9f8365e3394e06d0962c7598213ee181e97ec31038a3a3"
+    ],
+    [
+      "15f412022765a0cef594176b702b5ab1fc06471ccd817c64091daf9a09cc98c6.json",
+      "1f26763dccf482d926b77b002df0d10ab45e52fbd98a943721908b683bf43244"
+    ],
+    [
+      "160df7df1abd8a8d0a8d58b6839173bf15bf8d8825ac88bedb15efc93f9d0058.json",
+      "03af3aa6fa5c8042dfeb28e49cc95b7d3f2e74d69a8ac30036c0caf5853a46bc"
+    ],
+    [
+      "1c2d6f6555ba309f300be4abea1b77f6ec0cc1c603033c8ce3f7b076849a5981.json",
+      "9a35f5a15d073e31f6aed5247e2231d7f1d51b45cf6e7baa49d284aa840b40c0"
+    ],
+    [
+      "1cd7d66b70b35bd7997e95c43f25d0a71d1f07a2b523c05ad5f95da822d63a09.json",
+      "49a6385963ae1420ee2cb083b21646d0f862b8d001a97c9026dc5b464b35a4c0"
+    ],
+    [
+      "1d98f8b251ebdc3342bc455c7909ee10e78810981ef4a298aa982e158c0c04f3.json",
+      "ea57cf30f362d40e7089bc4dba9e6b3d8ad4e10959737e18c6d55ebe3d5d02b7"
+    ],
+    [
+      "1e9d973d47b074a8601e487dbc9c20a031c3f0221a15f57a2141a8989a9b113f.json",
+      "b43e45ec6648dce7a81f5d588105884a0c7a223457afb013eabc083370d16173"
+    ],
+    [
+      "1f936150e2d7435f8464855a82afca9e709ee3f4524003a9f08c20cc89015c0f.json",
+      "615e0a9c864e9fca159f706caae845cc6393a5d2d8dac7302021b32b37b9f15b"
+    ],
+    [
+      "2023-12-02.ref.json",
+      "6f9443968e33490242c515ea28ade31f19b22203f9dc043db18b99b1ba6bef9c"
+    ],
+    [
+      "2023-12-03.ref.json",
+      "08f35897cb04bd3247ef6bd744514c63b92cc434ec1983c30f1b71dd0bab7577"
+    ],
+    [
+      "2023-12-04.ref.json",
+      "359c4826746f7f8e18c622056e039324c3e344399c6baf9e52b4760eea120e4b"
+    ],
+    [
+      "2023-12-05.ref.json",
+      "1eb04a311de358de85472df8325afa0aac991513424ebf0f2d2b428ce8d41f40"
+    ],
+    [
+      "2023-12-06.ref.json",
+      "40eea94789cae2174741ad3b29112b6ddd32917a9c9e0dee5b94dd92aa810846"
+    ],
+    [
+      "2023-12-07.ref.json",
+      "7f1ba2375bf1703227216c31f1387e89bff82fb0ccdc27e2b274d3fef1d668a3"
+    ],
+    [
+      "2023-12-08.ref.json",
+      "89b7ac01b4fc5acbe3efcbcab3204d798e4bbbba58b8c6b77137d0f314be11b1"
+    ],
+    [
+      "2023-12-09.ref.json",
+      "deb42b36c2dc6010953753d523a39fd7a2df5df69eeb9037f515d555bf626600"
+    ],
+    [
+      "2023-12-10.ref.json",
+      "d3a78436b6fb1336ed9e30bb38a62ae0b11c4f7bac33158bf30dbe053b48d17b"
+    ],
+    [
+      "2023-12-11.ref.json",
+      "99390d108304533d09e5f9eace5a76a441ee126674042a0cd4a76b09d0e0c61b"
+    ],
+    [
+      "2023-12-12.ref.json",
+      "c62cc97bcb379ac5c6a39dce1336522f74454098cc7907acf9eb84b0cca45a2b"
+    ],
+    [
+      "2023-12-13.ref.json",
+      "eee32c1fe4840c89af4053f0f91ee6eccf880a42e54bfbe22077351e246ba0fb"
+    ],
+    [
+      "2023-12-14.ref.json",
+      "a5311afadd074c0e4632b52473149f63f81abbc8a4290acddd3779e7d5b31abe"
+    ],
+    [
+      "2023-12-15.ref.json",
+      "0f8d9b4fef60fc962df80809e2a5167e6177ffe8d5c55f6a0549eaa4c19f2e8d"
+    ],
+    [
+      "2023-12-16.ref.json",
+      "c7224c51e01e2462d25b62e6dd21b1e0447ebb6f22d77edf1dc0c89ff324910c"
+    ],
+    [
+      "2023-12-17.ref.json",
+      "4428168a27688b8bbcca578869c35fbecd0617bbe9efdde44b2b939c7d1fef09"
+    ],
+    [
+      "2023-12-18.ref.json",
+      "ebc14690d269299646654dfc5397ee6101531fe23b8a650a987360fdb2bcd57a"
+    ],
+    [
+      "2023-12-19.ref.json",
+      "6eadf60e21c5863e191c904e0fb4ad711867127bf4bf4c8a7d95fa3befac288a"
+    ],
+    [
+      "2023-12-20.ref.json",
+      "5773914429632f9294926dc0dc8cceac64aaf81374be3516884172249eaa24a8"
+    ],
+    [
+      "2023-12-21.ref.json",
+      "4dcb27d138facbcc2fd4dddb01779a052c41aa6d7adec2e7bd21f9410cdb081a"
+    ],
+    [
+      "2023-12-22.ref.json",
+      "ebbecd940945833d43a5f9b7d6c843cc0b2a3c8c2c395b887f34f856d08e4a69"
+    ],
+    [
+      "2023-12-23.ref.json",
+      "a5af0e91c7a3599dfa3ad4bd727951317854e649d7cc416ab63f6a3b23ce60d2"
+    ],
+    [
+      "2023-12-24.ref.json",
+      "3b71eaf38426cba032898850ed84ad7ebd888d8b53a540951d70c66a2880cf21"
+    ],
+    [
+      "2023-12-25.ref.json",
+      "63a7c96d300f80afcb62e2762c4ee6035586b802e259f86afc750e111473ebc5"
+    ],
+    [
+      "2023-12-26.ref.json",
+      "4f544ba8ee37afb04b03bcb816b0b6190a970d0ba297d0d40de58b639d2cddd2"
+    ],
+    [
+      "2023-12-27.ref.json",
+      "89bea30b116a067f8048d51da9e68f3cdff6d4b9a97bd395e5fdcdc6f94ebf3f"
+    ],
+    [
+      "2023-12-28.ref.json",
+      "99bbff3aede67187f6db6e14edac81ba6a2b2e361491679bca3f1ab4806a2b4b"
+    ],
+    [
+      "2023-12-29.ref.json",
+      "467149c35d91a2121a6c13a1337e33d34a436abe8673dc0d2f09a9d27c44052f"
+    ],
+    [
+      "2023-12-30.ref.json",
+      "b1fd9b512493649fc8d32ffc2881bff7455745608cc18d3e350bba8feedcd84a"
+    ],
+    [
+      "2023-12-31.ref.json",
+      "9a0c2f8c94730f357d2ad3403e559e76db31b11d8f81bd780ecdfcc093ee2006"
+    ],
+    [
+      "2024-01-01.ref.json",
+      "3719f6393220a6952b7da4b9765f2009acab66f8bdcd55b8459fed8fc17ba236"
+    ],
+    [
+      "2024-01-02.ref.json",
+      "f5f76ec1f8c25a8db9af79772479129916efccc114b7069bcb9ade840343eeaf"
+    ],
+    [
+      "2024-01-03.ref.json",
+      "376776461001254bf2e8ae77db160598be48470fd3fde79df40260a7222c8caa"
+    ],
+    [
+      "2024-01-04.ref.json",
+      "18c2f425b8e64abb500e5f2e4b54bad7b8b234ca7278af2833bc834cb52f5184"
+    ],
+    [
+      "2024-01-05.ref.json",
+      "fa92cb64c0a7e560ad6f675c5cc7d05ff08d731e0ab5367bf418dcf9fa67ab47"
+    ],
+    [
+      "2024-01-06.ref.json",
+      "e7cd74b2860a11f217f9203aa6792e57d5247c81d9e9792f0184c9cdd255006a"
+    ],
+    [
+      "2024-01-07.ref.json",
+      "9265f1f6b15e0b067af74b69c128c9fa4857afe18792cf19722d5511598e2d40"
+    ],
+    [
+      "2024-01-08.ref.json",
+      "d273d986cde5d5552f4107aeaa720f02deafd9980c68588c86c5f246b3da456d"
+    ],
+    [
+      "2024-01-09.ref.json",
+      "14036455ad5807f119a1b7b888c21414ae77ac11750ffdaa09a91a4d9ae466fe"
+    ],
+    [
+      "2024-01-10.ref.json",
+      "f58d3e25e5912ff4c4b323de3c3dc8522ba85326ef0a4e19445b92eb4d74ca57"
+    ],
+    [
+      "2024-01-11.ref.json",
+      "86f52621e348879b25fa617ff957eeb88677c979304c97884c11655be7bfb4b8"
+    ],
+    [
+      "2024-01-12.ref.json",
+      "3b7485e91cf87dcebdf5f1523e9f39663ec7d558f9395ca1511a9535e45ea63f"
+    ],
+    [
+      "2024-01-13.ref.json",
+      "ada18f3e132e42f1ec6c9597866ecc9966c27876b8d2a84e30337ff724b982a2"
+    ],
+    [
+      "2024-01-14.ref.json",
+      "d06e2c2372b6f948edd5631e2abcadf91bb2daf3b5daa1f1cc9ed218cb5df564"
+    ],
+    [
+      "2024-01-15.ref.json",
+      "18c682e001cb439a986980b55832cda0eb1a5ef552e9f0a5c361beb68c1eb267"
+    ],
+    [
+      "2024-01-16.ref.json",
+      "18532c62be36cc5edd7a560806f9e3e776d7e677b03319fe802c22296daf3655"
+    ],
+    [
+      "2024-01-17.ref.json",
+      "da1eb6612e69fde553788fe3150615f968480429b2fe1da239351a0e82918a13"
+    ],
+    [
+      "2024-01-18.ref.json",
+      "4af5fbf1bac727a74c76ec2325b70879fcc1ee2cddd962a97c962a33853917f2"
+    ],
+    [
+      "2024-01-19.ref.json",
+      "6e479a0282cf388ad61c600bd0592e534e88a1db522ce610aeb16842e232bcd4"
+    ],
+    [
+      "2024-01-20.ref.json",
+      "419a05e6f3cb3c6ab60b3abd3499312c66be6f4b874f141bc28c50ca51578f45"
+    ],
+    [
+      "2024-01-21.ref.json",
+      "192019c66c37012af710dbd295227a0acf303a77b4066b81180fcd029fc27c57"
+    ],
+    [
+      "2024-01-22.ref.json",
+      "9c3fce3d3342f0d340b32c24b12939a4ebe579a42177601947e379f3a63b54c3"
+    ],
+    [
+      "2024-01-23.ref.json",
+      "babd90c3b82c17604fc03454ef647f023c73774e52043d1fd266004c91c09389"
+    ],
+    [
+      "2024-01-24.ref.json",
+      "dc3feca6d77966b5deef77353d4602a20590c17a8ac84c5e195e40bd09d557a3"
+    ],
+    [
+      "2024-01-25.ref.json",
+      "171abffb2378827abe6c6325b53793cfd955fbcb55c0d45ff932fa91bd2feff0"
+    ],
+    [
+      "2024-01-26.ref.json",
+      "6497e86ee54d4b808085dd4b9b942e8a6555284e9d6f03431ae0f467f580dc34"
+    ],
+    [
+      "2024-01-27.ref.json",
+      "ca04d8bfa7f093f4e081d6df1d0aee332a83c261661b635da8f6864159fc7ce2"
+    ],
+    [
+      "2024-01-28.ref.json",
+      "6dccbff1605a439acf6bd04cad00103d2b2c3775e814f63154b3020ef7f5e700"
+    ],
+    [
+      "2024-01-29.ref.json",
+      "c7e6c56413dd85ff5484c0c69c1d8b20fa04806b59224817c89decc8206e074d"
+    ],
+    [
+      "2024-01-30.ref.json",
+      "1e66af786c8685af03e64a26b8f71f7fd9478654b58ab26884097c9c7fc06171"
+    ],
+    [
+      "2024-01-31.ref.json",
+      "2515caa0ea590150d88e3e500a55003e977a16c07ed9db26fc264b7868ed8d30"
+    ],
+    [
+      "2024-02-01.ref.json",
+      "581218650f6abc595596b9d1f01c6ad65df456a43011512756c239157eb40036"
+    ],
+    [
+      "2024-02-02.ref.json",
+      "64f9663cc22cadcb7f5fa789ec8a72984854336c48619e361185c6512964d2eb"
+    ],
+    [
+      "2024-02-03.ref.json",
+      "e1e34d51b25021bfc4967263b0fe473f346b8f42e4ebe856ee7980f41925526b"
+    ],
+    [
+      "2024-02-04.ref.json",
+      "0b5246e0e9e20e773313a7ff30823f2540a45a3628a86866a8a971cf02b25da3"
+    ],
+    [
+      "2024-02-05.ref.json",
+      "660eca8fcdd2d8ab54f61c7ae84d074c40bd640a6420de63bfee9bb4221a6175"
+    ],
+    [
+      "2024-02-06.ref.json",
+      "d218353b398e55794ed5ad843d2142a62912bf3c359fed87bb014b4ec10e34fe"
+    ],
+    [
+      "2024-02-07.ref.json",
+      "e65f503ed6de0aca640353e08eb75d3d64a8f3f500b5e776684e54ce1fa7f2a8"
+    ],
+    [
+      "2024-02-08.ref.json",
+      "0219e75ec5e5fcfb92703ef8e42500c1ded24abc1fe2f813139038d394ed08df"
+    ],
+    [
+      "2024-02-09.ref.json",
+      "b65bea9cbd5a2bbae4eda4db5bedb5a446ac7989d9d542a1f84b0f2742718882"
+    ],
+    [
+      "2024-02-10.ref.json",
+      "ebc3d3e1c1a31415dba59a0e897fd31ac10ba041508dd8593477a377731c203c"
+    ],
+    [
+      "2024-02-11.ref.json",
+      "20de28a1eb592d954528cd412b0911468c230796aa5b7fc7abaa84e7b539d2c5"
+    ],
+    [
+      "2024-02-12.ref.json",
+      "a960d17939ba019566520d08f4f506e9edcd0478f6b40a361d582e8caff18605"
+    ],
+    [
+      "2024-02-13.ref.json",
+      "d49baab692f2b47e5417fb3c9153a4617a12ddfe9f3bf96db192c7be63d8ca81"
+    ],
+    [
+      "2024-02-14.ref.json",
+      "06af21e259e8d7f444af14ea7443c761d38daacb4733abfbe0b1ca26bd8356f2"
+    ],
+    [
+      "2024-02-15.ref.json",
+      "14a6e3436a0eba62986008d8f359fabbbac3be0931d68df4dfa4329835f19c16"
+    ],
+    [
+      "2024-02-16.ref.json",
+      "9283319e5301470528fa8c34346af29cf640627efa79919309c4fe3e2c1626e5"
+    ],
+    [
+      "2024-02-17.ref.json",
+      "910739adbc0933fbb3243c03f5041f9a4aa0316237391127ef01aed8c027decc"
+    ],
+    [
+      "2024-02-18.ref.json",
+      "54af6ee12bb97e6e2d60febb7967a66a213a1f7656874ffc3372b9838a830ab4"
+    ],
+    [
+      "2024-02-19.ref.json",
+      "c7eba09e33effc14a30685b735c93fb55d595c387efb2f175c34f48752720c68"
+    ],
+    [
+      "2024-02-20.ref.json",
+      "4fee60d8048c38a868113dc05727290c8222225442b33fbe0abc26530e8e253a"
+    ],
+    [
+      "2024-02-21.ref.json",
+      "570a966b69397bc5c793ebc2186587578583cb31f0862a5022f868f43329b7cd"
+    ],
+    [
+      "2024-02-22.ref.json",
+      "43653f96cffee16543bf79ff96406ca5fe617e30dbf7cc1df159285f0223ae38"
+    ],
+    [
+      "2024-02-23.ref.json",
+      "17c85cd20d8ef7931315e5d89f8b8891af44ee21d7b47b1bcc4ca76316b39849"
+    ],
+    [
+      "2024-02-24.ref.json",
+      "39ae468987c9d13025cfeb3708037b6606f1dd4545ee7be60d7557289445b4f9"
+    ],
+    [
+      "2024-02-25.ref.json",
+      "3dbf4a6db60f410df01271f7c8e69ebd3a77608b35d1482d24a9eb23f5820cef"
+    ],
+    [
+      "2024-02-26.ref.json",
+      "137ee91c8d0e21eb2dbdfea8aacde5ff97b4e6b9fcac857e5a159d90bdc0cc84"
+    ],
+    [
+      "2024-02-27.ref.json",
+      "4e9054fe055b68c512afffcd5ceb7d271a46de518ce4191433dc56148e1d3097"
+    ],
+    [
+      "2024-02-28.ref.json",
+      "a522c23efcbbb1d482ea8e338ca95ccfaed60702c0ac3bf10410b3046f4356ea"
+    ],
+    [
+      "2024-02-29.ref.json",
+      "1eab12f7553dac508ebeef3b4e23b947aa51b2737e9580d392484354f75c0b66"
+    ],
+    [
+      "2024-03-01.ref.json",
+      "90ea9547622bf2a822868ddfcac62a86482274571055e9bc8e933c26fa2b7336"
+    ],
+    [
+      "2024-03-02.ref.json",
+      "4284a0ca81a7949b8a982ddc97f62be9b6e3a8bdb4624d4ae11ea0aa71cf512a"
+    ],
+    [
+      "2024-03-03.ref.json",
+      "d957f5826ace27dfbd1c0e22dcc3f5ce6c44998b65dc5aa727d7cc4a08edd50c"
+    ],
+    [
+      "2024-03-04.ref.json",
+      "53810cdddd27b488185f54854d75502715f9a263b52a1ccad400418b0734ea04"
+    ],
+    [
+      "2024-03-05.ref.json",
+      "8be8a63841376d177ec8f13d49c776777762194a3a361a75f0c794a6ccdf0c44"
+    ],
+    [
+      "2024-03-06.ref.json",
+      "6493915c1323d950eb865340d1fa1f8399fba29dc998e8fa134e32799444771d"
+    ],
+    [
+      "2024-03-07.ref.json",
+      "0a5bc05a3eaf9f3019ba9e73a4876ecbb8708a4bd272702fe76e1770cb712573"
+    ],
+    [
+      "2024-03-08.ref.json",
+      "b0be52682bd50437db21d5305b039f6ce3531da80167777bfb0a755c625f076d"
+    ],
+    [
+      "2024-03-09.ref.json",
+      "4038de682410aa77d257c76da020b1c9a81aab11091834fd3d5bbd1f9b3e9008"
+    ],
+    [
+      "2024-03-10.ref.json",
+      "e8dad6c46e7ef9dc072ad7041430b76eda8a3bef1addc44a008295f7848e0c95"
+    ],
+    [
+      "2024-03-11.ref.json",
+      "55e3aad2d2a214a50f8403104986bd96c4b737f87cd77905c5dca6a6dd4a2bca"
+    ],
+    [
+      "2024-03-12.ref.json",
+      "c2d941d320829a63fad01d8bdcb89c85a2e3e00b85ac2c98c6f5b104fe6fc8f4"
+    ],
+    [
+      "2024-03-13.ref.json",
+      "611d29eee36c0843496842eadc1fa742483df5e072816b2132bc2a9ad79400a3"
+    ],
+    [
+      "2024-03-14.ref.json",
+      "d56053d14bdd70f4cf9d89b5be168177206d556ea534d638b0b5ae1ab66cacf9"
+    ],
+    [
+      "2024-03-15.ref.json",
+      "bff3784e83ddab9f206b7973afa6322259214865b2ffcc9aaa7a6df4e1385c53"
+    ],
+    [
+      "2024-03-16.ref.json",
+      "36d090fd4c4df8bef23b81ed1357ebbcc21743be4231b7b5fd104c18f7ae35df"
+    ],
+    [
+      "2024-03-17.ref.json",
+      "e0a0c71c3d323908b11f174f47da49826e225e7d4cc63a35aee30fc022b9d49c"
+    ],
+    [
+      "2024-03-18.ref.json",
+      "e96f7816759826907337d620b791f3eed5d0e9ee1c5d41fbefeda06e63d7274e"
+    ],
+    [
+      "2024-03-19.ref.json",
+      "320c75d1139c60f4781136a5f51029861fd77e8bf0e724a373448e27841cc9c4"
+    ],
+    [
+      "2024-03-20.ref.json",
+      "26d4e6c37b62707baa7333336a87de828e2891527c3c43609ed36eb26e906df5"
+    ],
+    [
+      "2024-03-21.ref.json",
+      "d0e386fc0d34e3bd1c8e7bc19990148c2e60961d7f416d2af8e50c2c009ce5aa"
+    ],
+    [
+      "2024-03-22.ref.json",
+      "2a5ba1b674ee1ada0acfb0e904e68a7a4d5ec6bd14c42b803429db7a707570f0"
+    ],
+    [
+      "2024-03-23.ref.json",
+      "ac712a7a7e640cffa77388fa9b20ba76c1f92db834199fff6dde47873958f441"
+    ],
+    [
+      "2024-03-24.ref.json",
+      "8297dc84c11ea6c84c6353ec0fff9e8f6cc8c95cec7ec1bc3ce02195bfcd3170"
+    ],
+    [
+      "2024-03-25.ref.json",
+      "27322226e86630ef319deefe96803925b9bd00af19bba153264c072386a211eb"
+    ],
+    [
+      "2024-03-26.ref.json",
+      "e2a1547db1fa53d24e63671fc1d437e16fe6c976fcbc073c166f847cbb43b5b3"
+    ],
+    [
+      "2024-03-27.ref.json",
+      "09edfb1454353a12fb3bc6c9be939abf363d3291df78aded4422553c07a44d24"
+    ],
+    [
+      "2024-03-28.ref.json",
+      "11997b3d6bf607a827bdc7f2131c5d5ea04b1032e0b11142827e7e0ce8a82742"
+    ],
+    [
+      "2024-03-29.ref.json",
+      "a220077bc1c5c1af8d61a9d52eb4bd2d22089e6f2f929c1bc709d33f3d8825b0"
+    ],
+    [
+      "2024-03-30.ref.json",
+      "bbd8b2c82a3ca5e98b2f51e1cc1631236720c034c30f6d0afe2a49352c40986c"
+    ],
+    [
+      "20ea0e74c9c0ed30fb38bf22b249365474035c3211a66fa15cc52f13a6acffee.json",
+      "1610bf41a7d05e227dd254aa66f0e3324093341677573c7e0f735af699322f47"
+    ],
+    [
+      "2804a214dd647134e9bf57bdd71b283d50aea0736102fa4403531b653c26e157.json",
+      "1b437394e5dd6a53cca177fa2a83f16df30cc758626ac22069f6ad4b100bb0b8"
+    ],
+    [
+      "2bf118aec6d694a465a66cb71a49dda05650963955ba7f019b3793cf8c2cd913.json",
+      "19424b0346c329405b1ecf9a481c64e3e1229aead58c9143b5dae9671cc248aa"
+    ],
+    [
+      "2d8eb6b496e0bd19b67b993f817b182e639c9b7c9a52f09d6414731ea55bd90b.json",
+      "38d96371c87a2457f144165c6b4ca9644b4c2c34a7711272f4fcd77579b59396"
+    ],
+    [
+      "2ea1c2b3356d43735bf47e769f8b4ae5315f4bbf4140819c1774da709ff6241f.json",
+      "328cfe229c134fcb29f2608c277ab19b8f379a91dbc192ab2af63e0284799792"
+    ],
+    [
+      "2f15609e8a17a1b572597b1669666ff8a39f24f4dbe2324bac12a4247f401076.json",
+      "0cb34b983a1025d28de85c597f01c1d8677e2593a9f417fd25de9ded9c42717c"
+    ],
+    [
+      "303f4f8cef98788ef7a93779da233f1adb57019f285b23411d9d2b01f3dc6e1c.json",
+      "da0caa8c25298de1ffad7464bc3d6b1a11afd38d5e83e3617509cbe3912027c2"
+    ],
+    [
+      "330f3dc7cd83c0f50b7c36de9355025c67e0d92c227809961ca735f91377c0e0.json",
+      "52159f51f26609eab06fa9bdea85570465c9015590fc1bc52e317f841e27c36d"
+    ],
+    [
+      "33ab65b057dca47eadeaa2954b5e251a54dcbaf6a18636ed4d13b9f20714e301.json",
+      "50dc777040d16d8375e3aa70a1b2dfd66b27716ea8ee0795c48fae5867078ad1"
+    ],
+    [
+      "3415ee7e5517baa4557e75e5d7745c1664a4b0e931c39289151a89617216dd3c.json",
+      "ec8da5794fc939b9043d1c8554c24705ceccf79b5e24499bcfa601f9df15dac3"
+    ],
+    [
+      "38f82f3a44ebd8503857e8bed6bd39a0c6f7ad0823b61fc46e3ec4d995c72b97.json",
+      "2b475f1148d0a278595a4c8419c72d0d74e31f58625423a60468da3b3531b90a"
+    ],
+    [
+      "3b01cc4af31c0d2501f7a0d37969e6ede9d6daecfecef6352155f2d40f8dfd22.json",
+      "5060a5ac7896769eb88c2ca703b59458db03c082633d411ca393573b8914ce94"
+    ],
+    [
+      "3b0738dad5ff053694ea11c4b8423b1768ac915177de9bcfc90e254a5d90a824.json",
+      "371ad3cbfb67cdb6590ebbde7729a4b61015e9ebde1b1c1a24ee4a4b8a956be8"
+    ],
+    [
+      "3b62c9bdcdbb6f37d1b87fa3531f8295b7354af75f7145a3b7d0752b782398c6.json",
+      "690411bcac3e403fc1c150de34cb510f4ca97935e30985f5fff8ef508c9ebe37"
+    ],
+    [
+      "3bb3a42e52ea779d1adf96142fa0352d488befe7dfe3da2e4ae3059abc06b57a.json",
+      "17f0c781535ef68b43978479979cb9cf7fd24b9ee2107fd81867827d0b8fcbd6"
+    ],
+    [
+      "3f61b530952a1c18a8b7e2e9b838fedbf19e49586400320769fc57771e216fd3.json",
+      "81ee61515b32a5dfe81a2f18206f0964cf75dc4c682c4b60523e760551ec6833"
+    ],
+    [
+      "4079a048069b0c92375b078680cfd60a045cdc2089a09e98894bcbfc4682eb3c.json",
+      "cc655b1c7b6eb476000dac7f02624137e790dd300dfd5cd7255de503b7086b3a"
+    ],
+    [
+      "41a96f6273052f456c40ab428c14bbb60115a16f19d91b9cb233c8c55a46b042.json",
+      "6894bd475383efb40a065d4958125b69a8a74e0fb07121ed0addab5d6e58a8e7"
+    ],
+    [
+      "468fcaf91392f6be273bd4ccb65dd777463ca69962fc1460eb57dcb2d5531868.json",
+      "a944958f783aaeef797b1abfbefedcd5073411454f18fbcb5c166367eb17cfb4"
+    ],
+    [
+      "4738100cfa7868ac87ae587c4883d7638cafda425d86e35f0b5c1ae868e2d93c.json",
+      "b556e6158b331e1b9d6b95929e986415967a701d2b4ca5318a32bf74e6889b78"
+    ],
+    [
+      "478a80fd399fb9b505af8f21a83e80d317c8ced6af9f609a54728deee6041330.json",
+      "2782a4c9492095ce0e0d6f46be5cba1569e78149b5c2f20f0d6b15786c8c28d2"
+    ],
+    [
+      "47a878b753e6286dbec8a5809ac38d7fcf86ffa1a01d2522e81e552fa23634fd.json",
+      "2df18a47e6a5df2bf8f124fd9b4a75b67c6911fbf989ac3985040503153098c3"
+    ],
+    [
+      "497c540833f32a2586a6216c8a1f42106b82d4692ba1bc5d5cbba141c15c0f1b.json",
+      "0681e44a084d24245c7595105c4070370cf84c9f0989f52e6e9740e6ae0cf055"
+    ],
+    [
+      "4b440e7ccf3a37902998652a930c8e82bb168facfce6bb163334f32b9b059ea3.json",
+      "6a9962ec82495a5a5cd9aab61a13863f76a70506a71bbeea5f75d0030e047779"
+    ],
+    [
+      "4c7624dc1be4e72cdd751385b43c3782b61318b8ea63b28cddb4bee113b0d926.json",
+      "5c59afc1347237d47a5c5800388ef3f167373c79e97178c1621426b1d6cbeab5"
+    ],
+    [
+      "4fdba089b63e6d9f5333b285017ee538e09c96919691b6db59628d4b264d0bb5.json",
+      "0c29e7ef0b4fc58f90c332b3af965c3ad08923639e8b4614d46052f0316ffd24"
+    ],
+    [
+      "50fd0c60bed789054759c33bbc828c2bf37c251c689a4f9dfe81fd063f2578f7.json",
+      "0bbedce3b7a36875509f04225716a381f55abf4fb10b3956b27b1e282a519c1a"
+    ],
+    [
+      "57782992d64d58a2f1a04940ffbf6d8dee796b325a3db3d53ca12873f5b195f9.json",
+      "06ac5417cd5a19e07f56754210e2f1f904d3617520a3c51041fd1e2b8d4b76df"
+    ],
+    [
+      "584040e229afff39f0ba6171b9bcce24d12384b16a1116c1ca8d0d397c6b6290.json",
+      "7d24fd8d268d682a4311ffe0f4a3eaf63a5f04b6d2dd4e6790286a6b8fa2126d"
+    ],
+    [
+      "5a8b6698fffe48fcc0e6ec2b9fb399477f93d70679beae55357c4e2f01e2b29f.json",
+      "f6ddb0e52336a2cc7761a5ccd8fbe1fc28a36fa1d9c24c660fa81bc043393c63"
+    ],
+    [
+      "5b0fe347bbcdded121b1bd59fb7ac95ab47d54c2a6023b8fca3fe1c32190b773.json",
+      "54fbda2bf393b691007bc76c50813f0c7448cc47c94338c81d77429e436361c7"
+    ],
+    [
+      "5df1b3483c68518da2b346c6e79859a6b38224fc33b460e1a900d14d3fa2ea0b.json",
+      "28fd5118c5b1650735b657a41ee15542e6f04c9a23b87ddebc731bc8c1bb1dcb"
+    ],
+    [
+      "5e48d0e6474fc9c17df4d79628146119aaea19d103236c2192ca639566e9d54f.json",
+      "5dc9f5a1a86fe0a069a1453cf65126241d07b9d8f2e240c45021900306a3e6ff"
+    ],
+    [
+      "6707c695545ee160aba86ca68afab02898c1d35b5828b24f3d10d21723951b59.json",
+      "f2ac696749a34cee231b5ac6124f3889f05d16bac012b72e7661f028f5c36357"
+    ],
+    [
+      "684f8c7fb75cb085a8897da764391a22c516f83bac217c04cb97c69404667f88.json",
+      "6ee0f8642ed3f73fc55424f70e29608e9d3a4f20a627cce33588e6f58659dc96"
+    ],
+    [
+      "68e66a121b80375c6e826d7b845a056fef8fad234de0378508339e2f0de1b01f.json",
+      "5c23e9f438f75b98909faed073162a28ad99beac647795e31febff9aea057b40"
+    ],
+    [
+      "6f40f662b74a0808bba2855e69a1b185aa411f83b7a086aefbfa0646b1b98e5e.json",
+      "0ac476faeba95e4990e8c9d8d6b01b01478b0913648373b1276e38a67196d9f1"
+    ],
+    [
+      "736ec5db1875903705fdd0cc6d47b8029fe8e22e7767a2749ad13eab2aa785d6.json",
+      "dd79d405d778d200482597f6e9672e537466f33dcd164931953203c3663cf10e"
+    ],
+    [
+      "7a78d291203a224352042fb4ffd417d9b8665bc10e39ab9a387eab29366586e6.json",
+      "79b2a7a90f6292ba74e5f41f00f0212d4177d4668a1f4008081fe31b923fddd1"
+    ],
+    [
+      "7a8dfacfb7f9370e02f2c46d10ccf35402dbd6ca18c3addbe17569060bdca17c.json",
+      "45a370062fccd2b98584e0c9ea88b1d0eb07e2d4b00257aabf950786d87c6f5b"
+    ],
+    [
+      "7c718ccb13a17c51450de3317165b65b00da451675045bd83d01221b0fc65f10.json",
+      "acee4e05947b20080f34a33dbe706aec8e870ca28b1a949e2766358d9973a5cd"
+    ],
+    [
+      "804bcc9edcb7d8b3b8e2076a8f054dfdb5f3e211f241689ce5836155ae5a4987.json",
+      "8ced5588fe8ae6950020325a1956256be7f51374b9fb1fd45c6dd58b18bfc3fe"
+    ],
+    [
+      "85742dc466b3e0a8f4412d91e8c546bb2d5fa49aace7cf6c38eb5c7d1adb0411.json",
+      "335cc8ade6a57b486820fc81f9871c15a9cc857d1c06f7efb12c317ea5ee067b"
+    ],
+    [
+      "86985ad60a61f9e09cc987155107694c4342c7c55d389f81a14fc2aa3fe9edb0.json",
+      "047fa1648d20c20c5bba6d414499dc5f05028019bf303322ad0d9042c47e9f69"
+    ],
+    [
+      "86e95d1f69da7121390271be0bf6dc6e3729feb79cff4b23297f4a0640590391.json",
+      "6c64953948654ed087feb3d924ce61fc67a275640f49ab8377fc15e5fe7ad25e"
+    ],
+    [
+      "8cf0fa30f312e8bb0f5ff55580d58bcf1c4dbd942db59f6af894a35097289f13.json",
+      "721656c65784032f0d8d61e503f9d0f81bb71e7636a8d6dcd5e791fad2bb2060"
+    ],
+    [
+      "909ff73f53f9ce110d536ce4eb43bc972365cb40be19db52467bd1d883bd4ece.json",
+      "76bbbf1836891bef4ee48bb7f89a40179f51fc16f6ae04321f026b072935b4c8"
+    ],
+    [
+      "916694ea6f73f0cae059ca57cf9fce070171462e00e194aeb769e4b8e7a9c100.json",
+      "2f20fa123d01f1e20e8cb264c1f6489c5bec81dcd3ac05d88d8694d386bb0c00"
+    ],
+    [
+      "92c8fdc55eccd64815a1c08df7cde5138f85a655ff87a1a692b448e14524ec2e.json",
+      "0876ded345c522b1884557d5727a1933239a13647c89575c445bfdca17b0938b"
+    ],
+    [
+      "9dfa14c1a8bb0cf0281942009ae9e653ba54ef777f8f396c63f5e3ccfa2652ae.json",
+      "f75aae7ce8be2f6084a8fa31634225259a48c28b9e47e066ebaf583f1eb8c063"
+    ],
+    [
+      "9e7d5b6ab071b712240045fe72f47de573f64bb0efe6c2bc1f37ea7ea800e3ab.json",
+      "e0748252546937f377326246e3c04160322be765604905d4fe4b50db38bb3b89"
+    ],
+    [
+      "a009d0b1ed7aa6e3453c1febb6716e8b2a66e3558bf190ee085f87a459b856f4.json",
+      "bd0d851e73f38dfdd577997e37b394a3929df33ae2dbcf8b0f30166e9b4d9045"
+    ],
+    [
+      "a02fa96436515bd9f7a1324ef1124281da021bf07e9bae4ea726eaf1d3bfb9ee.json",
+      "20c31798409636f3656dca190b5b72d058e4908034484a938e307783479631af"
+    ],
+    [
+      "a041b917c8fa01c8b7b3b7d0ae16b74685f1845184c25ed5f4e8d841b0e773a7.json",
+      "82c3be0a52fcb42766651e8bcc16bfaa02f08ba23b8d0fae4b98be2dcbf15e18"
+    ],
+    [
+      "a17b44c0c7a2d9c95ac99a1d3fb27c146b1963169a010af9ef73fa8215a5b27a.json",
+      "89d0a85dbd3d98dc370aa41241e1644885212db649c9ffc44a0be8d3ea51a1c6"
+    ],
+    [
+      "a19c9a0186f25741733285eb3ac4393cbba2cf739e0357be2e2aab83722cd618.json",
+      "c1aafa1441cacb60f5b5ba9103c81f8e7821d8dbde6d23abe21f0a711ca28fd5"
+    ],
+    [
+      "a1aabd094ba35527d47b09bc12e274de0cbe7bde478893f6af01021ec6471ba3.json",
+      "f72b02fa05dd504496844dc135f60fa474216461748a49ceee3a887b98850eba"
+    ],
+    [
+      "a569536ff879b16e4e1bd906dad524a67368ce5cbe2cc893fea3519ab92d57b0.json",
+      "92bd91184dfa22021c93c8c3b0638703353e5dc234aa6883690f44de9912899e"
+    ],
+    [
+      "a5fd58146fe0dd7d2307a31dea4943d3d498dc8d78bf3deeaf2fcc7ab1323e8f.json",
+      "e54f7857639b4f9596d76160d2fda99fd559f17cb63ad276863b089b7491235e"
+    ],
+    [
+      "a7039159606b45777bad750d28a79ecca17cd7384e1a43a1d93f7026e35a8852.json",
+      "8ce0ea0e4243a45d8fde873cd5049ee3e204071d13d61ddb18d68c3f7384ef93"
+    ],
+    [
+      "a8974863afa8822db12f0b6563588428c9b7457f709ed9bcc88020fb7ef3e4c0.json",
+      "444ed0836dbe66120014aca202c9ee1214d4014fbb1fce946938b62331b31349"
+    ],
+    [
+      "a8e5f5f046974df1afc9b507f603dfd3b7a005192a44c33bf3abe66426929366.json",
+      "fe8ce8acbfcb97ae0162bd1ef456945e76bf491912d46d0d7ead8a0555cbe01b"
+    ],
+    [
+      "af79ba3aff54690a59837babcb94ce971a2723f5dfd1de76668d30bbc4d66298.json",
+      "b409d91d238c54512a7d1837f5fc405c194fdd88ccac4a792b058d7fef0014da"
+    ],
+    [
+      "b8fc622803551438861baa153959f0c2543f39a407a72dcdf28f82a03c9576e7.json",
+      "b513862e320d6123c9885d8ebe96aa0972b0f021277ccff31c7940c97a4e655b"
+    ],
+    [
+      "bb4a1e55f1cce00240a870e97a1b5b518f6913379dd7a59699a425b82020ff4b.json",
+      "ce20072ee13c7f60dadea08f5bc99aec642ee08045b975de76746f31a06740b2"
+    ],
+    [
+      "bbe4186ee26e56589dd33e5528c1868aaceba9a041336f1c0d0cf56cc1ee1ee4.json",
+      "d03c9fdd20a82f1a738e02f71a2b68517e7621276d2a487db87462ccfb3d7325"
+    ],
+    [
+      "bd6c2067689c2f084c6984cf2d36a309305d46c20d93d1e5358207ff862df552.json",
+      "594bd18fe72f9833496709d54ac3c92151589479ab317d3118b870871e896d6d"
+    ],
+    [
+      "bda42a0935f7a551df3eac507169fa7f68138fdaffe2cfe13e7bc5e27a8bbe9e.json",
+      "9d6d60700706bec9e45843ca49c81a36cc93051b13e6feeb89512c37db023fbc"
+    ],
+    [
+      "bf4b28d1044559e446b08bd8d799dde0eea4fb2b83a31cdade7742dc43b723a9.json",
+      "79b3667f5150e0db3382a757dd8fe27b8c15502b75f761514ca554ee63ef96d0"
+    ],
+    [
+      "bfc4b3b21ad6b34a0d806433256376ef15b4a7cfdf8c690392f0da5ac1bd7bc0.json",
+      "34074552525774bea69f3031cc2476492a0723cf40b63bf840f8c01ba629400c"
+    ],
+    [
+      "c030165d1e472757f4984bef5aab822b14b0066288ecd5c096846dc687af9561.json",
+      "2ff17e85aaa56f71909da43615e75f3054ef1eb47b3fb0298614847fbc872acd"
+    ],
+    [
+      "cadd3287ecc93132def8d5f4e3915383a585c6478aa612f59268078ff02e95c4.json",
+      "4cc0a6e5f3f4045878476f12281d697e29fee3e7c3d5a52f8a4de41bbea0a721"
+    ],
+    [
+      "cb23951deacc6a7ad49d0dc84d85dccae21b86071ec708f8717de435b5e5a3e8.json",
+      "b471f0ec734ccfd618bbd5a80254b1b216d2d9bf37e50cb9a134a4a560a60b24"
+    ],
+    [
+      "cd10bafc3266919ff059a163a269a25a427c64c722054093e19e9f1030da4924.json",
+      "38c9bddb0780c4cd868cc15b4e50d697f3d6237c4ab5615360a5a50080882ffc"
+    ],
+    [
+      "cdf631baf19a4810dea4a3787fc646e0bdda78fd2b996dcc92c99493babd81e0.json",
+      "a0802cee18963b9132509244b3e7c78a8aa208265b1da23308f3884878ae35c3"
+    ],
+    [
+      "cfe84b528452ba09ba96f84d9b5f4a6f3404c1dd60f820b9970b26daf42ca376.json",
+      "af09b0cefbab45e056c0a50776555fb28fc88e61d2383d38ce3c3cf4e066e831"
+    ],
+    [
+      "d06bdd9226de1557223a887a15b8409df04163c107da51222602513c8830d769.json",
+      "727d894ba872c857b06d334b6cae6a6881d2a0c66eef7a034582de24fa46b31f"
+    ],
+    [
+      "d1ffb9512a27be1a16cfd1732d0174e5abea047dd739f99002df35e7ec300c90.json",
+      "bd524e9bd99eb351b220a8b74611f61cf607f92c5963296d2f51624aabc5e95b"
+    ],
+    [
+      "d6214bf5ec14f48fceb3f5ec312838fc9b3172137cf886497c7a18435619face.json",
+      "66835729960ab0a3cd97e8710197e4338cee21cc78678bb42a8a0b8d77ba2a93"
+    ],
+    [
+      "d64dcd3a10f12209f8530a53079ce723015b3481dc4379d39135ff6b4f1ecd79.json",
+      "5f1fa2e9350668a5c8fbc35d50f99dd132b0e236f26d08c5e534d2eb3b21b69f"
+    ],
+    [
+      "d6bf9408789388ea27850948e0b863656909f8012b88a85779ad15e1855b2777.json",
+      "d82f4c81a85531c61a0941d5bfa0064a816de609cbb6e7b273121338bc1002fa"
+    ],
+    [
+      "da3075c11039935e2d5c2099d1570583946b5f710d9377f72f58acbc7e31ad8d.json",
+      "5950e36425898a44ec05b451ea863b345fa0d51de192ebdf2091b8624ee4e77d"
+    ],
+    [
+      "db8e64bf5453736c92a3215e3b1702033aaab5801845142d27e91a954c7f21c2.json",
+      "43eaf517491bc8722364573f4681ff5a862cfb0ad6072f3a68f1e4fe5bd4e44f"
+    ],
+    [
+      "dbba8219f65ad9181f2df8ac234c7b09bf7f14a790e913a98b5f9a177f626938.json",
+      "e486bb182f9d920d07f380257aeb94922dc35825f5969d6fa6aeb2c8c32d6016"
+    ],
+    [
+      "dc9107f2ec623154e194696562c23a5eb5adc26034f9133ad27ceee182d7d3c0.json",
+      "616f878673f570680ea86298b3c4d0d59ab538f3d9ef626a5b4c90a572cc2a75"
+    ],
+    [
+      "dd33508a7516cc863aba1438ba298a18164bcc692283d39283c36823ba49e437.json",
+      "9649a240e814d4e2e0dc4c03cfe5a88243e123ef97fbedd1c50b9a7747c655ec"
+    ],
+    [
+      "de57d2f8ce12a310b665019d4508af24680d6edbce6d0f1f79149fb82c1d7a5b.json",
+      "71de9ab34187102f154ebe3a8087817dc42ce944cc70d72de21c19aabcead18f"
+    ],
+    [
+      "e07f099e826eea470626961bb72ec44eaeaf129ed7e78afcd853dbe7c3c84586.json",
+      "7541bf154c8bd085399abd28d8419ff4e6a9428f5858a70a6543cbfad3f055ae"
+    ],
+    [
+      "e09eabfc88c4857caad89fd6cd429560116d23933d7cd87dc052b88eaef9bbda.json",
+      "448648c32711238ac5970e600a15535b264644cf0ae385c5355f73ec0084cba3"
+    ],
+    [
+      "e124891e483ef81cdc739995878fe87213ea06bba50bdb2e796b56ce498de456.json",
+      "701d8699aa9fdc58c689e442214921aa74fada2f630e50fd90fedfd1d7d0f881"
+    ],
+    [
+      "e332797831e7b3aeaba1e0f6d886274d9c02aad67aaa5c2b4cba22e8be24f696.json",
+      "c6ce8e38a8b104bc14caece72b53702f275ed9ccd560677f4512c95cf916c2f8"
+    ],
+    [
+      "e52d3ced9b7a481b67047cf4db0d4ef0779067faf4770055af888414fc33049a.json",
+      "2633847d6e272605647dfcbe3de3521d0cb53889f807f611aafd370edf0a953a"
+    ],
+    [
+      "ebc80fe2f214e565887875a99ba61102d1a1778c394331a3a33ccbd26e468c76.json",
+      "9541c0729fea7b1eb61f134d2106ec019c48c383dfe8d2b994d98eb2ca0949fb"
+    ],
+    [
+      "ecce9f26f2c7f1aaa0316e54d3485df21c97e916284b0d5162e7be521d341028.json",
+      "ca660a72000cc174f4f8615e39a90c9abdb4e8cb740dbc68896549fe294b5b02"
+    ],
+    [
+      "ed80abe28e6a7013a68d3d8ce29f9e314fb7c6ecaa641e859e1b3fcf71ab92f4.json",
+      "80dcb9bed1feec9cfa4ed4984a005ad1f373c0d1bce1120bef8e2a5ea02bdf2b"
+    ],
+    [
+      "f535d187244e9e6c7300f00b32a2998729c0182636d62d1232ff5e83d0be60d2.json",
+      "2f64654f0d2af064cb12a5f7a0ed48e8f28cf48f16adf24095f65ccd0f652c6e"
+    ],
+    [
+      "f6041a77173ea4ad9934fba9b405fd3cbaab986f185ee650da7073802c04d769.json",
+      "0c4fa61fd835cd5745048c577d08804511a3adbb956f030109d68b7b63839432"
+    ],
+    [
+      "f664e32bcea3a678049770431c452b72c80e509fd9d8c27750f8d7ad458b2a15.json",
+      "bfcf37ce6dc1f62a645f39eee69f05876bf775b31e7bdc80ecc94e2151dff727"
+    ],
+    [
+      "f6d659dad13fd4239feb6e387a38b1e8520b5346ab7bd21b9d3fa62513b11f54.json",
+      "2c4b10670653cf570b61d25c4bb7230506bb1aa3f288fb4140b21135a9499019"
+    ],
+    [
+      "f7c872dadd2570752764d7ccf858cc955e0c47fb710fac8dd9084361e5586ffd.json",
+      "08d9e7713fd9ad26e47bd79ed520f9347516119674758cbad7a97a6fe9d3bbaa"
+    ],
+    [
+      "f829e3071fff823fc37ca457e1da2eb687ba8999d7cfd311f1ffe1ad58d1e9e0.json",
+      "5dd2cc2ab380c93bbafa14d637010aa2abd25b8c835f2735231a74013e598019"
+    ],
+    [
+      "f9fd5fe45f75b0a42efb5de3a37a8608eb5e96c832ed9ae92840b8bdcdccf15a.json",
+      "ed3103d2f722375536b0f2b4a755c4c8eb75e872de442df7fc675d7994dc2a89"
+    ],
+    [
+      "fa4b4f8dd80f545af22ae8258fee64608b32e6c7902fced2ee5c38e40efea09e.json",
+      "cff5c01b6289fca1fa7da32b935612f8d084d5b36befdb8359a879a6688343c7"
+    ],
+    [
+      "fdb399b40063842bc0d80dd675d97252d1e4ca6510ed71ae0d58eba1593e39fa.json",
+      "df619b686e474ab053381c153b17b84e1f7f697ba67fd5ecc68ca265da590b20"
+    ],
+    [
+      "fe1aba472e9d8f21a7b6f1d20f74ef57f7a8273eb760ecfcb21980703c1a18bb.json",
+      "fad8d3a12ecf76464528792dab785a4320b0949296c522a1536ea232f76585a5"
+    ],
+    [
+      "verification-budget.json",
+      "6674d9f66239d853469e1c3b0999b35f6409c4fae766af9c75a2cae1c9b73460"
+    ]
+  ]
+}

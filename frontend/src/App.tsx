@@ -365,7 +365,7 @@ export function App() {
       {lifecycle === 'setup' && confirming && quote && quote.tradingFrom === from && quote.to === to && <PaidDownloadDialog key={quote.id} quote={quote} onCancel={()=>{setConfirming(false);setQuote(null);setDownloadNotice('Download cancelled. No paid request submitted and no additional budget reserved.')}} onApprove={()=>void confirmDownload()}/>}
       {lifecycle === 'trading' && <>
         <div className="workspace-toolbar" role="region" aria-label="Trading workspace controls">
-        <TradingDock reviewing={replay.reviewing} stops={stops} key={`${sessions.activeId}-${trading.state.session}`} trading={trading} draft={draft} setDraft={setDraft} onConfirm={confirmDraft}/>
+        <TradingDock reviewing={replay.reviewing} shortcutsBlocked={manage || !!stopPreview || status === 'loading' || confirming || paidPending || pendingStart} stops={stops} key={`${sessions.activeId}-${trading.state.session}`} trading={trading} draft={draft} setDraft={setDraft} onConfirm={confirmDraft}/>
         </div>
         {replay.reviewing && <div className="history-review" role="status"><strong>Reviewing history</strong><span>{new Date(replay.reviewTimestamp!).toISOString().slice(0,16).replace('T',' ')} UTC · Trading disabled</span><button onClick={replay.returnToCurrent}>Return to current replay</button></div>}
         {keyboardNotice && <p className="keyboard-notice" role="status">{keyboardNotice}</p>}
