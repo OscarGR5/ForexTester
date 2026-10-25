@@ -1,0 +1,2025 @@
+{
+  "providerRequests": 0,
+  "paidSubmissions": 0,
+  "screenshots": [
+    "docs/replay-header-and-auto-follow/after-1-1440.png",
+    "docs/replay-header-and-auto-follow/indicators-readiness.png",
+    "docs/replay-header-and-auto-follow/after-1-1100.png",
+    "docs/replay-header-and-auto-follow/after-1-1000.png",
+    "docs/replay-header-and-auto-follow/running-before-boundary.png",
+    "docs/replay-header-and-auto-follow/running-after-boundary.png",
+    "docs/replay-header-and-auto-follow/auto-follow-recovered-1.png",
+    "docs/replay-header-and-auto-follow/after-2-1440.png",
+    "docs/replay-header-and-auto-follow/after-2-1100.png",
+    "docs/replay-header-and-auto-follow/after-2-1000.png",
+    "docs/replay-header-and-auto-follow/auto-follow-recovered-2.png",
+    "docs/replay-header-and-auto-follow/after-3-1440.png",
+    "docs/replay-header-and-auto-follow/after-3-1100.png",
+    "docs/replay-header-and-auto-follow/after-3-1000.png",
+    "docs/replay-header-and-auto-follow/auto-follow-recovered-3.png",
+    "docs/replay-header-and-auto-follow/100x-recovery.png",
+    "docs/replay-header-and-auto-follow/historical-review.png",
+    "docs/replay-header-and-auto-follow/positions-1440.png",
+    "docs/replay-header-and-auto-follow/positions-1100.png",
+    "docs/replay-header-and-auto-follow/positions-1000.png",
+    "docs/replay-header-and-auto-follow/stop-drag-header-disabled.png",
+    "docs/replay-header-and-auto-follow/rollover-blocked.png"
+  ],
+  "errors": [],
+  "checks": {
+    "layout-1-1440": {
+      "boxes": [
+        {
+          "selector": ".app-header h1",
+          "x": 14,
+          "y": 13,
+          "right": 107.09375,
+          "bottom": 36
+        },
+        {
+          "selector": ".header-session",
+          "x": 115.09375,
+          "y": 6,
+          "right": 289.609375,
+          "bottom": 43
+        },
+        {
+          "selector": ".execution-details > summary",
+          "x": 297.609375,
+          "y": 9.5,
+          "right": 327.609375,
+          "bottom": 39.5
+        },
+        {
+          "selector": ".header-replay",
+          "x": 335.609375,
+          "y": 7.5,
+          "right": 1068.09375,
+          "bottom": 41.5
+        },
+        {
+          "selector": ".header-account",
+          "x": 1076.09375,
+          "y": 6,
+          "right": 1296.09375,
+          "bottom": 43
+        },
+        {
+          "selector": ".app-header > button",
+          "x": 1304.09375,
+          "y": 9.5,
+          "right": 1426,
+          "bottom": 39.5
+        }
+      ],
+      "controls": [
+        {
+          "x": 335.609375,
+          "y": 9.5,
+          "right": 376.828125,
+          "bottom": 39.5
+        },
+        {
+          "x": 382.828125,
+          "y": 9.5,
+          "right": 434.765625,
+          "bottom": 39.5
+        },
+        {
+          "x": 440.765625,
+          "y": 9.5,
+          "right": 527.203125,
+          "bottom": 39.5
+        },
+        {
+          "x": 533.203125,
+          "y": 9.5,
+          "right": 634.09375,
+          "bottom": 39.5
+        },
+        {
+          "x": 640.09375,
+          "y": 7.5,
+          "right": 822.5,
+          "bottom": 41.5
+        },
+        {
+          "x": 828.5,
+          "y": 7.5,
+          "right": 960.5,
+          "bottom": 41.5
+        },
+        {
+          "x": 966.5,
+          "y": 9.5,
+          "right": 1068.09375,
+          "bottom": 39.5
+        }
+      ],
+      "stress": {
+        "left": 1082.203125,
+        "right": 1296.09375,
+        "containerLeft": 1076.09375,
+        "containerRight": 1296.09375
+      },
+      "width": 1440,
+      "viewport": 1440
+    },
+    "layout-1-1100": {
+      "boxes": [
+        {
+          "selector": ".app-header h1",
+          "x": 14,
+          "y": 13,
+          "right": 107.09375,
+          "bottom": 36
+        },
+        {
+          "selector": ".header-session",
+          "x": 115.09375,
+          "y": 6,
+          "right": 690.09375,
+          "bottom": 43
+        },
+        {
+          "selector": ".execution-details > summary",
+          "x": 698.09375,
+          "y": 9.5,
+          "right": 728.09375,
+          "bottom": 39.5
+        },
+        {
+          "selector": ".header-replay",
+          "x": 14,
+          "y": 51,
+          "right": 1086,
+          "bottom": 85
+        },
+        {
+          "selector": ".header-account",
+          "x": 736.09375,
+          "y": 6,
+          "right": 956.09375,
+          "bottom": 43
+        },
+        {
+          "selector": ".app-header > button",
+          "x": 964.09375,
+          "y": 9.5,
+          "right": 1086,
+          "bottom": 39.5
+        }
+      ],
+      "controls": [
+        {
+          "x": 14,
+          "y": 53,
+          "right": 55.21875,
+          "bottom": 83
+        },
+        {
+          "x": 61.21875,
+          "y": 53,
+          "right": 113.15625,
+          "bottom": 83
+        },
+        {
+          "x": 119.15625,
+          "y": 53,
+          "right": 205.59375,
+          "bottom": 83
+        },
+        {
+          "x": 211.59375,
+          "y": 53,
+          "right": 312.484375,
+          "bottom": 83
+        },
+        {
+          "x": 318.484375,
+          "y": 51,
+          "right": 500.890625,
+          "bottom": 85
+        },
+        {
+          "x": 846.40625,
+          "y": 51,
+          "right": 978.40625,
+          "bottom": 85
+        },
+        {
+          "x": 984.40625,
+          "y": 53,
+          "right": 1086,
+          "bottom": 83
+        }
+      ],
+      "stress": {
+        "left": 742.203125,
+        "right": 956.09375,
+        "containerLeft": 736.09375,
+        "containerRight": 956.09375
+      },
+      "width": 1100,
+      "viewport": 1100
+    },
+    "layout-1-1000": {
+      "boxes": [
+        {
+          "selector": ".app-header h1",
+          "x": 14,
+          "y": 13,
+          "right": 107.09375,
+          "bottom": 36
+        },
+        {
+          "selector": ".header-session",
+          "x": 115.09375,
+          "y": 6,
+          "right": 590.09375,
+          "bottom": 43
+        },
+        {
+          "selector": ".execution-details > summary",
+          "x": 598.09375,
+          "y": 9.5,
+          "right": 628.09375,
+          "bottom": 39.5
+        },
+        {
+          "selector": ".header-replay",
+          "x": 14,
+          "y": 51,
+          "right": 986,
+          "bottom": 85
+        },
+        {
+          "selector": ".header-account",
+          "x": 636.09375,
+          "y": 6,
+          "right": 856.09375,
+          "bottom": 43
+        },
+        {
+          "selector": ".app-header > button",
+          "x": 864.09375,
+          "y": 9.5,
+          "right": 986,
+          "bottom": 39.5
+        }
+      ],
+      "controls": [
+        {
+          "x": 14,
+          "y": 53,
+          "right": 55.21875,
+          "bottom": 83
+        },
+        {
+          "x": 61.21875,
+          "y": 53,
+          "right": 113.15625,
+          "bottom": 83
+        },
+        {
+          "x": 119.15625,
+          "y": 53,
+          "right": 205.59375,
+          "bottom": 83
+        },
+        {
+          "x": 211.59375,
+          "y": 53,
+          "right": 312.484375,
+          "bottom": 83
+        },
+        {
+          "x": 318.484375,
+          "y": 51,
+          "right": 500.890625,
+          "bottom": 85
+        },
+        {
+          "x": 746.40625,
+          "y": 51,
+          "right": 878.40625,
+          "bottom": 85
+        },
+        {
+          "x": 884.40625,
+          "y": 53,
+          "right": 986,
+          "bottom": 83
+        }
+      ],
+      "stress": {
+        "left": 642.203125,
+        "right": 856.09375,
+        "containerLeft": 636.09375,
+        "containerRight": 856.09375
+      },
+      "width": 1000,
+      "viewport": 1000
+    },
+    "runningBoundary": {
+      "manual": {
+        "range": {
+          "from": 3378.882369542248,
+          "to": 3513.307454135481
+        },
+        "latestX": 1258.6539457517274,
+        "plotWidth": 1358,
+        "last": 3504,
+        "time": 1704470400,
+        "close": 1.10095,
+        "following": false
+      },
+      "recovered": {
+        "range": {
+          "from": 3389.574915406767,
+          "to": 3524
+        },
+        "latestX": 1231.6539457517295,
+        "plotWidth": 1358,
+        "last": 3512,
+        "time": 1704472800,
+        "close": 1.0999,
+        "following": true
+      }
+    },
+    "next-candle-1": {
+      "before": {
+        "range": {
+          "from": 272.7301784125972,
+          "to": 283.9322687953719
+        },
+        "latestX": 2199.2310156293083,
+        "plotWidth": 1358,
+        "last": 292,
+        "time": 1704470400,
+        "close": 1.0999,
+        "following": false
+      },
+      "after": {
+        "range": {
+          "from": 290,
+          "to": 301.2020903827747
+        },
+        "latestX": 277.2310156293063,
+        "plotWidth": 1358,
+        "last": 292,
+        "time": 1704470400,
+        "close": 1.1002,
+        "following": true
+      }
+    },
+    "running-pan-1": {
+      "range": {
+        "from": 290,
+        "to": 301.2020903827747
+      },
+      "latestX": 277.2310156293063,
+      "plotWidth": 1358,
+      "last": 292,
+      "time": 1704470400,
+      "close": 1.0993,
+      "following": true
+    },
+    "keyboard-recovery-1-0": {
+      "before": [
+        {
+          "range": {
+            "from": 272.7301784125972,
+            "to": 283.9322687953719
+          },
+          "latestX": 2199.2310156293083,
+          "plotWidth": 1358,
+          "last": 292,
+          "time": 1704470400,
+          "close": 1.0993,
+          "following": false
+        }
+      ],
+      "after": [
+        {
+          "range": {
+            "from": 290,
+            "to": 301.2020903827747
+          },
+          "latestX": 277.2310156293063,
+          "plotWidth": 1358,
+          "last": 292,
+          "time": 1704470400,
+          "close": 1.09875,
+          "following": true
+        }
+      ]
+    },
+    "layout-2-1440": {
+      "boxes": [
+        {
+          "selector": ".app-header h1",
+          "x": 14,
+          "y": 13,
+          "right": 107.09375,
+          "bottom": 36
+        },
+        {
+          "selector": ".header-session",
+          "x": 115.09375,
+          "y": 6,
+          "right": 289.609375,
+          "bottom": 43
+        },
+        {
+          "selector": ".execution-details > summary",
+          "x": 297.609375,
+          "y": 9.5,
+          "right": 327.609375,
+          "bottom": 39.5
+        },
+        {
+          "selector": ".header-replay",
+          "x": 335.609375,
+          "y": 7.5,
+          "right": 1068.09375,
+          "bottom": 41.5
+        },
+        {
+          "selector": ".header-account",
+          "x": 1076.09375,
+          "y": 6,
+          "right": 1296.09375,
+          "bottom": 43
+        },
+        {
+          "selector": ".app-header > button",
+          "x": 1304.09375,
+          "y": 9.5,
+          "right": 1426,
+          "bottom": 39.5
+        }
+      ],
+      "controls": [
+        {
+          "x": 335.609375,
+          "y": 9.5,
+          "right": 376.828125,
+          "bottom": 39.5
+        },
+        {
+          "x": 382.828125,
+          "y": 9.5,
+          "right": 434.765625,
+          "bottom": 39.5
+        },
+        {
+          "x": 440.765625,
+          "y": 9.5,
+          "right": 527.203125,
+          "bottom": 39.5
+        },
+        {
+          "x": 533.203125,
+          "y": 9.5,
+          "right": 634.09375,
+          "bottom": 39.5
+        },
+        {
+          "x": 640.09375,
+          "y": 7.5,
+          "right": 822.5,
+          "bottom": 41.5
+        },
+        {
+          "x": 828.5,
+          "y": 7.5,
+          "right": 960.5,
+          "bottom": 41.5
+        },
+        {
+          "x": 966.5,
+          "y": 9.5,
+          "right": 1068.09375,
+          "bottom": 39.5
+        }
+      ],
+      "stress": {
+        "left": 1082.203125,
+        "right": 1296.09375,
+        "containerLeft": 1076.09375,
+        "containerRight": 1296.09375
+      },
+      "width": 1440,
+      "viewport": 1440
+    },
+    "layout-2-1100": {
+      "boxes": [
+        {
+          "selector": ".app-header h1",
+          "x": 14,
+          "y": 13,
+          "right": 107.09375,
+          "bottom": 36
+        },
+        {
+          "selector": ".header-session",
+          "x": 115.09375,
+          "y": 6,
+          "right": 690.09375,
+          "bottom": 43
+        },
+        {
+          "selector": ".execution-details > summary",
+          "x": 698.09375,
+          "y": 9.5,
+          "right": 728.09375,
+          "bottom": 39.5
+        },
+        {
+          "selector": ".header-replay",
+          "x": 14,
+          "y": 51,
+          "right": 1086,
+          "bottom": 85
+        },
+        {
+          "selector": ".header-account",
+          "x": 736.09375,
+          "y": 6,
+          "right": 956.09375,
+          "bottom": 43
+        },
+        {
+          "selector": ".app-header > button",
+          "x": 964.09375,
+          "y": 9.5,
+          "right": 1086,
+          "bottom": 39.5
+        }
+      ],
+      "controls": [
+        {
+          "x": 14,
+          "y": 53,
+          "right": 55.21875,
+          "bottom": 83
+        },
+        {
+          "x": 61.21875,
+          "y": 53,
+          "right": 113.15625,
+          "bottom": 83
+        },
+        {
+          "x": 119.15625,
+          "y": 53,
+          "right": 205.59375,
+          "bottom": 83
+        },
+        {
+          "x": 211.59375,
+          "y": 53,
+          "right": 312.484375,
+          "bottom": 83
+        },
+        {
+          "x": 318.484375,
+          "y": 51,
+          "right": 500.890625,
+          "bottom": 85
+        },
+        {
+          "x": 846.40625,
+          "y": 51,
+          "right": 978.40625,
+          "bottom": 85
+        },
+        {
+          "x": 984.40625,
+          "y": 53,
+          "right": 1086,
+          "bottom": 83
+        }
+      ],
+      "stress": {
+        "left": 742.203125,
+        "right": 956.09375,
+        "containerLeft": 736.09375,
+        "containerRight": 956.09375
+      },
+      "width": 1100,
+      "viewport": 1100
+    },
+    "layout-2-1000": {
+      "boxes": [
+        {
+          "selector": ".app-header h1",
+          "x": 14,
+          "y": 13,
+          "right": 107.09375,
+          "bottom": 36
+        },
+        {
+          "selector": ".header-session",
+          "x": 115.09375,
+          "y": 6,
+          "right": 590.09375,
+          "bottom": 43
+        },
+        {
+          "selector": ".execution-details > summary",
+          "x": 598.09375,
+          "y": 9.5,
+          "right": 628.09375,
+          "bottom": 39.5
+        },
+        {
+          "selector": ".header-replay",
+          "x": 14,
+          "y": 51,
+          "right": 986,
+          "bottom": 85
+        },
+        {
+          "selector": ".header-account",
+          "x": 636.09375,
+          "y": 6,
+          "right": 856.09375,
+          "bottom": 43
+        },
+        {
+          "selector": ".app-header > button",
+          "x": 864.09375,
+          "y": 9.5,
+          "right": 986,
+          "bottom": 39.5
+        }
+      ],
+      "controls": [
+        {
+          "x": 14,
+          "y": 53,
+          "right": 55.21875,
+          "bottom": 83
+        },
+        {
+          "x": 61.21875,
+          "y": 53,
+          "right": 113.15625,
+          "bottom": 83
+        },
+        {
+          "x": 119.15625,
+          "y": 53,
+          "right": 205.59375,
+          "bottom": 83
+        },
+        {
+          "x": 211.59375,
+          "y": 53,
+          "right": 312.484375,
+          "bottom": 83
+        },
+        {
+          "x": 318.484375,
+          "y": 51,
+          "right": 500.890625,
+          "bottom": 85
+        },
+        {
+          "x": 746.40625,
+          "y": 51,
+          "right": 878.40625,
+          "bottom": 85
+        },
+        {
+          "x": 884.40625,
+          "y": 53,
+          "right": 986,
+          "bottom": 83
+        }
+      ],
+      "stress": {
+        "left": 642.203125,
+        "right": 856.09375,
+        "containerLeft": 636.09375,
+        "containerRight": 856.09375
+      },
+      "width": 1000,
+      "viewport": 1000
+    },
+    "next-candle-2": {
+      "before": {
+        "range": {
+          "from": 271.8484431883569,
+          "to": 283.0505335711316
+        },
+        "latestX": 1088.944605349979,
+        "plotWidth": 644,
+        "last": 292,
+        "time": 1704470400,
+        "close": 1.09875,
+        "following": false
+      },
+      "after": {
+        "range": {
+          "from": 291,
+          "to": 302.2020903827747
+        },
+        "latestX": 130.9446053499803,
+        "plotWidth": 644,
+        "last": 293,
+        "time": 1704474000,
+        "close": 1.0985,
+        "following": true
+      }
+    },
+    "running-pan-2": {
+      "range": {
+        "from": 291,
+        "to": 302.2020903827747
+      },
+      "latestX": 130.9446053499803,
+      "plotWidth": 644,
+      "last": 293,
+      "time": 1704474000,
+      "close": 1.09795,
+      "following": true
+    },
+    "keyboard-recovery-2-0": {
+      "before": [
+        {
+          "range": {
+            "from": 272.8484431883569,
+            "to": 284.0505335711316
+          },
+          "latestX": 1088.944605349979,
+          "plotWidth": 644,
+          "last": 293,
+          "time": 1704474000,
+          "close": 1.09795,
+          "following": false
+        },
+        {
+          "range": {
+            "from": 3328.217391304348,
+            "to": 3539.217391304348
+          },
+          "latestX": 577.028301886792,
+          "plotWidth": 644,
+          "last": 3518,
+          "time": 1704474600,
+          "close": 1.09795,
+          "following": false
+        }
+      ],
+      "after": [
+        {
+          "range": {
+            "from": 291,
+            "to": 302.2020903827747
+          },
+          "latestX": 130.9446053499803,
+          "plotWidth": 644,
+          "last": 293,
+          "time": 1704474000,
+          "close": 1.0978,
+          "following": true
+        },
+        {
+          "range": {
+            "from": 3328.217391304348,
+            "to": 3539.217391304348
+          },
+          "latestX": 604.3679245283014,
+          "plotWidth": 644,
+          "last": 3527,
+          "time": 1704477300,
+          "close": 1.0978,
+          "following": false
+        }
+      ]
+    },
+    "keyboard-recovery-2-1": {
+      "before": [
+        {
+          "range": {
+            "from": 291.53052566881627,
+            "to": 302.732616051591
+          },
+          "latestX": 102.94460534998166,
+          "plotWidth": 644,
+          "last": 293,
+          "time": 1704474000,
+          "close": 1.0978,
+          "following": false
+        },
+        {
+          "range": {
+            "from": 3170.5341614906833,
+            "to": 3381.5341614906833
+          },
+          "latestX": 1083.3679245283015,
+          "plotWidth": 644,
+          "last": 3527,
+          "time": 1704477300,
+          "close": 1.0978,
+          "following": false
+        }
+      ],
+      "after": [
+        {
+          "range": {
+            "from": 291.53052566881627,
+            "to": 302.732616051591
+          },
+          "latestX": 155.72244748997377,
+          "plotWidth": 644,
+          "last": 294,
+          "time": 1704477600,
+          "close": 1.0972,
+          "following": false
+        },
+        {
+          "range": {
+            "from": 3329,
+            "to": 3540
+          },
+          "latestX": 605.0283018867924,
+          "plotWidth": 644,
+          "last": 3528,
+          "time": 1704477600,
+          "close": 1.0972,
+          "following": true
+        }
+      ]
+    },
+    "layout-3-1440": {
+      "boxes": [
+        {
+          "selector": ".app-header h1",
+          "x": 14,
+          "y": 13,
+          "right": 107.09375,
+          "bottom": 36
+        },
+        {
+          "selector": ".header-session",
+          "x": 115.09375,
+          "y": 6,
+          "right": 289.609375,
+          "bottom": 43
+        },
+        {
+          "selector": ".execution-details > summary",
+          "x": 297.609375,
+          "y": 9.5,
+          "right": 327.609375,
+          "bottom": 39.5
+        },
+        {
+          "selector": ".header-replay",
+          "x": 335.609375,
+          "y": 7.5,
+          "right": 1068.09375,
+          "bottom": 41.5
+        },
+        {
+          "selector": ".header-account",
+          "x": 1076.09375,
+          "y": 6,
+          "right": 1296.09375,
+          "bottom": 43
+        },
+        {
+          "selector": ".app-header > button",
+          "x": 1304.09375,
+          "y": 9.5,
+          "right": 1426,
+          "bottom": 39.5
+        }
+      ],
+      "controls": [
+        {
+          "x": 335.609375,
+          "y": 9.5,
+          "right": 376.828125,
+          "bottom": 39.5
+        },
+        {
+          "x": 382.828125,
+          "y": 9.5,
+          "right": 434.765625,
+          "bottom": 39.5
+        },
+        {
+          "x": 440.765625,
+          "y": 9.5,
+          "right": 527.203125,
+          "bottom": 39.5
+        },
+        {
+          "x": 533.203125,
+          "y": 9.5,
+          "right": 634.09375,
+          "bottom": 39.5
+        },
+        {
+          "x": 640.09375,
+          "y": 7.5,
+          "right": 822.5,
+          "bottom": 41.5
+        },
+        {
+          "x": 828.5,
+          "y": 7.5,
+          "right": 960.5,
+          "bottom": 41.5
+        },
+        {
+          "x": 966.5,
+          "y": 9.5,
+          "right": 1068.09375,
+          "bottom": 39.5
+        }
+      ],
+      "stress": {
+        "left": 1082.203125,
+        "right": 1296.09375,
+        "containerLeft": 1076.09375,
+        "containerRight": 1296.09375
+      },
+      "width": 1440,
+      "viewport": 1440
+    },
+    "layout-3-1100": {
+      "boxes": [
+        {
+          "selector": ".app-header h1",
+          "x": 14,
+          "y": 13,
+          "right": 107.09375,
+          "bottom": 36
+        },
+        {
+          "selector": ".header-session",
+          "x": 115.09375,
+          "y": 6,
+          "right": 690.09375,
+          "bottom": 43
+        },
+        {
+          "selector": ".execution-details > summary",
+          "x": 698.09375,
+          "y": 9.5,
+          "right": 728.09375,
+          "bottom": 39.5
+        },
+        {
+          "selector": ".header-replay",
+          "x": 14,
+          "y": 51,
+          "right": 1086,
+          "bottom": 85
+        },
+        {
+          "selector": ".header-account",
+          "x": 736.09375,
+          "y": 6,
+          "right": 956.09375,
+          "bottom": 43
+        },
+        {
+          "selector": ".app-header > button",
+          "x": 964.09375,
+          "y": 9.5,
+          "right": 1086,
+          "bottom": 39.5
+        }
+      ],
+      "controls": [
+        {
+          "x": 14,
+          "y": 53,
+          "right": 55.21875,
+          "bottom": 83
+        },
+        {
+          "x": 61.21875,
+          "y": 53,
+          "right": 113.15625,
+          "bottom": 83
+        },
+        {
+          "x": 119.15625,
+          "y": 53,
+          "right": 205.59375,
+          "bottom": 83
+        },
+        {
+          "x": 211.59375,
+          "y": 53,
+          "right": 312.484375,
+          "bottom": 83
+        },
+        {
+          "x": 318.484375,
+          "y": 51,
+          "right": 500.890625,
+          "bottom": 85
+        },
+        {
+          "x": 846.40625,
+          "y": 51,
+          "right": 978.40625,
+          "bottom": 85
+        },
+        {
+          "x": 984.40625,
+          "y": 53,
+          "right": 1086,
+          "bottom": 83
+        }
+      ],
+      "stress": {
+        "left": 742.203125,
+        "right": 956.09375,
+        "containerLeft": 736.09375,
+        "containerRight": 956.09375
+      },
+      "width": 1100,
+      "viewport": 1100
+    },
+    "layout-3-1000": {
+      "boxes": [
+        {
+          "selector": ".app-header h1",
+          "x": 14,
+          "y": 13,
+          "right": 107.09375,
+          "bottom": 36
+        },
+        {
+          "selector": ".header-session",
+          "x": 115.09375,
+          "y": 6,
+          "right": 590.09375,
+          "bottom": 43
+        },
+        {
+          "selector": ".execution-details > summary",
+          "x": 598.09375,
+          "y": 9.5,
+          "right": 628.09375,
+          "bottom": 39.5
+        },
+        {
+          "selector": ".header-replay",
+          "x": 14,
+          "y": 51,
+          "right": 986,
+          "bottom": 85
+        },
+        {
+          "selector": ".header-account",
+          "x": 636.09375,
+          "y": 6,
+          "right": 856.09375,
+          "bottom": 43
+        },
+        {
+          "selector": ".app-header > button",
+          "x": 864.09375,
+          "y": 9.5,
+          "right": 986,
+          "bottom": 39.5
+        }
+      ],
+      "controls": [
+        {
+          "x": 14,
+          "y": 53,
+          "right": 55.21875,
+          "bottom": 83
+        },
+        {
+          "x": 61.21875,
+          "y": 53,
+          "right": 113.15625,
+          "bottom": 83
+        },
+        {
+          "x": 119.15625,
+          "y": 53,
+          "right": 205.59375,
+          "bottom": 83
+        },
+        {
+          "x": 211.59375,
+          "y": 53,
+          "right": 312.484375,
+          "bottom": 83
+        },
+        {
+          "x": 318.484375,
+          "y": 51,
+          "right": 500.890625,
+          "bottom": 85
+        },
+        {
+          "x": 746.40625,
+          "y": 51,
+          "right": 878.40625,
+          "bottom": 85
+        },
+        {
+          "x": 884.40625,
+          "y": 53,
+          "right": 986,
+          "bottom": 83
+        }
+      ],
+      "stress": {
+        "left": 642.203125,
+        "right": 856.09375,
+        "containerLeft": 636.09375,
+        "containerRight": 856.09375
+      },
+      "width": 1000,
+      "viewport": 1000
+    },
+    "next-candle-3": {
+      "before": {
+        "range": {
+          "from": 273.8484431883569,
+          "to": 285.0505335711316
+        },
+        "latestX": 1088.944605349979,
+        "plotWidth": 644,
+        "last": 294,
+        "time": 1704477600,
+        "close": 1.0972,
+        "following": false
+      },
+      "after": {
+        "range": {
+          "from": 292,
+          "to": 303.2020903827747
+        },
+        "latestX": 130.9446053499803,
+        "plotWidth": 644,
+        "last": 294,
+        "time": 1704477600,
+        "close": 1.0972,
+        "following": true
+      }
+    },
+    "running-pan-3": {
+      "range": {
+        "from": 292,
+        "to": 303.2020903827747
+      },
+      "latestX": 130.9446053499803,
+      "plotWidth": 644,
+      "last": 294,
+      "time": 1704477600,
+      "close": 1.0968,
+      "following": true
+    },
+    "keyboard-recovery-3-0": {
+      "before": [
+        {
+          "range": {
+            "from": 273.8484431883569,
+            "to": 285.0505335711316
+          },
+          "latestX": 1088.944605349979,
+          "plotWidth": 644,
+          "last": 294,
+          "time": 1704477600,
+          "close": 1.0968,
+          "following": false
+        },
+        {
+          "range": {
+            "from": 3341.217391304348,
+            "to": 3552.217391304348
+          },
+          "latestX": 577.028301886792,
+          "plotWidth": 644,
+          "last": 3531,
+          "time": 1704478500,
+          "close": 1.0968,
+          "following": false
+        },
+        {
+          "range": {
+            "from": 0.9999999999997726,
+            "to": 1189
+          },
+          "latestX": 636.2296047098403,
+          "plotWidth": 644,
+          "last": 1177,
+          "time": 1704478500,
+          "close": 1.0968,
+          "following": true
+        }
+      ],
+      "after": [
+        {
+          "range": {
+            "from": 292,
+            "to": 303.2020903827747
+          },
+          "latestX": 130.9446053499803,
+          "plotWidth": 644,
+          "last": 294,
+          "time": 1704477600,
+          "close": 1.09855,
+          "following": true
+        },
+        {
+          "range": {
+            "from": 3341.217391304348,
+            "to": 3552.217391304348
+          },
+          "latestX": 601.3301886792448,
+          "plotWidth": 644,
+          "last": 3539,
+          "time": 1704480900,
+          "close": 1.09855,
+          "following": false
+        },
+        {
+          "range": {
+            "from": 2.9999999999997726,
+            "to": 1191
+          },
+          "latestX": 636.2296047098403,
+          "plotWidth": 644,
+          "last": 1179,
+          "time": 1704480300,
+          "close": 1.09855,
+          "following": true
+        }
+      ]
+    },
+    "keyboard-recovery-3-1": {
+      "before": [
+        {
+          "range": {
+            "from": 292,
+            "to": 303.2020903827747
+          },
+          "latestX": 130.9446053499803,
+          "plotWidth": 644,
+          "last": 294,
+          "time": 1704477600,
+          "close": 1.09855,
+          "following": true
+        },
+        {
+          "range": {
+            "from": 3183.5341614906833,
+            "to": 3394.5341614906833
+          },
+          "latestX": 1080.3301886792449,
+          "plotWidth": 644,
+          "last": 3539,
+          "time": 1704480900,
+          "close": 1.09855,
+          "following": false
+        },
+        {
+          "range": {
+            "from": 54.69565217391278,
+            "to": 1242.695652173913
+          },
+          "latestX": 608.2296047098403,
+          "plotWidth": 644,
+          "last": 1179,
+          "time": 1704480300,
+          "close": 1.09855,
+          "following": false
+        }
+      ],
+      "after": [
+        {
+          "range": {
+            "from": 293,
+            "to": 304.2020903827747
+          },
+          "latestX": 130.9446053499803,
+          "plotWidth": 644,
+          "last": 295,
+          "time": 1704481200,
+          "close": 1.09865,
+          "following": true
+        },
+        {
+          "range": {
+            "from": 3341,
+            "to": 3552
+          },
+          "latestX": 605.0283018867924,
+          "plotWidth": 644,
+          "last": 3540,
+          "time": 1704481200,
+          "close": 1.09865,
+          "following": true
+        },
+        {
+          "range": {
+            "from": 54.69565217391278,
+            "to": 1242.695652173913
+          },
+          "latestX": 608.771236333053,
+          "plotWidth": 644,
+          "last": 1180,
+          "time": 1704481200,
+          "close": 1.09865,
+          "following": false
+        }
+      ]
+    },
+    "keyboard-recovery-3-2": {
+      "before": [
+        {
+          "range": {
+            "from": 293.53052566881627,
+            "to": 304.732616051591
+          },
+          "latestX": 102.94460534998166,
+          "plotWidth": 644,
+          "last": 295,
+          "time": 1704481200,
+          "close": 1.09865,
+          "following": false
+        },
+        {
+          "range": {
+            "from": 3341,
+            "to": 3552
+          },
+          "latestX": 605.0283018867924,
+          "plotWidth": 644,
+          "last": 3540,
+          "time": 1704481200,
+          "close": 1.09865,
+          "following": true
+        },
+        {
+          "range": {
+            "from": -829.6692546583854,
+            "to": 358.33074534161483
+          },
+          "latestX": 1087.771236333053,
+          "plotWidth": 644,
+          "last": 1180,
+          "time": 1704481200,
+          "close": 1.09865,
+          "following": false
+        }
+      ],
+      "after": [
+        {
+          "range": {
+            "from": 293.53052566881627,
+            "to": 304.732616051591
+          },
+          "latestX": 102.94460534998166,
+          "plotWidth": 644,
+          "last": 295,
+          "time": 1704481200,
+          "close": 1.09885,
+          "following": false
+        },
+        {
+          "range": {
+            "from": 3343,
+            "to": 3554
+          },
+          "latestX": 605.0283018867924,
+          "plotWidth": 644,
+          "last": 3542,
+          "time": 1704481800,
+          "close": 1.09885,
+          "following": true
+        },
+        {
+          "range": {
+            "from": 3.9999999999997726,
+            "to": 1192
+          },
+          "latestX": 636.2296047098403,
+          "plotWidth": 644,
+          "last": 1180,
+          "time": 1704481200,
+          "close": 1.09885,
+          "following": true
+        }
+      ]
+    },
+    "partial-M5": {
+      "before": {
+        "range": {
+          "from": 3114.517516110033,
+          "to": 3411.28345536082
+        },
+        "latestX": 1959.9906176367076,
+        "plotWidth": 1358,
+        "last": 3544,
+        "time": 1704482400,
+        "close": 1.09845,
+        "following": false
+      },
+      "after": {
+        "range": {
+          "from": 3259.234060749213,
+          "to": 3556
+        },
+        "latestX": 1299.9921365663547,
+        "plotWidth": 1358,
+        "last": 3544,
+        "time": 1704482400,
+        "close": 1.09845,
+        "following": true
+      }
+    },
+    "partial-M15": {
+      "before": {
+        "range": {
+          "from": 1024.3673998226373,
+          "to": 1123.2893795728996
+        },
+        "latestX": 2148.1174572158607,
+        "plotWidth": 1358,
+        "last": 1182,
+        "time": 1704483000,
+        "close": 1.0988,
+        "following": false
+      },
+      "after": {
+        "range": {
+          "from": 1095.0780202497376,
+          "to": 1194
+        },
+        "latestX": 1187.1174572158593,
+        "plotWidth": 1358,
+        "last": 1182,
+        "time": 1704483000,
+        "close": 1.0987,
+        "following": true
+      }
+    },
+    "partial-H1": {
+      "before": {
+        "range": {
+          "from": 257.5832023048593,
+          "to": 282.3136972424249
+        },
+        "latestX": 2052.944605350106,
+        "plotWidth": 1358,
+        "last": 296,
+        "time": 1704484800,
+        "close": 1.09755,
+        "following": false
+      },
+      "after": {
+        "range": {
+          "from": 294,
+          "to": 318.7304949375656
+        },
+        "latestX": 130.94460535010626,
+        "plotWidth": 1358,
+        "last": 296,
+        "time": 1704484800,
+        "close": 1.0977,
+        "following": true
+      }
+    },
+    "partial-H4": {
+      "before": {
+        "range": {
+          "from": 72.91715654731212,
+          "to": 79.09978028170352
+        },
+        "latestX": 1432.668501865729,
+        "plotWidth": 1358,
+        "last": 80,
+        "time": 1704657600,
+        "close": 1.09735,
+        "following": false
+      },
+      "after": {
+        "range": {
+          "from": 78,
+          "to": 84.1826237343914
+        },
+        "latestX": 471.66850186572765,
+        "plotWidth": 1358,
+        "last": 80,
+        "time": 1704657600,
+        "close": 1.09725,
+        "following": true
+      }
+    },
+    "partial-D1": {
+      "before": {
+        "range": {
+          "from": 12.540438826699356,
+          "to": 14.737542782431255
+        },
+        "latestX": 1680.8608802826125,
+        "plotWidth": 1358,
+        "last": 16,
+        "time": 1704672000,
+        "close": 1.09725,
+        "following": false
+      },
+      "after": {
+        "range": {
+          "from": 14.8028960442681,
+          "to": 17
+        },
+        "latestX": 719.8608802826124,
+        "plotWidth": 1358,
+        "last": 16,
+        "time": 1704672000,
+        "close": 1.09735,
+        "following": true
+      }
+    },
+    "fastReplay": [
+      {
+        "range": {
+          "from": 3481.3386555543266,
+          "to": 3782
+        },
+        "latestX": 1300.7282889818287,
+        "plotWidth": 1358,
+        "last": 3770,
+        "time": 1704726600,
+        "close": 1.0997,
+        "following": true
+      }
+    ],
+    "historicalReview": {
+      "review": {
+        "range": {
+          "from": 3366.382639574481,
+          "to": 3667.0439840201543
+        },
+        "latestX": 1813.7282889818284,
+        "plotWidth": 1358,
+        "last": 3769,
+        "time": 1704726300,
+        "close": 1.09945,
+        "following": false
+      },
+      "earlier": {
+        "range": {
+          "from": 3366.382639574481,
+          "to": 3667.0439840201543
+        },
+        "latestX": 1809.2265521003746,
+        "plotWidth": 1358,
+        "last": 3768,
+        "time": 1704726000,
+        "close": 1.09925,
+        "following": false
+      },
+      "live": {
+        "range": {
+          "from": 3481.3386555543266,
+          "to": 3782
+        },
+        "latestX": 1300.7282889818287,
+        "plotWidth": 1358,
+        "last": 3770,
+        "time": 1704726600,
+        "close": 1.0997,
+        "following": true
+      }
+    },
+    "restore": {
+      "savedGeometry": [
+        {
+          "range": {
+            "from": 3481.3386555543266,
+            "to": 3782
+          },
+          "latestX": 616.3144463212795,
+          "plotWidth": 644,
+          "last": 3770,
+          "time": 1704726600,
+          "close": 1.0997,
+          "following": true
+        },
+        {
+          "range": {
+            "from": 3539.3975155279504,
+            "to": 3750.3975155279504
+          },
+          "latestX": 701.0283018867922,
+          "plotWidth": 644,
+          "last": 3770,
+          "time": 1704726600,
+          "close": 1.0997,
+          "following": false
+        },
+        {
+          "range": {
+            "from": 295.3478653433573,
+            "to": 1268
+          },
+          "latestX": 634.7321600667585,
+          "plotWidth": 644,
+          "last": 1256,
+          "time": 1704726000,
+          "close": 1.0997,
+          "following": true
+        }
+      ],
+      "restored": [
+        {
+          "range": {
+            "from": 3481.3386555543266,
+            "to": 3782
+          },
+          "latestX": 616.3144463212795,
+          "plotWidth": 644,
+          "last": 3770,
+          "time": 1704726600,
+          "close": 1.0997,
+          "following": true
+        },
+        {
+          "range": {
+            "from": 3539.3975155279504,
+            "to": 3750.3975155279504
+          },
+          "latestX": 701.0283018867922,
+          "plotWidth": 644,
+          "last": 3770,
+          "time": 1704726600,
+          "close": 1.0997,
+          "following": false
+        },
+        {
+          "range": {
+            "from": 295.3478653433573,
+            "to": 1268
+          },
+          "latestX": 634.7321600667585,
+          "plotWidth": 644,
+          "last": 1256,
+          "time": 1704726000,
+          "close": 1.0997,
+          "following": true
+        }
+      ]
+    },
+    "positions-layout-1440": {
+      "boxes": [
+        {
+          "selector": ".app-header h1",
+          "x": 14,
+          "y": 13,
+          "right": 107.09375,
+          "bottom": 36
+        },
+        {
+          "selector": ".header-session",
+          "x": 115.09375,
+          "y": 6,
+          "right": 289.609375,
+          "bottom": 43
+        },
+        {
+          "selector": ".execution-details > summary",
+          "x": 297.609375,
+          "y": 9.5,
+          "right": 327.609375,
+          "bottom": 39.5
+        },
+        {
+          "selector": ".header-replay",
+          "x": 335.609375,
+          "y": 7.5,
+          "right": 1068.09375,
+          "bottom": 41.5
+        },
+        {
+          "selector": ".header-account",
+          "x": 1076.09375,
+          "y": 6,
+          "right": 1296.09375,
+          "bottom": 43
+        },
+        {
+          "selector": ".app-header > button",
+          "x": 1304.09375,
+          "y": 9.5,
+          "right": 1426,
+          "bottom": 39.5
+        }
+      ],
+      "controls": [
+        {
+          "x": 335.609375,
+          "y": 9.5,
+          "right": 376.828125,
+          "bottom": 39.5
+        },
+        {
+          "x": 382.828125,
+          "y": 9.5,
+          "right": 434.765625,
+          "bottom": 39.5
+        },
+        {
+          "x": 440.765625,
+          "y": 9.5,
+          "right": 527.203125,
+          "bottom": 39.5
+        },
+        {
+          "x": 533.203125,
+          "y": 9.5,
+          "right": 634.09375,
+          "bottom": 39.5
+        },
+        {
+          "x": 640.09375,
+          "y": 7.5,
+          "right": 822.5,
+          "bottom": 41.5
+        },
+        {
+          "x": 828.5,
+          "y": 7.5,
+          "right": 960.5,
+          "bottom": 41.5
+        },
+        {
+          "x": 966.5,
+          "y": 9.5,
+          "right": 1068.09375,
+          "bottom": 39.5
+        }
+      ],
+      "stress": {
+        "left": 1082.203125,
+        "right": 1296.09375,
+        "containerLeft": 1076.09375,
+        "containerRight": 1296.09375
+      },
+      "width": 1440,
+      "viewport": 1440
+    },
+    "positions-layout-1100": {
+      "boxes": [
+        {
+          "selector": ".app-header h1",
+          "x": 14,
+          "y": 13,
+          "right": 107.09375,
+          "bottom": 36
+        },
+        {
+          "selector": ".header-session",
+          "x": 115.09375,
+          "y": 6,
+          "right": 690.09375,
+          "bottom": 43
+        },
+        {
+          "selector": ".execution-details > summary",
+          "x": 698.09375,
+          "y": 9.5,
+          "right": 728.09375,
+          "bottom": 39.5
+        },
+        {
+          "selector": ".header-replay",
+          "x": 14,
+          "y": 51,
+          "right": 1086,
+          "bottom": 85
+        },
+        {
+          "selector": ".header-account",
+          "x": 736.09375,
+          "y": 6,
+          "right": 956.09375,
+          "bottom": 43
+        },
+        {
+          "selector": ".app-header > button",
+          "x": 964.09375,
+          "y": 9.5,
+          "right": 1086,
+          "bottom": 39.5
+        }
+      ],
+      "controls": [
+        {
+          "x": 14,
+          "y": 53,
+          "right": 55.21875,
+          "bottom": 83
+        },
+        {
+          "x": 61.21875,
+          "y": 53,
+          "right": 113.15625,
+          "bottom": 83
+        },
+        {
+          "x": 119.15625,
+          "y": 53,
+          "right": 205.59375,
+          "bottom": 83
+        },
+        {
+          "x": 211.59375,
+          "y": 53,
+          "right": 312.484375,
+          "bottom": 83
+        },
+        {
+          "x": 318.484375,
+          "y": 51,
+          "right": 500.890625,
+          "bottom": 85
+        },
+        {
+          "x": 846.40625,
+          "y": 51,
+          "right": 978.40625,
+          "bottom": 85
+        },
+        {
+          "x": 984.40625,
+          "y": 53,
+          "right": 1086,
+          "bottom": 83
+        }
+      ],
+      "stress": {
+        "left": 742.203125,
+        "right": 956.09375,
+        "containerLeft": 736.09375,
+        "containerRight": 956.09375
+      },
+      "width": 1100,
+      "viewport": 1100
+    },
+    "positions-layout-1000": {
+      "boxes": [
+        {
+          "selector": ".app-header h1",
+          "x": 14,
+          "y": 13,
+          "right": 107.09375,
+          "bottom": 36
+        },
+        {
+          "selector": ".header-session",
+          "x": 115.09375,
+          "y": 6,
+          "right": 590.09375,
+          "bottom": 43
+        },
+        {
+          "selector": ".execution-details > summary",
+          "x": 598.09375,
+          "y": 9.5,
+          "right": 628.09375,
+          "bottom": 39.5
+        },
+        {
+          "selector": ".header-replay",
+          "x": 14,
+          "y": 51,
+          "right": 986,
+          "bottom": 85
+        },
+        {
+          "selector": ".header-account",
+          "x": 636.09375,
+          "y": 6,
+          "right": 856.09375,
+          "bottom": 43
+        },
+        {
+          "selector": ".app-header > button",
+          "x": 864.09375,
+          "y": 9.5,
+          "right": 986,
+          "bottom": 39.5
+        }
+      ],
+      "controls": [
+        {
+          "x": 14,
+          "y": 53,
+          "right": 55.21875,
+          "bottom": 83
+        },
+        {
+          "x": 61.21875,
+          "y": 53,
+          "right": 113.15625,
+          "bottom": 83
+        },
+        {
+          "x": 119.15625,
+          "y": 53,
+          "right": 205.59375,
+          "bottom": 83
+        },
+        {
+          "x": 211.59375,
+          "y": 53,
+          "right": 312.484375,
+          "bottom": 83
+        },
+        {
+          "x": 318.484375,
+          "y": 51,
+          "right": 500.890625,
+          "bottom": 85
+        },
+        {
+          "x": 746.40625,
+          "y": 51,
+          "right": 878.40625,
+          "bottom": 85
+        },
+        {
+          "x": 884.40625,
+          "y": 53,
+          "right": 986,
+          "bottom": 83
+        }
+      ],
+      "stress": {
+        "left": 642.203125,
+        "right": 856.09375,
+        "containerLeft": 636.09375,
+        "containerRight": 856.09375
+      },
+      "width": 1000,
+      "viewport": 1000
+    },
+    "stopDragGuard": true,
+    "rollover": {
+      "timestamp": 1710717000000,
+      "count": 98359,
+      "days": 60,
+      "observedGap": true,
+      "geometry": [
+        {
+          "range": {
+            "from": 73.6203796103376,
+            "to": 76
+          },
+          "latestX": 357.1690815469087,
+          "plotWidth": 644,
+          "last": 75,
+          "time": 1710633600,
+          "close": 1.08855,
+          "following": true
+        },
+        {
+          "range": {
+            "from": 17176,
+            "to": 17387
+          },
+          "latestX": 605.0283018867924,
+          "plotWidth": 644,
+          "last": 17375,
+          "time": 1710717000,
+          "close": 1.08855,
+          "following": true
+        },
+        {
+          "range": {
+            "from": 4833.347865343358,
+            "to": 5806
+          },
+          "latestX": 634.7321600667585,
+          "plotWidth": 644,
+          "last": 5794,
+          "time": 1710716400,
+          "close": 1.08855,
+          "following": true
+        }
+      ]
+    },
+    "cacheUnchanged": true
+  }
+}

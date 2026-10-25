@@ -292,8 +292,9 @@ export function App() {
   const presets = useMemo(()=>[7,30,90].map(days=>calendar ? cachedPreset(calendar,days,endMoved ? to : undefined) : null),[calendar,endMoved,to])
   const chartLayout = <fieldset className="layout-controls"><legend>Charts</legend>{[1,2,3].map(count=><label key={count}><input type="radio" name="chart-count" value={count} checked={chartCount === count} onChange={()=>{ synchronizer.deactivate(); setChartCount(count) }}/>{count}</label>)}</fieldset>
   const pnlDisplay = <div className={`account-pnl ${pnl && Math.abs(pnl.usd) >= 0.005 ? pnl.usd > 0 ? 'positive' : 'negative' : ''}`} aria-label="Account PnL"><span>Account PnL</span><strong>{pnl ? `$${pnl.usd.toFixed(2)} · ${pnl.percent.toFixed(2)}%` : 'PnL unavailable'}</strong></div>
+  const workspaceDisabled = !sessions.initialized || sessions.busy || sessions.conflict || sessions.awaitingChoice || finishing
   return <main className={`app-shell phase-${lifecycle}`}>
-    <header className="app-header"><h1>ForexTester</h1><span className="header-session">{sessions.name} <span className="save-state">{history ? sessions.saveStatus : 'Not started'}</span></span>
+    <header className="app-header"><h1>ForexTester</h1><span className="header-session"><span className="session-name">{sessions.name}</span> <span className="save-state">{history ? sessions.saveStatus : 'Not started'}</span></span>
       {lifecycle === 'trading' && <details ref={executionDetails} className="execution-details"><summary aria-label="Execution details" title="Execution details"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v2"/></svg></summary><div className="execution-popover">
         <strong>Execution details</strong>
         <p>While paused: Shift + Right completes the active chart’s next candle. Shift + Left reviews earlier candles without rewinding trade execution. Select a chart by clicking, panning, scrolling or changing its timeframe. Return to current replay to trade.</p>
@@ -301,6 +302,13 @@ export function App() {
         <p>SL amounts are net at the stop level, including entry and exit commissions. Pending values estimate the next fill from the observed price. Gaps can change the outcome. Entry lines mark the fill price; net breakeven also includes commissions.</p>
         {history && isSinglePrice(history) && <details><summary>Contract mappings and rollover events</summary>{history.contracts.map(c=><p key={c.from}>{c.from} to {c.to} (exclusive): {c.rawSymbol} · instrument {c.instrumentId}</p>)}</details>}
       </div></details>}
+      {lifecycle === 'trading' && (
+        <fieldset className="header-replay" aria-label="Market replay" disabled={workspaceDisabled || status === 'loading' || pendingStart || manage || confirming || !!stopPreview} hidden={!sessions.initialized || sessions.awaitingChoice}>
+          <button disabled={!replay.canPlay || !!stopPreview} onClick={()=>{setDraft(null);replay.play()}}>Play</button><button disabled={!replay.canPause} onClick={replay.pause}>Pause</button><button disabled={!replay.canNext || !!stopPreview} onClick={()=>{setDraft(null);replay.next()}}>Next Candle</button>
+          <label>Speed<select aria-label="Replay speed" value={replay.speed} onChange={e=>replay.setSpeed(Number(e.target.value) as 1|10|100)}>{[1,10,100].map(s=><option key={s} value={s}>{s}×</option>)}</select></label>
+          {chartLayout}<div className="replay-state"><span aria-label="Replay status" className="replay-status">{replay.status}</span><span className="replay-progress" aria-label="Replay progress">{replay.revealed-replay.startIndex} / {replay.total-replay.startIndex} candles</span></div><button disabled={replay.reviewing} onClick={()=>void finish()}>{replay.complete ? 'Review Results' : 'Finish backtest'}</button>
+        </fieldset>
+      )}
       {lifecycle !== 'setup' && <div className="header-account"><time className="replay-clock">{replay.timestamp === null ? 'Awaiting replay' : new Date(replay.timestamp).toISOString().slice(0,16).replace('T',' ') + ' UTC'}</time>{pnlDisplay}</div>}<button onClick={()=>{ replay.pause(); setDraft(null); setManage(true) }}>Sessions / settings</button>
     </header>
     {sessions.error && !manage && !sessions.awaitingChoice && <p className="form-error critical-save" role="alert">{sessions.error} <button onClick={()=>setManage(true)}>Open storage controls</button></p>}
@@ -311,7 +319,7 @@ export function App() {
       {lifecycle === 'trading' && <button disabled={sessions.busy || finishing} onClick={()=>{ restart(); setManage(false) }}>Restart backtest</button>}
     </ManagementDialog>}
     {!sessions.initialized && !sessions.awaitingChoice && <p className="startup-status" role="status">Checking saved backtests…</p>}
-    <fieldset className="workspace-controls" disabled={!sessions.initialized || sessions.busy || sessions.conflict || sessions.awaitingChoice || finishing} hidden={!sessions.initialized || sessions.awaitingChoice}>
+    <fieldset className="workspace-controls" disabled={workspaceDisabled} hidden={!sessions.initialized || sessions.awaitingChoice}>
       {lifecycle === 'setup' && <section className="setup-workspace" aria-label="Backtest setup">
         <div className="setup-heading"><h2>Set up a backtest</h2><p>Choose downloaded history and start a paused, indicator-ready replay.</p></div>
         {!!sessions.legacySessions.length && <p className="chart-note">Older browser backtests are available. <button type="button" onClick={()=>setManage(true)}>Review browser backtests</button></p>}
@@ -355,18 +363,13 @@ export function App() {
       {lifecycle === 'setup' && confirming && quote && quote.tradingFrom === from && quote.to === to && <PaidDownloadDialog key={quote.id} quote={quote} onCancel={()=>{setConfirming(false);setQuote(null);setDownloadNotice('Download cancelled. No paid request submitted and no additional budget reserved.')}} onApprove={()=>void confirmDownload()}/>}
       {lifecycle === 'trading' && <>
         <div className="workspace-toolbar" role="region" aria-label="Trading workspace controls">
-        <div className="replay-strip" role="group" aria-label="Market replay">
-          <button disabled={!replay.canPlay || !!stopPreview} onClick={()=>{setDraft(null);replay.play()}}>Play</button><button disabled={!replay.canPause} onClick={replay.pause}>Pause</button><button disabled={!replay.canNext || !!stopPreview} onClick={()=>{setDraft(null);replay.next()}}>Next Candle</button>
-          <label>Speed<select aria-label="Replay speed" value={replay.speed} onChange={e=>replay.setSpeed(Number(e.target.value) as 1|10|100)}>{[1,10,100].map(s=><option key={s} value={s}>{s}×</option>)}</select></label>
-          {chartLayout}<span aria-label="Replay status" className="replay-status">{replay.status}</span><span className="replay-progress" aria-label="Replay progress">{replay.revealed-replay.startIndex} / {replay.total-replay.startIndex} candles</span><button onClick={()=>void finish()}>{replay.complete ? 'Review Results' : 'Finish backtest'}</button>
-        </div>
         <TradingDock reviewing={replay.reviewing} stops={stops} key={`${sessions.activeId}-${trading.state.session}`} trading={trading} draft={draft} setDraft={setDraft} onConfirm={confirmDraft}/>
         </div>
         {replay.reviewing && <div className="history-review" role="status"><strong>Reviewing history</strong><span>{new Date(replay.reviewTimestamp!).toISOString().slice(0,16).replace('T',' ')} UTC · Trading disabled</span><button onClick={replay.returnToCurrent}>Return to current replay</button></div>}
         {keyboardNotice && <p className="keyboard-notice" role="status">{keyboardNotice}</p>}
         {replay.blocked && <p className="coverage-warning" role="alert">Replay blocked at contract rollover. No positions, stops or pending orders were executed across the boundary. Finish this backtest or select a replay start after the rollover. A carry/roll policy requires project-lead approval.</p>}
         <div className="chart-workspace" aria-label={`${history?.symbol === '6E' ? 'EURUSD 6E' : history?.symbol ?? 'EURUSD 6E'} chart workspace`}><div className={`chart-stack charts-${chartCount}`}>
-          {timeframes.slice(0,chartCount).map((timeframe,id)=><ChartPane key={id} instrument={history?.symbol ?? '6E'} id={id} active={id === activeChart} timeframe={timeframe} sessionId={sessions.activeId} positions={replay.reviewing ? [] : trading.state.positions} entries={replay.reviewing ? [] : entries} onConfirmStop={confirmDraft} confirmStopDisabled={draftInvalid} stops={replay.reviewing ? [] : stops} stopInteraction={{ enabled: canRequestOrder(trading.permission) && !draft,
+          {timeframes.slice(0,chartCount).map((timeframe,id)=><ChartPane key={id} instrument={history?.symbol ?? '6E'} id={id} active={id === activeChart} reviewing={replay.reviewing} timeframe={timeframe} sessionId={sessions.activeId} positions={replay.reviewing ? [] : trading.state.positions} entries={replay.reviewing ? [] : entries} onConfirmStop={confirmDraft} confirmStopDisabled={draftInvalid} stops={replay.reviewing ? [] : stops} stopInteraction={{ enabled: canRequestOrder(trading.permission) && !draft,
             preview: stopPreview, onPreview: setStopPreview, onCommit: (positionId, price) => {
               const position = trading.state.positions.find(p => p.id === positionId)
               const error = position ? stopModificationError(trading.state, position, price, trading.permission) : 'Position is no longer open.'

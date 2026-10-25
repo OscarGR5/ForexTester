@@ -8,6 +8,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { createChart, type CandlestickData, type ISeriesApi, type UTCTimestamp } from 'lightweight-charts'
 import { App } from './App'
+import * as persistence from './useSessionPersistence'
 import { selectedRange, shiftDate, accountPnl } from './workflow'
 import { PreferenceTabGuard } from './uiPreferenceCleanup'
 import { uiKey } from './uiPreferences'
@@ -792,4 +793,87 @@ it('dismisses execution and indicator disclosures outside and on Escape while re
  await input('Chart 1 BB #1 Length', '25')
  await outside(host.querySelector('h1')!); await act(async () => indicators.querySelector('summary')!.click())
  expect(host.querySelector<HTMLInputElement>('[aria-label="Chart 1 BB #1 Length"]')!.value).toBe('25')
+})
+
+it('places one replay control group in the application header and keeps trading below it', async () => {
+ await start()
+ const header = host.querySelector('.app-header')!, toolbar = host.querySelector('.workspace-toolbar')!
+ for (const name of ['Play', 'Pause', 'Next Candle', 'Finish backtest']) {
+  expect(header.contains(button(name))).toBe(true)
+  expect([...host.querySelectorAll('button')].filter(b => b.textContent === name)).toHaveLength(1)
+ }
+ expect(header.querySelector('[aria-label="Replay speed"]')).not.toBeNull()
+ expect(header.querySelectorAll('input[name="chart-count"]')).toHaveLength(3)
+ expect(header.querySelector('[aria-label="Replay status"]')).not.toBeNull()
+ expect(header.querySelector('[aria-label="Replay progress"]')).not.toBeNull()
+ for (const name of ['Buy', 'Sell']) expect(toolbar.contains(button(name))).toBe(true)
+ expect(toolbar.querySelector('[aria-label="Risk per entry (%)"]')).not.toBeNull()
+ expect(toolbar.querySelector('.header-replay')).toBeNull()
+ await click('Play')
+ expect(button('Play').matches(':disabled')).toBe(true)
+ expect(button('Next Candle').matches(':disabled')).toBe(true)
+ expect(button('Pause').matches(':disabled')).toBe(false)
+ await click('Pause'); await click('Sessions / settings')
+ for (const control of header.querySelectorAll('.header-replay button, .header-replay select, .header-replay input')) expect(control.matches(':disabled')).toBe(true)
+ await click('Close management')
+ expect(button('Next Candle').matches(':disabled')).toBe(false)
+ await shortcut('ArrowLeft')
+ expect(button('Play').matches(':disabled')).toBe(true)
+ expect(button('Next Candle').matches(':disabled')).toBe(true)
+ expect(button('Finish backtest').matches(':disabled')).toBe(true)
+})
+
+it('keeps indicator readiness in the disclosure and updates it for settings, timeframe and replay', async () => {
+ await start(); await select('Chart 1 timeframe', 'M5')
+ const panel = () => host.querySelector<HTMLDetailsElement>('.indicator-controls')!
+ const status = () => panel().querySelector('.indicator-readiness')!
+ expect(host.querySelectorAll('.indicator-readiness')).toHaveLength(1)
+ expect(host.querySelector('.pane-toolbar > .indicator-readiness')).toBeNull()
+ expect(panel().open).toBe(false)
+ expect(status().closest('.indicator-options')).not.toBeNull()
+ await act(async () => panel().querySelector('summary')!.click())
+ expect(panel().open).toBe(true)
+ expect(status().textContent).toContain('completed M5 candles')
+ await input('Chart 1 BB #1 Length', '200')
+ expect(status().textContent).toContain('200')
+ await select('Chart 1 timeframe', 'D1')
+ expect(panel().open).toBe(false)
+ expect(status().textContent).toContain('completed D1 candles')
+ expect(status().textContent).toContain('warming up')
+ await select('Chart 1 timeframe', 'M5')
+ await input('Chart 1 Span B', '1'); await input('Chart 1 Kijun', '1'); await input('Chart 1 Tenkan', '1'); await input('Chart 1 Displacement', '1')
+ await input('Chart 1 BB #1 Length', '91')
+ // Disable the longer-period overlays so the unchanged warm-up calculation uses the selected Bollinger length.
+ for (const label of ['Chart 1 BB #2', 'Chart 1 Stochastic']) {
+  const checkbox = host.querySelector<HTMLInputElement>(`[aria-label="${label}"]`)!
+  if (checkbox.checked) await act(async () => checkbox.click())
+ }
+ const before = status().textContent
+ await shortcut('ArrowRight'); await shortcut('ArrowRight')
+ expect(status().textContent).not.toBe(before)
+ expect(status().textContent).toContain('Indicators ready')
+})
+
+it('preserves all storage and startup fieldset guards after moving replay into the header', async () => {
+ await start()
+ const original = persistence.useSessionPersistence
+ let guards: Partial<ReturnType<typeof original>> = {}
+ vi.spyOn(persistence, 'useSessionPersistence').mockImplementation(options => ({ ...original(options), ...guards }))
+ for (const state of [{ initialized: false }, { busy: true }, { conflict: true }, { awaitingChoice: true }]) {
+  guards = state
+  await act(async () => root.render(<StrictMode><App/></StrictMode>))
+  expect(host.querySelector('.workspace-controls')!.matches(':disabled')).toBe(true)
+  for (const control of host.querySelectorAll('.header-replay button, .header-replay select, .header-replay input')) expect(control.matches(':disabled')).toBe(true)
+ }
+ guards = {}
+ await act(async () => root.render(<StrictMode><App/></StrictMode>))
+ expect(button('Next Candle').matches(':disabled')).toBe(false)
+ let release!: () => void
+ guards = { flush: () => new Promise<void>(resolve => { release = resolve }) }
+ await act(async () => root.render(<StrictMode><App/></StrictMode>))
+ await click('Finish backtest')
+ for (const control of host.querySelectorAll('.header-replay button, .header-replay select, .header-replay input')) expect(control.matches(':disabled')).toBe(true)
+ vi.mocked(window.confirm).mockReturnValueOnce(false)
+ await act(async () => release())
+ expect(button('Next Candle').matches(':disabled')).toBe(false)
 })

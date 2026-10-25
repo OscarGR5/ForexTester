@@ -202,7 +202,7 @@ button:disabled { opacity: 0.45; cursor: default; }
 .setup-heading h2 { font-size: 28px; letter-spacing: -.025em; margin: 0 0 8px; }
 .setup-heading p { margin: 0 0 24px; color: #b2b5be; font-size: 14px; }
 .setup-workspace label { display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: #b2b5be; }
-.setup-workspace input, .dock-controls input, .dock-controls select, .stop-placement input, .replay-strip select { min-width: 0; max-width: 100%; min-height: 36px; padding: 6px 10px; background: #171e28; border: 1px solid #4a596b; border-radius: 4px; color: #e5eaf0; color-scheme: dark; }
+.setup-workspace input, .dock-controls input, .dock-controls select, .stop-placement input, .header-replay select { min-width: 0; max-width: 100%; min-height: 36px; padding: 6px 10px; background: #171e28; border: 1px solid #4a596b; border-radius: 4px; color: #e5eaf0; color-scheme: dark; }
 .backtest-name { max-width: 500px; }
 .setup-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 44px; margin-top: 26px; }
 .setup-grid h3 { font-size: 17px; font-weight: 600; margin: 0 0 16px; }.setup-grid h3 span { color: #b2b5be; font-size: 12px; font-weight: 400; margin-left: 8px; }
@@ -213,7 +213,6 @@ button:disabled { opacity: 0.45; cursor: default; }
 .account-fields + p { margin: 12px 0 20px; line-height: 1.6; }.initial-layout { margin-top: 16px; }
 .setup-footer { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-top: 24px; padding-top: 20px; border-top: 1px solid #354250; }.setup-footer > div { max-width: 65%; font-size: 13px; }.primary-action { padding: 10px 20px; background: #315e60; white-space: nowrap; }
 .load-actions { display: flex; gap: 12px; margin: 20px 0 12px; }.load-error { font-size: 13px; line-height: 1.6; color: #e2a2a6; }.load-error code { overflow-wrap: anywhere; }.load-error summary { cursor: pointer; color: #e5eaf0; }.data-ready { font-size: 13px; color: #75c4b5; }progress { width: 100%; accent-color: #75c4b5; }
-.replay-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 14px; flex: none; font-size: 12px; }.replay-strip > strong { margin-right: 6px; }.replay-strip label { display: flex; align-items: center; gap: 6px; }.replay-strip .layout-controls { margin-left: 10px; }.replay-progress { font-size: 11px; }
 .phase-trading .chart-workspace, .phase-trading .chart-workspace:has(input:checked) { flex: 1 1 0; min-height: 200px; border: 0; border-radius: 0; overflow: hidden; }
 .chart-stack { padding: 0 8px; gap: 4px; }.phase-trading .chart-pane, .phase-trading .chart-pane:has(.indicator-controls[open]), .phase-trading .chart-pane:has(input:checked) { min-height: 0; border: 0; border-radius: 0; }
 .phase-trading .chart-pane:has(.indicator-controls input[aria-label$='Stochastic']:checked),
@@ -351,9 +350,9 @@ button:disabled { opacity: 0.45; cursor: default; }
 .stop-drag-status button { margin-left: 12px; }
 
 
-/* Replay and order entry share a compact header; chart space has no bottom dock. */
+/* Trade entry and position management stay above the charts. */
 .workspace-toolbar { flex: none; background: #171e28; border-bottom: 1px solid #354250; }
-.workspace-toolbar .replay-strip { padding-bottom: 4px; }
+
 .dock-controls { align-items: center; }
 .dock-controls .setup-status { color: #b2b5be; }
 
@@ -366,7 +365,7 @@ button:disabled { opacity: 0.45; cursor: default; }
 .confirm-draft-stop { display: grid; place-items: center; min-width: 36px; min-height: 36px; padding: 4px; color: #f2f7f8; background: #315e60; border: 0; border-radius: 2px 0 0 2px; }
 
 
-/* One compact workspace header, wrapping by control group on smaller laptops. */
+/* Compact application and trading controls for desktop and laptops. */
 .app-header { gap: 16px; padding: 6px 14px; min-height: 48px; }
 .app-header h1, .app-header > button { flex-shrink: 0; }
 .header-account { display: flex; align-items: center; gap: 16px; white-space: nowrap; }
@@ -374,17 +373,14 @@ button:disabled { opacity: 0.45; cursor: default; }
 .account-pnl { gap: 8px; }
 .account-pnl strong { font-size: 16px; }
 .workspace-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; padding: 4px 14px; font-size: 12px; }
-.workspace-toolbar .replay-strip { padding: 0; gap: 6px; flex: 1 1 auto; }
-.replay-strip .layout-controls { margin-left: 4px; }
-.replay-strip .layout-controls label { padding: 0 4px; }
-.replay-strip .layout-controls legend { font-size: 12px; margin-right: 4px; }
-.replay-strip .replay-status { min-width: auto; font-size: 12px; }
-.replay-strip .replay-progress { margin-left: 0; }
+
+.header-replay .layout-controls label { padding: 0 4px; }
+.header-replay .layout-controls legend { font-size: 12px; margin-right: 4px; }
 .trading-toolbar { display: contents; }
 .dock-controls { flex: 0 1 auto; gap: 6px 8px; margin-left: auto; font-size: 12px; }
 .dock-controls label { gap: 6px; }
 .dock-controls input { width: 60px; }
-.dock-controls input, .dock-controls select, .replay-strip select { min-height: 30px; padding: 4px 6px; }
+.dock-controls input, .dock-controls select, .header-replay select { min-height: 30px; padding: 4px 6px; }
 .workspace-toolbar button { min-height: 30px; padding: 4px 8px; }
 .stop-placement, .active-positions, .trading-toolbar > .form-error { flex-basis: 100%; }
 .execution-details { position: relative; flex: none; font-size: 12px; }
@@ -396,17 +392,17 @@ button:disabled { opacity: 0.45; cursor: default; }
 .execution-popover p { margin: 8px 0; line-height: 1.5; color: #b2b5be; }
 .execution-popover summary { cursor: pointer; }
 /* The settings overlay never participates in toolbar sizing. */
-.pane-toolbar { display: grid; grid-template-columns: max-content max-content max-content minmax(0, 1fr); align-items: center; justify-content: normal; gap: 8px; flex: none; }
+.pane-toolbar { display: grid; grid-template-columns: max-content max-content max-content; align-items: center; justify-content: normal; gap: 8px; flex: none; }
 .pane-toolbar .instrument { flex-wrap: nowrap; gap: 6px; white-space: nowrap; }
 .pane-toolbar label { font-size: 12px; gap: 6px; }
 .indicator-controls, .indicator-controls[open] { margin-left: 0; min-width: 0; font-size: 12px; }
-.pane-toolbar .indicator-readiness { margin: 0; font-size: 11px; line-height: 14px; overflow-wrap: anywhere; }
+.indicator-options .indicator-readiness { flex-basis: 100%; margin: 0; font-size: 12px; line-height: 1.5; }
 .indicator-options { width: min(720px, 100%); }
 @media (max-width: 1200px) {
   .app-header { gap: 12px; }
   .header-account { gap: 12px; }
   .account-pnl { align-items: flex-end; flex-direction: column; gap: 2px; }
-  .workspace-toolbar .replay-strip { flex-basis: 100%; }
+
   .dock-controls { margin-left: 0; }
 }
 
@@ -415,3 +411,30 @@ button:disabled { opacity: 0.45; cursor: default; }
 .history-review { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; padding: 4px 16px; background: #29261d; color: #f4d495; font-size: 12px; }
 .history-review button { margin-left: auto; }
 .keyboard-notice { margin: 0; padding: 4px 16px; color: #f4d495; font-size: 12px; }
+
+/* Replay shares the application header; positions use the full trading toolbar. */
+.phase-trading .app-header { display: grid; grid-template-columns: max-content minmax(72px, 1fr) 30px max-content 220px max-content; gap: 8px; }
+.phase-trading .execution-popover { left: 0; right: auto; }
+.phase-trading .header-session { display: flex; flex-direction: column; gap: 2px; }
+.session-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.phase-trading .save-state { margin: 0; min-height: 15px; }
+.phase-trading .header-account { flex-direction: column; align-items: flex-end; gap: 2px; }
+.phase-trading .account-pnl { flex-direction: row; align-items: center; gap: 6px; }
+.phase-trading .account-pnl strong { font-size: 13px; min-width: 144px; text-align: right; }
+.phase-trading .account-pnl > span { font-size: 11px; }
+.header-replay { display: flex; align-items: center; flex: none; font-size: 12px; margin: 0; border: 0; padding: 0; gap: 6px; min-width: 0; flex-wrap: nowrap; }
+.header-replay[hidden] { display: none; }
+.header-replay button, .phase-trading .app-header > button { min-height: 30px; padding: 4px 8px; font-size: 12px; white-space: nowrap; }
+.header-replay label { display: flex; align-items: center; gap: 4px; }
+.header-replay .layout-controls { margin: 0; flex: none; }
+.replay-state { display: flex; flex-direction: column; gap: 2px; min-width: 132px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.header-replay .replay-status { min-width: 0; min-height: 15px; font-size: 12px; }
+.header-replay .replay-progress { margin: 0; font-size: 11px; }
+.dock-controls { margin-left: 0; flex: 1 1 100%; }
+.active-positions { width: 100%; }
+@media (max-width: 1350px) {
+  .phase-trading .app-header { grid-template-columns: max-content minmax(120px, 1fr) 30px 220px max-content; }
+  .phase-trading .execution-popover { left: auto; right: 0; }
+  .header-replay { grid-row: 2; grid-column: 1 / -1; }
+  .header-replay .replay-state { margin-left: auto; }
+}

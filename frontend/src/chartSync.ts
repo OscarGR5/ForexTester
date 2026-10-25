@@ -5,7 +5,8 @@ import { TIMEFRAME_MS, type Timeframe } from './history.js'
 // Logical bars, never market observations. Ichimoku projection can need more.
 export const FOLLOW_RIGHT_OFFSET = 12
 const MAX_RIGHT_OFFSET = 80
-const followOffset = (entry: Entry) => Math.max(FOLLOW_RIGHT_OFFSET, entry.projectedBars)
+// Keep the candle body in the plot even when zoom is tighter than the projection.
+const followOffset = (entry: Entry, width = Infinity) => Math.min(Math.max(FOLLOW_RIGHT_OFFSET, entry.projectedBars), Math.max(1, width - 2))
 const maxRightOffset = (entry: Entry, width: number) => Math.max(followOffset(entry), Math.min(MAX_RIGHT_OFFSET, width * 0.4))
 
 export interface UtcRange { from: number; to: number }
@@ -102,7 +103,7 @@ export class ChartSynchronizer {
     this.refreshCrosshair()
   }
   update(id: number, candles: readonly CandlestickData<UTCTimestamp>[], timeframe: Timeframe,
-    applyData: () => number | void, dirty = 0): void {
+    applyData: () => number | void, dirty = 0, recoverVisibility = false): void {
     const entry = this.entries.get(id)
     if (!entry) return
     entry.setting = true
@@ -120,7 +121,7 @@ export class ChartSynchronizer {
       entry.step = TIMEFRAME_MS[timeframe] / 1000
       entry.projectedBars = applyData() ?? 0
       this.ensureView(id, entry)
-      this.applyViewport(id, entry)
+      this.applyViewport(id, entry, recoverVisibility)
       entry.pending = entry.chart.timeScale().getVisibleLogicalRange()
     } finally { entry.setting = false }
     if (dirty === 0) this.refreshCrosshair()
@@ -141,9 +142,9 @@ export class ChartSynchronizer {
     if (this.keyboardChartId >= count) this.activate(0)
   }
   deactivate(): void { this.activeId = null }
-  refresh(id: number): void {
+  refresh(id: number, recoverVisibility = false): void {
     const entry = this.entries.get(id)
-    if (entry) { this.ensureView(id, entry); this.applyViewport(id, entry) }
+    if (entry) { this.ensureView(id, entry); this.applyViewport(id, entry, recoverVisibility) }
   }
   register(id: number, chart: IChartApi, series: ISeriesApi<'Candlestick'>,
     candles: readonly CandlestickData<UTCTimestamp>[], timeframe: Timeframe): () => void {
@@ -166,7 +167,7 @@ export class ChartSynchronizer {
   }
   private recordRange(id: number, entry: Entry, range: { from: number; to: number }): void {
     this.views.set(id, { range: { from: logicalToUtc(entry.times, range.from, entry.step), to: logicalToUtc(entry.times, range.to, entry.step) },
-      logical: { ...range }, step: entry.step, following: Math.abs(range.to - (entry.times.length - 1 + followOffset(entry))) < 0.5 })
+      logical: { ...range }, step: entry.step, following: Math.abs(range.to - (entry.times.length - 1 + followOffset(entry, range.to - range.from))) < 0.5 })
   }
   private onRange(id: number, range: LogicalRange | null): void {
     const entry = this.entries.get(id)
@@ -198,18 +199,25 @@ export class ChartSynchronizer {
     finally { entry.setting = false }
     this.recordRange(id, entry, entry.pending ?? next); this.onViewportChange?.(); this.refreshCrosshair()
   }
-  private applyViewport(id: number, entry: Entry): void {
+  private applyViewport(id: number, entry: Entry, recoverVisibility = false): void {
     const view = this.views.get(id), last = entry.times.length - 1
     if (!view?.range || last < 0) return
-    if (last === 0 && !entry.projectedBars) { entry.chart.timeScale().fitContent(); return }
     const started = performanceStart(); performanceCount('sync.request')
     const sameStep = view.step === entry.step && view.logical
     const width = Math.max(1, Math.min(last + followOffset(entry),
       sameStep ? view.logical!.to - view.logical!.from : utcToLogical(entry.times, view.range.to, entry.step) - utcToLogical(entry.times, view.range.from, entry.step)))
-    const to = view.following ? last + followOffset(entry) : Math.max(Math.min(5, width), Math.min(last + maxRightOffset(entry, width),
+    const current = entry.chart.timeScale().getVisibleLogicalRange()
+    // Only a forward replay observation may recover a manual view. Resizes,
+    // settings, restore and historical review must leave paused navigation alone.
+    // Check the actual plot, including updates within the same higher-timeframe bar.
+    const recover = recoverVisibility && current !== null &&
+      (last < current.from || last >= current.to - Math.min(2, width * 0.2))
+    const following = view.following || recover
+    // At extreme zoom a full projection margin can exceed the entire viewport.
+    const margin = followOffset(entry, width)
+    const to = following ? last + margin : Math.max(Math.min(5, width), Math.min(last + maxRightOffset(entry, width),
       sameStep ? view.logical!.to : utcToLogical(entry.times, view.range.to, entry.step)))
     const next = { from: to - width, to }
-    const current = entry.chart.timeScale().getVisibleLogicalRange()
     if (!current || Math.abs(current.from - next.from) > 0.001 || Math.abs(current.to - next.to) > 0.001) {
       const setting = entry.setting; entry.setting = true
       try {
@@ -217,8 +225,8 @@ export class ChartSynchronizer {
         entry.pending = entry.chart.timeScale().getVisibleLogicalRange()
       } finally { entry.setting = setting }
     }
-    const following = view.following
     this.recordRange(id, entry, next); this.views.get(id)!.following = following
+    if (recover && !view.following) this.onViewportChange?.()
     performanceEnd('sync.apply', started)
   }
   suspendCrosshair(suspended: boolean): void {
