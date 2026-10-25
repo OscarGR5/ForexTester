@@ -1,3 +1,4 @@
+import { stopOverlays } from './stopOverlays'
 import { canRequestOrder, stopModificationError } from './trading'
 import { plannedRisk } from './risk'
 import type { StopPreview } from './useStopDrag'
@@ -73,6 +74,7 @@ export function App() {
   const startIndex = hydration?.checkpoint.replay.startIndex ?? automaticStart?.index ?? source.length
   const replay = useReplay(history ? source : null, startIndex, hydration ? { replay: hydration.checkpoint.replay, epoch: hydration.checkpoint.trading.session } : null)
   const trading = useTrading(history, replay, hydration)
+  const stops = useMemo(() => stopOverlays(trading.state, stopPreview), [trading.state, stopPreview])
   const chartOffset = useMemo(() => {
     if (!history || !isSinglePrice(history) || !history.candles[startIndex]) return 0
     let index = startIndex
@@ -325,7 +327,7 @@ export function App() {
         {replay.blocked && <p className="coverage-warning" role="alert">Replay blocked at contract rollover. No positions, stops or pending orders were executed across the boundary. Finish this backtest or select a replay start after the rollover. A carry/roll policy requires project-lead approval.</p>}
         {history && isSinglePrice(history) && <details className="chart-note"><summary>Contract mappings and rollover events</summary>{history.contracts.map(c=><p key={c.from}>{c.from} to {c.to} (exclusive): {c.rawSymbol} · instrument {c.instrumentId}</p>)}</details>}
         <div className="chart-workspace" aria-label={`${history?.symbol ?? '6E'} chart workspace`}><div className={`chart-stack charts-${chartCount}`}>
-          {timeframes.slice(0,chartCount).map((timeframe,id)=><ChartPane key={id} instrument={history?.symbol ?? '6E'} id={id} timeframe={timeframe} sessionId={sessions.activeId} positions={trading.state.positions} stopInteraction={{ enabled: canRequestOrder(trading.permission) && !draft,
+          {timeframes.slice(0,chartCount).map((timeframe,id)=><ChartPane key={id} instrument={history?.symbol ?? '6E'} id={id} timeframe={timeframe} sessionId={sessions.activeId} positions={trading.state.positions} stops={stops} stopInteraction={{ enabled: canRequestOrder(trading.permission) && !draft,
             preview: stopPreview, onPreview: setStopPreview, onCommit: (positionId, price) => {
               const position = trading.state.positions.find(p => p.id === positionId)
               const error = position ? stopModificationError(trading.state, position, price, trading.permission) : 'Position is no longer open.'
@@ -339,7 +341,7 @@ export function App() {
           return <p className={`stop-drag-status${error ? ' form-error' : ''}`} role="status">{stopPreview.id} · SL {stopPreview.price.toFixed(5)} · {error ?? `Risk $${plannedRisk({ ...position!, stopPrice: stopPreview.price }).toFixed(2)} · Effective after the current M1 candle. Release to apply; Escape to cancel.`}</p>
         })()}
         {stopError && <p className="stop-drag-status form-error" role="alert">{stopError}<button onClick={() => setStopError(null)}>Dismiss</button></p>}
-        <TradingDock key={`${sessions.activeId}-${trading.state.session}`} trading={trading} draft={draft} setDraft={setDraft}/>
+        <TradingDock stops={stops} key={`${sessions.activeId}-${trading.state.session}`} trading={trading} draft={draft} setDraft={setDraft}/>
       </>}
       {lifecycle === 'finished' && <section className="results-workspace" aria-label="Backtest results"><div className="results-heading"><h2>Backtest results</h2><button onClick={sessions.save}>Save now</button></div>
         <p className="chart-note">{historyLabel(history)} · {history && isSinglePrice(history) ? 'Hypothetical forex-style sizing; simplified trade-price fills.' : 'Original legacy execution model.'}</p><p className="results-disclosure">{trading.state.positions.length} positions remain open · {trading.state.pending.length} entries pending. Account PnL includes open equity; journal statistics use completed trades. No exits were created when finishing.</p>

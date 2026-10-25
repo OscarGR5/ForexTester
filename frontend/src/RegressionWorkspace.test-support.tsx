@@ -1,3 +1,4 @@
+import { stopOverlays } from './stopOverlays'
 import { historyCandles } from './history'
 // Regression composition for Tasks 1–19. Exercises current production chart,
 // replay, trading, journal and persistence components with the former controls.
@@ -202,7 +203,7 @@ export function RegressionWorkspace() {
       <div className="chart-workspace" aria-label="EURUSD bid chart workspace">
         <div className="chart-stack" style={{ gridTemplateRows: `repeat(${chartCount}, minmax(auto, 1fr))` }}>
           {timeframes.slice(0, chartCount).map((timeframe, id) => <ChartPane placement={null} onPick={() => {}} key={id} id={id} timeframe={timeframe}
-            sessionId={sessions.activeId} positions={trading.state.positions} source={history ? historyCandles(history) : EMPTY_CANDLES} count={replay.count} synchronizer={synchronizer} onTimeframeChange={changeTimeframe}
+            sessionId={sessions.activeId} positions={trading.state.positions} stops={stopOverlays(trading.state)} source={history ? historyCandles(history) : EMPTY_CANDLES} count={replay.count} synchronizer={synchronizer} onTimeframeChange={changeTimeframe}
             settings={indicatorSettings[id][timeframe]!} onSettingsChange={changeSettings} />)}
         </div>
         {status === 'loading' && <div className="chart-message" role="status">Loading EURUSD bid/ask history · {loadProgress.completed} / {loadProgress.total} chunks complete…</div>}

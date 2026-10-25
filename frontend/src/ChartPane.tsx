@@ -1,3 +1,5 @@
+import { StopLines } from './stopLabels'
+import type { StopOverlay } from './stopOverlays'
 import { useStopDrag, type StopInteraction } from './useStopDrag'
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { CandlestickSeries, CrosshairMode, ColorType, LineStyle, createChart, type IChartApi, type IPriceLine, type ISeriesApi, type Time, type MouseEventParams } from 'lightweight-charts'
@@ -23,6 +25,7 @@ interface ChartPaneProps {
   count: number
   synchronizer: ChartSynchronizer
   stopInteraction?: StopInteraction
+  stops: StopOverlay[]
   positions: Position[]
   placement: StopDraft | null
   onPick: (price: number) => void
@@ -31,7 +34,7 @@ interface ChartPaneProps {
   onTimeframeChange: (id: number, timeframe: Timeframe) => void
 }
 
-export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, placement, onPick, stopInteraction }: ChartPaneProps) {
+export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, stops, placement, onPick, stopInteraction }: ChartPaneProps) {
   const [readiness, setReadiness] = useState('')
   const container = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
@@ -40,7 +43,7 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, se
   const updateSettings = useCallback((next: IndicatorSettings) => onSettingsChange(id, next), [id, onSettingsChange])
   const indicatorsRef = useRef<IndicatorSeries | null>(null)
   const savePriceRef = useRef<(() => void) | null>(null)
-  const stopLines = useRef(new Map<string, IPriceLine>())
+  const stopLines = useRef<StopLines | null>(null)
   const previousSettings = useRef<IndicatorSettings | null>(null)
   const unregisterRef = useRef<(() => void) | null>(null)
   const previous = useRef<{ source: readonly Candle[]; count: number; bars: ReplayBars; timeframe: Timeframe; synchronizer: ChartSynchronizer } | null>(null)
@@ -81,6 +84,7 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, se
       wickUpColor: '#ffffff', wickDownColor: '#ffffff',
       priceFormat: { type: 'price', precision: 5, minMove: 0.00001 },
     })
+    stopLines.current = new StopLines(series)
     chartRef.current = chart
     seriesRef.current = series
     timeSlots.current = new ChartTimeSlots(chart)
@@ -93,7 +97,8 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, se
       indicatorsRef.current = null
       timeSlots.current = null
       previousSettings.current = null
-      stopLines.current.clear()
+      stopLines.current?.dispose()
+      stopLines.current = null
       chart.remove()
       chartRef.current = null
       seriesRef.current = null
@@ -185,21 +190,8 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, se
   }, [id, source, count, synchronizer, timeframe, settings])
 
   useLayoutEffect(() => {
-    const series = seriesRef.current!
-    const ids = new Set(positions.map((position) => position.id))
-    for (const [id, line] of stopLines.current) {
-      if (!ids.has(id)) { series.removePriceLine(line); stopLines.current.delete(id) }
-    }
-    for (const position of positions) {
-      const ordinal = Number(position.id.split('-').at(-1))
-      const options = { price: stopInteraction?.preview?.id === position.id ? stopInteraction.preview.price : position.stopPrice, color: ordinal % 2 ? '#ef9a9a' : '#ffcc80', lineWidth: 1 as const,
-        lineStyle: ordinal % 2 ? LineStyle.Dashed : LineStyle.Dotted, axisLabelVisible: true,
-        title: '' }
-      const line = stopLines.current.get(position.id)
-      if (line) line.applyOptions(options)
-      else stopLines.current.set(position.id, series.createPriceLine(options))
-    }
-  }, [positions, stopInteraction?.preview])
+    stopLines.current!.update(stops)
+  }, [stops])
 
   useEffect(() => {
     const scale = seriesRef.current!.priceScale()
