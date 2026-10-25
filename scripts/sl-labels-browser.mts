@@ -144,8 +144,8 @@ try {
   for (const pane of await chartStops()) assert.equal(pane.stops.length, 2)
   await screenshot(`two-sls-${count}-panes`)
  }
- await page.setViewportSize({ width: 390, height: 844 }); await settle(); await screenshot('two-sls-mobile')
- assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 390)
+ await page.setViewportSize({ width: 1100, height: 800 }); await settle(); await screenshot('two-sls-laptop')
+ assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 1100)
  await page.setViewportSize({ width: 1440, height: 1000 }); await settle()
  await button(`Close ${first}`).click(); await button('Next Candle').click(); await saved()
  assert.equal((await record()).checkpoint.trading.positions.length, 1)

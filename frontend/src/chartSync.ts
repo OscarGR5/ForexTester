@@ -2,6 +2,12 @@ import { performanceStart, performanceEnd, performanceCount } from './replayPerf
 import type { CandlestickData, IChartApi, ISeriesApi, LogicalRange, MouseEventParams, UTCTimestamp } from 'lightweight-charts'
 import { TIMEFRAME_MS, type Timeframe } from './history.js'
 
+// Logical bars, never market observations. Ichimoku projection can need more.
+export const FOLLOW_RIGHT_OFFSET = 12
+const MAX_RIGHT_OFFSET = 80
+const followOffset = (entry: Entry) => Math.max(FOLLOW_RIGHT_OFFSET, entry.projectedBars)
+const maxRightOffset = (entry: Entry, width: number) => Math.max(followOffset(entry), Math.min(MAX_RIGHT_OFFSET, width * 0.4))
+
 export interface UtcRange { from: number; to: number }
 
 // Logical coordinates are local to a chart. Convert them through candle UTC times
@@ -121,7 +127,7 @@ export class ChartSynchronizer {
     if (this.views.has(id) || !entry.times.length) return
     if (this.legacy?.range) { this.views.set(id, structuredClone(this.legacy)); return }
     const last = entry.times.length - 1
-    const from = Math.max(0, last - 199), to = Math.max(1, last + entry.projectedBars)
+    const from = Math.max(0, last - 199), to = Math.max(1, last + followOffset(entry))
     this.views.set(id, { range: { from: logicalToUtc(entry.times, from, entry.step), to: logicalToUtc(entry.times, to, entry.step) },
       logical: { from, to }, step: entry.step, following: true })
   }
@@ -152,7 +158,7 @@ export class ChartSynchronizer {
   }
   private recordRange(id: number, entry: Entry, range: { from: number; to: number }): void {
     this.views.set(id, { range: { from: logicalToUtc(entry.times, range.from, entry.step), to: logicalToUtc(entry.times, range.to, entry.step) },
-      logical: { ...range }, step: entry.step, following: range.to >= entry.times.length - 1 + entry.projectedBars - 0.05 })
+      logical: { ...range }, step: entry.step, following: Math.abs(range.to - (entry.times.length - 1 + followOffset(entry))) < 0.5 })
   }
   private onRange(id: number, range: LogicalRange | null): void {
     const entry = this.entries.get(id)
@@ -162,15 +168,23 @@ export class ChartSynchronizer {
       if (Math.abs(range.from - pending.from) < 0.001 && Math.abs(range.to - pending.to) < 0.001) return
     }
     if (this.activeId !== id || Date.now() > this.activeUntil) return
-    this.recordRange(id, entry, range); this.onViewportChange?.()
+    const width = range.to - range.from
+    const to = Math.min(range.to, entry.times.length - 1 + maxRightOffset(entry, width))
+    const bounded = { from: to - width, to }
+    if (to !== range.to) {
+      entry.setting = true
+      try { entry.chart.timeScale().setVisibleLogicalRange(bounded); entry.pending = entry.chart.timeScale().getVisibleLogicalRange() }
+      finally { entry.setting = false }
+    }
+    this.recordRange(id, entry, bounded); this.onViewportChange?.()
   }
   // Public time-scale API: the right logical edge never depends on pointer X.
   wheel(id: number, delta: number): void {
     const entry = this.entries.get(id), range = entry?.chart.timeScale().getVisibleLogicalRange()
     if (!entry || !range || !Number.isFinite(delta) || !delta || entry.times.length < 2) return
-    const available = entry.times.length - 1 + entry.projectedBars
+    const available = entry.times.length - 1 + followOffset(entry)
     const width = Math.max(Math.min(5, available), Math.min(available, (range.to - range.from) * Math.exp(Math.max(-1, Math.min(1, delta * 0.002)))))
-    const to = Math.min(available, Math.max(width, range.to)), next = { from: Math.max(0, to - width), to }
+    const to = Math.min(entry.times.length - 1 + maxRightOffset(entry, width), range.to), next = { from: to - width, to }
     this.activate(id); entry.setting = true
     try { entry.chart.timeScale().setVisibleLogicalRange(next); entry.pending = entry.chart.timeScale().getVisibleLogicalRange() }
     finally { entry.setting = false }
@@ -182,9 +196,9 @@ export class ChartSynchronizer {
     if (last === 0 && !entry.projectedBars) { entry.chart.timeScale().fitContent(); return }
     const started = performanceStart(); performanceCount('sync.request')
     const sameStep = view.step === entry.step && view.logical
-    const width = Math.max(1, Math.min(last + entry.projectedBars,
+    const width = Math.max(1, Math.min(last + followOffset(entry),
       sameStep ? view.logical!.to - view.logical!.from : utcToLogical(entry.times, view.range.to, entry.step) - utcToLogical(entry.times, view.range.from, entry.step)))
-    const to = view.following ? last + entry.projectedBars : Math.max(Math.min(5, width), Math.min(last + entry.projectedBars,
+    const to = view.following ? last + followOffset(entry) : Math.max(Math.min(5, width), Math.min(last + maxRightOffset(entry, width),
       sameStep ? view.logical!.to : utcToLogical(entry.times, view.range.to, entry.step)))
     const next = { from: to - width, to }
     const current = entry.chart.timeScale().getVisibleLogicalRange()

@@ -47,7 +47,7 @@ try {
     assert.equal(await page.getByRole('button', { name: 'Load historical data', exact: true }).isEnabled(), true)
     assert.equal(await page.getByRole('region', { name: 'Backtest setup' }).isVisible(), true)
   }
-  for (const [width, height] of [[1440, 900], [390, 844]]) {
+  for (const [width, height] of [[1440, 900], [1100, 800]]) {
     await page.setViewportSize({ width, height })
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width)
     await page.screenshot({ path: `docs/task-20/startup-legacy-${width}.png`, fullPage: true })
@@ -61,7 +61,7 @@ try {
   await page.getByRole('button', { name: 'Resume / Manage sessions', exact: true }).click()
   await page.getByRole('button', { name: 'Resume session', exact: true }).waitFor()
   assert.deepEqual(errors, []); assert.deepEqual(historyRequests, [])
-  await writeFile('docs/task-20/startup-verification.json', JSON.stringify({ errors, historyRequests, verified: ['delayed discovery hides Setup', 'legacy-only refresh keeps Setup available', 'two reloads', 'optional dismissible migration', 'original browser session imports successfully', 'desktop/mobile no overflow'] }, null, 2))
+  await writeFile('docs/task-20/startup-verification.json', JSON.stringify({ errors, historyRequests, verified: ['delayed discovery hides Setup', 'legacy-only refresh keeps Setup available', 'two reloads', 'optional dismissible migration', 'original browser session imports successfully', 'desktop/laptop no overflow'] }, null, 2))
 } finally {
   await browser.close(); await vite.close(); await new Promise<void>(resolve => api.close(() => resolve()))
   await rm(directory, { recursive: true, force: true })

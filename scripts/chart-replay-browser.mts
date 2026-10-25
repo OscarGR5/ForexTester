@@ -119,7 +119,7 @@ try {
       await page.getByRole('button', { name: 'Next Candle', exact: true }).click()
       assert.equal(Number((await page.locator('[aria-label="Replay progress"]').textContent())!.split('/')[0]), Number(after!.split('/')[0]) + 1)
       await page.getByRole('button', { name: 'Save now', exact: true }).click(); await page.locator('.session-status strong').filter({ hasText: /^Saved$/ }).waitFor()
-      for (const width of [1440, 390]) { await page.setViewportSize({ width, height: 1000 }); await page.screenshot({ path: `/tmp/task19-${label}-${width}.png`, fullPage: true }); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width) }
+      for (const width of [1440, 1100]) { await page.setViewportSize({ width, height: 1000 }); await page.screenshot({ path: `/tmp/task19-${label}-${width}.png`, fullPage: true }); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width) }
       assert.equal(await page.locator('.tv-lightweight-charts').count(), 3)
       if (process.env.VERIFY) results.verification = await verifyReplayWorkspace(page)
     }
