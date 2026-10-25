@@ -14,7 +14,7 @@ import { PreferenceTabGuard } from './uiPreferenceCleanup'
 import { uiKey } from './uiPreferences'
 import { SessionStore } from './sessionStore'
 import { DiskSessionStore } from './diskSessionStore'
-import { recordDigest, historyFingerprint } from './sessionCodec'
+import { recordDigest, historyFingerprint, equitySuffix } from './sessionCodec'
 import { sessionHistory, sessionSimulation } from './sessionFixtures'
 import { createEquityLedger } from './equity'
 import { lifecycleOf } from './sessionTypes'
@@ -191,7 +191,7 @@ it('saves loaded setup, locks configured account at start, and mounts chart-firs
  await mount();await input('Starting balance (USD)','15000');await input('Round-trip commission (USD per standard lot)','7');await load()
  await until(()=>host.querySelector('.save-state')?.textContent==='Saved');let records=await disk.storage.list();expect(records.sessions[0].checkpoint.lifecycle).toBe('trading')
  expect(host.querySelector('.chart-canvas')).toBeTruthy();expect(host.querySelector('[aria-label="Starting balance (USD)"]')).toBeNull()
- expect(host.querySelector('.trading-journal')).toBeNull();expect(host.querySelector('[aria-label="Account PnL"]')?.textContent).toContain('$0.00 · 0.00%')
+ expect(host.querySelector('.results-primary')).toBeNull();expect(host.querySelector('[aria-label="Account PnL"]')?.textContent).toContain('$0.00 · 0.00%')
  await until(()=>host.querySelector('.save-state')?.textContent==='Saved');records=await disk.storage.list();expect(records.sessions[0].checkpoint.trading.account.referenceBalance).toBe(15000)
 })
 it('keeps Databento configuration errors readable and retries only on user action',async()=>{
@@ -252,8 +252,90 @@ it('confirms finishing with open positions, preserves them, and restores finishe
  await start();await order();await click('Next Candle');vi.mocked(window.confirm).mockReturnValueOnce(false)
  await click('Finish backtest');await until(()=>!host.querySelector<HTMLFieldSetElement>('.workspace-controls')!.disabled);expect(host.querySelector('.phase-trading')).toBeTruthy();expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('1 open positions'))
  await click('Finish backtest');await until(()=>host.querySelector('.phase-finished')&&host.querySelector('.save-state')?.textContent==='Saved')
- expect(host.querySelector('.trading-journal')).toBeTruthy();const record=(await disk.storage.list()).sessions[0];expect(record.checkpoint.lifecycle).toBe('finished');expect(record.checkpoint.trading.positions).toHaveLength(1);expect(record.checkpoint.trading.closed).toHaveLength(0)
+ expect(host.querySelector('.results-primary')).toBeTruthy();const record=(await disk.storage.list()).sessions[0];expect(record.checkpoint.lifecycle).toBe('finished');expect(record.checkpoint.trading.positions).toHaveLength(1);expect(record.checkpoint.trading.closed).toHaveLength(0)
  const before=historyCalls;await act(async()=>root.unmount());root=createRoot(host);await mount();await click('Resume backtest');await until(()=>host.querySelector('.phase-finished'));expect(historyCalls).toBe(before);expect(host.querySelector('.stop-placement')).toBeNull()
+})
+it('resumes a restored finished backtest paused, preserves every record, reloads Trading, and counts subsequent trades', async () => {
+ await start(); await order(); await click('Next Candle')
+ const id=host.querySelector('[data-position-id]')!.getAttribute('data-position-id')!
+ await click(`Close ${id}`); await click('Next Candle')
+ await click('Finish backtest'); await until(()=>host.querySelector('.phase-finished')&&host.querySelector('.save-state')?.textContent==='Saved')
+ const store=new DiskSessionStore(), before=(await disk.storage.list()).sessions[0]
+ const recovered=await store.recover(before.id,async()=>{throw Error('History download forbidden')})
+ expect(before.checkpoint.trading.closed).toHaveLength(1)
+ const historyBefore=historyCalls
+ await act(async()=>root.unmount()); root=createRoot(host); await mount(); await click('Resume backtest')
+ await until(()=>host.querySelector('.phase-finished')&&host.querySelector('.save-state')?.textContent==='Saved')
+ await until(()=>!button('Resume Backtest').matches(':disabled')); await click('Resume Backtest'); await until(()=>host.querySelector('.phase-trading')&&host.querySelector('.save-state')?.textContent==='Saved')
+ expect(host.querySelector('[aria-label="Replay status"]')?.textContent).toBe('Paused')
+ const resumed=(await disk.storage.list()).sessions[0]
+ expect(resumed.id).toBe(before.id); expect(resumed.checkpoint.lifecycle).toBe('trading')
+ expect(resumed.checkpoint.trading).toEqual(before.checkpoint.trading)
+ expect(resumed.checkpoint.replay).toEqual(before.checkpoint.replay)
+ expect(resumed.checkpoint.executionCursor).toBe(before.checkpoint.executionCursor)
+ expect(resumed.checkpoint.equity).toEqual(before.checkpoint.equity)
+ expect(resumed.checkpoint.workspace).toEqual(before.checkpoint.workspace)
+ expect(equitySuffix((await store.recover(before.id,async()=>{throw Error('History download forbidden')})).ledger,0)).toEqual(equitySuffix(recovered.ledger,0))
+ await act(async()=>root.unmount()); root=createRoot(host); await mount(); await click('Resume backtest')
+ await until(()=>host.querySelector('.phase-trading'))
+ expect(host.querySelector('[aria-label="Replay status"]')?.textContent).toBe('Paused')
+ await order('Buy',1.098); await click('Next Candle')
+ const nextId=host.querySelector('[data-position-id]')!.getAttribute('data-position-id')!
+ await click(`Close ${nextId}`); await click('Next Candle')
+ await click('Finish backtest'); await until(()=>host.querySelector('.phase-finished')&&host.querySelector('.save-state')?.textContent==='Saved')
+ const after=(await disk.storage.list()).sessions[0]
+ expect(after.checkpoint.trading.closed).toHaveLength(2)
+ expect(after.checkpoint.trading.closed[0]).toEqual(before.checkpoint.trading.closed[0])
+ expect(after.checkpoint.executionCursor).toBe(before.checkpoint.executionCursor+2)
+ expect(after.checkpoint.equity.count).toBe(before.checkpoint.equity.count+2)
+ const full=(await store.recover(before.id,async()=>{throw Error('History download forbidden')})).ledger
+ expect(equitySuffix(full,0).slice(0,before.checkpoint.equity.count)).toEqual(equitySuffix(recovered.ledger,0))
+ expect(host.querySelector('.results-sample')?.textContent).toContain('2 completed setups')
+ expect(historyCalls).toBe(historyBefore); expect((await disk.storage.list()).sessions).toHaveLength(1)
+})
+it('resumes with open positions, pending orders, modified stops and independent chart preferences intact', async () => {
+ await start(); await order('Buy',1.099); await click('Next Candle')
+ await dragStop(1.099,1.0995); await order('Buy',1.098)
+ await act(async()=>host.querySelector<HTMLInputElement>('input[name="chart-count"][value="2"]')!.click())
+ await select('Chart 1 timeframe','M5'); await select('Chart 2 timeframe','H1')
+ const canvas=host.querySelector('.chart-canvas')!
+ vi.spyOn(canvas,'getBoundingClientRect').mockReturnValue({left:0,top:0,width:900,height:650} as DOMRect)
+ await act(async()=>{canvasWheel(canvas,200,-160)})
+ await click('Finish backtest'); await until(()=>host.querySelector('.phase-finished')&&host.querySelector('.save-state')?.textContent==='Saved')
+ const before=(await disk.storage.list()).sessions[0]
+ expect(before.checkpoint.trading.positions).toHaveLength(1); expect(before.checkpoint.trading.pending).toHaveLength(1)
+ expect(before.checkpoint.trading.positions[0].stopModifications).toHaveLength(1)
+ await until(()=>!button('Resume Backtest').matches(':disabled')); await click('Resume Backtest'); await until(()=>host.querySelector('.phase-trading')&&host.querySelector('.save-state')?.textContent==='Saved')
+ const after=(await disk.storage.list()).sessions[0]
+ expect(after.checkpoint.trading).toEqual(before.checkpoint.trading); expect(after.checkpoint.equity).toEqual(before.checkpoint.equity)
+ expect(after.checkpoint.executionCursor).toBe(before.checkpoint.executionCursor)
+ expect(after.checkpoint.workspace).toEqual(before.checkpoint.workspace)
+ expect([...host.querySelectorAll<HTMLSelectElement>('select[aria-label$="timeframe"]')].map(s=>s.value)).toEqual(['M5','H1'])
+ await until(()=>!button('Next Candle').matches(':disabled')); await click('Next Candle'); await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
+ const advanced=(await disk.storage.list()).sessions[0]
+ expect(advanced.checkpoint.trading.pending).toHaveLength(0); expect(advanced.checkpoint.trading.positions).toHaveLength(2)
+ expect(advanced.checkpoint.executionCursor).toBe(before.checkpoint.executionCursor+1)
+})
+it('disables Results resume during saves and rolls back a failed lifecycle save without losing the checkpoint', async () => {
+ await start(); await click('Finish backtest'); await until(()=>host.querySelector('.phase-finished')&&host.querySelector('.save-state')?.textContent==='Saved')
+ const before=(await disk.storage.list()).sessions[0], underlying=globalThis.fetch
+ let release!:()=>void
+ vi.stubGlobal('fetch',async(path:string,options?:RequestInit)=>{
+   if(path.includes('/checkpoint')&&typeof options?.body==='string') {
+     const lifecycle=JSON.parse(options.body).record.checkpoint.lifecycle
+     if(lifecycle==='finished'&&!release) await new Promise<void>(resolve=>{release=resolve})
+     if(lifecycle==='trading') return new Response(JSON.stringify({error:'Disk write failed',code:'STORAGE_UNAVAILABLE'}),{status:503})
+   }
+   return underlying(path,options)
+ })
+ await click('Save now'); await until(()=>!!release)
+ expect(button('Resume Backtest').disabled).toBe(true)
+ await act(async()=>release()); await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
+ await until(()=>!button('Resume Backtest').matches(':disabled')); await click('Resume Backtest'); await until(()=>host.querySelector('.critical-save'))
+ expect(host.querySelector('.phase-finished')).toBeTruthy(); expect(host.querySelector('.phase-trading')).toBeNull()
+ const after=(await disk.storage.list()).sessions[0]
+ expect(after.checkpoint).toEqual(before.checkpoint)
+ vi.stubGlobal('fetch',underlying)
 })
 it('restores active sessions paused without drafts and keeps charts alive through next-candle updates',async()=>{
  await start();const count=vi.mocked(createChart).mock.calls.length;await order();await click('Next Candle');expect(vi.mocked(createChart).mock.calls.length).toBe(count)
@@ -296,7 +378,14 @@ it('keeps production chart candles behind the clock and offers explicit review a
  expect(candlestick().at(-1).time).toBe(beginning/1000)
  for(let i=1;i<12;i++)await click('Next Candle')
  expect(candlestick().at(-1).time).toBe(beginning/1000);expect(candlestick().at(-1).close).toBe(bid.at(-1)!.close);expect(host.querySelector('.phase-trading')).toBeTruthy();expect(button('Buy').disabled).toBe(true)
- await click('Review Results');await until(()=>host.querySelector('.phase-finished'));expect(host.querySelector('.trading-journal')).toBeTruthy()
+ await click('Review Results');await until(()=>host.querySelector('.phase-finished'));expect(host.querySelector('.results-primary')).toBeTruthy()
+ await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
+ const before=(await disk.storage.list()).sessions[0]
+ await until(()=>!button('Return to charts').matches(':disabled')); await click('Return to charts');await until(()=>host.querySelector('.phase-trading')&&host.querySelector('.save-state')?.textContent==='Saved')
+ expect(button('Next Candle').disabled).toBe(true);expect(button('Play').disabled).toBe(true);expect(button('Buy').disabled).toBe(true)
+ await until(()=>!button('Review Results').matches(':disabled'));await click('Next Candle');await click('Play');await click('Review Results');await until(()=>host.querySelector('.phase-finished')&&host.querySelector('.save-state')?.textContent==='Saved')
+ const after=(await disk.storage.list()).sessions[0]
+ expect(after.checkpoint).toEqual(before.checkpoint)
 })
 
 it('shows an uncached quote, requires confirmation, and preserves the chosen name/start when installing single-price history', async () => {
@@ -550,6 +639,13 @@ it('preserves the production rollover blocker after one-click startup',async()=>
  expect(host.querySelector('[aria-label="Replay status"]')?.textContent).toBe('Rollover blocked')
  expect(button('Next Candle').disabled).toBe(true);expect(button('Play').disabled).toBe(true)
  await until(()=>host.querySelector('.save-state')?.textContent==='Saved');expect((await disk.storage.list()).sessions[0].checkpoint.replay.timestamp).toBe(beginning+60000)
+ await click('Review Results');await until(()=>host.querySelector('.phase-finished')&&host.querySelector('.save-state')?.textContent==='Saved')
+ const before=(await disk.storage.list()).sessions[0]
+ await until(()=>!button('Return to charts').matches(':disabled')); await click('Return to charts');await until(()=>host.querySelector('.phase-trading')&&host.querySelector('.save-state')?.textContent==='Saved')
+ expect(host.querySelector('[aria-label="Replay status"]')?.textContent).toBe('Rollover blocked')
+ expect(button('Next Candle').disabled).toBe(true);expect(button('Play').disabled).toBe(true);expect(button('Buy').disabled).toBe(true)
+ await until(()=>!button('Review Results').matches(':disabled'));await click('Next Candle');await click('Play');await click('Review Results');await until(()=>host.querySelector('.phase-finished')&&host.querySelector('.save-state')?.textContent==='Saved')
+ expect((await disk.storage.list()).sessions[0].checkpoint).toEqual(before.checkpoint)
 })
 
 function activeStopLines() {
@@ -1038,8 +1134,10 @@ it('updates individual and combined net PnL through quotes, close, journal and s
  expect(total()).toBe(expectedTotal)
  expect(host.querySelector('[aria-label="Account PnL"]')!.textContent).toBe(account)
  await click('Finish backtest'); await until(() => host.querySelector('.phase-finished'))
- await until(() => !button('Journal').matches(':disabled')); await click('Journal'); await select('Journal view', 'positions')
- expect(host.querySelector('.journal-table-scroll')!.textContent).toContain(first)
+ await until(() => !host.querySelector<HTMLFieldSetElement>('.workspace-controls')!.disabled)
+ await act(async () => { host.querySelector<HTMLDetailsElement>('.results-breakdown')!.open = true })
+ for (const toggle of host.querySelectorAll<HTMLButtonElement>('.results-breakdown button[aria-expanded]')) await act(async () => toggle.click())
+ expect(host.querySelector('.results-breakdown')!.textContent).toContain(first)
  await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
 })
 
@@ -1130,8 +1228,10 @@ it('Close all queues both exits, preserves net commissions and journal/account d
  await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
  expect((await disk.storage.list()).sessions[0].checkpoint.trading).toEqual(state)
  await click('Finish backtest'); await until(() => host.querySelector('.phase-finished'))
- await until(() => !button('Journal').matches(':disabled')); await click('Journal'); await select('Journal view', 'positions')
- for (const position of state.closed) expect(host.querySelector('.journal-table-scroll')!.textContent).toContain(position.id)
+ await until(() => !host.querySelector<HTMLFieldSetElement>('.workspace-controls')!.disabled)
+ await act(async () => { host.querySelector<HTMLDetailsElement>('.results-breakdown')!.open = true })
+ for (const toggle of host.querySelectorAll<HTMLButtonElement>('.results-breakdown button[aria-expanded]')) await act(async () => toggle.click())
+ for (const position of state.closed) expect(host.querySelector('.results-breakdown')!.textContent).toContain(position.id)
 })
 it('Close all leaves a pending entry intact and obeys playback and review constraints', async () => {
  await start(); await order('Buy', 1.097); await click('Next Candle'); await order('Buy', 1.096)

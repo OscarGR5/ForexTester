@@ -8,7 +8,7 @@ import type { StopPreview } from './useStopDrag'
 import { HistoryTimeline } from './HistoryTimeline'
 import { automaticReplayStart, cachedPreset, formatUtcDate, rangeCoverage, type CacheCalendar } from './cacheCalendar'
 import { quoteHistory, downloadHistory, type HistoryQuote } from './databentoHistory'
-import { historyCandles, historyLabel, isSinglePrice } from './history'
+import { historyCandles, isSinglePrice } from './history'
 import { flushSync } from 'react-dom'
 import { PaidDownloadDialog } from './PaidDownloadDialog'
 import { ManagementDialog } from './ManagementDialog'
@@ -22,15 +22,13 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { SessionControls } from './SessionControls'
 import { useSessionPersistence } from './useSessionPersistence'
 import { equitySummary, type Hydration, type SessionSnapshot, type WorkspaceSettings } from './sessionTypes'
-import type { AnalyticsScope } from './analytics'
 import { ChartSynchronizer } from './chartSync'
 import { useReplay } from './useReplay'
 import { accountRiskError } from './risk'
 import { useTrading } from './useTrading'
-import { TradingJournal } from './TradingJournal'
+import { ResultsDashboard } from './ResultsDashboard'
 import { indicatorPreset, type IndicatorSettings } from './indicators'
 import { HistoryLoader, type LoadProgress, type LoadedHistory } from './historyLoader'
-import { EquityChart } from './EquityChart'
 import { HistoryRequestError, type Candle, type DateRange, type Timeframe } from './history'
 
 const EMPTY_CANDLES: readonly Candle[] = []
@@ -56,7 +54,6 @@ export function App() {
   const [keyboardNotice, setKeyboardNotice] = useState('')
   const [manage, setManage] = useState(false)
   const [finishing, setFinishing] = useState(false)
-  const [resultSection, setResultSection] = useState<'summary' | 'journal' | 'equity'>('summary')
   const [coverageError, setCoverageError] = useState(false)
   const [calendar, setCalendar] = useState<CacheCalendar | null>(null)
   const [endMoved, setEndMoved] = useState(false)
@@ -113,7 +110,7 @@ export function App() {
     download: (range, progress) => new HistoryLoader().load(range, new AbortController().signal, progress ?? setLoadProgress),
     restore: (saved, source) => {
       selectionTouched.current = true
-      loadGeneration.current++; loadAbort.current?.abort(); setDraft(null); setManage(false); setLifecycle(lifecycleOf(saved.checkpoint)); setResultSection('summary')
+      loadGeneration.current++; loadAbort.current?.abort(); setDraft(null); setManage(false); setLifecycle(lifecycleOf(saved.checkpoint))
       setHydration(saved); setHistory(source); setRequestedRange(saved.record.range)
       setFrom(saved.record.range.from); setTo(saved.record.range.to)
       setPendingStart(false); starting.current = false
@@ -130,10 +127,8 @@ export function App() {
   const [uiWorkspace, setUiWorkspace] = useUiValue(sessions.activeId, 'workspace', hydration?.checkpoint.workspace ?? workspace, validWorkspace)
   const uiWorkspaceRef = useRef(uiWorkspace)
   useLayoutEffect(() => { uiWorkspaceRef.current = uiWorkspace }, [uiWorkspace])
-  const { chartCount, timeframes, indicators: indicatorSettings, statisticsScope, journalScope } = uiWorkspace
+  const { chartCount, timeframes, indicators: indicatorSettings } = uiWorkspace
   const setChartCount = (chartCount: number) => setUiWorkspace((w) => ({ ...w, chartCount }))
-  const setStatisticsScope = useCallback((statisticsScope: AnalyticsScope) => setUiWorkspace((w) => ({ ...w, statisticsScope })), [setUiWorkspace])
-  const setJournalScope = useCallback((journalScope: AnalyticsScope) => setUiWorkspace((w) => ({ ...w, journalScope })), [setUiWorkspace])
   const synchronizer = useMemo(() => {
     const sync = new ChartSynchronizer(bounds)
     sync.restore(readUi(sessions.activeId, 'workspace', hydration?.checkpoint.workspace ?? workspace, validWorkspace).viewport)
@@ -261,9 +256,22 @@ export function App() {
     try {
       await sessions.flush()
       if (!window.confirm(`Finish this backtest? ${trading.state.positions.length} open positions, ${trading.state.pending.length} pending entries and ${trading.state.positions.filter(p=>p.closeRequestedAt !== null).length} pending closes remain. No exits will be created. Results include unrealized account PnL separately from realized statistics.`)) return
-      flushSync(() => { setLifecycle('finished'); setResultSection('summary') })
+      flushSync(() => { setLifecycle('finished') })
       await sessions.flush()
     } catch { setLifecycle('trading') }
+    finally { setFinishing(false) }
+  }
+
+  async function resumeBacktest() {
+    if (lifecycle !== 'finished' || finishing || sessions.busy || sessions.conflict || sessions.awaitingChoice || !sessions.initialized || sessions.saveStatus === 'Saving') return
+    flushSync(() => { replay.pause(); setFinishing(true) })
+    try {
+      await sessions.flush()
+      // Keep the replay/trading hooks and synchronizer intact. Only the saved
+      // workspace lifecycle changes; no replay start or next-candle action.
+      flushSync(() => { setLifecycle('trading') })
+      await sessions.flush()
+    } catch { flushSync(() => { setLifecycle('finished') }) }
     finally { setFinishing(false) }
   }
 
@@ -308,7 +316,7 @@ export function App() {
         <fieldset className="header-replay" aria-label="Market replay" disabled={workspaceDisabled || status === 'loading' || pendingStart || manage || confirming || !!stopPreview} hidden={!sessions.initialized || sessions.awaitingChoice}>
           <button disabled={!replay.canPlay || !!stopPreview} onClick={()=>{setDraft(null);replay.play()}}>Play</button><button disabled={!replay.canPause} onClick={replay.pause}>Pause</button><button disabled={!replay.canNext || !!stopPreview} onClick={()=>{setDraft(null);replay.next()}}>Next Candle</button>
           <label>Speed<select aria-label="Replay speed" value={replay.speed} onChange={e=>replay.setSpeed(Number(e.target.value) as 1|10|100)}>{[1,10,100].map(s=><option key={s} value={s}>{s}×</option>)}</select></label>
-          {chartLayout}<div className="replay-state"><span aria-label="Replay status" className="replay-status">{replay.status}</span><span className="replay-progress" aria-label="Replay progress">{replay.revealed-replay.startIndex} / {replay.total-replay.startIndex} candles</span></div><button disabled={replay.reviewing} onClick={()=>void finish()}>{replay.complete ? 'Review Results' : 'Finish backtest'}</button>
+          {chartLayout}<div className="replay-state"><span aria-label="Replay status" className="replay-status">{replay.status}</span><span className="replay-progress" aria-label="Replay progress">{replay.revealed-replay.startIndex} / {replay.total-replay.startIndex} candles</span></div><button disabled={replay.reviewing} onClick={()=>void finish()}>{replay.complete || replay.blocked ? 'Review Results' : 'Finish backtest'}</button>
         </fieldset>
       )}
       {lifecycle !== 'setup' && <div className="header-account"><time className="replay-clock">{replay.timestamp === null ? 'Awaiting replay' : new Date(replay.timestamp).toISOString().slice(0,16).replace('T',' ') + ' UTC'}</time>{pnlDisplay}</div>}<button onClick={()=>{ replay.pause(); setDraft(null); setManage(true) }}>Sessions / settings</button>
@@ -386,12 +394,9 @@ export function App() {
         })()}
         {stopError && <p className="stop-drag-status form-error" role="alert">{stopError}<button onClick={() => setStopError(null)}>Dismiss</button></p>}
       </>}
-      {lifecycle === 'finished' && <section className="results-workspace" aria-label="Backtest results"><div className="results-heading"><h2>Backtest results</h2><button onClick={sessions.save}>Save now</button></div>
-        <p className="chart-note">{historyLabel(history)} · {history && isSinglePrice(history) ? 'Hypothetical forex-style sizing; simplified trade-price fills.' : 'Original legacy execution model.'}</p><p className="results-disclosure">{trading.state.positions.length} positions remain open · {trading.state.pending.length} entries pending. Account PnL includes open equity; journal statistics use completed trades. No exits were created when finishing.</p>
-        <nav className="results-navigation" aria-label="Results sections">{([['summary','Overview'],['journal','Journal'],['equity','Equity & drawdown']] as const).map(([key,label])=><button key={key} aria-pressed={resultSection === key} onClick={()=>setResultSection(key)}>{label}</button>)}</nav>
-        {resultSection !== 'equity' && <TradingJournal section={resultSection} sessionId={sessions.activeId} key={`${sessions.activeId}-${trading.state.session}`} state={trading.state} onUpdateSetup={trading.updateSetup} scope={statisticsScope} view={journalScope} onScopeChange={setStatisticsScope} onViewChange={setJournalScope}/>}
-        {resultSection === 'equity' && <EquityChart sessionId={sessions.activeId} ledger={trading.equity} referenceBalance={trading.state.account.referenceBalance}/>}
-      </section>}
+      {lifecycle === 'finished' && <ResultsDashboard key={`${sessions.activeId}-${trading.state.session}`} state={trading.state} ledger={trading.equity}
+        start={startMs} endpoint={replay.timestamp} singlePrice={!!history && isSinglePrice(history)} onSave={sessions.save}
+        onResume={()=>void resumeBacktest()} reviewOnly={replay.complete || replay.blocked} resumeDisabled={workspaceDisabled || manage || sessions.saveStatus === 'Saving'} />}
     </fieldset>
   </main>
 }
