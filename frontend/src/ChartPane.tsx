@@ -21,6 +21,7 @@ import type { StopDraft } from './TradingDock'
 
 interface ChartPaneProps {
   id: number
+  active?: boolean
   instrument?: string
   sessionId: string | null
   timeframe: Timeframe
@@ -40,7 +41,7 @@ interface ChartPaneProps {
   onTimeframeChange: (id: number, timeframe: Timeframe) => void
 }
 
-export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, stops, placement, onPick, stopInteraction, entries = [], onConfirmStop, confirmStopDisabled }: ChartPaneProps) {
+export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, active = false, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, stops, placement, onPick, stopInteraction, entries = [], onConfirmStop, confirmStopDisabled }: ChartPaneProps) {
   const [readiness, setReadiness] = useState('')
   const container = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
@@ -125,6 +126,7 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, se
       const box = element.getBoundingClientRect(), chart = chartRef.current
       const x = event.clientX - box.left, y = event.clientY - box.top
       if (x < 0 || x >= box.width || y < 0 || y >= chart.panes().reduce((height, pane) => height + pane.getHeight(), 0)) return
+      synchronizer.activate(id)
       const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? box.height : 1)
       if (x >= chart.timeScale().width()) {
         // Only the candle pane's price axis controls its vertical range.
@@ -265,13 +267,13 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, se
   useDraftStopAnnotation(draftAnnotation, chartRef, seriesRef, placement?.price ?? null)
 
   return (
-    <section className={`chart-pane${placement ? " placing-stop" : ""}`} aria-label={`Chart ${id + 1}: ${instrument === '6E' ? 'EURUSD 6E' : instrument} ${timeframe} ${instrument === '6E' ? 'trade prices' : 'bid'}`}
+    <section data-active={active} className={`chart-pane${placement ? " placing-stop" : ""}`} aria-label={`Chart ${id + 1}: ${instrument === '6E' ? 'EURUSD 6E' : instrument} ${timeframe} ${instrument === '6E' ? 'trade prices' : 'bid'}`}
       onPointerDownCapture={() => synchronizer.activate(id)}
       onPointerMoveCapture={(event) => { if (event.buttons) synchronizer.activate(id) }}>
       <div className="pane-toolbar">
         <span className="instrument"><strong>{instrument === '6E' ? 'EURUSD 6E' : instrument}</strong>{instrument !== '6E' && <span className="bid-label">Bid</span>}</span>
         <label>Timeframe <select aria-label={`Chart ${id + 1} timeframe`} value={timeframe}
-          onChange={(event) => onTimeframeChange(id, event.target.value as Timeframe)}>
+          onChange={(event) => { synchronizer.activate(id); onTimeframeChange(id, event.target.value as Timeframe) }}>
           {timeframe === 'M1' && <option value="M1">M1 (legacy)</option>}
           {VISIBLE_TIMEFRAMES.map((option) => <option key={option} value={option}>{option}</option>)}
         </select></label>

@@ -1,3 +1,5 @@
+import { useDismissibleDetails } from './useOutsideInteraction'
+import { useReplayKeyboard } from './useReplayKeyboard'
 import { entryOverlays } from './entryOverlays'
 import { stopOverlays } from './stopOverlays'
 import { canRequestOrder, stopModificationError } from './trading'
@@ -49,6 +51,9 @@ export function App() {
   const [stopPreview, setStopPreview] = useState<StopPreview | null>(null)
   const [stopError, setStopError] = useState<string | null>(null)
   const [draft, setDraft] = useState<StopDraft | null>(null)
+  const executionDetails = useDismissibleDetails()
+  const [activeChart, setActiveChart] = useState(0)
+  const [keyboardNotice, setKeyboardNotice] = useState('')
   const [manage, setManage] = useState(false)
   const [finishing, setFinishing] = useState(false)
   const [resultSection, setResultSection] = useState<'summary' | 'journal' | 'equity'>('summary')
@@ -77,7 +82,7 @@ export function App() {
   const trading = useTrading(history, replay, hydration)
   const stops = useMemo(() => stopOverlays(trading.state, stopPreview), [trading.state, stopPreview])
   const entries = useMemo(() => entryOverlays(trading.state), [trading.state])
-  const draftInvalid = !draft || !canRequestOrder(trading.permission) || !!draftEstimate(trading.state, draft).error
+  const draftInvalid = replay.reviewing || !draft || !canRequestOrder(trading.permission) || !!draftEstimate(trading.state, draft).error
   const confirmDraft = () => {
     if (!draft || draft.price === null || draftInvalid) return
     if (draft.positionId) trading.modifyStop(draft.positionId, draft.price)
@@ -132,6 +137,20 @@ export function App() {
     sync.restore(readUi(sessions.activeId, 'workspace', hydration?.checkpoint.workspace ?? workspace, validWorkspace).viewport)
     return sync
   }, [history, replay.epoch, sessions.activeId])
+  useLayoutEffect(() => {
+    synchronizer.onActiveChartChange = setActiveChart
+    synchronizer.retainCharts(chartCount)
+    setActiveChart(synchronizer.keyboardChartId)
+    return () => { synchronizer.onActiveChartChange = undefined }
+  }, [synchronizer, chartCount])
+  useReplayKeyboard({
+    enabled: lifecycle === 'trading' && replay.active,
+    playing: replay.playing,
+    busy: !!draft || !!stopPreview || manage || finishing || sessions.busy || sessions.conflict || sessions.awaitingChoice || !sessions.initialized,
+    onPlaying: () => setKeyboardNotice('Pause replay to use Shift + Arrow keys.'),
+    navigate: direction => { setKeyboardNotice(''); return replay.navigate(direction, timeframes[activeChart] ?? timeframes[0], chartOffset) },
+  })
+  useEffect(() => { if (!replay.playing) setKeyboardNotice('') }, [replay.playing])
   useLayoutEffect(() => { synchronizer.advance(bounds) }, [synchronizer, bounds])
   useEffect(() => {
     if (!sessions.activeId) return
@@ -173,7 +192,7 @@ export function App() {
   }, [pendingStart, history, automaticStart])
   useEffect(() => { if (replay.playing) setDraft(null) }, [replay.playing])
   useEffect(() => {
-    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') { setDraft(null); setManage(false) } }
+    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') setDraft(null) }
     window.addEventListener('keydown', escape); return () => window.removeEventListener('keydown', escape)
   }, [])
   useEffect(() => { setQuote(null); setConfirming(false) }, [from, to])
@@ -275,8 +294,9 @@ export function App() {
   const pnlDisplay = <div className={`account-pnl ${pnl && Math.abs(pnl.usd) >= 0.005 ? pnl.usd > 0 ? 'positive' : 'negative' : ''}`} aria-label="Account PnL"><span>Account PnL</span><strong>{pnl ? `$${pnl.usd.toFixed(2)} · ${pnl.percent.toFixed(2)}%` : 'PnL unavailable'}</strong></div>
   return <main className={`app-shell phase-${lifecycle}`}>
     <header className="app-header"><h1>ForexTester</h1><span className="header-session">{sessions.name} <span className="save-state">{history ? sessions.saveStatus : 'Not started'}</span></span>
-      {lifecycle === 'trading' && <details className="execution-details"><summary aria-label="Execution details" title="Execution details"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v2"/></svg></summary><div className="execution-popover">
+      {lifecycle === 'trading' && <details ref={executionDetails} className="execution-details"><summary aria-label="Execution details" title="Execution details"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v2"/></svg></summary><div className="execution-popover">
         <strong>Execution details</strong>
+        <p>While paused: Shift + Right completes the active chart’s next candle. Shift + Left reviews earlier candles without rewinding trade execution. Select a chart by clicking, panning, scrolling or changing its timeframe. Return to current replay to trade.</p>
         {history && isSinglePrice(history) ? <p>6E trade prices · hypothetical forex-style sizing (1 lot = 100,000 EUR). No spread; entries fill at the next eligible M1 opening, with high/low stops and gap-open handling. Not exchange-accurate futures or EUR/USD CFD execution.</p> : <p>Original legacy bid/ask execution. Entries fill at the next synchronized M1 opening.</p>}
         <p>SL amounts are net at the stop level, including entry and exit commissions. Pending values estimate the next fill from the observed price. Gaps can change the outcome. Entry lines mark the fill price; net breakeven also includes commissions.</p>
         {history && isSinglePrice(history) && <details><summary>Contract mappings and rollover events</summary>{history.contracts.map(c=><p key={c.from}>{c.from} to {c.to} (exclusive): {c.rawSymbol} · instrument {c.instrumentId}</p>)}</details>}
@@ -285,10 +305,10 @@ export function App() {
     </header>
     {sessions.error && !manage && !sessions.awaitingChoice && <p className="form-error critical-save" role="alert">{sessions.error} <button onClick={()=>setManage(true)}>Open storage controls</button></p>}
     {sessions.awaitingChoice && !manage && <section className="startup-selection" aria-label="Choose a backtest"><SessionControls startup sessions={sessions} range={{from:tradingFrom,to:history?.to ?? requestedRange.to}} timestamp={replay.timestamp}/></section>}
-    {manage && <ManagementDialog required={false} onClose={()=>setManage(false)}>
-      <button className="close-management" onClick={()=>setManage(false)}>Close management</button>
+    {manage && <ManagementDialog required={false} busy={sessions.busy || finishing} onClose={()=>setManage(false)}>
+      <button className="close-management" disabled={sessions.busy || finishing} onClick={()=>setManage(false)}>Close management</button>
       <SessionControls sessions={sessions} range={{from:tradingFrom,to:history?.to ?? requestedRange.to}} timestamp={replay.timestamp}/>
-      {lifecycle === 'trading' && <button onClick={()=>{ restart(); setManage(false) }}>Restart backtest</button>}
+      {lifecycle === 'trading' && <button disabled={sessions.busy || finishing} onClick={()=>{ restart(); setManage(false) }}>Restart backtest</button>}
     </ManagementDialog>}
     {!sessions.initialized && !sessions.awaitingChoice && <p className="startup-status" role="status">Checking saved backtests…</p>}
     <fieldset className="workspace-controls" disabled={!sessions.initialized || sessions.busy || sessions.conflict || sessions.awaitingChoice || finishing} hidden={!sessions.initialized || sessions.awaitingChoice}>
@@ -336,22 +356,24 @@ export function App() {
       {lifecycle === 'trading' && <>
         <div className="workspace-toolbar" role="region" aria-label="Trading workspace controls">
         <div className="replay-strip" role="group" aria-label="Market replay">
-          <button disabled={!replay.canPlay} onClick={()=>{setDraft(null);replay.play()}}>Play</button><button disabled={!replay.canPause} onClick={replay.pause}>Pause</button><button disabled={!replay.canNext} onClick={()=>{setDraft(null);replay.next()}}>Next Candle</button>
+          <button disabled={!replay.canPlay || !!stopPreview} onClick={()=>{setDraft(null);replay.play()}}>Play</button><button disabled={!replay.canPause} onClick={replay.pause}>Pause</button><button disabled={!replay.canNext || !!stopPreview} onClick={()=>{setDraft(null);replay.next()}}>Next Candle</button>
           <label>Speed<select aria-label="Replay speed" value={replay.speed} onChange={e=>replay.setSpeed(Number(e.target.value) as 1|10|100)}>{[1,10,100].map(s=><option key={s} value={s}>{s}×</option>)}</select></label>
           {chartLayout}<span aria-label="Replay status" className="replay-status">{replay.status}</span><span className="replay-progress" aria-label="Replay progress">{replay.revealed-replay.startIndex} / {replay.total-replay.startIndex} candles</span><button onClick={()=>void finish()}>{replay.complete ? 'Review Results' : 'Finish backtest'}</button>
         </div>
-        <TradingDock stops={stops} key={`${sessions.activeId}-${trading.state.session}`} trading={trading} draft={draft} setDraft={setDraft} onConfirm={confirmDraft}/>
+        <TradingDock reviewing={replay.reviewing} stops={stops} key={`${sessions.activeId}-${trading.state.session}`} trading={trading} draft={draft} setDraft={setDraft} onConfirm={confirmDraft}/>
         </div>
+        {replay.reviewing && <div className="history-review" role="status"><strong>Reviewing history</strong><span>{new Date(replay.reviewTimestamp!).toISOString().slice(0,16).replace('T',' ')} UTC · Trading disabled</span><button onClick={replay.returnToCurrent}>Return to current replay</button></div>}
+        {keyboardNotice && <p className="keyboard-notice" role="status">{keyboardNotice}</p>}
         {replay.blocked && <p className="coverage-warning" role="alert">Replay blocked at contract rollover. No positions, stops or pending orders were executed across the boundary. Finish this backtest or select a replay start after the rollover. A carry/roll policy requires project-lead approval.</p>}
         <div className="chart-workspace" aria-label={`${history?.symbol === '6E' ? 'EURUSD 6E' : history?.symbol ?? 'EURUSD 6E'} chart workspace`}><div className={`chart-stack charts-${chartCount}`}>
-          {timeframes.slice(0,chartCount).map((timeframe,id)=><ChartPane key={id} instrument={history?.symbol ?? '6E'} id={id} timeframe={timeframe} sessionId={sessions.activeId} positions={trading.state.positions} entries={entries} onConfirmStop={confirmDraft} confirmStopDisabled={draftInvalid} stops={stops} stopInteraction={{ enabled: canRequestOrder(trading.permission) && !draft,
+          {timeframes.slice(0,chartCount).map((timeframe,id)=><ChartPane key={id} instrument={history?.symbol ?? '6E'} id={id} active={id === activeChart} timeframe={timeframe} sessionId={sessions.activeId} positions={replay.reviewing ? [] : trading.state.positions} entries={replay.reviewing ? [] : entries} onConfirmStop={confirmDraft} confirmStopDisabled={draftInvalid} stops={replay.reviewing ? [] : stops} stopInteraction={{ enabled: canRequestOrder(trading.permission) && !draft,
             preview: stopPreview, onPreview: setStopPreview, onCommit: (positionId, price) => {
               const position = trading.state.positions.find(p => p.id === positionId)
               const error = position ? stopModificationError(trading.state, position, price, trading.permission) : 'Position is no longer open.'
               setStopError(error)
               if (!error) trading.modifyStop(positionId, price)
               return error
-            } }} source={chartSource} count={Math.max(0, replay.count - chartOffset)} synchronizer={synchronizer} onTimeframeChange={changeTimeframe} settings={indicatorSettings[id][timeframe]!} onSettingsChange={changeSettings} placement={draft} onPick={pickStop}/>)}</div></div>
+            } }} source={chartSource} count={Math.max(0, replay.displayCount - chartOffset)} synchronizer={synchronizer} onTimeframeChange={changeTimeframe} settings={indicatorSettings[id][timeframe]!} onSettingsChange={changeSettings} placement={draft} onPick={pickStop}/>)}</div></div>
         {stopPreview && (() => {
           const position = trading.state.positions.find(p => p.id === stopPreview.id)
           const error = position ? stopModificationError(trading.state, position, stopPreview.price, trading.permission) : 'Position is no longer open.'

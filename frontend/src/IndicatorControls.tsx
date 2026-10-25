@@ -1,3 +1,4 @@
+import { useDismissibleDetails } from './useOutsideInteraction'
 import { memo, useEffect, useId, useState } from 'react'
 import { validateIndicatorSettings, type IndicatorSettings } from './indicators'
 
@@ -23,8 +24,9 @@ function Parameter({ label, ariaLabel, value, fractional, onChange }: { label: s
     }} />{invalid && <span id={errorId} className="parameter-error">{fractional ? 'Use > 0 to 100.' : 'Use 1–10000, whole numbers.'} Last valid value is applied.</span>}</label>
 }
 export const IndicatorControls = memo(function IndicatorControls({ id, settings, onChange }: { id: number; settings: IndicatorSettings; onChange: (settings: IndicatorSettings) => void }) {
+  const disclosure = useDismissibleDetails()
   const update = (next: IndicatorSettings) => { if (!validateIndicatorSettings(next)) onChange(next) }
-  return <details className="indicator-controls"><summary>Indicators</summary>
+  return <details ref={disclosure} name="chart-indicators" className="indicator-controls"><summary>Indicators</summary>
     <div className="indicator-options" aria-label={`Chart ${id + 1} indicators`}>
       {(Object.keys(FIELDS) as (keyof typeof FIELDS)[]).map((group) => <fieldset key={group}>
         <legend><label><input type="checkbox" checked={settings[group].enabled} aria-label={`Chart ${id + 1} ${NAMES[group]}`}

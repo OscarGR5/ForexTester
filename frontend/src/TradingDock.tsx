@@ -21,17 +21,16 @@ export function draftEstimate(state: TradingState, draft: StopDraft) {
       (!lots ? 'The selected risk rounds below the minimum lot size.' : risk! > combinedRisk(state).remainingUsd + 1e-7 ? 'Estimated risk exceeds the remaining combined risk budget.' : null)
   return { error, lots, risk }
 }
-export function TradingDock({ trading, draft, setDraft, stops, onConfirm }: { onConfirm: () => void; stops: StopOverlay[]; trading: ReturnType<typeof useTrading>; draft: StopDraft | null; setDraft: (draft: StopDraft | null) => void }) {
+export function TradingDock({ reviewing = false, trading, draft, setDraft, stops, onConfirm }: { reviewing?: boolean; onConfirm: () => void; stops: StopOverlay[]; trading: ReturnType<typeof useTrading>; draft: StopDraft | null; setDraft: (draft: StopDraft | null) => void }) {
   const { state, permission } = trading
-  const [mode, setMode] = useState('risk'), [risk, setRisk] = useState('1'), [lots, setLots] = useState('0.01')
+  const [risk, setRisk] = useState('1')
   const canOrder = canRequestOrder(permission), slots = state.pending.length + state.positions.length
   const setupId = activeSetupId(state)
   const estimate = draft ? draftEstimate(state, draft) : null
-  const begin = (direction: Direction) => setDraft({ direction, sizing: mode === 'risk' ? { mode: 'risk', riskPercent: Number(risk) } : Number(lots), setupId, slot: slots + 1, price: null })
+  const begin = (direction: Direction) => setDraft({ direction, sizing: { mode: 'risk', riskPercent: Number(risk) }, setupId, slot: slots + 1, price: null })
   return <section className="trading-toolbar" aria-label="Simulated trading">
     <div className="dock-controls">
-      <label>Sizing mode<select aria-label="Sizing mode" value={mode} onChange={e=>setMode(e.target.value)} disabled={!!draft}><option value="risk">Risk %</option><option value="manual">Manual lots</option></select></label>
-      {mode === 'risk' ? <label>Risk per entry (%)<input aria-label="Risk per entry (%)" type="number" step="any" value={risk} onChange={e=>setRisk(e.target.value)} disabled={!!draft}/></label> : <label>Volume (lots)<input type="number" step="any" value={lots} onChange={e=>setLots(e.target.value)} disabled={!!draft}/></label>}
+      <label>Risk per entry (%)<input aria-label="Risk per entry (%)" type="number" min="0" max="100" step="any" value={risk} onChange={e=>setRisk(e.target.value)} disabled={!!draft}/></label>
 
       <button className="buy-button" disabled={!canOrder || slots >= 2 || !!automaticSetupError(state,'buy',setupId)} onClick={()=>begin('buy')}>Buy</button>
       <button className="sell-button" disabled={!canOrder || slots >= 2 || !!automaticSetupError(state,'sell',setupId)} onClick={()=>begin('sell')}>Sell</button>
@@ -47,7 +46,7 @@ export function TradingDock({ trading, draft, setDraft, stops, onConfirm }: { on
       {draft.price !== null && <button onClick={()=>setDraft({...draft,price:null})}>Choose another level</button>}
       <details><summary>Enter price with keyboard</summary><label>SL price<input aria-label="SL price" type="number" step="0.00001" value={draft.price ?? ''} onChange={e=>setDraft({...draft,price:e.target.value ? Number(e.target.value) : null})}/></label></details>
     </div>}
-    {slots > 0 && <div className="active-positions">
+    {!reviewing && slots > 0 && <div className="active-positions">
       {state.pending.map(p=><div key={p.id} data-order-id={p.id}><strong>Pending {p.direction} · {p.id}</strong><span>{stops.find(stop => stop.id === p.id)?.label} · {p.mode === 'risk' ? `${p.requestedRiskPercent}% risk` : `${p.lots} lots`}</span><button disabled={!canOrder} onClick={()=>trading.cancel(p.id)} aria-label={`Cancel entry ${p.id}`}>Cancel entry</button></div>)}
       {state.positions.map((p,i)=>{ const mark=markPosition(p,state.quote); return <div key={p.id} data-position-id={p.id}>
         <strong>{p.direction === 'buy' ? 'Buy' : 'Sell'} · {p.id}</strong><span>{p.lots} lots · {stops.find(stop => stop.id === p.id)?.label}</span><span>{mark ? `Est. net $${mark.estimatedNetPnlUsd.toFixed(2)} (${(mark.estimatedNetPnlUsd/state.account.referenceBalance*100).toFixed(2)}%)` : 'PnL unavailable'}</span>
@@ -55,6 +54,6 @@ export function TradingDock({ trading, draft, setDraft, stops, onConfirm }: { on
         <button disabled={!canOrder || p.closeRequestedAt !== null} onClick={()=>trading.close(p.id)} aria-label={`Close ${p.id}`}>{p.closeRequestedAt !== null ? 'Close pending' : 'Close'}</button>
       </div>})}
     </div>}
-    {state.rejected.at(-1)?.rejectedAt === state.observedTimestamp && <p className="form-error" role="alert">Entry rejected: {state.rejected.at(-1)?.reason}</p>}
+    {!reviewing && state.rejected.at(-1)?.rejectedAt === state.observedTimestamp && <p className="form-error" role="alert">Entry rejected: {state.rejected.at(-1)?.reason}</p>}
   </section>
 }

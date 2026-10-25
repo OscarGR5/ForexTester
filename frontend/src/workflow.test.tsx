@@ -623,7 +623,8 @@ it('places trade entry above the charts and renders no empty position area when 
  await start()
  const toolbar = host.querySelector('.workspace-toolbar')!, chartArea = host.querySelector('.chart-workspace')!
  expect(toolbar.contains(button('Buy'))).toBe(true)
- expect(toolbar.contains(host.querySelector('[aria-label="Sizing mode"]'))).toBe(true)
+ expect(host.querySelector('[aria-label="Sizing mode"]')).toBeNull()
+ expect(toolbar.contains(host.querySelector('[aria-label="Risk per entry (%)"]'))).toBe(true)
  expect(toolbar.compareDocumentPosition(chartArea) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
  expect(host.querySelector('.trading-dock')).toBeNull()
  expect(host.querySelector('.active-positions')).toBeNull()
@@ -686,4 +687,109 @@ it('groups the replay timestamp with Account PnL and discloses execution details
  expect(pane.querySelector('.indicator-readiness')?.textContent).toMatch(/Indicators/)
  const options = vi.mocked(createChart).mock.calls.at(-1)![1]!
  expect(options.timeScale).toMatchObject({ fixRightEdge: false, rightOffset: 12 })
+})
+
+async function shortcut(key: 'ArrowLeft' | 'ArrowRight', target: EventTarget = window) {
+ const event = new KeyboardEvent('keydown', { key, shiftKey: true, bubbles: true, cancelable: true })
+ await act(async () => target.dispatchEvent(event))
+ return event
+}
+async function outside(element: Element) {
+ await act(async () => {
+  element.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }))
+  element.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+ })
+}
+it('keeps the last clicked or scrolled chart active beyond synchronization expiry and falls back when removed', async () => {
+ await start()
+ await act(async () => host.querySelector<HTMLInputElement>('input[name="chart-count"][value="3"]')!.click())
+ const panes = [...host.querySelectorAll('.chart-pane')]
+ expect(panes[0].getAttribute('data-active')).toBe('true')
+ await act(async () => panes[2].dispatchEvent(new MouseEvent('pointerdown', { bubbles: true })))
+ expect(panes[2].getAttribute('data-active')).toBe('true')
+ vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 2000)
+ expect(panes[2].getAttribute('data-active')).toBe('true')
+ const canvas = panes[1].querySelector('.chart-canvas')!
+ vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, width: 900, height: 650 } as DOMRect)
+ await act(async () => { canvasWheel(canvas, 850, 80) })
+ expect(panes[1].getAttribute('data-active')).toBe('true')
+ await select('Chart 3 timeframe', 'H1')
+ expect(panes[2].getAttribute('data-active')).toBe('true')
+ await act(async () => host.querySelector<HTMLInputElement>('input[name="chart-count"][value="2"]')!.click())
+ expect(panes[0].getAttribute('data-active')).toBe('true')
+ await act(async () => panes[1].dispatchEvent(new MouseEvent('pointerdown', { bubbles: true })))
+ await act(async () => host.querySelector<HTMLInputElement>('input[name="chart-count"][value="1"]')!.click())
+ expect(panes[0].getAttribute('data-active')).toBe('true')
+})
+it('uses percentage risk for both new entries and preserves rounded sizes after fill', async () => {
+ await start()
+ expect(host.querySelector<HTMLInputElement>('[aria-label="Risk per entry (%)"]')!.value).toBe('1')
+ expect(host.textContent).not.toContain('Manual lots')
+ await order('Buy', 1.098)
+ await input('Risk per entry (%)', '.5'); await order('Buy', 1.097)
+ expect([...host.querySelectorAll('[data-order-id]')].map(el => el.textContent)).toEqual([expect.stringContaining('1% risk'), expect.stringContaining('0.5% risk')])
+ await click('Next Candle')
+ const expectedLots = [1000 / ((1.1003 - 1.098) * 100000), 500 / ((1.1003 - 1.097) * 100000)].map(n => Math.floor(n * 100) / 100)
+ for (const lots of expectedLots) expect(host.querySelector('.active-positions')?.textContent).toContain(`${lots} lots`)
+})
+it('reviews revealed history without changing the durable trading cursor, hides annotations, and restores trading', async () => {
+ await start(); await select('Chart 1 timeframe', 'M5'); await order('Buy', 1.098)
+ await shortcut('ArrowRight'); expect(host.querySelector('time')?.textContent).toContain('00:04')
+ await shortcut('ArrowRight'); expect(host.querySelector('time')?.textContent).toContain('00:09')
+ await click('Sessions / settings'); await click('Save now'); await until(() => host.querySelector('.save-state')?.textContent === 'Saved'); await click('Close management')
+ const before = (await disk.storage.list()).sessions[0]
+ const total = chartForCanvas(host.querySelector('.chart-canvas')!).addSeries.mock.results[0].value.data().length
+ await shortcut('ArrowLeft')
+ expect(host.querySelector('.history-review')?.textContent).toContain('Reviewing history')
+ expect(host.querySelector('time')?.textContent).toContain('00:09')
+ expect(button('Buy').disabled).toBe(true); expect(button('Play').disabled).toBe(true)
+ expect(host.querySelector('.active-positions')).toBeNull(); expect(activeEntryLines()).toHaveLength(0); expect(activeStopLines()).toHaveLength(0)
+ expect(chartForCanvas(host.querySelector('.chart-canvas')!).addSeries.mock.results[0].value.data().length).toBeLessThan(total)
+ await click('Sessions / settings'); await click('Save now'); await until(() => host.querySelector('.save-state')?.textContent === 'Saved'); await click('Close management')
+ const reviewing = (await disk.storage.list()).sessions[0]
+ expect(reviewing.checkpoint.trading).toEqual(before.checkpoint.trading)
+ expect(reviewing.checkpoint.executionCursor).toBe(before.checkpoint.executionCursor)
+ expect(reviewing.checkpoint.equity).toEqual(before.checkpoint.equity)
+ expect(reviewing.checkpoint.replay).toEqual(before.checkpoint.replay)
+ await shortcut('ArrowRight'); expect(host.querySelector('.history-review')).toBeNull(); expect(button('Buy').disabled).toBe(false)
+ await shortcut('ArrowLeft'); await click('Return to current replay')
+ expect([...host.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent === 'Modify SL')!.disabled).toBe(false); expect(activeEntryLines()).toHaveLength(1)
+})
+it('blocks shortcuts in focused editors, open disclosures, management, drafts, and playback', async () => {
+ await start(); const clock = () => host.querySelector('time')?.textContent
+ const before = clock(), risk = host.querySelector<HTMLInputElement>('[aria-label="Risk per entry (%)"]')!
+ for (const element of [risk, host.querySelector('select')!, document.createElement('textarea'), document.createElement('div')]) {
+  if (!element.isConnected) { host.append(element); element.setAttribute('contenteditable', 'true') }
+  await act(async () => (element as HTMLElement).focus())
+  expect((await shortcut('ArrowRight', element)).defaultPrevented).toBe(false); expect(clock()).toBe(before)
+  ;(element as HTMLElement).blur()
+ }
+ for (const selector of ['.execution-details', '.indicator-controls']) {
+  await act(async () => { host.querySelector<HTMLDetailsElement>(selector)!.open = true })
+  expect((await shortcut('ArrowRight')).defaultPrevented).toBe(false); expect(clock()).toBe(before)
+  await act(async () => host.querySelector<HTMLDetailsElement>(selector)!.open = false)
+ }
+ await click('Sessions / settings'); expect((await shortcut('ArrowRight')).defaultPrevented).toBe(false); await click('Close management')
+ await click('Buy'); expect((await shortcut('ArrowRight')).defaultPrevented).toBe(false); await click('Cancel placement')
+ await click('Play'); expect((await shortcut('ArrowRight')).defaultPrevented).toBe(false)
+ expect(host.querySelector('.keyboard-notice')?.textContent).toContain('Pause replay')
+ await click('Pause'); expect(clock()).toBe(before)
+ const plain = new KeyboardEvent('keydown', { key: 'ArrowRight', cancelable: true }); window.dispatchEvent(plain)
+ expect(plain.defaultPrevented).toBe(false); expect(clock()).toBe(before)
+})
+it('dismisses execution and indicator disclosures outside and on Escape while retaining valid settings', async () => {
+ await start()
+ const execution = host.querySelector<HTMLDetailsElement>('.execution-details')!, indicators = host.querySelector<HTMLDetailsElement>('.indicator-controls')!
+ for (const details of [execution, indicators]) {
+  await act(async () => details.querySelector('summary')!.click()); expect(details.open).toBe(true)
+  await outside(details.querySelector('div')!); expect(details.open).toBe(true)
+  await outside(host.querySelector('h1')!); expect(details.open).toBe(false)
+  await act(async () => details.querySelector('summary')!.click())
+  await act(async () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })))
+  expect(details.open).toBe(false); expect(document.activeElement).toBe(details.querySelector('summary'))
+ }
+ await act(async () => indicators.querySelector('summary')!.click())
+ await input('Chart 1 BB #1 Length', '25')
+ await outside(host.querySelector('h1')!); await act(async () => indicators.querySelector('summary')!.click())
+ expect(host.querySelector<HTMLInputElement>('[aria-label="Chart 1 BB #1 Length"]')!.value).toBe('25')
 })
