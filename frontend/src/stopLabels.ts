@@ -2,7 +2,7 @@ import { LineStyle, type IPriceLine, type IPrimitivePaneRenderer, type IPrimitiv
 import { STOP_COLOR, type StopOverlay } from './stopOverlays'
 
 // At most two labels. Keep full rows apart and connect displaced rows to their
-// exact price. The library continues to own price-axis values and line hits.
+// exact price. Rendered media-coordinate bounds also own annotation hits.
 export function stopLabelRows(stops: readonly StopOverlay[], coordinate: (price: number) => number | null, height: number) {
   const half = 11, gap = 25
   const rows = stops.flatMap(stop => {
@@ -21,8 +21,13 @@ export class StopLabels implements ISeriesPrimitive {
   private series: ISeriesApi<'Candlestick'> | null = null
   private requestUpdate: (() => void) | null = null
   private stops: readonly StopOverlay[] = []
+  private bounds: { id: string; x: number; top: number; width: number; height: number }[] = []
+  hitAnnotation(x: number, y: number): string | null {
+    return this.bounds.find(row => x >= row.x && x <= row.x + row.width && y >= row.top && y <= row.top + row.height)?.id ?? null
+  }
   private readonly renderer: IPrimitivePaneRenderer = {
     draw: target => target.useMediaCoordinateSpace(({ context, mediaSize }) => {
+      this.bounds = []
       if (!this.series) return
       context.save()
       context.font = '12px Inter, system-ui, sans-serif'
@@ -30,6 +35,7 @@ export class StopLabels implements ISeriesPrimitive {
       for (const { stop, y, center } of stopLabelRows(this.stops, price => this.series!.priceToCoordinate(price), mediaSize.height)) {
         const width = Math.min(mediaSize.width - 24, context.measureText(stop.annotation).width + 16)
         const x = mediaSize.width - width - 12
+        this.bounds.push({ id: stop.id, x, top: center - 11, width, height: 22 })
         context.strokeStyle = STOP_COLOR
         context.lineWidth = 1
         context.beginPath(); context.moveTo(x - 6, y); context.lineTo(x - 6, center); context.lineTo(x, center); context.stroke()
@@ -43,8 +49,8 @@ export class StopLabels implements ISeriesPrimitive {
   }
   private readonly views: IPrimitivePaneView[] = [{ zOrder: () => 'top', renderer: () => this.renderer }]
   attached({ series, requestUpdate }: SeriesAttachedParameter) { this.series = series as ISeriesApi<'Candlestick'>; this.requestUpdate = requestUpdate }
-  detached() { this.series = null; this.requestUpdate = null }
-  setData(stops: readonly StopOverlay[]) { this.stops = stops; this.requestUpdate?.() }
+  detached() { this.series = null; this.requestUpdate = null; this.bounds = [] }
+  setData(stops: readonly StopOverlay[]) { this.stops = stops; this.bounds = []; this.requestUpdate?.() }
   paneViews() { return this.views }
 }
 
@@ -52,6 +58,7 @@ export class StopLines {
   private readonly lines = new Map<string, IPriceLine>()
   private readonly labels = new StopLabels()
   constructor(private readonly series: ISeriesApi<'Candlestick'>) { series.attachPrimitive(this.labels) }
+  hitTest(x: number, y: number) { return this.labels.hitAnnotation(x, y) }
   update(stops: readonly StopOverlay[]) {
     const ids = new Set(stops.map(stop => stop.id))
     for (const [id, line] of this.lines) {

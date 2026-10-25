@@ -47,15 +47,11 @@ export function TradingDock({ reviewing = false, trading, draft, setDraft, stops
         if (!entry) return null
         const identity = `${entry.direction === 'buy' ? 'B' : 'S'}${stop.number}`
         const mark = position ? markPosition(position, state.quote) : null
-        return <div key={entry.id} data-position-id={position?.id} data-order-id={pending?.id}>
-          <details className="position-details"><summary aria-label={`${pending ? 'Pending' : 'Open'} ${entry.direction} ${entry.id} details`}><strong className={entry.direction === 'buy' ? 'entry-buy' : 'entry-sell'}>{pending ? 'Pending ' : ''}{identity}</strong></summary>
-            <div className="position-detail-text">{entry.direction === 'buy' ? 'Buy' : 'Sell'} · {entry.id} · Setup {entry.setupId}<br/>{stop.label}{position && <><br/>Entry {position.entryPrice.toFixed(5)} · {position.lots} lots</>}</div>
-          </details>
+        return <div key={entry.id} data-setup-id={entry.setupId} data-position-id={position?.id} data-order-id={pending?.id}>
+          <strong className={entry.direction === 'buy' ? 'entry-buy' : 'entry-sell'}>{pending ? 'Pending ' : ''}{identity}</strong>
           <span>{position ? `${position.lots} lots` : entry.mode === 'risk' ? `${entry.requestedRiskPercent}% risk` : `${entry.lots} lots`}</span>
-          <span className="position-stop">SL {stop.number} · {stop.price.toFixed(5)} · {stop.pips === null ? 'Distance unavailable' : `${pending ? '~' : ''}${stop.pips.toFixed(1)} pips`}</span>
-          {position && <span className={mark ? mark.estimatedNetPnlUsd < 0 ? 'negative' : 'positive' : ''}>{mark ? `Est. net $${mark.estimatedNetPnlUsd.toFixed(2)} (${(mark.estimatedNetPnlUsd/state.account.referenceBalance*100).toFixed(2)}%)` : 'PnL unavailable'}</span>}
-          {pending ? <button disabled={!canOrder} onClick={()=>trading.cancel(entry.id)} aria-label={`Cancel entry ${entry.id}`}>Cancel entry</button> : <>
-            <button disabled={!canOrder || position!.closeRequestedAt !== null} onClick={()=>setDraft({direction:entry.direction,sizing:position!.lots,setupId:entry.setupId,positionId:entry.id,slot:stop.number,price:null})} aria-label={`Modify SL ${entry.id}`}>Modify SL</button>
+          {position && <span className={mark ? mark.estimatedNetPnlUsd < 0 ? 'negative' : 'positive' : ''}>{mark ? `Est. net ${mark.estimatedNetPnlUsd < 0 ? '-' : ''}$${Math.abs(mark.estimatedNetPnlUsd).toFixed(2)} (${(mark.estimatedNetPnlUsd/state.account.referenceBalance*100).toFixed(2)}%)` : 'PnL unavailable'}</span>}
+          {pending ? <button disabled={!canOrder} onClick={()=>trading.cancel(entry.id)} aria-label={`Cancel entry ${entry.id}`}>Cancel</button> : <>
             <button disabled={!canOrder || position!.closeRequestedAt !== null} onClick={()=>trading.close(entry.id)} aria-label={`Close ${entry.id}`}>{position!.closeRequestedAt !== null ? 'Close pending' : 'Close'}</button>
           </>}
         </div>
@@ -68,7 +64,6 @@ export function TradingDock({ reviewing = false, trading, draft, setDraft, stops
       {estimate?.error ? <span className="form-error" role="status">{estimate.error}</span> : <span>{draft.positionId ? 'Position risk preview:' : 'Observed-price estimate:'} {estimate?.lots?.toFixed(2)} lots · ${estimate?.risk?.toFixed(2)} risk ({((estimate?.risk ?? 0)/state.account.referenceBalance*100).toFixed(2)}%). {draft.positionId ? 'Effective after the current M1 candle.' : 'Final size checked at entry.'}</span>}
       <button disabled={!canOrder || !!estimate?.error} onClick={onConfirm}>{draft.positionId ? 'Confirm SL change' : 'Confirm order'}</button>
       <button onClick={()=>setDraft(null)}>Cancel placement</button>
-      {draft.price !== null && <button onClick={()=>setDraft({...draft,price:null})}>Choose another level</button>}
       <details><summary>Enter price with keyboard</summary><label>SL price<input aria-label="SL price" type="number" step="0.00001" value={draft.price ?? ''} onChange={e=>setDraft({...draft,price:e.target.value ? Number(e.target.value) : null})}/></label></details>
     </div>}
     {!reviewing && state.rejected.at(-1)?.rejectedAt === state.observedTimestamp && <p className="form-error" role="alert">Entry rejected: {state.rejected.at(-1)?.reason}</p>}
