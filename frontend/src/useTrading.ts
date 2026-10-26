@@ -4,7 +4,7 @@ import { createEquityLedger, recordEquity, type EquityLedger } from './equity'
 import type { CommissionConfig } from './commissions'
 import type { AccountRisk, EntrySizing } from './risk'
 import { useCallback, useMemo, useState } from 'react'
-import { historyCandles, isSinglePrice, type HistoryResponse } from './history'
+import { historyCandles, isSinglePrice, isLocalForex, type HistoryResponse } from './history'
 import { requestAutomaticEntry, cancelEntry, configureAccount, configureCommission, createTradingState, observeCandle, modifyStop, requestClose, requestEntry, updateSetupMetadata, type SetupMetadata, type Direction, type TradingPermission, type TradingState } from './trading'
 
 interface ReplayClock { reviewing?: boolean; epoch: number; revealed: number; active: boolean; playing: boolean; complete: boolean; blocked?: boolean; startIndex?: number }
@@ -19,7 +19,7 @@ export function useTrading(history: HistoryResponse | null, replay: ReplayClock,
   }
   if (history && current.processed < replay.revealed) {
     const processing = performanceStart()
-    let state = history && isSinglePrice(history) ? { ...current.state, symbol: '6E' as const } : current.state
+    let state = history && isSinglePrice(history) ? { ...current.state, symbol: history.symbol, ...(isLocalForex(history) ? {executionModel: history.executionModel} : {}) } : current.state
     let equity = current.equity
     // React may combine many timer ticks into one render. Process the entire
     // newly revealed prefix, rather than filling at just the final rendered bar.
@@ -33,7 +33,7 @@ export function useTrading(history: HistoryResponse | null, replay: ReplayClock,
     performanceEnd('execution.equity', processing)
     current = { ...current, processed: replay.revealed, state, equity }
   }
-  if (history && isSinglePrice(history) && current.state.symbol !== '6E') current = { ...current, state: { ...current.state, symbol: '6E' } }
+  if (history && isSinglePrice(history) && current.state.symbol !== history.symbol) current = { ...current, state: { ...current.state, symbol: history.symbol, ...(isLocalForex(history) ? {executionModel: history.executionModel} : {}) } }
   // Pure adjustment before children render, as with the replay dataset reset.
   // No effects/ref mutations: StrictMode can safely repeat this computation.
   if (current !== session) setSession(current)

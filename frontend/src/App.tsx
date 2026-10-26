@@ -7,10 +7,8 @@ import { plannedRisk } from './risk'
 import type { StopPreview } from './useStopDrag'
 import { HistoryTimeline } from './HistoryTimeline'
 import { automaticReplayStart, cachedPreset, formatUtcDate, rangeCoverage, type CacheCalendar } from './cacheCalendar'
-import { quoteHistory, downloadHistory, type HistoryQuote } from './databentoHistory'
-import { historyCandles, isSinglePrice } from './history'
+import { historyCandles, isSinglePrice, isLocalForex, isFuturesHistory } from './history'
 import { flushSync } from 'react-dom'
-import { PaidDownloadDialog } from './PaidDownloadDialog'
 import { ManagementDialog } from './ManagementDialog'
 import { ChartPane } from './ChartPane'
 import { draftEstimate, draftObservedPrice, TradingDock, type StopDraft } from './TradingDock'
@@ -38,11 +36,6 @@ export function App() {
   const [from, setFrom] = useState(DEFAULT_RANGE.from)
   const [to, setTo] = useState(DEFAULT_RANGE.to)
   const [requestedRange, setRequestedRange] = useState<DateRange>(DEFAULT_RANGE)
-  const [quote, setQuote] = useState<HistoryQuote | null>(null)
-  const [confirming, setConfirming] = useState(false)
-  const paidSubmitting = useRef(false)
-  const [paidPending, setPaidPending] = useState(false)
-  const [downloadNotice, setDownloadNotice] = useState<string | null>(null)
   const [history, setHistory] = useState<LoadedHistory | null>(null)
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
   const [lifecycle, setLifecycle] = useState<Lifecycle>('setup')
@@ -54,13 +47,12 @@ export function App() {
   const [keyboardNotice, setKeyboardNotice] = useState('')
   const [manage, setManage] = useState(false)
   const [finishing, setFinishing] = useState(false)
-  const [coverageError, setCoverageError] = useState(false)
+  const [coverageError, setCoverageError] = useState<string | null>(null)
   const [calendar, setCalendar] = useState<CacheCalendar | null>(null)
   const [endMoved, setEndMoved] = useState(false)
   const selectionTouched = useRef(false)
   const starting = useRef(false)
   const [pendingStart, setPendingStart] = useState(false)
-  const [moreData, setMoreData] = useState(false)
   const loadAbort = useRef<AbortController | null>(null)
   const loadGeneration = useRef(0)
   const [error, setError] = useState<string | null>(null)
@@ -89,7 +81,7 @@ export function App() {
     setDraft(null)
   }
   const chartOffset = useMemo(() => {
-    if (!history || !isSinglePrice(history) || !history.candles[startIndex]) return 0
+    if (!history || !isFuturesHistory(history) || !history.candles[startIndex]) return 0
     let index = startIndex
     while (index > 0 && history.candles[index - 1].instrumentId === history.candles[startIndex].instrumentId) index--
     return index
@@ -114,13 +106,13 @@ export function App() {
       setHydration(saved); setHistory(source); setRequestedRange(saved.record.range)
       setFrom(saved.record.range.from); setTo(saved.record.range.to)
       setPendingStart(false); starting.current = false
-      setStatus('ready'); setError(null); setFormError(null); setQuote(null); setConfirming(false)
+      setStatus('ready'); setError(null); setFormError(null)
     },
     fresh: (range) => {
       selectionTouched.current = true
       setPendingStart(false); starting.current = false
       loadGeneration.current++; loadAbort.current?.abort(); setDraft(null); setLifecycle('setup'); setStatus('idle'); setManage(false)
-      setQuote(null); setConfirming(false); setHydration(null); setHistory(null); setRequestedRange({ ...range }); setFrom(range.from); setTo(range.to)
+      setHydration(null); setHistory(null); setRequestedRange({ ...range }); setFrom(range.from); setTo(range.to)
     },
   })
 
@@ -169,16 +161,20 @@ export function App() {
 
   async function refreshCoverage() {
     try {
-      const response = await fetch('/api/history/calendar')
-      if (!response.ok) throw Error()
+      const discovery = await fetch('/api/history/datasets')
+      if (!discovery.ok) { const body = await discovery.json().catch(() => null); throw new Error(body?.error ?? 'Local history could not be verified.') }
+      const installed = await discovery.json()
+      if (!Array.isArray(installed.datasets) || !installed.datasets.some((item: { symbol: string; tradingEnabled: boolean }) => item.symbol === 'EURUSD' && item.tradingEnabled)) { setCalendar({days: []}); setCoverageError(null); return }
+      const response = await fetch('/api/history/calendar?symbol=EURUSD')
+      if (!response.ok) { const body = await response.json().catch(() => null); throw new Error(body?.error ?? 'Local history could not be verified.') }
       const value: CacheCalendar = await response.json()
       if (!Array.isArray(value.days)) throw Error()
-      setCalendar(value); setCoverageError(false)
+      setCalendar(value); setCoverageError(null)
       if (!selectionTouched.current) {
         const initial = cachedPreset(value, 90) ?? cachedPreset(value, 30) ?? cachedPreset(value, 7)
         if (initial) { setFrom(initial.from); setTo(initial.to); setRequestedRange(initial) }
       }
-    } catch { setCoverageError(true) }
+    } catch (reason) { setCoverageError(reason instanceof Error && reason.message ? reason.message : 'Local history could not be verified.') }
   }
   useEffect(() => { void refreshCoverage(); return () => { loadAbort.current?.abort(); loadGeneration.current++ } }, [])
   useEffect(() => {
@@ -192,31 +188,25 @@ export function App() {
     const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') setDraft(null) }
     window.addEventListener('keydown', escape); return () => window.removeEventListener('keydown', escape)
   }, [])
-  useEffect(() => { setQuote(null); setConfirming(false) }, [from, to])
   const pickStop = useCallback((price: number) => setDraft(d => d ? { ...d, price } : null), [])
   async function loadData(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault()
-    if (starting.current || paidSubmitting.current) return
+    if (starting.current) return
     const selected = selectedRange(from, shiftDate(to, -1), null)
     setFormError(selected.error)
     if (selected.error || accountRiskError(trading.state.account) || commissionConfigError(trading.state.commission)) return
     starting.current = true; selectionTouched.current = true
-    setQuote(null); setConfirming(false); setDownloadNotice(null)
     const generation = ++loadGeneration.current
     loadAbort.current?.abort()
     const controller = new AbortController(); loadAbort.current = controller
     setStatus('loading'); setError(null); setHistoryFailure(null); setLoadProgress({completed:0,total:1}); setRequestedRange(selected.range)
     try {
       await sessions.flush()
-      const estimate = await quoteHistory(selected.range, controller.signal)
-      if (generation !== loadGeneration.current) return
-      setQuote(estimate)
-      if (!estimate.cached) { starting.current = false; setStatus('idle'); setConfirming(true); return }
       const result = await loader.load(selected.range, controller.signal, setLoadProgress)
       if (generation !== loadGeneration.current) return
       if (!automaticReplayStart(historyCandles(result), selected.range)) throw new Error('Insufficient historical candles for Ichimoku. Select a later starting period or a longer interval.')
       const chosenName = sessions.name
-      if (history && !await sessions.fresh(selected.range)) throw new Error('The previous backtest could not be saved. New data remains cached; retry storage before switching.')
+      if (history && !await sessions.fresh(selected.range)) throw new Error('The previous backtest could not be saved. Local history is ready; retry storage before switching.')
       starting.current = true
       // Name updates flush persistence immediately, so install the new history first.
       flushSync(() => { setHydration(null); setHistory(result); setStatus('ready'); setPendingStart(true) })
@@ -226,30 +216,6 @@ export function App() {
       setHistoryFailure(reason instanceof HistoryRequestError ? reason : null)
       setError(reason instanceof Error ? reason.message : 'Historical data unavailable.'); setStatus('error'); starting.current = false; void refreshCoverage()
     }
-  }
-  async function confirmDownload() {
-    if (!quote || quote.tradingFrom !== from || quote.to !== to || !quote.downloadAllowed || Date.now() >= Date.parse(quote.expiresAt) || paidSubmitting.current) return
-    starting.current = true; paidSubmitting.current = true; setPaidPending(true); setConfirming(false); setDownloadNotice(null)
-    const generation = ++loadGeneration.current
-    const controller = new AbortController(); loadAbort.current = controller
-    setStatus('loading'); setError(null); setHistoryFailure(null); setLoadProgress({ completed: 0, total: 1 })
-    try {
-      await sessions.flush()
-      if (Date.now() >= Date.parse(quote.expiresAt)) throw new Error('Quote expired. Load historical data again for a fresh estimate.')
-      const result = await downloadHistory(quote, controller.signal)
-      if (generation !== loadGeneration.current) return
-      if (!automaticReplayStart(historyCandles(result), { from: quote.tradingFrom, to: quote.to })) throw new Error('Insufficient historical candles for Ichimoku. Select a later starting period or a longer interval.')
-      const chosenName = sessions.name
-      if (history && !await sessions.fresh({ from: quote.tradingFrom, to: quote.to })) throw new Error('The previous backtest could not be saved. Downloaded data remains cached; retry storage before switching.')
-      starting.current = true
-      flushSync(() => { setHydration(null); setHistory(result); setStatus('ready'); setPendingStart(true); setLoadProgress({ completed: 1, total: 1 }); setQuote(null) })
-      sessions.editName(chosenName)
-    } catch (reason) {
-      if (generation !== loadGeneration.current || controller.signal.aborted) return
-      setHistoryFailure(reason instanceof HistoryRequestError ? reason : null)
-      setError(reason instanceof Error ? reason.message : 'Historical download failed.'); setStatus('error'); setQuote(null)
-      setDownloadNotice('A paid submission may already have reached the backend. Closing this page does not guarantee no charge. Wait for the backend to finish, then load again to inspect the cache; no request is retried automatically.')
-    } finally { starting.current = false; paidSubmitting.current = false; setPaidPending(false) }
   }
   async function finish() {
     flushSync(() => { replay.pause(); setDraft(null); setFinishing(true) })
@@ -297,7 +263,7 @@ export function App() {
 
   const pnl = accountPnl(trading.equity, trading.state.account.referenceBalance)
   const selected = selectedRange(from, shiftDate(to, -1), null)
-  const dateFields = <div className="period-fields"><label>From<input aria-label="From" type="date" value={from} disabled={status === 'loading'} onChange={e=>{selectionTouched.current=true;setFrom(e.target.value);setFormError(null)}}/></label><label>Through<input aria-label="Through" type="date" value={shiftDate(to,-1)} disabled={status === 'loading'} onChange={e=>{selectionTouched.current=true;setEndMoved(true);setTo(shiftDate(e.target.value,1));setFormError(null)}}/></label></div>
+  const dateFields = <div className="period-fields"><label>From<input aria-label="From" type="date" min={calendar?.firstTimestamp ? shiftDate(new Date(Math.ceil(calendar.firstTimestamp / 86400000) * 86400000).toISOString().slice(0,10),30) : undefined} max={calendar?.lastTimestamp ? new Date(calendar.lastTimestamp).toISOString().slice(0,10) : undefined} value={from} disabled={status === 'loading'} onChange={e=>{selectionTouched.current=true;setFrom(e.target.value);setFormError(null)}}/></label><label>Through<input aria-label="Through" type="date" min={calendar?.firstTimestamp ? shiftDate(new Date(Math.ceil(calendar.firstTimestamp / 86400000) * 86400000).toISOString().slice(0,10),30) : undefined} max={calendar?.lastTimestamp ? new Date(calendar.lastTimestamp).toISOString().slice(0,10) : undefined} value={shiftDate(to,-1)} disabled={status === 'loading'} onChange={e=>{selectionTouched.current=true;setEndMoved(true);setTo(shiftDate(e.target.value,1));setFormError(null)}}/></label></div>
   const readiness = useMemo(()=>calendar && !selected.error ? rangeCoverage(calendar,{from,to}) : null,[calendar,from,to,selected.error])
   const presets = useMemo(()=>[7,30,90].map(days=>calendar ? cachedPreset(calendar,days,endMoved ? to : undefined) : null),[calendar,endMoved,to])
   const chartLayout = <fieldset className="layout-controls"><legend>Charts</legend>{[1,2,3].map(count=><label key={count}><input type="radio" name="chart-count" value={count} checked={chartCount === count} onChange={()=>{ synchronizer.deactivate(); setChartCount(count) }}/>{count}</label>)}</fieldset>
@@ -308,12 +274,12 @@ export function App() {
       {lifecycle === 'trading' && <details ref={executionDetails} className="execution-details"><summary aria-label="Execution details" title="Execution details"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v2"/></svg></summary><div className="execution-popover">
         <strong>Execution details</strong>
         <p>While paused: Shift + Right completes the active chart’s next candle. Shift + Left reviews earlier candles without rewinding trade execution. Select a chart by clicking, panning, scrolling or changing its timeframe. Return to current replay to trade.</p>
-        {history && isSinglePrice(history) ? <p>6E trade prices · hypothetical forex-style sizing (1 lot = 100,000 EUR). No spread; entries fill at the next eligible M1 opening, with high/low stops and gap-open handling. Not exchange-accurate futures or EUR/USD CFD execution.</p> : <p>Original legacy bid/ask execution. Entries fill at the next synchronized M1 opening.</p>}
+        {history && isLocalForex(history) ? <p>EURUSD mid prices · simplified single-price execution. 1 standard lot = 100,000 EUR; PnL is in USD. No spread, bid/ask, tick sequence, slippage, swaps or financing are modeled. Entries and manual exits use the next observed M1 open; stops use M1 high/low and gap opens.</p> : history && isFuturesHistory(history) ? <p>6E trade prices · hypothetical forex-style sizing (1 lot = 100,000 EUR). No spread; entries fill at the next eligible M1 opening, with high/low stops and gap-open handling. Not exchange-accurate futures or EUR/USD CFD execution.</p> : <p>Original legacy bid/ask execution. Entries fill at the next synchronized M1 opening.</p>}
         <p>SL amounts are net at the stop level, including entry and exit commissions. Pending values estimate the next fill from the observed price. Gaps can change the outcome. Entry lines mark the fill price; net breakeven also includes commissions.</p>
-        {history && isSinglePrice(history) && <details><summary>Contract mappings and rollover events</summary>{history.contracts.map(c=><p key={c.from}>{c.from} to {c.to} (exclusive): {c.rawSymbol} · instrument {c.instrumentId}</p>)}</details>}
+        {history && isFuturesHistory(history) && <details><summary>Contract mappings and rollover events</summary>{history.contracts.map(c=><p key={c.from}>{c.from} to {c.to} (exclusive): {c.rawSymbol} · instrument {c.instrumentId}</p>)}</details>}
       </div></details>}
       {lifecycle === 'trading' && (
-        <fieldset className="header-replay" aria-label="Market replay" disabled={workspaceDisabled || status === 'loading' || pendingStart || manage || confirming || !!stopPreview} hidden={!sessions.initialized || sessions.awaitingChoice}>
+        <fieldset className="header-replay" aria-label="Market replay" disabled={workspaceDisabled || status === 'loading' || pendingStart || manage || !!stopPreview} hidden={!sessions.initialized || sessions.awaitingChoice}>
           <button disabled={!replay.canPlay || !!stopPreview} onClick={()=>{setDraft(null);replay.play()}}>Play</button><button disabled={!replay.canPause} onClick={replay.pause}>Pause</button><button disabled={!replay.canNext || !!stopPreview} onClick={()=>{setDraft(null);replay.next()}}>Next Candle</button>
           <label>Speed<select aria-label="Replay speed" value={replay.speed} onChange={e=>replay.setSpeed(Number(e.target.value) as 1|10|100)}>{[1,10,100].map(s=><option key={s} value={s}>{s}×</option>)}</select></label>
           {chartLayout}<div className="replay-state"><span aria-label="Replay status" className="replay-status">{replay.status}</span><span className="replay-progress" aria-label="Replay progress">{replay.revealed-replay.startIndex} / {replay.total-replay.startIndex} candles</span></div><button disabled={replay.reviewing} onClick={()=>void finish()}>{replay.complete || replay.blocked ? 'Review Results' : 'Finish backtest'}</button>
@@ -331,24 +297,21 @@ export function App() {
     {!sessions.initialized && !sessions.awaitingChoice && <p className="startup-status" role="status">Checking saved backtests…</p>}
     <fieldset className="workspace-controls" disabled={workspaceDisabled} hidden={!sessions.initialized || sessions.awaitingChoice}>
       {lifecycle === 'setup' && <section className="setup-workspace" aria-label="Backtest setup">
-        <div className="setup-heading"><h2>Set up a backtest</h2><p>Choose downloaded history and start a paused, indicator-ready replay.</p></div>
+        <div className="setup-heading"><h2>Set up a backtest</h2><p>Choose local Forex history and start a paused, indicator-ready replay.</p></div>
         {!!sessions.legacySessions.length && <p className="chart-note">Older browser backtests are available. <button type="button" onClick={()=>setManage(true)}>Review browser backtests</button></p>}
         <form onSubmit={loadData} className="setup-form" id="setup-form">
-          <section className="historical-period"><h3>Historical period <span>6E · M1 · UTC</span></h3>
-            {calendar?.days.length ? <HistoryTimeline calendar={calendar} range={{from,to}} disabled={status === 'loading'} onEndChange={()=>setEndMoved(true)} onChange={range=>{selectionTouched.current=true;setFrom(range.from);setTo(range.to);setFormError(null);setError(null)}}/> : <p role="status">{coverageError ? 'Downloaded history could not be checked.' : calendar ? 'No downloaded history yet. Get historical data to begin.' : 'Checking downloaded history…'} {coverageError && <button type="button" onClick={()=>void refreshCoverage()}>Retry coverage</button>}</p>}
+          <section className="historical-period"><h3>Historical period <span>EURUSD · Mid · M1 · UTC</span></h3><p className="chart-note">Mid-price M1 candles. Simplified fills with no spread, slippage or financing.</p>
+            {calendar?.days.length ? <HistoryTimeline calendar={calendar} range={{from,to}} disabled={status === 'loading'} onEndChange={()=>setEndMoved(true)} onChange={range=>{selectionTouched.current=true;setFrom(range.from);setTo(range.to);setFormError(null);setError(null)}}/> : <p role="status">{coverageError ? coverageError : calendar ? 'No local EURUSD history is installed. Import the archive with the local import command to begin.' : 'Checking local history…'} {coverageError && <button type="button" onClick={()=>void refreshCoverage()}>Retry coverage</button>}</p>}
             <div className="period-shortcuts">{[7,30,90].map((days,index)=><button type="button" key={days} disabled={status === 'loading' || !calendar || !presets[index]} aria-pressed={selected.days === days} onClick={()=>{const range=presets[index];if(range){selectionTouched.current=true;setFrom(range.from);setTo(range.to);setFormError(null);setError(null)}}}>{days} days</button>)}<span>{Number.isFinite(selected.days) ? selected.days : 0} calendar days · maximum 90</span></div>
             <div className="period-readiness" role="status">{calendar && (()=>{
               if (selected.error) return <p className="form-error">Choose 1 to 90 completed UTC calendar days.</p>
               if (!readiness) return null
-              return <><p><strong>{readiness.missing ? `${readiness.missing} missing days require a Databento download.` : `${selected.days} days selected — already downloaded.`}</strong></p>
-                {!readiness.missing && <p>No additional data required. Includes the 30-day indicator pre-roll.</p>}
+              return <><p><strong>{readiness.missing ? `${readiness.missing} days fall outside verified local history.` : `${selected.days} days selected · available locally.`}</strong></p>
+                {!readiness.missing && <p>Includes the 30-day indicator pre-roll. Market closures and missing observations remain gaps.</p>}
                 {readiness.replay && <><p>Replay begins automatically: <strong>{formatUtcDate(readiness.replay.timestamp)}, {new Date(readiness.replay.timestamp).toISOString().slice(11,16)} UTC</strong></p><p>{readiness.replay.count} completed H4 candles available · {readiness.replay.required} required for Ichimoku.</p>{readiness.replay.timestamp > Date.parse(from) && <p className="coverage-warning">The first tradable minute is later than your From date because of market closures, missing observations or indicator warm-up.</p>}</>}
                 {!readiness.missing && !readiness.replay && <p className="form-error">Insufficient historical candles for Ichimoku. Select a later starting period or a longer interval.</p>}
               </>
             })()}</div>
-            {calendar && (()=>{const bars=calendar.days.filter(day=>day.date>=from && day.date<to).flatMap(day=>day.h4);return bars.some((bar,index)=>index>0 && (bar as {instrumentId?:number}).instrumentId !== (bars[index-1] as {instrumentId?:number}).instrumentId) ? <p className="coverage-warning">Replay will pause at the next futures contract change.</p> : null})()}
-            <button type="button" className="more-history" disabled={status === 'loading'} onClick={()=>setMoreData(value=>!value)}>Get more historical data</button>
-            {moreData && <div className="more-history-fields"><p>Choose dates to estimate only missing data. Downloading requires your explicit paid approval.</p>{dateFields}</div>}
           </section>
           <section className="setup-account"><h3>Trading account <span>USD</span></h3><div className="account-fields">
             <label>Starting balance (USD)<input aria-label="Starting balance (USD)" type="number" min="0" step="any" disabled={status === 'loading'} value={trading.state.account.referenceBalance || ''} onChange={e=>trading.configure({...trading.state.account,referenceBalance:Number(e.target.value)})}/></label>
@@ -358,28 +321,25 @@ export function App() {
             <label>Backtest name<input maxLength={200} aria-label="Backtest name" disabled={status === 'loading'} value={sessions.name} onChange={e=>sessions.editName(e.target.value)}/></label>
             <label>Round-trip commission ($ / standard lot)<input aria-label="Round-trip commission (USD per standard lot)" type="number" min="0" step="any" disabled={status === 'loading'} value={trading.state.commission.roundTripUsdPerLot} onChange={e=>{const value={roundTripUsdPerLot:Number(e.target.value)};setFormError(commissionConfigError(value));trading.configureCommission(value)}}/></label>
             <div className="initial-layout">{chartLayout}</div>
-            {!moreData && <div><h4>Manual historical dates</h4>{dateFields}</div>}
-            <p className="chart-note">30-day pre-roll · 6E Euro FX futures · Databento GLBX.MDP3 · ohlcv-1m. Hypothetical forex-style sizing; no synthetic spread. Commission is split between entry and exit.</p>
+            <div><h4>Manual historical dates</h4>{dateFields}</div>
+            <p className="chart-note">30-day pre-roll · EURUSD Forex · local Parquet archive · mid-price M1 candles. Simplified single-price fills with no spread, slippage, swaps or financing. 1 standard lot = 100,000 EUR. Commission is split between entry and exit.</p>
           </div></details>
         </form>
           <footer className="setup-footer"><div aria-live="polite">
             {(formError || accountRiskError(trading.state.account) || commissionConfigError(trading.state.commission)) && <p className="form-error">{formError || accountRiskError(trading.state.account) || commissionConfigError(trading.state.commission)}</p>}
-            {status === 'loading' && <div role="status"><p>Preparing charts and indicators…</p>{!paidPending && <button type="button" onClick={()=>{loadGeneration.current++;loadAbort.current?.abort();starting.current=false;setPendingStart(false);setStatus('idle');setQuote(null)}}>Cancel loading</button>}<progress max={loadProgress.total || 1} value={loadProgress.completed}/></div>}
+            {status === 'loading' && <div role="status"><p>Preparing charts and indicators…</p>{<button type="button" onClick={()=>{loadGeneration.current++;loadAbort.current?.abort();starting.current=false;setPendingStart(false);setStatus('idle')}}>Cancel loading</button>}<progress max={loadProgress.total || 1} value={loadProgress.completed}/></div>}
             {status === 'error' && <p className="form-error" role="alert">{error}</p>}
-            {downloadNotice && <p role="status">{downloadNotice}</p>}
-            {paidPending && <p role="status">Approved download in progress. Closing this page does not cancel a paid request.</p>}
-          </div><button type="submit" form="setup-form" className="primary-action" disabled={status === 'loading' || !!selected.error || !!accountRiskError(trading.state.account) || !!commissionConfigError(trading.state.commission) || !!(readiness && !readiness.missing && !readiness.replay)}>Start backtest</button></footer>
+          </div><button type="submit" form="setup-form" className="primary-action" disabled={status === 'loading' || !!selected.error || !!accountRiskError(trading.state.account) || !!commissionConfigError(trading.state.commission) || !readiness || !!readiness.missing || !readiness.replay}>Start backtest</button></footer>
       </section>}
-      {lifecycle === 'setup' && confirming && quote && quote.tradingFrom === from && quote.to === to && <PaidDownloadDialog key={quote.id} quote={quote} onCancel={()=>{setConfirming(false);setQuote(null);setDownloadNotice('Download cancelled. No paid request submitted and no additional budget reserved.')}} onApprove={()=>void confirmDownload()}/>}
       {lifecycle === 'trading' && <>
         <div className="workspace-toolbar" role="region" aria-label="Trading workspace controls">
-        <TradingDock reviewing={replay.reviewing} shortcutsBlocked={lifecycle !== 'trading' || workspaceDisabled || manage || !!stopPreview || status !== 'ready' || confirming || paidPending || pendingStart || replay.playing} stops={stops} key={`${sessions.activeId}-${trading.state.session}`} trading={trading} draft={draft} setDraft={setDraft} onConfirm={confirmDraft}/>
+        <TradingDock reviewing={replay.reviewing} shortcutsBlocked={lifecycle !== 'trading' || workspaceDisabled || manage || !!stopPreview || status !== 'ready' || pendingStart || replay.playing} stops={stops} key={`${sessions.activeId}-${trading.state.session}`} trading={trading} draft={draft} setDraft={setDraft} onConfirm={confirmDraft}/>
         </div>
         {replay.reviewing && <div className="history-review" role="status"><strong>Reviewing history</strong><span>{new Date(replay.reviewTimestamp!).toISOString().slice(0,16).replace('T',' ')} UTC · Trading disabled</span><button onClick={replay.returnToCurrent}>Return to current replay</button></div>}
         {keyboardNotice && <p className="keyboard-notice" role="status">{keyboardNotice}</p>}
         {replay.blocked && <p className="coverage-warning" role="alert">Replay blocked at contract rollover. No positions, stops or pending orders were executed across the boundary. Finish this backtest or select a replay start after the rollover. A carry/roll policy requires project-lead approval.</p>}
-        <div className="chart-workspace" aria-label={`${history?.symbol === '6E' ? 'EURUSD 6E' : history?.symbol ?? 'EURUSD 6E'} chart workspace`}><div className={`chart-stack charts-${chartCount}`}>
-          {timeframes.slice(0,chartCount).map((timeframe,id)=><ChartPane key={id} instrument={history?.symbol ?? '6E'} id={id} active={id === activeChart} reviewing={replay.reviewing} timeframe={timeframe} sessionId={sessions.activeId} positions={replay.reviewing ? [] : trading.state.positions} entries={replay.reviewing ? [] : entries} onConfirmStop={confirmDraft} confirmStopDisabled={draftInvalid} stops={replay.reviewing ? [] : stops} stopInteraction={{ enabled: canRequestOrder(trading.permission) && !draft,
+        <div className="chart-workspace" aria-label={`${history?.symbol === '6E' ? 'EURUSD 6E' : history?.symbol ?? 'EURUSD'} chart workspace`}><div className={`chart-stack charts-${chartCount}`}>
+          {timeframes.slice(0,chartCount).map((timeframe,id)=><ChartPane key={id} instrument={history?.symbol ?? 'EURUSD'} priceLabel={history && isLocalForex(history) ? 'Mid' : undefined} priceDecimals={history && isLocalForex(history) ? history.instrument.priceDecimals : undefined} id={id} active={id === activeChart} reviewing={replay.reviewing} timeframe={timeframe} sessionId={sessions.activeId} positions={replay.reviewing ? [] : trading.state.positions} entries={replay.reviewing ? [] : entries} onConfirmStop={confirmDraft} confirmStopDisabled={draftInvalid} stops={replay.reviewing ? [] : stops} stopInteraction={{ enabled: canRequestOrder(trading.permission) && !draft,
             preview: stopPreview, onPreview: setStopPreview, onCommit: (positionId, price) => {
               const position = trading.state.positions.find(p => p.id === positionId)
               const error = position ? stopModificationError(trading.state, position, price, trading.permission) : 'Position is no longer open.'

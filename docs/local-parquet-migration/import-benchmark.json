@@ -1,0 +1,9 @@
+{
+  "symbol": "EURUSD",
+  "datasetId": "b7952ececc3677fa32606fac5ad125ca92a4fcdc83f1901088ae7cc6233bbb64",
+  "rows": 7945468,
+  "firstTimestamp": 1110378900000,
+  "lastTimestamp": 1790369940000,
+  "elapsedSeconds": 13.680482476,
+  "peakRssMiB": 330.73046875
+}

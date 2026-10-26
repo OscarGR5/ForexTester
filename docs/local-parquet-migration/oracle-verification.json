@@ -1,0 +1,20 @@
+[
+  {
+    "candleDigest": "afbf45b4a075aa01877c6ead48501e839a968abf9e4c22aecc7ac82ee0b66d45",
+    "matched": true,
+    "rows": 120382,
+    "year": 2005
+  },
+  {
+    "candleDigest": "22b37a88c0938cf8985f20fbe041b8a5318f62fe606de64740716d7c8d6147c6",
+    "matched": true,
+    "rows": 122565,
+    "year": 2015
+  },
+  {
+    "candleDigest": "99c13bcc85103da9e6e4b3ad95ca4a853f412327939458f5c087ecd75546d470",
+    "matched": true,
+    "rows": 121125,
+    "year": 2025
+  }
+]

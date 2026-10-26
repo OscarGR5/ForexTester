@@ -1,8 +1,8 @@
 import { type Candle, type DateRange, type TradeCandle } from './history.js'
 import { shiftDate } from './workflow.js'
 
-export interface CalendarDay { date: string; status: 'cached' | 'invalid'; observations: number; h4: Candle[] }
-export interface CacheCalendar { days: CalendarDay[] }
+export interface CalendarDay { date: string; status: 'cached' | 'invalid' | 'gap'; observations: number; h4: Candle[] }
+export interface CacheCalendar { days: CalendarDay[]; symbol?: string; datasetId?: string; from?: string; to?: string; firstTimestamp?: number; lastTimestamp?: number; priceBasis?: 'mid' }
 export const formatUtcDate = (value: string | number) => !Number.isFinite(new Date(value).getTime()) ? 'Choose date' : new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(value))
 const H4 = 14_400_000
 export const WARMUP_REQUIRED = 78
@@ -30,7 +30,7 @@ export function rangeCoverage(calendar: CacheCalendar, range: DateRange) {
   const candles: Candle[] = []
   for (let date = shiftDate(range.from, -30); date && date < range.to; date = shiftDate(date, 1)) {
     const entry = days.get(date)
-    if (entry?.status !== 'cached') missing++
+    if (!entry || entry.status === 'invalid' || calendar.firstTimestamp !== undefined && Date.parse(date) < Math.ceil(calendar.firstTimestamp / 86400000) * 86400000) missing++
     else candles.push(...entry.h4)
   }
   return { missing, replay: missing ? null : automaticReplayStart(candles, range) }

@@ -3,14 +3,21 @@ import { mkdtemp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promis
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { migrateCache } from './databento-cache-migrate.mts'
-import { HistoryService } from '../backend/src/history.js'
-import { FixtureDatabento, creditEnv, fixtureNow } from '../tests/databentoFixture.js'
+import { createHash } from 'node:crypto'
+import { LEGACY_IDENTITY } from '../backend/src/history.js'
+import { fixtureHistory } from '../tests/databentoFixture.js'
 let root: string, source: string, destination: string
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), 'cache-import-test-')); source = join(root, 'source'); destination = join(root, 'destination')
   await mkdir(source)
-  const service = new HistoryService(new FixtureDatabento(), source, creditEnv, fixtureNow)
-  await service.confirm((await service.estimate('2024-01-09', '2024-01-11', 0)).id, true)
+  const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex')
+  for (const from of ['2024-01-09','2024-01-10']) {
+    const to = new Date(Date.parse(from)+86400000).toISOString().slice(0,10)
+    const history=fixtureHistory(from,to),id=hash({...LEGACY_IDENTITY,from,to,contracts:history.contracts})
+    await writeFile(join(source,`${id}.json`),JSON.stringify({history,digest:hash(history)}))
+    await writeFile(join(source,`${from}.ref.json`),JSON.stringify({id}))
+  }
+  await writeFile(join(source,'verification-budget.json'),JSON.stringify({version:1,reservations:[{id:'historical-reservation',reservedUsd:.04,estimatedUsd:.02}]}))
 })
 afterEach(async () => { await rm(root, { recursive: true, force: true }) })
 it('copies validated cache and complete ledger byte for byte, keeps source intact and reruns without overwriting', async () => {

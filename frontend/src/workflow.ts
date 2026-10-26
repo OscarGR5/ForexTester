@@ -1,5 +1,5 @@
-import { validateDateRange } from './history'
-import type { EquityLedger } from './equity'
+import { validateDateRange } from './history.js'
+import type { EquityLedger } from './equity.js'
 export interface Coverage {
   symbol: string; resolution: string; providerEarliestTimestamp: string | null; earliestSelectableDate: string | null;
   latestEligibleDate: string; latestBoundaryProvisional: boolean; lastVerifiedAvailableDate: string | null;

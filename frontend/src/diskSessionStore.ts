@@ -39,7 +39,8 @@ export class DiskSessionStore {
   async repairHistory(id: string, download: (range: SessionRecord['range']) => Promise<LoadedHistory>) {
     const { record } = await this.call<{ record: SessionRecord }>(`/sessions/${id}`)
     await validateRecord(record)
-    if (record.symbol === 'EURUSD') throw new StorageApiError('HISTORY_MISSING', 'The original Dukascopy provider dataset is required. Restore its history object from backup; Databento cannot regenerate it.')
+    if (record.symbol === 'EURUSD' && !record.checkpoint.trading.executionModel) throw new StorageApiError('HISTORY_MISSING', 'The original Dukascopy provider dataset is required. Restore its history object from backup; Databento cannot regenerate it.')
+    if (record.symbol === '6E') throw new StorageApiError('HISTORY_MISSING', 'The original saved Databento history object is required. Restore it from backup; online regeneration is disabled.')
     const history = validatedHistory(await download(record.range))
     if (await historyFingerprint(history) !== record.historyId) throw fingerprintMismatch()
     const body = typeof Worker !== 'undefined' && historyCandles(history).length + (isSinglePrice(history) ? 0 : history.ask.length) > 8192 ? await historyRequestBody(history) : history

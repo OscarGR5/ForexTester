@@ -59,6 +59,7 @@ export function observedPrice(quote: Quote | null, direction: Direction): number
 }
 export interface TradingState {
   symbol?: 'EURUSD' | '6E'
+  executionModel?: 'single-price-m1-v1'
   account: AccountRisk
   commission: CommissionConfig
   session: number
@@ -183,7 +184,7 @@ export function requestClose(state: TradingState, id: string, permission: Tradin
 export function stopModificationError(state: TradingState, position: Position, price: number, permission: TradingPermission): string | null {
   if (!canRequestOrder(permission)) return 'SL changes require paused replay with another candle available.'
   if (!validStopPrice(price)) return 'Enter a positive, finite SL price.'
-  const side = state.symbol === '6E' ? 'trade' : position.direction === 'buy' ? 'bid' : 'ask'
+  const side = state.quote && 'priceModel' in state.quote ? 'trade' : position.direction === 'buy' ? 'bid' : 'ask'
   const candle = quoteCandle(state.quote, side)
   if (!candle) return `Cannot change SL: current ${side} closing quote is unavailable.`
   if (position.direction === 'buy' ? price >= candle.close : price <= candle.close) {
@@ -290,7 +291,7 @@ export function observeCandle(state: TradingState, bid: Candle, ask?: Candle, pr
     surviving.push(position)
   }
   // Quote-only observations preserve record identities for journal/curve memoization.
-  return { ...state, ...(priceModel === 'single' ? { symbol: '6E' as const } : {}), observedTimestamp: timestamp, quote,
+  return { ...state, ...(priceModel === 'single' ? { symbol: state.symbol ?? '6E' as const } : {}), observedTimestamp: timestamp, quote,
     pending: pending.length === state.pending.length ? state.pending : pending,
     positions: surviving.length === state.positions.length && surviving.every((position, index) => position === state.positions[index]) ? state.positions : surviving,
     closed: closed.length ? [...state.closed, ...closed] : state.closed,

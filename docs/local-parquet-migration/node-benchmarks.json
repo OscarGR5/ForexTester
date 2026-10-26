@@ -1,0 +1,83 @@
+[
+  {
+    "year": 2005,
+    "days": 90,
+    "preRollDays": 30,
+    "tradingFrom": "2005-05-01",
+    "from": "2005-04-01",
+    "to": "2005-07-30",
+    "selectedRows": 120382,
+    "elapsedSeconds": 0.353796242,
+    "peakRssMiB": 350.87890625,
+    "candleDigest": "afbf45b4a075aa01877c6ead48501e839a968abf9e4c22aecc7ac82ee0b66d45",
+    "first": {
+      "timestamp": 1112313600000,
+      "open": 1.2964,
+      "high": 1.2964,
+      "low": 1.2961,
+      "close": 1.2961
+    },
+    "last": {
+      "timestamp": 1122670740000,
+      "open": 1.2122,
+      "high": 1.2122,
+      "low": 1.212,
+      "close": 1.2122
+    },
+    "independentPyArrowDigestMatched": true
+  },
+  {
+    "year": 2015,
+    "days": 90,
+    "preRollDays": 30,
+    "tradingFrom": "2015-04-01",
+    "from": "2015-03-02",
+    "to": "2015-06-30",
+    "selectedRows": 122565,
+    "elapsedSeconds": 0.35728478499999994,
+    "peakRssMiB": 346.3671875,
+    "candleDigest": "22b37a88c0938cf8985f20fbe041b8a5318f62fe606de64740716d7c8d6147c6",
+    "first": {
+      "timestamp": 1425254400000,
+      "open": 1.116095,
+      "high": 1.11663,
+      "low": 1.116095,
+      "close": 1.116585
+    },
+    "last": {
+      "timestamp": 1435622340000,
+      "open": 1.12195,
+      "high": 1.12195,
+      "low": 1.12182,
+      "close": 1.121825
+    },
+    "independentPyArrowDigestMatched": true
+  },
+  {
+    "year": 2025,
+    "days": 90,
+    "preRollDays": 30,
+    "tradingFrom": "2025-04-01",
+    "from": "2025-03-02",
+    "to": "2025-06-30",
+    "selectedRows": 121125,
+    "elapsedSeconds": 0.36927876800000003,
+    "peakRssMiB": 341.359375,
+    "candleDigest": "99c13bcc85103da9e6e4b3ad95ca4a853f412327939458f5c087ecd75546d470",
+    "first": {
+      "timestamp": 1740953700000,
+      "open": 1.040175,
+      "high": 1.04025,
+      "low": 1.04013,
+      "close": 1.04018
+    },
+    "last": {
+      "timestamp": 1751241540000,
+      "open": 1.172655,
+      "high": 1.17268,
+      "low": 1.172635,
+      "close": 1.17268
+    },
+    "independentPyArrowDigestMatched": true
+  }
+]

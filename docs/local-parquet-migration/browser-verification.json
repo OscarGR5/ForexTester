@@ -1,0 +1,40 @@
+[
+  {
+    "width": 1100,
+    "height": 800,
+    "range": {
+      "from": "2005-06-01",
+      "to": "2005-06-08"
+    },
+    "symbol": "EURUSD",
+    "sessionId": "74503d4c-fad4-41e9-aedc-243816472d57",
+    "closedPositions": 1,
+    "remainingPositions": 1,
+    "restoredReplayTimestamp": 1117584120000,
+    "keyboardAdvancedTo": 1117587540000,
+    "historyRequests": 1,
+    "externalRequests": [],
+    "pageErrors": [],
+    "horizontalOverflow": false,
+    "sessionDirectory": "/tmp/forextester-local-browser-1100-tU7Jls"
+  },
+  {
+    "width": 1440,
+    "height": 1000,
+    "range": {
+      "from": "2005-06-01",
+      "to": "2005-06-08"
+    },
+    "symbol": "EURUSD",
+    "sessionId": "811e258f-6345-4326-9352-d8b63cc92c4f",
+    "closedPositions": 1,
+    "remainingPositions": 1,
+    "restoredReplayTimestamp": 1117584120000,
+    "keyboardAdvancedTo": 1117587540000,
+    "historyRequests": 1,
+    "externalRequests": [],
+    "pageErrors": [],
+    "horizontalOverflow": false,
+    "sessionDirectory": "/tmp/forextester-local-browser-1440-UBbZwy"
+  }
+]

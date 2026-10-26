@@ -3,7 +3,7 @@ import { accountRiskError, exceedsRisk } from './risk.js'
 import { commissionConfigError, perSideCommissionUsd } from './commissions.js'
 import { combinedRisk, grossPnl, type TradingState } from './trading.js'
 import { createEquityLedger, type EquityLedger, type EquityPoint } from './equity.js'
-import { historyCandles, isSinglePrice, parseHistory, TIMEFRAMES, validateDateRange } from './history.js'
+import { historyCandles, isSinglePrice, isLocalForex, isFuturesHistory, parseHistory, TIMEFRAMES, validateDateRange } from './history.js'
 import { PREROLL_DAYS, replayStartIndex, type LoadedHistory } from './historyLoader.js'
 import { defaultIndicatorSettings, validateIndicatorSettings } from './indicatorSettings.js'
 import { RECORD_VERSION, type EquitySummary, type SessionRecord } from './sessionTypes.js'
@@ -34,7 +34,8 @@ export function validatedHistory(value: LoadedHistory): LoadedHistory {
 // Explicit little-endian IEEE-754 numbers, side lengths and UTC range form the
 // canonical identity. Both independent sides, including gaps, participate.
 export async function historyFingerprint(history: LoadedHistory): Promise<string> {
-  if (isSinglePrice(history)) return sha256(JSON.stringify({ format: 'single-history-v1', source: history.source, symbol: history.symbol, dataset: history.dataset,
+  if (isLocalForex(history)) return sha256(JSON.stringify({ fingerprintVersion: 'local-forex-fingerprint-v1', ...validatedHistory(history) }))
+  if (isFuturesHistory(history)) return sha256(JSON.stringify({ format: 'single-history-v1', source: history.source, symbol: history.symbol, dataset: history.dataset,
     schema: history.schema, continuousSymbol: history.continuousSymbol, stypeIn: history.stypeIn, normalizationVersion: history.normalizationVersion,
     from: history.from, tradingFrom: history.tradingFrom, to: history.to, contracts: history.contracts, candles: history.candles }))
   const prefix = new TextEncoder().encode(`EURUSD/M1/v1/${history.from}/${history.tradingFrom}/${history.to}/`)
@@ -101,7 +102,7 @@ function validateTrading(state: TradingState) {
   requireValid(!exceedsRisk(risk.usedUsd, risk.maximumUsd))
   if (clock === null) requireValid(!entries.length && !state.setups.length && state.quote === null)
   else {
-    requireValid(state.quote && ('priceModel' in state.quote ? state.quote.priceModel === 'single' && state.symbol === '6E' && state.quote.trade : state.quote.bid))
+    requireValid(state.quote && ('priceModel' in state.quote ? state.quote.priceModel === 'single' && (state.symbol === '6E' || state.symbol === 'EURUSD' && state.executionModel === 'single-price-m1-v1') && state.quote.trade : state.quote.bid))
     for (const bar of ['priceModel' in state.quote! ? state.quote.trade : state.quote!.bid, 'priceModel' in state.quote! ? null : state.quote!.ask]) if (bar) requireValid(bar.timestamp === clock &&
       [bar.open, bar.high, bar.low, bar.close].every(positive) && bar.low <= Math.min(bar.open, bar.close) && bar.high >= Math.max(bar.open, bar.close))
   }
@@ -158,12 +159,13 @@ export async function validateRecord(record: SessionRecord): Promise<void> {
 export function validateHistoryCheckpoint(record: SessionRecord, history: LoadedHistory) {
   const { replay, trading } = record.checkpoint
   requireValid(history.tradingFrom === record.range.from && history.to === record.range.to && historyCandles(history).length === record.totalCandles && history.symbol === record.symbol)
+  requireValid(isLocalForex(history) ? trading.executionModel === history.executionModel : trading.executionModel === undefined)
   requireValid(replay.startIndex === replayStartIndex(historyCandles(history), replay.startTimestamp))
   if (replay.started) {
     const bid = historyCandles(history)[replay.index!]
     const expected = isSinglePrice(history) ? { priceModel: 'single', trade: bid } : { bid, ask: history.ask.find((bar) => bar.timestamp === replay.timestamp) ?? null }
     requireValid(bid?.timestamp === replay.timestamp && JSON.stringify(trading.quote) === JSON.stringify(expected))
-    if (isSinglePrice(history)) requireValid(history.candles.slice(replay.startIndex, replay.index! + 1).every(bar => bar.instrumentId === history.candles[replay.startIndex].instrumentId))
+    if (isFuturesHistory(history)) requireValid(history.candles.slice(replay.startIndex, replay.index! + 1).every(bar => bar.instrumentId === history.candles[replay.startIndex].instrumentId))
   }
 }
 

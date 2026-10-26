@@ -40,7 +40,7 @@ vi.mock('lightweight-charts', () => ({
     }
     }
     return {
-      addSeries: vi.fn(makeSeries), removeSeries: vi.fn(), remove: vi.fn(),
+      applyOptions: vi.fn(), addSeries: vi.fn(makeSeries), removeSeries: vi.fn(), remove: vi.fn(),
       panes: () => [{ setStretchFactor: vi.fn() }, { setStretchFactor: vi.fn() }],
       timeScale: () => scale,
       subscribeCrosshairMove: vi.fn(), unsubscribeCrosshairMove: vi.fn(),
