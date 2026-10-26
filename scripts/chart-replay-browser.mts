@@ -116,7 +116,7 @@ try {
     await writeFile(`/tmp/task19-${label}.json`, JSON.stringify(results, null, 2))
     assert.ok(observations > 0); console.log(JSON.stringify({ phase: 'app', days, scenario, observations, elapsed, pauseMs }))
     if (days === 90 && scenario === 'C') {
-      await page.getByRole('button', { name: 'Next Candle', exact: true }).click()
+      await page.getByRole('button', { name: 'Next Min', exact: true }).click()
       assert.equal(Number((await page.locator('[aria-label="Replay progress"]').textContent())!.split('/')[0]), Number(after!.split('/')[0]) + 1)
       await page.getByRole('button', { name: 'Save now', exact: true }).click(); await page.locator('.session-status strong').filter({ hasText: /^Saved$/ }).waitFor()
       for (const width of [1440, 1100]) { await page.setViewportSize({ width, height: 1000 }); await page.screenshot({ path: `/tmp/task19-${label}-${width}.png`, fullPage: true }); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width) }

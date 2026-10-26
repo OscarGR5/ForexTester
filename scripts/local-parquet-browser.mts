@@ -72,14 +72,14 @@ try {
     await page.getByLabel('SL price',{exact:true}).fill(stop.toFixed(7))
     await page.getByRole('button',{name:'Confirm order',exact:true}).click()
    }
-   await page.getByRole('button',{name:'Next Candle',exact:true}).click()
+   await page.getByRole('button',{name:'Next Min',exact:true}).click()
    record=await saved(r=>r.checkpoint.trading.positions.length===2);assert.equal(record.checkpoint.trading.positions.length,2)
    const pnlBefore=record.checkpoint.trading
    assert(pnlBefore.positions.every(p=>p.entryCommissionUsd>0 && p.lots>0))
    await page.screenshot({path:`${output}/trading-${width}.png`,fullPage:true})
    const firstId=record.checkpoint.trading.positions[0].id
    await page.getByRole('button',{name:`Close ${firstId}`,exact:true}).click()
-   await page.getByRole('button',{name:'Next Candle',exact:true}).click()
+   await page.getByRole('button',{name:'Next Min',exact:true}).click()
    record=await saved(r=>r.checkpoint.trading.closed.length===1);assert.equal(record.checkpoint.trading.closed.length,1);assert.equal(record.checkpoint.trading.positions.length,1)
    const beforeFinish=record.checkpoint
    await page.getByRole('button',{name:'Finish backtest',exact:true}).click()

@@ -126,7 +126,7 @@ try {
   assert.deepEqual(restored.checkpoint.trading, before.checkpoint.trading); assert.deepEqual(restored.checkpoint.equity, before.checkpoint.equity)
   evidence.checks.legacyFinishedRestorationAndDeterminism = true
   await button('Return to charts').click(); await page.locator('.phase-trading').waitFor(); await saved()
-  assert.equal(await button('Play').isDisabled(), true); assert.equal(await button('Next Candle').isDisabled(), true)
+  assert.equal(await button('Play').isDisabled(), true); assert.equal(await button('Next Min').isDisabled(), true)
   assert.deepEqual((await record(fixtures.populated.id)).checkpoint.replay, restored.checkpoint.replay)
   await button('Review Results').click(); await page.locator('.phase-finished').waitFor(); await saved()
   evidence.checks.completeHistoryChartReview = true
@@ -200,7 +200,7 @@ try {
   await page.locator('.phase-trading').waitFor(); await saved()
   assert.equal(await page.getByLabel('Replay status', { exact: true }).innerText(), 'Paused')
   assert.deepEqual((await record(fixtures.unfinished.id)).checkpoint.trading, resumed.checkpoint.trading)
-  await button('Next Candle').click(); await saved()
+  await button('Next Min').click(); await saved()
   const advanced = await record(fixtures.unfinished.id)
   assert.equal(advanced.checkpoint.executionCursor, resumed.checkpoint.executionCursor + 1)
   assert.equal(advanced.checkpoint.equity.count, resumed.checkpoint.equity.count + 1)

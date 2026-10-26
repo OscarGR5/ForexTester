@@ -1,6 +1,9 @@
 import '../backend/src/environment.js'
 import assert from 'node:assert/strict'
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
+import { setTimeout as delay } from 'node:timers/promises'
+import { nextCandleIndex } from '../frontend/src/candleNavigation.js'
+import { historyCandles } from '../frontend/src/history.js'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { createServer } from 'vite'
@@ -66,6 +69,45 @@ try {
       await page.locator('.chart-pane').nth(1).waitFor()
       assert.deepEqual(await timeframes(), ['H4', 'D1'])
       assert.equal(await checked('Chart 1 Ichimoku'), true); assert.equal(await checked('Chart 2 Ichimoku'), true)
+      const saved = async (timestamp?: number) => {
+        for (let attempt = 0; attempt < 400; attempt++) {
+          const record = (await storage.list()).sessions[0]
+          if (await page.locator('.save-state').textContent() === 'Saved' && record?.checkpoint.lifecycle === 'trading' &&
+            (timestamp === undefined || record.checkpoint.replay.timestamp === timestamp)) return record
+          await delay(25)
+        }
+        throw Error('Replay checkpoint did not match the displayed navigation')
+      }
+      let checkpoint = await saved()
+      const observations = historyCandles(await storage.getHistory(checkpoint.historyId))
+      for (const focused of [0, 1]) {
+        await page.locator('.chart-pane').nth(focused).locator('.chart-canvas').click({ position: { x: 150, y: 100 } })
+        const before = checkpoint.checkpoint.replay.index!, expected = observations[before + 1].timestamp
+        await page.keyboard.press('Control+Shift+ArrowRight')
+        checkpoint = await saved(expected)
+        assert.equal(checkpoint.checkpoint.replay.index, before + 1)
+        assert.deepEqual(await timeframes(), ['H4', 'D1'])
+        assert.equal(await page.locator('.chart-pane').nth(focused).getAttribute('data-active'), 'true')
+        await page.keyboard.press('Control+Shift+ArrowLeft')
+        assert((await page.locator('.history-review').innerText()).includes(new Date(observations[before].timestamp).toISOString().slice(0, 16).replace('T', ' ')))
+        assert.equal(await page.getByRole('button', { name: 'Next Min', exact: true }).isDisabled(), true)
+        const reviewed = await saved(expected)
+        assert.deepEqual(reviewed.checkpoint.trading, checkpoint.checkpoint.trading)
+        assert.equal(reviewed.checkpoint.executionCursor, checkpoint.checkpoint.executionCursor)
+        await page.keyboard.press('Control+Shift+ArrowRight')
+        await page.locator('.history-review').waitFor({ state: 'hidden' })
+      }
+      const beforeButton = checkpoint.checkpoint.replay.index!
+      await page.getByRole('button', { name: 'Next Min', exact: true }).click()
+      checkpoint = await saved(observations[beforeButton + 1].timestamp)
+      await page.locator('.chart-pane').first().locator('.chart-canvas').click({ position: { x: 150, y: 100 } })
+      const expectedH4 = nextCandleIndex(observations, checkpoint.checkpoint.replay.index!, 'H4')
+      await page.keyboard.press('Shift+ArrowRight')
+      checkpoint = await saved(observations[expectedH4].timestamp)
+      await page.getByLabel('Execution details', { exact: true }).click()
+      assert((await page.locator('.execution-popover').innerText()).includes('Ctrl + Shift + Left/Right'))
+      assert((await page.locator('.execution-popover').innerText()).includes('does not rewind trade execution'))
+      await page.getByLabel('Execution details', { exact: true }).click()
       await page.screenshot({ path: `${output}/charts-2-${width}.png`, fullPage: true })
       const two = await page.locator('.chart-pane').evaluateAll(panes => panes.map(pane => pane.getBoundingClientRect().toJSON()))
       assert(Math.abs(two[0].y - two[1].y) < 2 && two[1].x > two[0].x)
@@ -87,7 +129,7 @@ try {
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
       const paidRequests = requests.filter(url => /hist\.databento|\/history\/(download|estimate)|pricing|purchase/i.test(url))
       assert.equal(overflow, false); assert.deepEqual(externalRequests, []); assert.deepEqual(paidRequests, []); assert.deepEqual(pageErrors, [])
-      reports.push({ width, height, setupDefaults: { commission: 7, chartCount: 2 }, presets: [7, 30, 90, 180, 365], randomRangeHistoryRequestsBeforeStart: 0,
+      reports.push({ width, height, setupDefaults: { commission: 7, chartCount: 2 }, presets: [7, 30, 90, 180, 365], randomRangeHistoryRequestsBeforeStart: 0, m1Shortcuts: { focusedTimeframes: ['H4', 'D1'], reviewPreservesExecution: true, nextMinAdvancesOneObservation: true, shiftH4Unchanged: true },
         layouts: { one: ['D1'], two: ['H4', 'D1'], three: ['M5', 'H4', 'H1'] }, customizationRestored: { one: ['H1'], two: ['H4', 'D1'] },
         localHistoryRequests: requests.filter(url => url.includes('/api/history?')).length, paidRequests, externalRequests, pageErrors, horizontalOverflow: overflow })
     } catch (error) {
