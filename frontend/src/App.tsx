@@ -303,6 +303,24 @@ export function App() {
   const chartLayout = <fieldset className="layout-controls"><legend>Charts</legend>{[1,2,3].map(count=><label key={count}><input type="radio" name="chart-count" value={count} checked={chartCount === count} onChange={()=>{ synchronizer.deactivate(); setChartCount(count) }}/>{count}</label>)}</fieldset>
   const pnlDisplay = <div className={`account-pnl ${pnl && Math.abs(pnl.usd) >= 0.005 ? pnl.usd > 0 ? 'positive' : 'negative' : ''}`} aria-label="Account PnL"><span>Account PnL</span><strong>{pnl ? `$${pnl.usd.toFixed(2)} · ${pnl.percent.toFixed(2)}%` : 'PnL unavailable'}</strong></div>
   const workspaceDisabled = !sessions.initialized || sessions.busy || sessions.conflict || sessions.awaitingChoice || finishing
+  useEffect(() => {
+    const enter = (event: KeyboardEvent) => {
+      if (event.key !== 'Enter' || event.repeat || event.ctrlKey || event.altKey || event.metaKey || event.shiftKey || event.isComposing || event.defaultPrevented) return
+      if (lifecycle !== 'trading' || workspaceDisabled || manage || stopPreview || status !== 'ready' || confirming || paidPending || pendingStart || replay.playing || draftInvalid || !draft || draft.price === null) return
+      if (document.querySelector('dialog[open], [role="dialog"], [aria-modal="true"], .indicator-controls[open], .execution-details[open], .stop-selector')) return
+      const interactive = (target: EventTarget | null) => {
+        if (!(target instanceof Element)) return false
+        // Only the dedicated draft input opts into Enter confirmation.
+        if (target.matches('.stop-placement input[data-draft-sl-price]:not(:disabled)')) return false
+        return !!target.closest('button, input, select, textarea, a[href], summary, [contenteditable]:not([contenteditable="false"]), [role="button"], [role="link"], [role="checkbox"], [role="radio"], [role="switch"], [role="tab"], [role="menuitem"], [role="combobox"], [role="listbox"], [role="slider"], [role="spinbutton"]')
+      }
+      if (interactive(event.target) || interactive(document.activeElement)) return
+      event.preventDefault()
+      confirmDraft()
+    }
+    window.addEventListener('keydown', enter)
+    return () => window.removeEventListener('keydown', enter)
+  })
   return <main className={`app-shell phase-${lifecycle}`}>
     <header className="app-header"><h1>ForexTester</h1><span className="header-session"><span className="session-name">{sessions.name}</span> <span className="save-state">{history ? sessions.saveStatus : 'Not started'}</span></span>
       {lifecycle === 'trading' && <details ref={executionDetails} className="execution-details"><summary aria-label="Execution details" title="Execution details"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v2"/></svg></summary><div className="execution-popover">

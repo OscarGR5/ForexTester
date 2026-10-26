@@ -6,6 +6,7 @@
     "backend"
   ],
   "scripts": {
+    "dev": "concurrently --kill-others --success all --names backend,frontend --prefix-colors blue,magenta \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:frontend": "npm run dev --workspace frontend",
     "dev:backend": "npm run dev --workspace backend",
     "typecheck": "npm run typecheck --workspaces",
@@ -13,6 +14,7 @@
     "test": "vitest run"
   },
   "devDependencies": {
+    "concurrently": "^10.0.6",
     "fake-indexeddb": "^6.2.6",
     "typescript": "^7.0.2",
     "vitest": "^5.0.5"
