@@ -510,8 +510,10 @@ button:disabled { opacity: 0.45; cursor: default; }
 .results-unit-toggle button[aria-pressed='true'] { background: #2a4955; border-color: #85c8d4; z-index: 1; }
 .results-timeline, .results-r-chart { display: block; width: 100%; height: auto; background: #131722; overflow: visible; }
 .results-timeline text, .results-r-chart text { font-family: Inter, system-ui, sans-serif; font-size: 10px; fill: #b2b5be; }
-.results-equity-line, .results-peak-line, .results-start-line { fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-.results-equity-line { stroke: #75c4b5; }
+.results-balance-line, .results-equity-line, .results-peak-line, .results-start-line { fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.results-balance-line { stroke: #75c4b5; stroke-width: 2.8; }
+.results-equity-line { stroke: #a7accf; }
+.results-equity-dot { fill: #a7accf; }
 .results-peak-line { stroke: #e2a2a6; }
 .results-start-line { stroke: #85c8d4; }
 .results-gap-bridge { stroke-dasharray: 3 4; stroke-opacity: .65; }
@@ -524,6 +526,8 @@ button:disabled { opacity: 0.45; cursor: default; }
 .results-chart-legend span { display: flex; align-items: center; gap: 6px; }
 .results-chart-legend span::before { content: ''; width: 18px; border-top: 2px solid #e2a2a6; }
 .results-chart-legend .results-start-legend::before { border-color: #85c8d4; }
+.results-chart-legend .results-balance-legend::before { border-color: #75c4b5; border-top-width: 3px; }
+.results-chart-legend .results-equity-legend::before { border-color: #a7accf; }
 .results-r-positive { fill: #75c4b5; }
 .results-r-negative { fill: #e2a2a6; }
 .results-r-zero { fill: #b2b5be; }

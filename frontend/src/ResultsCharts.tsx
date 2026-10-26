@@ -1,7 +1,7 @@
 import { memo, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { netR, type Observation } from './analytics'
 import type { EquityLedger, EquityPoint } from './equity'
-import { downsampleEquity, equityObservations, equityWindow, equityWindowStart, flatEquityGaps, type ExecutedInterval } from './equityDisplay'
+import { continuousCashGaps, downsampleEquity, equityObservations, equityWindow, equityWindowStart, flatEquityGaps, type ExecutedInterval } from './equityDisplay'
 import { monthlyPerformance, returnPercent, startingDeficit } from './resultsAnalytics'
 import { decimal, percent, profitFactor, rValue, usd } from './resultsFormatting'
 import { tradingTime } from './trading'
@@ -34,26 +34,29 @@ function useWidth() {
 
 // Two bounded SVG paths per series. Bridges join real endpoints only; they
 // never become observations, hover targets, or inputs to financial calculations.
-export function timelinePath(points: readonly EquityPoint[], value: (p: EquityPoint) => number | null, x: (timestamp: number) => number, y: (value: number) => number, flatGaps?: ReadonlySet<number>) {
-  let previous: { coordinate: string } | null = null
+export function timelinePath(points: readonly EquityPoint[], value: (p: EquityPoint) => number | null, x: (timestamp: number) => number, y: (value: number) => number, flatGaps?: ReadonlySet<number>, series: 'equity' | 'balance' = 'equity') {
+  let previous: { coordinate: string; value: number } | null = null
   let missing = false
   const solid: string[] = [], bridges: string[] = []
   for (const point of points) {
     const v = value(point)
     if (point.clockGap && !flatGaps?.has(point.timestamp)) missing = true
-    if (point.equityUsd === null || !Number.isFinite(point.equityUsd) || v === null || !Number.isFinite(v)) {
+    const available = series === 'balance' ? Number.isFinite(point.cashUsd) : point.equityUsd !== null && Number.isFinite(point.equityUsd)
+    if (!available || v === null || !Number.isFinite(v)) {
       missing = true
       continue
     }
     const coordinate = `${x(point.timestamp).toFixed(2)},${y(v).toFixed(2)}`
     if (previous && missing) {
-      bridges.push(`M${previous.coordinate} L${coordinate}`)
+      // Unknown cash intervals cannot locate a changed balance in time. Only
+      // equal endpoints get an estimated horizontal bridge, never a cash ramp.
+      if (series !== 'balance' || previous.value === v) bridges.push(`M${previous.coordinate} L${coordinate}`)
       solid.push(`M${coordinate} l0,0`)
     } else {
-      solid.push(`${previous ? 'L' : 'M'}${coordinate}`)
+      solid.push(previous && series === 'balance' ? `H${x(point.timestamp).toFixed(2)} V${y(v).toFixed(2)}` : `${previous ? 'L' : 'M'}${coordinate}`)
       if (!previous) solid.push('l0,0')
     }
-    previous = { coordinate }
+    previous = { coordinate, value: v }
     missing = false
   }
   return { solid: solid.join(' '), bridges: bridges.join(' ') }
@@ -72,9 +75,10 @@ export function nearestObservation(points: readonly EquityPoint[], timestamp: nu
   return Math.abs(timestamp - previous.timestamp) < Math.abs(next.timestamp - timestamp) ? previous : next
 }
 
-const Timeline = memo(function Timeline({ points, domainStart, flatGaps, width, referenceBalance, mode, unit, hoverTime, onHover }: {
+const Timeline = memo(function Timeline({ points, domainStart, flatGaps, cashGaps, width, referenceBalance, mode, unit, hoverTime, onHover }: {
   points: readonly EquityPoint[]; width: number; referenceBalance: number; mode: 'equity' | 'drawdown'; unit: 'percent' | 'usd'
   flatGaps: ReadonlySet<number>; domainStart: number
+  cashGaps?: ReadonlySet<number>
   hoverTime: number | null; onHover: (timestamp: number | null) => void
 }) {
   const height = mode === 'equity' ? 254 : 208, left = 80, right = 16, top = 16, bottom = 36
@@ -85,17 +89,19 @@ const Timeline = memo(function Timeline({ points, domainStart, flatGaps, width, 
     const value = (p: EquityPoint) => mode === 'drawdown' ? p.drawdownPercent === null ? null : -p.drawdownPercent
       : unit === 'usd' ? p.equityUsd : returnPercent(p.equityUsd, referenceBalance)
     const deficit = (p: EquityPoint) => { const d = startingDeficit(p, referenceBalance); return d === null ? null : -d }
+    const balance = (p: EquityPoint) => unit === 'usd' ? p.cashUsd : returnPercent(p.cashUsd, referenceBalance)
     const baseline = mode === 'equity' && unit === 'usd' ? referenceBalance : 0
     let min = baseline, max = baseline
-    for (const p of points) for (const v of mode === 'drawdown' ? [value(p), deficit(p)] : [value(p)]) {
+    for (const p of points) for (const v of mode === 'drawdown' ? [value(p), deficit(p)] : [value(p), balance(p)]) {
       if (v !== null && Number.isFinite(v)) { min = Math.min(min, v); max = Math.max(max, v) }
     }
     const padding = (max - min || (unit === 'usd' && mode === 'equity' ? Math.max(1, Math.abs(referenceBalance) * .01) : 1)) * .08
     min -= padding; max += mode === 'drawdown' ? 0 : padding
     const y = (v: number) => top + (max - v) / (max - min) * (height - top - bottom)
     return { min, max, baseline, y, primary: timelinePath(points, value, x, y, flatGaps),
+      balance: mode === 'equity' ? timelinePath(points, balance, x, y, cashGaps, 'balance') : null, balanceValue: balance,
       secondary: mode === 'drawdown' ? timelinePath(points, deficit, x, y, flatGaps) : null, value }
-  }, [points, domainStart, flatGaps, width, referenceBalance, mode, unit])
+  }, [points, domainStart, flatGaps, cashGaps, width, referenceBalance, mode, unit])
   const point = hoverTime === null ? null : points.find(p => p.timestamp === hoverTime) ?? null
   const format = mode === 'equity' && unit === 'usd' ? usd : percent
   const onKeyDown = (event: KeyboardEvent<SVGSVGElement>) => {
@@ -109,7 +115,7 @@ const Timeline = memo(function Timeline({ points, domainStart, flatGaps, width, 
   if (!points.length) return <p className="results-chart-empty">No M1 equity observations recorded.</p>
   return <>
     <svg className="results-timeline" viewBox={`0 0 ${width} ${height}`} role="img" tabIndex={0}
-      aria-label={mode === 'equity' ? `Account equity over UTC time in ${unit === 'usd' ? 'USD' : 'net return percent'}. Use arrow keys to inspect observations.` : 'Drawdown comparison over UTC time. Negative percentages below peak and starting balance. Use arrow keys to inspect observations.'}
+      aria-label={mode === 'equity' ? `Balance and equity over UTC time in ${unit === 'usd' ? 'USD' : 'net return percent'}. Use arrow keys to inspect observations.` : 'Drawdown comparison over UTC time. Negative percentages below peak and starting balance. Use arrow keys to inspect observations.'}
       onKeyDown={onKeyDown} onFocus={() => onHover(hoverTime ?? last)} onBlur={() => onHover(null)} onPointerLeave={() => onHover(null)}
       onPointerMove={event => {
         const box = event.currentTarget.getBoundingClientRect()
@@ -122,6 +128,10 @@ const Timeline = memo(function Timeline({ points, domainStart, flatGaps, width, 
         return <g key={ratio}><line className="results-gridline" x1={left} x2={width - right} y1={y} y2={y} /><text x={left - 10} y={y + 4} textAnchor="end">{format(value)}</text></g>
       })}
       <line className="chart-baseline" x1={left} x2={width - right} y1={geometry.y(geometry.baseline)} y2={geometry.y(geometry.baseline)} />
+      {geometry.balance && <>
+        <path className="results-balance-line" d={geometry.balance.solid} />
+        <path className="results-balance-line results-gap-bridge" d={geometry.balance.bridges} />
+      </>}
       <path className={mode === 'equity' ? 'results-equity-line' : 'results-peak-line'} d={geometry.primary.solid} />
       <path className={`${mode === 'equity' ? 'results-equity-line' : 'results-peak-line'} results-gap-bridge`} d={geometry.primary.bridges} />
       {geometry.secondary !== null && <>
@@ -129,12 +139,14 @@ const Timeline = memo(function Timeline({ points, domainStart, flatGaps, width, 
         <path className="results-start-line results-gap-bridge" d={geometry.secondary.bridges} />
       </>}
       {point && <g><line className="results-crosshair" x1={x(point.timestamp)} x2={x(point.timestamp)} y1={top} y2={height - bottom} />
-        {geometry.value(point) !== null && <circle className={mode === 'equity' ? 'net-point' : 'results-peak-dot'} cx={x(point.timestamp)} cy={geometry.y(geometry.value(point)!)} r="3" />}</g>}
+        {mode === 'equity' && geometry.balanceValue(point) !== null && Number.isFinite(geometry.balanceValue(point)) && <circle className="net-point" cx={x(point.timestamp)} cy={geometry.y(geometry.balanceValue(point)!)} r="4" />}
+        {geometry.value(point) !== null && Number.isFinite(geometry.value(point)) && <circle className={mode === 'equity' ? 'results-equity-dot' : 'results-peak-dot'} cx={x(point.timestamp)} cy={geometry.y(geometry.value(point)!)} r={mode === 'equity' ? 2.5 : 3} />}</g>}
       <text x={left} y={height - 10}>{new Date(first).toISOString().slice(0, 10)}</text>
       <text x={width - right} y={height - 10} textAnchor="end">{new Date(last).toISOString().slice(0, 16).replace('T', ' ')} UTC</text>
     </svg>
     <div className="results-chart-readout" aria-live="polite" aria-atomic="true">
-      {point ? <><time>{tradingTime(point.timestamp)}</time><span>Equity {usd(point.equityUsd)} · Return {percent(returnPercent(point.equityUsd, referenceBalance), true)} · Peak DD {percent(point.drawdownPercent)} · Below start {percent(startingDeficit(point, referenceBalance))}</span></>
+      {point ? <><time>{tradingTime(point.timestamp)}</time>{mode === 'equity' ? <span>Balance {usd(point.cashUsd)} ({percent(returnPercent(point.cashUsd, referenceBalance), true)}) · Equity {usd(point.equityUsd)} ({percent(returnPercent(point.equityUsd, referenceBalance), true)}) · Floating PnL {usd(point.equityUsd === null ? null : point.equityUsd - point.cashUsd, true)}</span>
+        : <span>Equity {usd(point.equityUsd)} · Return {percent(returnPercent(point.equityUsd, referenceBalance), true)} · Peak DD {percent(point.drawdownPercent)} · Below start {percent(startingDeficit(point, referenceBalance))}</span>}</>
         : <span>Hover or focus the chart and use arrow keys to inspect M1 observations.</span>}
     </div>
   </>
@@ -186,13 +198,15 @@ export const ResultsCharts = memo(function ResultsCharts({ ledger, positions, re
   const domainStart = useMemo(() => equityWindowStart(fullPoints, positions), [fullPoints, positions])
   const window = useMemo(() => equityWindow(fullPoints, positions), [fullPoints, positions])
   const flatGaps = useMemo(() => flatEquityGaps(window, positions), [window, positions])
+  const cashGaps = useMemo(() => continuousCashGaps(window, positions), [window, positions])
   const points = useMemo(() => downsampleEquity(window, width), [window, width])
   const months = useMemo(() => monthlyPerformance(observations, referenceBalance, start, endpoint), [observations, referenceBalance, start, endpoint])
   return <div className="results-performance-grid">
-    <section className="results-chart-panel results-account-chart" aria-label="Account Equity"><div ref={ref}>
-      <div className="results-panel-heading"><h3>Account Equity <Help text="M1 mark-to-market equity includes incurred commissions and available unrealized PnL. Return uses fixed initial capital. Lines connect recorded values directly. Dashed bridges span missing marks or clock gaps with exposure; confirmed flat account values connect solidly. Bridges contain no intermediate valuations. The view starts the UTC day before the first fill. Full-resolution observations determine every drawdown KPI." /></h3>
-        <div className="results-unit-toggle" role="group" aria-label="Equity chart units"><button aria-pressed={unit === 'percent'} onClick={() => setUnit('percent')}>%</button><button aria-pressed={unit === 'usd'} onClick={() => setUnit('usd')}>USD</button></div></div>
-      <Timeline points={points} domainStart={domainStart} flatGaps={flatGaps} width={width} referenceBalance={referenceBalance} mode="equity" unit={unit} hoverTime={hoverTime} onHover={setHoverTime} />
+    <section className="results-chart-panel results-account-chart" aria-label="Balance & Equity"><div ref={ref}>
+      <div className="results-panel-heading"><h3>Balance &amp; Equity <Help text="Balance is realized cash after incurred entry and exit commissions, stepping at recorded M1 executions. Equity adds available unrealized PnL. Both returns use fixed initial capital. Cash stays flat across closures with no intermediate executions. Dashed bridges estimate gaps between real endpoints, never intermediate valuations; unknown cash changes are disconnected. Missing equity and floating PnL remain N/A. The view starts the UTC day before the first fill. KPIs use the full ledger." /></h3>
+        <div className="results-unit-toggle" role="group" aria-label="Balance and equity chart units"><button aria-pressed={unit === 'percent'} onClick={() => setUnit('percent')}>%</button><button aria-pressed={unit === 'usd'} onClick={() => setUnit('usd')}>USD</button></div></div>
+      <div className="results-chart-legend"><span className="results-balance-legend">Balance</span><span className="results-equity-legend">Equity</span></div>
+      <Timeline points={points} domainStart={domainStart} flatGaps={flatGaps} cashGaps={cashGaps} width={width} referenceBalance={referenceBalance} mode="equity" unit={unit} hoverTime={hoverTime} onHover={setHoverTime} />
     </div></section>
     <SetupRChart observations={observations} />
     <section className="results-chart-panel" aria-label="Drawdown Comparison">
