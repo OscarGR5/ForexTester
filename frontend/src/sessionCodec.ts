@@ -28,7 +28,7 @@ export async function recordDigest(record: Omit<SessionRecord, 'digest'> | Sessi
 }
 export function validatedHistory(value: LoadedHistory): LoadedHistory {
   requireValid(value && !validateDateRange({ from: value.tradingFrom, to: value.to }))
-  requireValid(typeof value.from === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value.from) && Date.parse(value.from) < Date.parse(value.tradingFrom))
+  requireValid(typeof value.from === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value.from) && Date.parse(value.from) <= Date.parse(value.tradingFrom))
   return { ...parseHistory(value, { from: value.from, to: value.to }), tradingFrom: value.tradingFrom }
 }
 // Explicit little-endian IEEE-754 numbers, side lengths and UTC range form the

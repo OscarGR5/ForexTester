@@ -10,7 +10,7 @@ import { SessionStorage } from '../backend/src/sessionStorage.js'
 
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ?? 'playwright-core')
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH ?? '/home/admin/.cache/ms-playwright/chromium-1248/chrome-linux64/chrome', headless: true, args: ['--no-sandbox'] })
-const output = 'docs/backtest-warmup-chart-defaults'
+const output = process.env.BROWSER_OUTPUT ?? 'docs/backtest-warmup-chart-defaults'
 await mkdir(output, { recursive: true })
 const reports: unknown[] = []
 
@@ -48,6 +48,11 @@ try {
       assert.equal(await page.locator('input[name="chart-count"][value="2"]').isChecked(), true)
       assert.equal(await page.getByRole('button', { name: '180 days', exact: true }).isVisible(), true)
       assert.equal(requests.filter(url => url.includes('/api/history?')).length, 0)
+      for (const days of [7, 30, 90, 180, 365]) {
+        await page.getByRole('button', { name: `${days} days`, exact: true }).click()
+        assert((await page.locator('.period-shortcuts').innerText()).includes(`${days} calendar days`))
+        assert.equal(await page.getByRole('button', { name: 'Start backtest', exact: true }).isEnabled(), true)
+      }
       await page.getByRole('button', { name: 'Random Range', exact: true }).click()
       assert((await page.locator('.period-shortcuts').innerText()).includes('120 calendar days'))
       assert.equal(requests.filter(url => url.includes('/api/history?')).length, 0)
@@ -82,7 +87,7 @@ try {
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
       const paidRequests = requests.filter(url => /hist\.databento|\/history\/(download|estimate)|pricing|purchase/i.test(url))
       assert.equal(overflow, false); assert.deepEqual(externalRequests, []); assert.deepEqual(paidRequests, []); assert.deepEqual(pageErrors, [])
-      reports.push({ width, height, setupDefaults: { commission: 7, chartCount: 2 }, randomRangeHistoryRequestsBeforeStart: 0,
+      reports.push({ width, height, setupDefaults: { commission: 7, chartCount: 2 }, presets: [7, 30, 90, 180, 365], randomRangeHistoryRequestsBeforeStart: 0,
         layouts: { one: ['D1'], two: ['H4', 'D1'], three: ['M5', 'H4', 'H1'] }, customizationRestored: { one: ['H1'], two: ['H4', 'D1'] },
         localHistoryRequests: requests.filter(url => url.includes('/api/history?')).length, paidRequests, externalRequests, pageErrors, horizontalOverflow: overflow })
     } catch (error) {

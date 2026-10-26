@@ -20,7 +20,7 @@ export function createApp(history = new LocalArchive(), _now: () => Date = () =>
       if (request.method === 'GET' && url.pathname === '/api/history') {
         if ([...url.searchParams.keys()].some(key => !['symbol','from','to','tradingFrom'].includes(key))) throw new DataError('INVALID_HISTORY_REQUEST', 'Only an installed symbol and UTC dates are accepted.')
         const from = url.searchParams.get('from') ?? '', tradingFrom = url.searchParams.get('tradingFrom') ?? ''
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(tradingFrom) || Date.parse(from) >= Date.parse(tradingFrom)) throw new DataError('INVALID_HISTORY_RANGE', 'Indicator warm-up must begin before the replay period.')
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(tradingFrom) || Date.parse(from) > Date.parse(tradingFrom)) throw new DataError('INVALID_HISTORY_RANGE', 'History must begin on or before the replay period.')
         response.end(JSON.stringify(await history.load(url.searchParams.get('symbol') ?? '', tradingFrom, url.searchParams.get('to') ?? '', from))); return
       }
       response.writeHead(404); response.end(JSON.stringify({ error: 'Not found' }))

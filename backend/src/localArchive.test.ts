@@ -82,3 +82,13 @@ it('rejects unsafe symbols, paths, schema, date ranges and unsupported USD conve
   expect((await archive.datasets()).find(d=>d.symbol==='USDJPY')?.tradingEnabled).toBe(false)
   await expect(archive.load('USDJPY','2024-02-01','2024-03-01')).rejects.toMatchObject({code:'UNSUPPORTED_TRADING_CURRENCY'})
 })
+
+it('rejects unexplained empty replay weekdays before reading a range and preserves the source', async () => {
+  const start = Date.UTC(2024, 0, 1) / 1000
+  const missing = await parquetFixture(root, 'missing-weekday', `SELECT (${start} + i * 86400)::BIGINT TS, 1.1::DOUBLE O, 1.1004::DOUBLE H, 1.0996::DOUBLE L, 1.1001::DOUBLE C FROM range(130) t(i) WHERE i != 44 AND dayofweek(to_timestamp(${start} + i * 86400) AT TIME ZONE 'UTC') NOT IN (0,6)`)
+  const original = await readFile(missing)
+  await archive.importFile(missing)
+  await expect(archive.load('EURUSD', '2024-02-01', '2024-03-01', '2024-02-01')).rejects.toMatchObject({ code: 'REPLAY_DATA_MISSING' })
+  await expect(archive.load('EURUSD', '2024-03-01', '2024-04-01', '2024-03-01')).resolves.toMatchObject({ from: '2024-03-01', to: '2024-04-01' })
+  expect(await readFile(missing)).toEqual(original)
+})

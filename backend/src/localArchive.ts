@@ -8,7 +8,7 @@ import { pipeline } from 'node:stream/promises'
 import { dataDirectory } from './sessionStorage.js'
 import { projectRoot } from './projectPaths.js'
 import { HISTORY_PREROLL_DAYS, MAX_BACKTEST_DAYS, parseHistory, type Candle, type ForexInstrument, type LocalForexHistory } from '../../frontend/src/history.js'
-import { eligibleRandomRanges } from '../../frontend/src/cacheCalendar.js'
+import { eligibleRandomRanges, rangeCoverage } from '../../frontend/src/cacheCalendar.js'
 import type { CacheCalendar, CalendarDay } from '../../frontend/src/cacheCalendar.js'
 
 import { DataError } from './historyErrors.js'
@@ -110,10 +110,13 @@ export class LocalArchive {
   }
   async load(symbol: string, tradingFrom: string, to: string, warmupFrom?: string): Promise<LocalForexHistory> {
     const start = dateMs(tradingFrom), end = dateMs(to), from = warmupFrom ?? day(start - HISTORY_PREROLL_DAYS * DAY), warmup = dateMs(from)
-    if (warmup >= start || start >= end || (end - start) / DAY > MAX_BACKTEST_DAYS || end > Date.parse(day(Date.now()))) throw new DataError('INVALID_HISTORY_RANGE', `Choose 1 to ${MAX_BACKTEST_DAYS} completed UTC replay days with warm-up before the start.`)
+    if (warmup > start || start >= end || (end - start) / DAY > MAX_BACKTEST_DAYS || end > Date.parse(day(Date.now()))) throw new DataError('INVALID_HISTORY_RANGE', `Choose 1 to ${MAX_BACKTEST_DAYS} completed UTC replay days with history beginning on or before the start.`)
     const m = await this.manifest(symbol)
     if (symbol !== 'EURUSD' || m.instrument.quoteCurrency !== 'USD') throw new DataError('UNSUPPORTED_TRADING_CURRENCY', 'USD risk sizing is enabled only for EURUSD.', 409)
     if (warmup < Math.floor(m.firstTimestamp / DAY) * DAY || end > (Math.floor(m.lastTimestamp / DAY) + 1) * DAY) throw new DataError('RANGE_UNAVAILABLE', 'Choose dates inside the installed history, including the required indicator warm-up.', 409)
+    const coverage = rangeCoverage(m.calendar, { from: tradingFrom, to }, [])
+    if (coverage.replayMissing) throw new DataError('REPLAY_DATA_MISSING', `${coverage.replayMissing} replay days have missing or unverified local observations. Choose another range.`, 409)
+    if (!coverage.replay) throw new DataError('REPLAY_DATA_MISSING', 'The selected replay period contains no trading observations.', 409)
     const sourcePath = this.source(await this.root(), m), before = await safeFile(sourcePath)
     const connection = await parquetConnection()
     try {

@@ -30,8 +30,9 @@ it('uses start-inclusive and end-exclusive replay bounds', () => {
 
 it('requires explicit calendar entries but accepts expected closure days without manufacturing bars', () => {
   const value = calendar()
-  const closure = value.days.find(day => day.date === '2023-12-24')!
-  closure.status = 'gap'; closure.observations = 0; closure.h4 = []
+  for (const closure of value.days.filter(day => new Date(day.date).getUTCDay() === 0)) {
+    closure.status = 'gap'; closure.observations = 0; closure.h4 = []
+  }
   const range = { from: '2024-01-01', to: '2024-04-01' }
   expect(rangeCoverage(value, range).missing).toBe(0)
   const missingDay = { ...value, days: value.days.filter(day => day.date !== '2023-12-23') }
@@ -95,4 +96,85 @@ it('rejects empty, reversed and oversized manual ranges without scanning', () =>
   for (const range of [{ from: '', to: '2024-01-01' }, { from: '2020-01-01', to: '2024-01-01' }, { from: '2024-01-02', to: '2024-01-01' }]) {
     expect(rangeCoverage(calendar(), range).replay).toBeNull()
   }
+})
+
+
+it('needs no preceding observations when indicators are disabled, including zero-period requirements', () => {
+  const value = calendar(120, '2024-01-01'), range = { from: value.from!, to: value.to! }
+  for (const requirements of [[], [{ timeframe: 'M1', periods: 0 }] as const]) {
+    expect(rangeCoverage(value, range, requirements)).toMatchObject({ missing: 0, warmupFrom: range.from,
+      replay: { index: 0, timestamp: Date.parse(range.from), count: 0, required: 0, timeframe: null, checks: [] } })
+    expect(automaticReplayStart(value.days[0].h4, range, requirements)?.index).toBe(0)
+    expect(cachedPreset(value, 120, undefined, requirements)).toEqual(range)
+    expect(randomCachedRange(value, () => 0, requirements)).toEqual(range)
+  }
+  expect(automaticReplayStart([], range, [])).toBeNull()
+  expect(automaticReplayStart(value.days[0].h4, { from: value.to!, to: shiftDate(value.to!, 1) }, [])).toBeNull()
+})
+
+it('restores 78 completed D1 candles when Ichimoku is enabled and removes the requirement when disabled', () => {
+  const value = calendar(200, '2024-01-01'), early = { from: '2024-01-01', to: '2024-01-08' }
+  expect(rangeCoverage(value, early, []).replay?.required).toBe(0)
+  expect(rangeCoverage(value, early).replay).toBeNull()
+  expect(rangeCoverage(value, early, []).replay?.index).toBe(0)
+  const boundary = { from: shiftDate(early.from, 78), to: shiftDate(early.from, 79) }
+  expect(rangeCoverage(value, boundary).replay).toMatchObject({ required: 78, count: 78, timeframe: 'D1' })
+  expect(rangeCoverage(value, { from: shiftDate(early.from, 77), to: boundary.from }).replay).toBeNull()
+})
+
+function weekdayCalendar(length = 400): CacheCalendar {
+  const value = calendar(length, '2024-01-01')
+  for (const day of value.days) if ([0, 6].includes(new Date(day.date).getUTCDay())) {
+    day.status = 'gap'; day.observations = 0; day.h4 = []
+  }
+  return value
+}
+
+it('accepts repeated UTC weekend closures for this archive without changing observations', () => {
+  const value = weekdayCalendar(), original = JSON.stringify(value)
+  expect(rangeCoverage(value, { from: '2024-01-01', to: '2024-04-30' }, []).replay).not.toBeNull()
+  expect(JSON.stringify(value)).toBe(original)
+})
+
+it('accepts a documented full-day weekday closure but rejects missing or unverified trading days', () => {
+  const range = { from: '2024-01-01', to: '2024-04-30' }
+  for (const evidence of [undefined, { reason: 'Holiday', source: '' }, { reason: 'Archive fixture closure', source: 'Fixture provider schedule, 2024-02-14' }]) {
+    const value = weekdayCalendar(), gap = value.days.find(day => day.date === '2024-02-14')!
+    Object.assign(gap, { status: 'gap', observations: 0, h4: [], closure: evidence })
+    const coverage = rangeCoverage(value, range, [])
+    expect(coverage.replayMissing).toBe(evidence?.source ? 0 : 1)
+    expect(Boolean(coverage.replay)).toBe(Boolean(evidence?.source))
+    if (!evidence?.source) expect(cachedPreset(value, 120, range.to, [])!.from > '2024-02-14').toBe(true)
+  }
+})
+
+it('uses this provider’s observed weekend schedule and rejects a missing Sunday when other Sundays trade', () => {
+  const value = weekdayCalendar(), sunday = value.days.find(day => day.date === '2024-01-07')!
+  Object.assign(sunday, { status: 'cached', observations: 1, h4: [bar(Date.parse(sunday.date) + 22 * 3_600_000)] })
+  expect(rangeCoverage(value, { from: '2024-01-13', to: '2024-01-16' }, []).replayMissing).toBe(1)
+  expect(rangeCoverage(value, { from: '2024-01-06', to: '2024-01-09' }, []).replayMissing).toBe(0)
+})
+
+it('keeps replay data failures distinct from gaps in indicator warm-up', () => {
+  for (const missingDate of ['2024-02-14', '2024-04-03']) {
+    const value = calendar(300, '2024-01-01')
+    Object.assign(value.days.find(day => day.date === missingDate)!, { status: 'gap', observations: 0, h4: [] })
+    const coverage = rangeCoverage(value, { from: '2024-04-01', to: '2024-04-08' })
+    expect(coverage.replay).toBeNull()
+    expect(coverage.replayMissing).toBe(missingDate === '2024-04-03' ? 1 : 0)
+    expect(coverage.warmupMissing).toBe(missingDate === '2024-02-14' ? 1 : 0)
+  }
+})
+
+it('excludes unverified windows, preserves independent intervals, and samples all eligible starts uniformly', () => {
+  const value = weekdayCalendar()
+  Object.assign(value.days.find(day => day.date === '2024-07-03')!, { status: 'gap', observations: 0, h4: [] })
+  const eligible = eligibleRandomRanges(value, 120, [])
+  expect(eligible.some(range => range.to <= '2024-07-03')).toBe(true)
+  expect(eligible.some(range => range.from > '2024-07-03')).toBe(true)
+  expect(eligible.some(range => range.from <= '2024-07-03' && range.to > '2024-07-03')).toBe(false)
+  const sample = weekdayCalendar(124), starts = eligibleRandomRanges(sample, 120, [])
+  const selected = starts.map((_, index) => randomCachedRange(sample, () => (index + .5) / starts.length, []))
+  expect(selected).toEqual(starts)
+  expect(new Set(selected.map(range => range!.from)).size).toBe(starts.length)
 })

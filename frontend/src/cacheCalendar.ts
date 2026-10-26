@@ -1,7 +1,8 @@
 import { MAX_BACKTEST_DAYS, TIMEFRAME_MS, aggregateBidCandles, type Candle, type DateRange, type Timeframe, type TradeCandle } from './history.js'
 import { shiftDate } from './workflow.js'
 
-export interface CalendarDay { date: string; status: 'cached' | 'invalid' | 'gap'; observations: number; h4: Candle[] }
+// Closure evidence belongs to this installed dataset, never to a global holiday list.
+export interface CalendarDay { date: string; status: 'cached' | 'invalid' | 'gap'; observations: number; h4: Candle[]; closure?: { reason: string; source: string } }
 export interface CacheCalendar { days: CalendarDay[]; symbol?: string; datasetId?: string; from?: string; to?: string; firstTimestamp?: number; lastTimestamp?: number; priceBasis?: 'mid' }
 export interface WarmupRequirement { timeframe: Timeframe; periods: number }
 export interface WarmupCheck extends WarmupRequirement { count: number }
@@ -10,7 +11,7 @@ export interface ReplayReadiness {
   timestamp: number
   count: number
   required: number
-  timeframe: Timeframe
+  timeframe: Timeframe | null
   warmupFrom: string
   checks: WarmupCheck[]
 }
@@ -23,6 +24,7 @@ interface PreparedCalendar {
   days: Map<string, CalendarDay>
   bars: Map<Timeframe, Candle[]>
   segmentStarts: Map<Timeframe, number[]>
+  closedWeekendDays: Set<number>
 }
 const preparedCalendars = new WeakMap<CacheCalendar, Map<string, PreparedCalendar>>()
 
@@ -47,7 +49,15 @@ function prepareCalendar(calendar: CacheCalendar, requirements: readonly WarmupR
     const aggregated = aggregateBidCandles(candles, timeframe)
     bars.set(timeframe, aggregated); starts.set(timeframe, segmentStarts(aggregated))
   }
-  const prepared = { candles, days: new Map(calendar.days.map(day => [day.date, day])), bars, segmentStarts: starts }
+  // Infer only full UTC weekend days, independently for each archive. A provider
+  // with any Sunday observations must not have an empty Sunday waved through.
+  // Weekday absence is never evidence of a holiday. Require a repeated weekend
+  // pattern, so a lone empty day cannot establish the archive's weekly schedule.
+  const closedWeekendDays = new Set([0, 6].filter(weekday => {
+    const entries = calendar.days.filter(day => new Date(day.date).getUTCDay() === weekday)
+    return entries.length > 1 && entries.every(day => day.status === 'gap' && day.observations === 0 && !day.h4.length)
+  }))
+  const prepared = { candles, days: new Map(calendar.days.map(day => [day.date, day])), bars, segmentStarts: starts, closedWeekendDays }
   const entries = preparedCalendars.get(calendar) ?? new Map<string, PreparedCalendar>()
   entries.set(key, prepared); preparedCalendars.set(calendar, entries)
   return prepared
@@ -82,7 +92,8 @@ function replayReadiness(candles: readonly Candle[], range: DateRange, requireme
     const count = end - first
     return { ...requirement, count, fromTimestamp: count >= requirement.periods ? bars[end - requirement.periods].timestamp : undefined }
   })
-  if (!checks.length || checks.some(check => check.count < check.periods || check.fromTimestamp === undefined)) return null
+  if (!checks.length) return { index, timestamp: candles[index].timestamp, count: 0, required: 0, timeframe: null, warmupFrom: range.from, checks: [] }
+  if (checks.some(check => check.count < check.periods || check.fromTimestamp === undefined)) return null
   const governing = checks.reduce((longest, check) => TIMEFRAME_MS[check.timeframe] * check.periods > TIMEFRAME_MS[longest.timeframe] * longest.periods ? check : longest)
   const earliest = Math.min(...checks.map(check => check.fromTimestamp!))
   return { index, timestamp: candles[index].timestamp, count: governing.count, required: governing.periods, timeframe: governing.timeframe,
@@ -96,25 +107,29 @@ export function automaticReplayStart(candles: readonly Candle[], range: DateRang
   return replayReadiness(candles, range, requirements)
 }
 
-function unavailable(calendar: CacheCalendar, days: ReadonlyMap<string, CalendarDay>, from: string, to: string): number {
+function unavailable(calendar: CacheCalendar, prepared: PreparedCalendar, from: string, to: string): number {
   let missing = 0
   for (let date = from; date && date < to; date = shiftDate(date, 1)) {
-    const entry = days.get(date)
-    if (!entry || entry.status === 'invalid' || calendar.firstTimestamp !== undefined && Date.parse(date) < Math.floor(calendar.firstTimestamp / 86_400_000) * 86_400_000) missing++
+    const entry = prepared.days.get(date)
+    const closure = entry?.status === 'gap' && entry.observations === 0 && !entry.h4.length &&
+      (Boolean(entry.closure?.reason.trim() && entry.closure?.source.trim()) || prepared.closedWeekendDays.has(new Date(date).getUTCDay()))
+    const cached = entry?.status === 'cached' && entry.observations > 0
+    const beforeSource = calendar.firstTimestamp !== undefined && Date.parse(date) < Math.floor(calendar.firstTimestamp / 86_400_000) * 86_400_000
+    if ((!cached && !closure) || beforeSource) missing++
   }
   return missing
 }
 
 export function rangeCoverage(calendar: CacheCalendar, range: DateRange, requirements: readonly WarmupRequirement[] = DEFAULT_WARMUP_REQUIREMENTS) {
   const length = (Date.parse(range.to) - Date.parse(range.from)) / 86_400_000
-  if (!Number.isFinite(length) || length < 1 || length > MAX_BACKTEST_DAYS) return { missing: 0, replay: null as ReplayReadiness | null, warmupFrom: null as string | null }
+  if (!Number.isFinite(length) || length < 1 || length > MAX_BACKTEST_DAYS) return { missing: 0, replayMissing: 0, warmupMissing: 0, replay: null as ReplayReadiness | null, warmupFrom: null as string | null }
   const prepared = prepareCalendar(calendar, requirements)
-  const replayMissing = unavailable(calendar, prepared.days, range.from, range.to)
-  if (replayMissing) return { missing: replayMissing, replay: null, warmupFrom: null }
+  const replayMissing = unavailable(calendar, prepared, range.from, range.to)
+  if (replayMissing) return { missing: replayMissing, replayMissing, warmupMissing: 0, replay: null, warmupFrom: null }
   const replay = replayReadiness(prepared.candles, range, requirements, prepared)
-  if (!replay) return { missing: 0, replay: null, warmupFrom: null }
-  const missing = unavailable(calendar, prepared.days, replay.warmupFrom, range.from)
-  return { missing, replay: missing ? null : replay, warmupFrom: replay.warmupFrom }
+  if (!replay) return { missing: 0, replayMissing: 0, warmupMissing: 0, replay: null, warmupFrom: null }
+  const missing = unavailable(calendar, prepared, replay.warmupFrom, range.from)
+  return { missing, replayMissing: 0, warmupMissing: missing, replay: missing ? null : replay, warmupFrom: replay.warmupFrom }
 }
 
 export function cachedPreset(calendar: CacheCalendar, days: number, selectedEnd?: string, requirements: readonly WarmupRequirement[] = DEFAULT_WARMUP_REQUIREMENTS): DateRange | null {

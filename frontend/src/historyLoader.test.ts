@@ -43,3 +43,12 @@ it('measures D1 Ichimoku readiness from completed observed bars', () => {
   expect(ichimokuWarmup(bars.slice(1), start).ready).toBe(false)
   expect(replayStartIndex([...bars, { ...bars[0], timestamp: start + 60000 }], start)).toBe(78)
 })
+
+it('loads from the replay boundary without pre-roll when no indicators require it', async () => {
+  const range = { from: '2024-01-01', to: '2024-01-02' }
+  const download = vi.fn(async full => fixtureHistory(full.from, full.to))
+  const history = await new HistoryLoader(download).load(range, new AbortController().signal, () => {}, range.from)
+  expect(download).toHaveBeenCalledExactlyOnceWith({ ...range, tradingFrom: range.from }, expect.any(AbortSignal))
+  expect(history).toMatchObject({ ...range, tradingFrom: range.from })
+  await expect(new HistoryLoader(download).load(range, new AbortController().signal, () => {}, '2024-01-02')).rejects.toThrow('on or before')
+})

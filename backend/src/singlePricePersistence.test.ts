@@ -44,3 +44,23 @@ it('saves and resumes a late checkpoint from a 365-day local-Forex session',asyn
   expect(restored.ledger.count).toBe(lateIndex-startIndex+1);expect(restored.checkpoint.equity).toEqual(equitySummary(ledger))
   expect(restored.history).toEqual(history)
 })
+
+it.each([1, 2, 3] as const)('restores a %i-chart zero-indicator session with no warm-up and preserves its commission', async chartCount => {
+  const from='2024-01-01',to='2024-01-02'
+  const history=validatedHistory({format:'local-forex-v1',source:'local-parquet',symbol:'EURUSD',resolution:'M1',datasetId:'a'.repeat(64),sourceChecksum:'a'.repeat(64),normalizationVersion:1,
+    priceModel:'single',priceBasis:'mid',executionModel:'single-price-m1-v1',timestampConvention:'utc-minute-open',instrument:{symbol:'EURUSD',baseCurrency:'EUR',quoteCurrency:'USD',pipSize:.0001,priceDecimals:7,unitsPerLot:100000},
+    from,tradingFrom:from,to,candles:Array.from({length:4},(_,index)=>({timestamp:Date.parse(from)+index*60000,open:1.1,high:1.1004,low:1.0996,close:1.1001}))})
+  const ledger=createEquityLedger(100000)
+  const workspace=sessionSimulation().snapshot().checkpoint.workspace
+  workspace.chartCount=chartCount
+  for(const pane of workspace.indicators) for(const settings of Object.values(pane)) for(const group of Object.values(settings!)) group.enabled=false
+  const snapshot:SessionSnapshot={ledger,checkpoint:{lifecycle:'setup',trading:{...createTradingState(),executionModel:'single-price-m1-v1',commission:{roundTripUsdPerLot:3.75}},equity:equitySummary(ledger),executionCursor:0,
+    replay:{started:false,index:null,timestamp:null,startIndex:0,startTimestamp:Date.parse(from),speed:1,complete:false,playing:false},workspace}}
+  const id=await historyFingerprint(history),store=new DiskSessionStore()
+  await store.cacheHistory(id,history)
+  const saved=await store.save({id:crypto.randomUUID(),name:'No indicators',createdAt:new Date().toISOString(),range:{from,to},historyId:id,totalCandles:4},snapshot,null)
+  const restored=await store.recover(saved.id)
+  expect(restored.history).toEqual(history)
+  expect(restored.checkpoint).toEqual(snapshot.checkpoint)
+  expect(restored.checkpoint.trading.commission.roundTripUsdPerLot).toBe(3.75)
+})

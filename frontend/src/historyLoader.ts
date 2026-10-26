@@ -6,15 +6,16 @@ export const PREROLL_DAYS = HISTORY_PREROLL_DAYS
 export type LoadedHistory = HistoryResponse & { tradingFrom: string }
 export interface LoadProgress { completed: number; total: number }
 
-// Read installed local observations. New callers provide the exact calendar day
-// containing the earliest required completed indicator candle.
+// Read installed observations from the exact indicator warm-up boundary, or
+// the replay boundary when no warm-up is required. Omitted bounds retain the
+// legacy pre-roll for existing callers.
 export class HistoryLoader {
   constructor(private download: (range: HistoryFetchRange, signal?: AbortSignal) => Promise<HistoryResponse> = fetchHistory) {}
   async load(range: DateRange, signal: AbortSignal, progress: (value: LoadProgress) => void, warmupFrom?: string): Promise<LoadedHistory> {
     const error = validateDateRange(range)
     if (error) throw new Error(error)
     const from = warmupFrom ?? date(Date.parse(range.from) - PREROLL_DAYS * DAY)
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || Date.parse(from) >= Date.parse(range.from)) throw new Error('Indicator warm-up must begin before the replay period.')
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !Number.isFinite(Date.parse(from)) || date(Date.parse(from)) !== from || Date.parse(from) > Date.parse(range.from)) throw new Error('History must begin on or before the replay period.')
     const full = { from, to: range.to, tradingFrom: range.from }
     progress({ completed: 0, total: 1 })
     const history = parseHistory(await this.download(full, signal), full)
