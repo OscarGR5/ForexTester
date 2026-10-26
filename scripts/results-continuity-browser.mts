@@ -61,7 +61,7 @@ try {
     for (const unit of ['percent', 'usd']) {
       if (unit === 'usd') await page.getByRole('button', { name: 'USD', exact: true }).click()
       const result = await page.locator('.results-timeline').evaluateAll(charts => charts.map(chart => {
-        const paths = [...chart.querySelectorAll('path')].map(path => ({
+        const paths = [...chart.querySelectorAll('path:not(.results-balance-line)')].map(path => ({
           d: path.getAttribute('d') ?? '', bridge: path.classList.contains('results-gap-bridge'),
           dash: getComputedStyle(path).strokeDasharray, opacity: getComputedStyle(path).strokeOpacity,
         }))

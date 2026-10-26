@@ -45,6 +45,23 @@ export function flatEquityGaps(points: readonly EquityPoint[], positions: readon
   return connected
 }
 
+// Cash is unaffected by open-position marks. A clock gap can be held flat (or
+// stepped at its right endpoint) only if no execution occurred inside it.
+export function continuousCashGaps(points: readonly EquityPoint[], positions: readonly ExecutedInterval[]): ReadonlySet<number> {
+  const executions = positions.flatMap(p => p.exitTime === undefined ? [p.entryTime] : [p.entryTime, p.exitTime]).sort((a, b) => a - b)
+  const connected = new Set<number>()
+  let cursor = 0
+  for (let index = 1; index < points.length; index++) {
+    const previous = points[index - 1], point = points[index]
+    if (!point.clockGap) continue
+    while (cursor < executions.length && executions[cursor] <= previous.timestamp) cursor++
+    if (Number.isFinite(previous.cashUsd) && Number.isFinite(point.cashUsd)
+      && !(executions[cursor] < point.timestamp)
+      && (previous.cashUsd === point.cashUsd || executions[cursor] === point.timestamp)) connected.add(point.timestamp)
+  }
+  return connected
+}
+
 export function equityObservations(ledger: EquityLedger): EquityPoint[] {
   const points: EquityPoint[] = new Array(ledger.count)
   let node = ledger.tail
@@ -53,7 +70,9 @@ export function equityObservations(ledger: EquityLedger): EquityPoint[] {
 }
 
 // Display only. Keep time-bucket endpoints and all financial extrema, plus both
-// sides of missing observations and clock gaps. The ledger remains untouched.
+// sides of missing observations, clock gaps and EVERY cash change. Transaction
+// neighbors are not bounded by pixel count: removing one would move a cash step.
+// The ledger remains untouched.
 export function downsampleEquity(points: readonly EquityPoint[], pixels: number): EquityPoint[] {
   if (points.length <= pixels * 4) return [...points]
   const first = points[0].timestamp, span = points.at(-1)!.timestamp - first || 1
@@ -67,9 +86,9 @@ export function downsampleEquity(points: readonly EquityPoint[], pixels: number)
       if (index) flush(index - 1)
       bucket = nextBucket; start = min = max = dd = cashMin = cashMax = index
     }
-    if (point.equityUsd !== null) {
-      if (points[min].equityUsd === null || point.equityUsd < points[min].equityUsd!) min = index
-      if (points[max].equityUsd === null || point.equityUsd > points[max].equityUsd!) max = index
+    if (point.equityUsd !== null && Number.isFinite(point.equityUsd)) {
+      if (points[min].equityUsd === null || !Number.isFinite(points[min].equityUsd) || point.equityUsd < points[min].equityUsd!) min = index
+      if (points[max].equityUsd === null || !Number.isFinite(points[max].equityUsd) || point.equityUsd > points[max].equityUsd!) max = index
       if ((point.drawdownUsd ?? 0) > (points[dd].drawdownUsd ?? 0)) dd = index
     }
     if (point.cashUsd < points[cashMin].cashUsd) cashMin = index
@@ -78,7 +97,8 @@ export function downsampleEquity(points: readonly EquityPoint[], pixels: number)
     // numeric marks and unavailable peak percentages at nonpositive equity.
     const valid = (value: number | null) => value !== null && Number.isFinite(value)
     if (point.clockGap || (index && (
-      valid(point.equityUsd) !== valid(points[index - 1].equityUsd)
+      point.cashUsd !== points[index - 1].cashUsd
+      || valid(point.equityUsd) !== valid(points[index - 1].equityUsd)
       || valid(point.drawdownPercent) !== valid(points[index - 1].drawdownPercent)))) {
       selected.add(index); if (index) selected.add(index - 1)
     }
