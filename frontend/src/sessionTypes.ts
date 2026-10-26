@@ -26,9 +26,14 @@ export interface WorkspaceSettings {
   chartCount: number
   timeframes: Timeframe[]
   indicators: Partial<Record<Timeframe, IndicatorSettings>>[]
+  chartModes?: Partial<Record<'1' | '2' | '3', ChartModeSettings>>
   statisticsScope: AnalyticsScope
   journalScope: AnalyticsScope
   viewport: ViewportState | null
+}
+export interface ChartModeSettings {
+  timeframes: Timeframe[]
+  indicators: Partial<Record<Timeframe, IndicatorSettings>>[]
 }
 export type EquitySummary = Omit<EquityLedger, 'tail'>
 export interface SessionCheckpoint {

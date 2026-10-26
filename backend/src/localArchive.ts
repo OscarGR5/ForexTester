@@ -8,6 +8,7 @@ import { pipeline } from 'node:stream/promises'
 import { dataDirectory } from './sessionStorage.js'
 import { projectRoot } from './projectPaths.js'
 import { HISTORY_PREROLL_DAYS, MAX_BACKTEST_DAYS, parseHistory, type Candle, type ForexInstrument, type LocalForexHistory } from '../../frontend/src/history.js'
+import { eligibleRandomRanges, rangeCoverage } from '../../frontend/src/cacheCalendar.js'
 import type { CacheCalendar, CalendarDay } from '../../frontend/src/cacheCalendar.js'
 
 import { DataError } from './historyErrors.js'
@@ -95,7 +96,7 @@ export class LocalArchive {
       const m = await this.manifest(name.slice(0, 6))
       return { symbol: m.instrument.symbol, instrument: m.instrument, datasetId: m.datasetId, priceBasis: m.priceBasis,
         firstTimestamp: m.firstTimestamp, lastTimestamp: m.lastTimestamp, rows: m.rows,
-        earliestSelectableDate: day(Math.ceil(m.firstTimestamp / DAY) * DAY + HISTORY_PREROLL_DAYS * DAY),
+        earliestSelectableDate: eligibleRandomRanges(m.calendar, 1)[0]?.from,
         latestEligibleDate: day(m.lastTimestamp), maximumCalendarDays: MAX_BACKTEST_DAYS, timezone: 'UTC',
         tradingEnabled: m.instrument.symbol === 'EURUSD' && m.instrument.quoteCurrency === 'USD' }
     }))
@@ -107,12 +108,15 @@ export class LocalArchive {
     catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { days: [] }; throw error }
     return (await this.manifest(symbol)).calendar
   }
-  async load(symbol: string, tradingFrom: string, to: string): Promise<LocalForexHistory> {
-    const start = dateMs(tradingFrom), end = dateMs(to), from = day(start - HISTORY_PREROLL_DAYS * DAY)
-    if (start >= end || (end - start) / DAY > MAX_BACKTEST_DAYS || end > Date.parse(day(Date.now()))) throw new DataError('INVALID_HISTORY_RANGE', `Choose 1 to ${MAX_BACKTEST_DAYS} completed UTC days.`)
+  async load(symbol: string, tradingFrom: string, to: string, warmupFrom?: string): Promise<LocalForexHistory> {
+    const start = dateMs(tradingFrom), end = dateMs(to), from = warmupFrom ?? day(start - HISTORY_PREROLL_DAYS * DAY), warmup = dateMs(from)
+    if (warmup > start || start >= end || (end - start) / DAY > MAX_BACKTEST_DAYS || end > Date.parse(day(Date.now()))) throw new DataError('INVALID_HISTORY_RANGE', `Choose 1 to ${MAX_BACKTEST_DAYS} completed UTC replay days with history beginning on or before the start.`)
     const m = await this.manifest(symbol)
     if (symbol !== 'EURUSD' || m.instrument.quoteCurrency !== 'USD') throw new DataError('UNSUPPORTED_TRADING_CURRENCY', 'USD risk sizing is enabled only for EURUSD.', 409)
-    if (Date.parse(from) < Math.ceil(m.firstTimestamp / DAY) * DAY || end > (Math.floor(m.lastTimestamp / DAY) + 1) * DAY) throw new DataError('RANGE_UNAVAILABLE', 'Choose dates inside the installed history, including 30 days of indicator pre-roll.', 409)
+    if (warmup < Math.floor(m.firstTimestamp / DAY) * DAY || end > (Math.floor(m.lastTimestamp / DAY) + 1) * DAY) throw new DataError('RANGE_UNAVAILABLE', 'Choose dates inside the installed history, including the required indicator warm-up.', 409)
+    const coverage = rangeCoverage(m.calendar, { from: tradingFrom, to }, [])
+    if (coverage.replayMissing) throw new DataError('REPLAY_DATA_MISSING', `${coverage.replayMissing} replay days have missing or unverified local observations. Choose another range.`, 409)
+    if (!coverage.replay) throw new DataError('REPLAY_DATA_MISSING', 'The selected replay period contains no trading observations.', 409)
     const sourcePath = this.source(await this.root(), m), before = await safeFile(sourcePath)
     const connection = await parquetConnection()
     try {

@@ -15,6 +15,7 @@ import * as replayHook from './useReplay'
 import { selectedRange, shiftDate, accountPnl } from './workflow'
 import { PreferenceTabGuard } from './uiPreferenceCleanup'
 import { uiKey } from './uiPreferences'
+import * as preferences from './uiPreferences'
 import { SessionStore } from './sessionStore'
 import { DiskSessionStore } from './diskSessionStore'
 import { recordDigest, historyFingerprint, equitySuffix } from './sessionCodec'
@@ -64,7 +65,8 @@ const coverage={symbol:'6E',resolution:'M1',providerEarliestTimestamp:'2010-06-0
 let host:HTMLDivElement,root:Root,disk:Awaited<ReturnType<typeof diskApiFixture>>,historyCalls=0
 let missingAsk=false,failHistory=false
 const beginning=Date.UTC(2024,0,9)
-const preroll=Array.from({length:90},(_,i)=>({timestamp:beginning-(90-i)*14400000,open:1.1,high:1.1002,low:1.0999,close:1.1001}))
+const presetFrom=Date.UTC(2024,0,9)
+const preroll=Array.from({length:78},(_,i)=>({timestamp:presetFrom-(78-i)*86_400_000,open:1.1,high:1.1002,low:1.0999,close:1.1001}))
 const bid=Array.from({length:12},(_,i)=>({timestamp:beginning+i*60000,open:1.1+i*.0001,close:1.1001+i*.0001,high:1.1002+i*.0001,low:i===5?1.0985:1.0999+i*.0001}))
 beforeEach(async()=>{
  disk=await diskApiFixture();historyCalls=0;missingAsk=false;failHistory=false
@@ -73,8 +75,8 @@ beforeEach(async()=>{
  vi.stubGlobal('fetch',async(path:string,options?:RequestInit)=>{
   if(path.startsWith('/api/storage'))return disk.fetch(path,options)
   if(path==='/api/history/datasets')return new Response(JSON.stringify({datasets:[{symbol:'EURUSD',tradingEnabled:true}]}))
-  if(path.startsWith('/api/history/calendar'))return new Response(JSON.stringify({days:Array.from({length:32},(_,i)=>{
-    const date=shiftDate('2023-12-10',i),bars=[...preroll,bid[0]].filter(b=>b.timestamp>=Date.parse(date)&&b.timestamp<Date.parse(shiftDate(date,1)))
+  if(path.startsWith('/api/history/calendar'))return new Response(JSON.stringify({days:Array.from({length:Math.ceil((Date.parse('2024-01-10')-preroll[0].timestamp)/86_400_000)},(_,i)=>{
+    const date=shiftDate(new Date(preroll[0].timestamp).toISOString().slice(0,10),i),bars=[...preroll,bid[0]].filter(b=>b.timestamp>=Date.parse(date)&&b.timestamp<Date.parse(shiftDate(date,1)))
     return {date,status:bars.length?'cached':'gap',observations:bars.length,h4:bars}
   })}))
   if(path==='/api/history/coverage')return new Response(JSON.stringify(coverage))
@@ -93,7 +95,7 @@ async function click(name:string){await act(async()=>button(name).click())}
 async function input(label:string,value:string){const el=host.querySelector<HTMLInputElement>(`[aria-label="${label}"]`)!;expect(el).toBeTruthy();await act(async()=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')!.set!.call(el,value);el.dispatchEvent(new Event('input',{bubbles:true}))})}
 async function select(label:string,value:string){const el=host.querySelector<HTMLSelectElement>(`[aria-label="${label}"]`)!;await act(async()=>{el.value=value;el.dispatchEvent(new Event('change',{bubbles:true}))})}
 async function load(){await click('Start backtest');await until(()=>host.querySelector('.phase-trading'))}
-async function start(){await mount();await load()}
+async function start(){await mount();await act(async()=>host.querySelector<HTMLInputElement>('input[name="chart-count"][value="1"]')!.click());await load()}
 function chart(){return vi.mocked(createChart).mock.results.filter(r=>r.type==='return').at(-1)!.value}
 function chartForCanvas(canvas: Element) {
  const index = vi.mocked(createChart).mock.calls.map(([element]) => element).lastIndexOf(canvas as HTMLElement)
@@ -163,9 +165,13 @@ async function order(direction='Buy',price=.099+1){await click(direction);await 
 it('keeps initial setup explicit, bounded and free from automatic downloads under StrictMode',async()=>{
  await mount();expect(historyCalls).toBe(0);expect(host.textContent).toContain('Set up a backtest');expect(host.querySelector('.chart-canvas')).toBeNull()
  const from=host.querySelector<HTMLInputElement>('[aria-label="From"]')!,through=host.querySelector<HTMLInputElement>('[aria-label="Through"]')!
- expect(from.min).toBe('');expect(through.max).toBe('');expect(through.value).toBe('2024-01-09')
+ expect(from.min).toBe(new Date(preroll[0].timestamp).toISOString().slice(0,10));expect(through.max).toBe('');expect(through.value).toBe('2024-01-09')
+ expect(host.querySelector<HTMLInputElement>('[aria-label="Backtest name"]')?.value).toBe('Untitled backtest')
+ expect(host.querySelector<HTMLInputElement>('[aria-label="Round-trip commission (USD per standard lot)"]')?.value).toBe('7')
+ expect(host.querySelector<HTMLInputElement>('input[name="chart-count"][value="2"]')?.checked).toBe(true)
  expect(button('90 days').disabled).toBe(true);expect(button('365 days').disabled).toBe(true);expect(historyCalls).toBe(0)
- await input('From','2000-01-01');await click('Start backtest');expect(historyCalls).toBe(0)
+ await click('Random Range');expect(host.textContent).toContain('No cached 120-day replay window');expect(historyCalls).toBe(0)
+ await input('From','2023-01-01');await click('Start backtest');expect(historyCalls).toBe(0)
 })
 it('keeps legacy-only recovery optional on refresh and preserves the browser original',async()=>{
  const legacy=new SessionStore(),history=sessionHistory(),sim=sessionSimulation(history),historyId=await historyFingerprint(history)
@@ -421,7 +427,7 @@ it('starts local mid-price history without pricing or confirmation and preserves
 it('keeps out-of-coverage dates unavailable without requesting a download',async()=>{
  await mount();await input('From','2022-01-03');await input('Through','2022-01-04')
  expect(button('Start backtest').disabled).toBe(true)
- expect(host.textContent).toContain('outside verified local history')
+ expect(host.textContent).toContain('replay days have missing or unverified local observations')
  expect(historyCalls).toBe(0);expect(host.textContent).not.toContain('Get more historical data')
 })
 it('shows an explicit empty local archive without offering online data',async()=>{
@@ -562,8 +568,15 @@ it('cancels an in-flight cached load without creating or starting a session',asy
 it('preserves the production rollover blocker after one-click startup',async()=>{
  const {fixtureHistory}=await import('../../tests/databentoFixture'),underlying=globalThis.fetch
  vi.stubGlobal('fetch',async(path:string,options?:RequestInit)=>{
+  if(path.startsWith('/api/history/calendar')){
+   const calendar=await (await underlying(path,options)).json()
+   const bar={...bid[0],timestamp:Date.parse('2024-01-10')}
+   calendar.days.push({date:'2024-01-10',status:'cached',observations:1,h4:[bar]})
+   return new Response(JSON.stringify(calendar))
+  }
   if(path.startsWith('/api/history?')){
-   const source=fixtureHistory('2023-12-10','2024-01-11','2024-01-10')
+   const params=new URL(path,'http://local').searchParams
+   const source=fixtureHistory(params.get('from')!,params.get('to')!,'2024-01-10')
    source.candles=[...preroll,...bid.slice(0,2),{...bid[0],timestamp:Date.parse('2024-01-10')}].map(bar=>({...bar,volume:'1',instrumentId:bar.timestamp<Date.parse('2024-01-10')?101:202}))
    return new Response(JSON.stringify(source))
   }
@@ -870,10 +883,10 @@ it('keeps indicator readiness in the disclosure and updates it for settings, tim
  await select('Chart 1 timeframe', 'D1')
  expect(panel().open).toBe(false)
  expect(status().textContent).toContain('completed D1 candles')
- expect(status().textContent).toContain('warming up')
+ expect(status().textContent).toContain('Indicators ready')
  await select('Chart 1 timeframe', 'M5')
  await input('Chart 1 Span B', '1'); await input('Chart 1 Kijun', '1'); await input('Chart 1 Tenkan', '1'); await input('Chart 1 Displacement', '1')
- await input('Chart 1 BB #1 Length', '91')
+ await input('Chart 1 BB #1 Length', '79')
  // Disable the longer-period overlays so the unchanged warm-up calculation uses the selected Bollinger length.
  for (const label of ['Chart 1 BB #2', 'Chart 1 Stochastic']) {
   const checkbox = host.querySelector<HTMLInputElement>(`[aria-label="${label}"]`)!
@@ -1333,4 +1346,51 @@ it.each([['Buy', 1.097, 1.098, 'b'], ['Sell', 1.103, 1.104, 's']] as const)('dir
  const state = (await disk.storage.list()).sessions[0].checkpoint.trading
  expect(state.positions).toHaveLength(1)
  expect(state.positions[0].stopPrice).toBe(newStop)
+})
+
+
+it.each([1, 2, 3] as const)('starts and restores a %i-chart layout with every indicator disabled at the first cached date', async count => {
+ const workspace=preferences.defaultWorkspace()
+ for(const mode of Object.values(workspace.chartModes!)) for(const pane of mode!.indicators) for(const settings of Object.values(pane)) for(const group of Object.values(settings!)) group.enabled=false
+ workspace.chartModes!['1']!.timeframes[0]='M1'
+ workspace.chartModes!['1']!.indicators[0]={M1:workspace.chartModes!['1']!.indicators[0].D1!}
+ Object.assign(workspace,{chartCount:count,...workspace.chartModes![String(count) as '1'|'2'|'3']})
+ vi.spyOn(preferences,'defaultWorkspace').mockImplementation(()=>structuredClone(workspace))
+ await mount()
+ const first=new Date(preroll[0].timestamp).toISOString().slice(0,10)
+ await input('From',first);await input('Through',first)
+ expect(button('Start backtest').disabled).toBe(false)
+ expect(host.textContent).toContain('No indicator warm-up required')
+ await load();await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
+ const record=(await disk.storage.list()).sessions[0]
+ expect(record.checkpoint.replay.startIndex).toBe(0)
+ expect(record.checkpoint.replay.startTimestamp).toBe(preroll[0].timestamp)
+ expect(record.checkpoint.workspace.chartCount).toBe(count)
+ expect(host.querySelectorAll('.chart-pane')).toHaveLength(count)
+ await act(async()=>root.unmount());root=createRoot(host);await mount();await click('Resume backtest');await until(()=>host.querySelector('.phase-trading'))
+ expect(host.querySelectorAll('.chart-pane')).toHaveLength(count)
+ expect(host.querySelector('.replay-clock')?.textContent).toContain(first)
+ expect((await disk.storage.list()).sessions[0].checkpoint.trading.commission).toEqual(record.checkpoint.trading.commission)
+})
+
+it('recalculates historical readiness when switching between zero-indicator and D1 Ichimoku modes', async () => {
+ const workspace=preferences.defaultWorkspace(),mode=workspace.chartModes!['1']!
+ for(const pane of mode.indicators) for(const settings of Object.values(pane)) for(const group of Object.values(settings!)) group.enabled=false
+ Object.assign(workspace,{chartCount:1,...mode})
+ vi.spyOn(preferences,'defaultWorkspace').mockImplementation(()=>structuredClone(workspace))
+ await mount()
+ const first=new Date(preroll[0].timestamp).toISOString().slice(0,10)
+ await input('From',first);await input('Through',first)
+ expect(button('Start backtest').disabled).toBe(false)
+ await act(async()=>host.querySelector<HTMLInputElement>('input[name="chart-count"][value="2"]')!.click())
+ expect(button('Start backtest').disabled).toBe(true)
+ expect(host.textContent).toContain('Insufficient completed historical candles')
+ await input('From','2024-01-09');await input('Through','2024-01-09')
+ expect(button('Start backtest').disabled).toBe(false)
+ expect(host.textContent).toContain('78 required')
+ await input('From',first);await input('Through',first)
+ await act(async()=>host.querySelector<HTMLInputElement>('input[name="chart-count"][value="1"]')!.click())
+ expect(button('Start backtest').disabled).toBe(false)
+ expect(host.textContent).toContain('No indicator warm-up required')
+ expect(historyCalls).toBe(0)
 })

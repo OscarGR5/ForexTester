@@ -3,7 +3,7 @@ import type { CandlestickData, LineData, UTCTimestamp } from 'lightweight-charts
 import { TIMEFRAME_MS, type Timeframe } from './history.js'
 
 import { validateIndicatorSettings, type IndicatorSettings } from './indicatorSettings.js'
-export { defaultIndicatorSettings, indicatorPreset, validateIndicatorSettings, type IndicatorSettings, type BollingerSettings } from './indicatorSettings.js'
+export { defaultIndicatorSettings, indicatorPreset, indicatorWarmupRequirement, validateIndicatorSettings, type IndicatorSettings, type BollingerSettings } from './indicatorSettings.js'
 
 export type IndicatorLine = LineData<UTCTimestamp>[]
 export interface CloudPoint { time: UTCTimestamp; a: number; b: number }

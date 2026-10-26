@@ -54,8 +54,10 @@ export interface DateRange {
 }
 
 export const MAX_BACKTEST_DAYS = 365
+// Retained for validating and restoring histories created before warm-up became
+// observation-driven. New backtests pass an explicit warm-up start date.
 export const HISTORY_PREROLL_DAYS = 30
-export const BACKTEST_DAY_PRESETS = [7, 30, 90, 365] as const
+export const BACKTEST_DAY_PRESETS = [7, 30, 90, 180, 365] as const
 
 export class HistoryRequestError extends Error {
   override name = 'HistoryRequestError'
@@ -194,8 +196,10 @@ export function toBidChartCandles(history: HistoryResponse | { bid: readonly Can
   }))
 }
 
-export async function fetchHistory(range: DateRange, signal?: AbortSignal): Promise<HistoryResponse> {
-  const params = new URLSearchParams({ symbol: 'EURUSD', from: range.from, to: range.to, tradingFrom: new Date(Date.parse(range.from) + HISTORY_PREROLL_DAYS * DAY_MS).toISOString().slice(0,10) })
+export interface HistoryFetchRange extends DateRange { tradingFrom?: string }
+export async function fetchHistory(range: HistoryFetchRange, signal?: AbortSignal): Promise<HistoryResponse> {
+  const tradingFrom = range.tradingFrom ?? new Date(Date.parse(range.from) + HISTORY_PREROLL_DAYS * DAY_MS).toISOString().slice(0,10)
+  const params = new URLSearchParams({ symbol: 'EURUSD', from: range.from, to: range.to, tradingFrom })
   let response: Response
   try { response = await fetch(`/api/history?${params}`, { signal }) }
   catch {

@@ -4,7 +4,7 @@ import { commissionConfigError, perSideCommissionUsd } from './commissions.js'
 import { combinedRisk, grossPnl, type TradingState } from './trading.js'
 import { createEquityLedger, type EquityLedger, type EquityPoint } from './equity.js'
 import { historyCandles, isSinglePrice, isLocalForex, isFuturesHistory, parseHistory, TIMEFRAMES, validateDateRange } from './history.js'
-import { PREROLL_DAYS, replayStartIndex, type LoadedHistory } from './historyLoader.js'
+import { replayStartIndex, type LoadedHistory } from './historyLoader.js'
 import { defaultIndicatorSettings, validateIndicatorSettings } from './indicatorSettings.js'
 import { RECORD_VERSION, type EquitySummary, type SessionRecord } from './sessionTypes.js'
 
@@ -28,7 +28,7 @@ export async function recordDigest(record: Omit<SessionRecord, 'digest'> | Sessi
 }
 export function validatedHistory(value: LoadedHistory): LoadedHistory {
   requireValid(value && !validateDateRange({ from: value.tradingFrom, to: value.to }))
-  requireValid(typeof value.from === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value.from) && Date.parse(value.from) === Date.parse(value.tradingFrom) - PREROLL_DAYS * 86_400_000)
+  requireValid(typeof value.from === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value.from) && Date.parse(value.from) <= Date.parse(value.tradingFrom))
   return { ...parseHistory(value, { from: value.from, to: value.to }), tradingFrom: value.tradingFrom }
 }
 // Explicit little-endian IEEE-754 numbers, side lengths and UTC range form the
@@ -151,6 +151,19 @@ export async function validateRecord(record: SessionRecord): Promise<void> {
         requireValid(!validateIndicatorSettings(value!))
       }
     })
+    if (workspace.chartModes !== undefined) {
+      requireValid(workspace.chartModes && typeof workspace.chartModes === 'object')
+      for (const [count, mode] of Object.entries(workspace.chartModes)) {
+        requireValid(['1', '2', '3'].includes(count) && mode && Array.isArray(mode.timeframes) && mode.timeframes.length === 3 &&
+          mode.timeframes.every((tf) => TIMEFRAMES.includes(tf)) && Array.isArray(mode.indicators) && mode.indicators.length === 3)
+        mode!.indicators.forEach((settings, index) => {
+          requireValid(settings && settings[mode!.timeframes[index]])
+          for (const [tf, value] of Object.entries(settings)) {
+            requireValid(TIMEFRAMES.includes(tf as typeof TIMEFRAMES[number]) && value && !validateIndicatorSettings(value))
+          }
+        })
+      }
+    }
     const viewport = workspace.viewport
     if (viewport) requireValid(validViewportState(viewport))
   } catch (error) { if (error instanceof Error && error.message === corrupt().message) throw error; throw corrupt() }

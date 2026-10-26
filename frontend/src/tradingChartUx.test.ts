@@ -95,8 +95,8 @@ describe('revealed D1 chart data', () => {
     bars.advance(source, 79); expect(bars.candles.length - 1).toBe(78)
     expect(calculateIndicators(bars.candles, settings, 'D1').cloud.length).toBeGreaterThan(0)
   })
-  it('defaults new charts to H1 and accepts legacy M1 workspace and old shared viewport', () => {
-    const workspace = defaultWorkspace(); expect(workspace.timeframes[0]).toBe('H1')
+  it('defaults new charts to H4 and D1 and accepts legacy M1 workspace and old shared viewport', () => {
+    const workspace = defaultWorkspace(); expect(workspace).toMatchObject({ chartCount: 2, timeframes: ['H4', 'D1', 'H1'] })
     expect(validWorkspace({ ...workspace, timeframes: ['M1', 'M5', 'H1'], indicators: [{ M1: indicatorPreset('M1') }, { M5: indicatorPreset('M5') }, { H1: indicatorPreset('H1') }], viewport: { range: { from: 1, to: 2 }, following: false } })).toBe(true)
   })
 })

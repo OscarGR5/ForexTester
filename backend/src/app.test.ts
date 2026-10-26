@@ -34,3 +34,12 @@ it('removes pricing/download endpoints and rejects path input or cross-origin ac
  expect((await fetch(`${origin}/api/history/calendar?symbol=../../etc/passwd`)).status).toBe(400)
  expect((await fetch(`${origin}/api/history/datasets`,{headers:{Origin:'https://example.com'}})).status).toBe(403)
 })
+
+it('starts on the first installed date with an equal history and replay boundary', async () => {
+ const response=await fetch(`${origin}/api/history?symbol=EURUSD&from=2024-01-01&tradingFrom=2024-01-01&to=2024-01-02`)
+ expect(response.status).toBe(200)
+ const history=await response.json()
+ expect(history).toMatchObject({from:'2024-01-01',to:'2024-01-02'})
+ expect(history.candles[0].timestamp).toBe(Date.UTC(2024,0,1))
+ expect((await fetch(`${origin}/api/history?symbol=EURUSD&from=2024-01-02&tradingFrom=2024-01-01&to=2024-01-03`)).status).toBe(400)
+})

@@ -25,10 +25,10 @@ describe('USD round-trip configuration and per-side arithmetic', () => {
     expect(configureCommission(state, { roundTripUsdPerLot }, ready)).toBe(state)
     expect(() => createTradingState(0, undefined, { roundTripUsdPerLot })).toThrow('USD')
   })
-  it('uses $7 per side for 2 lots at $7 round-trip, retaining sub-cent precision', () => {
+  it('defaults to $7 round trip and charges $7 per side for 2 lots, retaining sub-cent precision', () => {
     expect(perSideCommissionUsd(2, config)).toBe(7)
     expect(perSideCommissionUsd(0.013, { roundTripUsdPerLot: 7.25 })).toBeCloseTo(0.047125, 12)
-    expect(createTradingState().commission.roundTripUsdPerLot).toBe(0)
+    expect(createTradingState().commission.roundTripUsdPerLot).toBe(7)
   })
   it('locks settings for paused, playing, and completed active replay', () => {
     for (const blocked of [permission, { ...permission, playing: true }, { ...permission, hasFuture: false }]) {

@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import { indicatorPreset, indicatorWarmupRequirement } from './indicatorSettings'
-it.each([['M1',0],['M5',48],['M15',48],['H1',78],['H4',78]] as const)('counts the default %s completed-candle requirement', (timeframe,required)=>{
+it.each([['M1',0],['M5',48],['M15',48],['H1',78],['H4',78],['D1',78]] as const)('counts the default %s completed-candle requirement', (timeframe,required)=>{
  expect(indicatorWarmupRequirement(indicatorPreset(timeframe))).toBe(required)
 })
 it('reports additional warm-up when editable Ichimoku settings increase the lookback',()=>{
