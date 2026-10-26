@@ -6,13 +6,16 @@ import { HISTORY_PREROLL_DAYS, MAX_BACKTEST_DAYS, type DateRange } from './histo
 const MIN_WINDOW_DAYS = 120
 const NAVIGATION_DAYS = 90
 
-export function HistoryTimeline({ calendar, range, disabled, onChange, onEndChange }: {
-  calendar: CacheCalendar; range: DateRange; disabled: boolean; onChange: (range: DateRange) => void; onEndChange: () => void
+export function HistoryTimeline({ calendar, range, warmupFrom, disabled, onChange, onEndChange }: {
+  calendar: CacheCalendar; range: DateRange; warmupFrom?: string; disabled: boolean; onChange: (range: DateRange) => void; onEndChange: () => void
 }) {
   const selectedDays = (Date.parse(range.to) - Date.parse(range.from)) / 86400000
-  const windowDays = Math.max(MIN_WINDOW_DAYS, Math.min(MAX_BACKTEST_DAYS, Number.isFinite(selectedDays) ? Math.max(1, selectedDays) : 1) + HISTORY_PREROLL_DAYS)
-  const [windowFrom, setWindowFrom] = useState(shiftDate(range.from, -HISTORY_PREROLL_DAYS))
-  useEffect(() => { if (range.from < windowFrom || range.to > shiftDate(windowFrom, windowDays)) setWindowFrom(shiftDate(range.from, -HISTORY_PREROLL_DAYS)) }, [range.from, range.to, windowDays])
+  const fallbackWarmup = shiftDate(range.from, -HISTORY_PREROLL_DAYS)
+  const visibleWarmupFrom = warmupFrom ?? fallbackWarmup
+  const warmupDays = Math.max(0, (Date.parse(range.from) - Date.parse(visibleWarmupFrom)) / 86400000)
+  const windowDays = Math.max(MIN_WINDOW_DAYS, (Number.isFinite(selectedDays) ? Math.max(1, selectedDays) : 1) + warmupDays)
+  const [windowFrom, setWindowFrom] = useState(visibleWarmupFrom)
+  useEffect(() => { if (visibleWarmupFrom < windowFrom || range.to > shiftDate(windowFrom, windowDays)) setWindowFrom(visibleWarmupFrom) }, [visibleWarmupFrom, range.to, windowDays])
   const offset = (date: string) => Number.isFinite(Date.parse(date)) ? (Date.parse(date) - Date.parse(windowFrom)) / 86400000 : 0
   const entries = new Map(calendar.days.map(day => [day.date, day]))
   const months = [...new Set(calendar.days.map(day => day.date.slice(0, 7)))]
@@ -29,13 +32,13 @@ export function HistoryTimeline({ calendar, range, disabled, onChange, onEndChan
     <div className="timeline-track">
       <div className="timeline-days" aria-hidden="true">{Array.from({ length: windowDays }, (_, index) => {
         const date = shiftDate(windowFrom, index), day = entries.get(date)
-        return <span key={date} title={`${formatUtcDate(date)}: ${day?.status === 'cached' ? `${day.observations} M1 observations; ${1440-day.observations} minutes without observations` : day?.status === 'gap' ? 'no M1 observations in the source' : 'outside verified local history'}`} className={`${day?.status === 'cached' ? 'cached' : day?.status === 'invalid' ? 'invalid' : 'uncached'}${date >= range.from && date < range.to ? ' selected' : ''}`}/>
+        return <span key={date} title={`${formatUtcDate(date)}: ${day?.status === 'cached' ? `${day.observations} M1 observations; ${1440-day.observations} minutes without observations` : day?.status === 'gap' ? 'no M1 observations in the source' : 'outside verified local history'}`} className={`${day?.status === 'cached' ? 'cached' : day?.status === 'invalid' ? 'invalid' : 'uncached'}${date >= range.from && date < range.to ? ' selected' : day?.status === 'cached' && date >= visibleWarmupFrom && date < range.from ? ' warmup' : ''}`}/>
       })}</div>
       <input aria-label="Historical start date" aria-valuetext={formatUtcDate(range.from)} type="range" min="0" max={windowDays - 1} value={Math.max(0, Math.min(windowDays - 1, offset(range.from)))} disabled={disabled} onChange={event => move('from', Number(event.target.value))}/>
       <input aria-label="Historical end date" aria-valuetext={formatUtcDate(shiftDate(range.to, -1))} type="range" min="0" max={windowDays - 1} value={Math.max(0, Math.min(windowDays - 1, offset(range.to) - 1))} disabled={disabled} onChange={event => move('to', Number(event.target.value))}/>
     </div>
     <div className="timeline-scale"><span>{formatUtcDate(windowFrom)}</span><span>{formatUtcDate(shiftDate(windowFrom, windowDays - 1))}</span></div>
-    <p className="timeline-legend"><span>M1 observations available</span><span>No M1 observations</span></p>
+    <p className="timeline-legend"><span>Replay period</span><span>Indicator warm-up</span><span>No M1 observations</span></p>
   </div>
 }
 export { cachedPreset }

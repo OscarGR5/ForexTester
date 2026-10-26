@@ -54,7 +54,8 @@ export function RegressionWorkspace() {
     to: historyCandles(history!)[replay.count - 1].timestamp / 1000,
   } : undefined, [history, replay.count])
   const warmup = useMemo(() => ichimokuWarmup(history ? historyCandles(history) : [], startMs), [history, startMs])
-  const workspace = useMemo<WorkspaceSettings>(() => ({ ...defaultWorkspace(), timeframes: ['M1', 'M5', 'H1'], indicators: [{ M1: indicatorPreset('M1') }, { M5: indicatorPreset('M5') }, { H1: indicatorPreset('H1') }] }), [])
+  const workspace = useMemo<WorkspaceSettings>(() => ({ ...defaultWorkspace(), chartCount: 1, chartModes: undefined,
+    timeframes: ['M1', 'M5', 'H1'], indicators: [{ M1: indicatorPreset('M1') }, { M5: indicatorPreset('M5') }, { H1: indicatorPreset('H1') }] }), [])
   const snapshot = useMemo<SessionSnapshot | null>(() => history ? ({ ledger: trading.equity, checkpoint: {
     replay: { started: replay.active, index: replay.active ? replay.count - 1 : null, timestamp: replay.timestamp,
       startIndex: replay.active ? replay.startIndex : startIndex, startTimestamp: startMs, speed: replay.speed, complete: replay.complete, playing: replay.playing },

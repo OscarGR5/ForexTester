@@ -1,6 +1,6 @@
 // User-entered USD rate for one standard FX lot, covering entry and exit.
 export interface CommissionConfig { roundTripUsdPerLot: number }
-export const DEFAULT_COMMISSION: CommissionConfig = { roundTripUsdPerLot: 0 }
+export const DEFAULT_COMMISSION: CommissionConfig = { roundTripUsdPerLot: 7 }
 
 export function commissionConfigError(config: CommissionConfig): string | null {
   return Number.isFinite(config.roundTripUsdPerLot) && config.roundTripUsdPerLot >= 0

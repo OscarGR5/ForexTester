@@ -202,7 +202,11 @@ export function useSessionPersistence(options: Options) {
         writeUi(record.id, 'workspace', readUi(record.id, 'workspace', result.checkpoint.workspace, validWorkspace))
         latest.current.restore(result, result.history)
       } else {
-        const presentation = readUi(active.current?.id ?? null, 'workspace', defaultWorkspace(), validWorkspace)
+        // A period reload keeps the current workspace. An explicit New session
+        // has no range and receives the current new-backtest defaults.
+        const presentation = range
+          ? readUi(active.current?.id ?? null, 'workspace', defaultWorkspace(), validWorkspace)
+          : defaultWorkspace()
         active.current = newActive(); writeUi(active.current.id, 'workspace', presentation); setName(active.current.name); setSavedAt(null); setCacheWarning(null)
         latest.current.fresh(range ?? { from: latest.current.history?.tradingFrom ?? '2024-01-09', to: latest.current.history?.to ?? '2024-01-10' })
       }

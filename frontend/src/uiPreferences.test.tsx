@@ -2,7 +2,7 @@
 import { act, StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { defaultWorkspace, emptyOrderDraft, readUi, uiKey, useUiValue, validOrderDraft, validWorkspace, writeUi } from './uiPreferences'
+import { defaultWorkspace, emptyOrderDraft, readUi, selectChartMode, uiKey, updateActiveChartMode, useUiValue, validOrderDraft, validWorkspace, writeUi } from './uiPreferences'
 import { TradingPanel } from './TradingPanel'
 import { createTradingState } from './trading'
 
@@ -10,11 +10,28 @@ Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 beforeEach(() => localStorage.clear())
 afterEach(() => vi.restoreAllMocks())
 it('restores layout, timeframe, indicators, zoom/following state and isolates sessions', () => {
-  const settings = defaultWorkspace(); settings.chartCount = 3; settings.timeframes[0] = 'H4'; settings.indicators[0].H4 = settings.indicators[2].H4
+  const settings = selectChartMode(defaultWorkspace(), 3)
   settings.viewport = { range: { from: 1700000000, to: 1700003600 }, following: false }
   writeUi('one', 'workspace', settings)
   expect(readUi('one', 'workspace', defaultWorkspace(), validWorkspace)).toEqual(settings)
   expect(readUi('two', 'workspace', defaultWorkspace(), validWorkspace)).toEqual(defaultWorkspace())
+})
+it('initializes the requested chart mode once and retains independent edits when switching', () => {
+  let settings = defaultWorkspace()
+  expect(settings).toMatchObject({ chartCount: 2, timeframes: ['H4', 'D1', 'H1'] })
+  expect(settings.indicators[0].H4?.ichimoku.enabled).toBe(true)
+  expect(settings.indicators[1].D1?.ichimoku.enabled).toBe(true)
+  settings = selectChartMode(settings, 1)
+  expect(settings.timeframes[0]).toBe('D1')
+  const single = { ...settings.indicators[0], H1: settings.indicators[2].H1! }
+  settings = updateActiveChartMode(settings, { timeframes: ['H1', ...settings.timeframes.slice(1)], indicators: [single, ...settings.indicators.slice(1)] })
+  settings = selectChartMode(settings, 3)
+  expect(settings.timeframes).toEqual(['M5', 'H4', 'H1'])
+  expect(settings.indicators[0].M5).toMatchObject({ bollinger: { enabled: true, stdDev: 2 }, bollinger2: { enabled: true, stdDev: 1 }, stochastic: { enabled: true } })
+  settings = selectChartMode(settings, 1)
+  expect(settings.timeframes[0]).toBe('H1')
+  expect(settings.indicators[0].H1?.ichimoku.enabled).toBe(true)
+  expect(selectChartMode(settings, 2).timeframes).toEqual(['H4', 'D1', 'H1'])
 })
 it.each(['{', '[]', 'null', '{"workspace":{"chartCount":99}}', '{"workspace":{"timeframes":null}}'])('safely ignores invalid localStorage: %s', (raw) => {
   localStorage.setItem(uiKey('one'), raw)

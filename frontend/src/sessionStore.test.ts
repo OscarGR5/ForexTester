@@ -61,6 +61,14 @@ describe('IndexedDB atomic session checkpoints and recovery', () => {
     expect(restored.checkpoint.trading.account).toEqual({ referenceBalance: 10000, maxRiskPercent: 20 })
     expect(restored.checkpoint.trading.commission).toEqual({ roundTripUsdPerLot: 7 })
   })
+  it('restores an older workspace and zero commission without applying new-session defaults', async () => {
+    const sim = sessionSimulation(); sim.state = { ...sim.state, commission: { roundTripUsdPerLot: 0 } }; sim.observe()
+    const restored = await recover(await save(sim), sim)
+    expect(restored.checkpoint.trading.commission).toEqual({ roundTripUsdPerLot: 0 })
+    expect(restored.checkpoint.workspace.chartCount).toBe(3)
+    expect(restored.checkpoint.workspace.chartModes).toBeUndefined()
+    expect(restored.checkpoint.workspace.timeframes).toEqual(['M1', 'M5', 'H4'])
+  })
   it('restores a pending percentage entry without prematurely sizing, filling or charging it', async () => {
     const sim = sessionSimulation(); sim.observe(); sim.state = requestEntry(sim.state, 'buy', { mode: 'risk', riskPercent: 1 }, 1.098, manualPermission)
     const restored = await recover(await save(sim), sim)

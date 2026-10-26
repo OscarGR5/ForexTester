@@ -103,6 +103,20 @@ describe('indicator calculations', () => {
     s.ichimoku.displacement = 100
     expect(calculateIndicators(bars([10, 11, 12, 13]), s, 'M1').tenkan).toHaveLength(3)
   })
+  it('matches uninterrupted D1 Ichimoku at replay start with exactly 78 completed warm-up candles', () => {
+    const s = defaultIndicatorSettings(); s.ichimoku.enabled = true
+    const source = Array.from({ length: 121 }, (_, index): ChartCandle => {
+      const price = 100 + index / 10
+      return { time: (Date.UTC(2023, 0, 1) / 1000 + index * 86_400) as ChartCandle['time'],
+        open: price, high: price + 2 + Math.sin(index), low: price - 2 - Math.cos(index), close: price }
+    })
+    const replayIndex = 100, replayTime = source[replayIndex].time
+    const uninterrupted = calculateIndicators(source.slice(0, replayIndex + 1), s, 'D1')
+    const warmed = calculateIndicators(source.slice(replayIndex - 78, replayIndex + 1), s, 'D1')
+    expect(warmed.cloud.find(point => point.time === replayTime)).toEqual(uninterrupted.cloud.find(point => point.time === replayTime))
+    expect(warmed.tenkan.at(-1)).toEqual(uninterrupted.tenkan.at(-1))
+    expect(warmed.kijun.at(-1)).toEqual(uninterrupted.kijun.at(-1))
+  })
   it('validates every numeric parameter, including disabled indicators', () => {
     expect(validateIndicatorSettings(defaultIndicatorSettings())).toBeNull()
     for (const [group, values] of Object.entries(settings())) for (const key of Object.keys(values).filter((k) => !['enabled', 'basisVisible', 'upperVisible', 'lowerVisible'].includes(k))) {

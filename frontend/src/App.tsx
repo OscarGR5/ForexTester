@@ -6,7 +6,7 @@ import { canRequestOrder, stopModificationError } from './trading'
 import { plannedRisk } from './risk'
 import type { StopPreview } from './useStopDrag'
 import { HistoryTimeline } from './HistoryTimeline'
-import { automaticReplayStart, cachedPreset, formatUtcDate, rangeCoverage, type CacheCalendar } from './cacheCalendar'
+import { automaticReplayStart, cachedPreset, formatUtcDate, randomCachedRange, rangeCoverage, type CacheCalendar, type WarmupRequirement } from './cacheCalendar'
 import { historyCandles, isSinglePrice, isLocalForex, isFuturesHistory } from './history'
 import { flushSync } from 'react-dom'
 import { ManagementDialog } from './ManagementDialog'
@@ -15,7 +15,7 @@ import { draftEstimate, draftObservedPrice, TradingDock, type StopDraft } from '
 import { accountPnl, selectedRange, shiftDate } from './workflow'
 import { lifecycleOf, type Lifecycle } from './sessionTypes'
 import { commissionConfigError } from './commissions'
-import { defaultWorkspace, readUi, useUiValue, validWorkspace, writeUi } from './uiPreferences'
+import { defaultWorkspace, readUi, selectChartMode, updateActiveChartMode, useUiValue, validWorkspace, writeUi } from './uiPreferences'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { SessionControls } from './SessionControls'
 import { useSessionPersistence } from './useSessionPersistence'
@@ -25,12 +25,20 @@ import { useReplay } from './useReplay'
 import { accountRiskError } from './risk'
 import { useTrading } from './useTrading'
 import { ResultsDashboard } from './ResultsDashboard'
-import { indicatorPreset, type IndicatorSettings } from './indicators'
+import { indicatorPreset, indicatorWarmupRequirement, type IndicatorSettings } from './indicators'
 import { HistoryLoader, type LoadProgress, type LoadedHistory } from './historyLoader'
-import { BACKTEST_DAY_PRESETS, HISTORY_PREROLL_DAYS, HistoryRequestError, MAX_BACKTEST_DAYS, type Candle, type DateRange, type Timeframe } from './history'
+import { BACKTEST_DAY_PRESETS, HistoryRequestError, MAX_BACKTEST_DAYS, type Candle, type DateRange, type Timeframe } from './history'
 
 const EMPTY_CANDLES: readonly Candle[] = []
 const DEFAULT_RANGE: DateRange = { from: '2024-01-09', to: '2024-01-10' }
+function workspaceWarmupRequirements(workspace: WorkspaceSettings): WarmupRequirement[] {
+  const byTimeframe = new Map<Timeframe, number>()
+  workspace.timeframes.slice(0, workspace.chartCount).forEach((timeframe, index) => {
+    const periods = indicatorWarmupRequirement(workspace.indicators[index][timeframe]!)
+    if (periods) byTimeframe.set(timeframe, Math.max(periods, byTimeframe.get(timeframe) ?? 0))
+  })
+  return [...byTimeframe].map(([timeframe, periods]) => ({ timeframe, periods }))
+}
 
 export function App() {
   const [from, setFrom] = useState(DEFAULT_RANGE.from)
@@ -48,6 +56,7 @@ export function App() {
   const [manage, setManage] = useState(false)
   const [finishing, setFinishing] = useState(false)
   const [coverageError, setCoverageError] = useState<string | null>(null)
+  const [randomError, setRandomError] = useState<string | null>(null)
   const [calendar, setCalendar] = useState<CacheCalendar | null>(null)
   const [endMoved, setEndMoved] = useState(false)
   const selectionTouched = useRef(false)
@@ -61,10 +70,11 @@ export function App() {
   const [loader] = useState(() => new HistoryLoader())
   const [loadProgress, setLoadProgress] = useState<LoadProgress>({ completed: 0, total: 0 })
   const [hydration, setHydration] = useState<Hydration | null>(null)
+  const [loadedRequirements, setLoadedRequirements] = useState<WarmupRequirement[]>(() => workspaceWarmupRequirements(defaultWorkspace()))
 
   const source = history ? historyCandles(history) : EMPTY_CANDLES
   const tradingFrom = history?.tradingFrom ?? requestedRange.from
-  const automaticStart = useMemo(() => history ? automaticReplayStart(source, { from: tradingFrom, to: history.to }) : null, [history, source, tradingFrom])
+  const automaticStart = useMemo(() => history ? automaticReplayStart(source, { from: tradingFrom, to: history.to }, loadedRequirements) : null, [history, source, tradingFrom, loadedRequirements])
   const startMs = hydration?.checkpoint.replay.startTimestamp ?? automaticStart?.timestamp ?? Date.parse(tradingFrom)
   const startIndex = hydration?.checkpoint.replay.startIndex ?? automaticStart?.index ?? source.length
   const replay = useReplay(history ? source : null, startIndex, hydration ? { replay: hydration.checkpoint.replay, epoch: hydration.checkpoint.trading.session } : null)
@@ -104,6 +114,7 @@ export function App() {
       selectionTouched.current = true
       loadGeneration.current++; loadAbort.current?.abort(); setDraft(null); setManage(false); setLifecycle(lifecycleOf(saved.checkpoint))
       setHydration(saved); setHistory(source); setRequestedRange(saved.record.range)
+      setLoadedRequirements(workspaceWarmupRequirements(saved.checkpoint.workspace))
       setFrom(saved.record.range.from); setTo(saved.record.range.to)
       setPendingStart(false); starting.current = false
       setStatus('ready'); setError(null); setFormError(null)
@@ -120,7 +131,7 @@ export function App() {
   const uiWorkspaceRef = useRef(uiWorkspace)
   useLayoutEffect(() => { uiWorkspaceRef.current = uiWorkspace }, [uiWorkspace])
   const { chartCount, timeframes, indicators: indicatorSettings } = uiWorkspace
-  const setChartCount = (chartCount: number) => setUiWorkspace((w) => ({ ...w, chartCount }))
+  const setChartCount = (chartCount: 1 | 2 | 3) => setUiWorkspace((w) => selectChartMode(w, chartCount))
   const synchronizer = useMemo(() => {
     const sync = new ChartSynchronizer(bounds)
     sync.restore(readUi(sessions.activeId, 'workspace', hydration?.checkpoint.workspace ?? workspace, validWorkspace).viewport)
@@ -171,7 +182,8 @@ export function App() {
       if (!Array.isArray(value.days)) throw Error()
       setCalendar(value); setCoverageError(null)
       if (!selectionTouched.current) {
-        const initial = cachedPreset(value, 90) ?? cachedPreset(value, 30) ?? cachedPreset(value, 7)
+        const requirements = workspaceWarmupRequirements(defaultWorkspace())
+        const initial = cachedPreset(value, 90, undefined, requirements) ?? cachedPreset(value, 30, undefined, requirements) ?? cachedPreset(value, 7, undefined, requirements)
         if (initial) { setFrom(initial.from); setTo(initial.to); setRequestedRange(initial) }
       }
     } catch (reason) { setCoverageError(reason instanceof Error && reason.message ? reason.message : 'Local history could not be verified.') }
@@ -202,14 +214,17 @@ export function App() {
     setStatus('loading'); setError(null); setHistoryFailure(null); setLoadProgress({completed:0,total:1}); setRequestedRange(selected.range)
     try {
       await sessions.flush()
-      const result = await loader.load(selected.range, controller.signal, setLoadProgress)
+      const coverage = calendar ? rangeCoverage(calendar, selected.range, workspaceWarmupRequirements(uiWorkspace)) : null
+      if (!coverage?.replay || coverage.missing || !coverage.warmupFrom) throw new Error('The selected replay and its indicator warm-up are not fully available in the local cache.')
+      const requirements = workspaceWarmupRequirements(uiWorkspace)
+      const result = await loader.load(selected.range, controller.signal, setLoadProgress, coverage.warmupFrom)
       if (generation !== loadGeneration.current) return
-      if (!automaticReplayStart(historyCandles(result), selected.range)) throw new Error('Insufficient historical candles for Ichimoku. Select a later starting period or a longer interval.')
+      if (!automaticReplayStart(historyCandles(result), selected.range, requirements)) throw new Error('Insufficient completed historical candles for the selected indicators. Select a later replay start.')
       const chosenName = sessions.name
       if (history && !await sessions.fresh(selected.range)) throw new Error('The previous backtest could not be saved. Local history is ready; retry storage before switching.')
       starting.current = true
       // Name updates flush persistence immediately, so install the new history first.
-      flushSync(() => { setHydration(null); setHistory(result); setStatus('ready'); setPendingStart(true) })
+      flushSync(() => { setLoadedRequirements(requirements); setHydration(null); setHistory(result); setStatus('ready'); setPendingStart(true) })
       sessions.editName(chosenName); void refreshCoverage()
     } catch (reason) {
       if (generation !== loadGeneration.current || controller.signal.aborted) return
@@ -250,7 +265,7 @@ export function App() {
 
   const changeTimeframe = useCallback((id: number, timeframe: Timeframe) => {
     synchronizer.deactivate()
-    setUiWorkspace((w) => ({ ...w,
+    setUiWorkspace((w) => updateActiveChartMode(w, {
       timeframes: w.timeframes.map((value, index) => index === id ? timeframe : value),
       indicators: w.indicators.map((settings, index) => index === id && !settings[timeframe]
         ? { ...settings, [timeframe]: indicatorPreset(timeframe) } : settings),
@@ -258,15 +273,19 @@ export function App() {
   }, [synchronizer, setUiWorkspace])
   const changeSettings = useCallback((id: number, next: IndicatorSettings) => {
     synchronizer.deactivate()
-    setUiWorkspace((w) => ({ ...w, indicators: w.indicators.map((value, index) => index === id ? { ...value, [w.timeframes[id]]: next } : value) }))
+    setUiWorkspace((w) => updateActiveChartMode(w, { timeframes: w.timeframes,
+      indicators: w.indicators.map((value, index) => index === id ? { ...value, [w.timeframes[id]]: next } : value) }))
   }, [synchronizer, setUiWorkspace])
 
   const pnl = accountPnl(trading.equity, trading.state.account.referenceBalance)
   const selected = selectedRange(from, shiftDate(to, -1), null)
-  const dateFields = <div className="period-fields"><label>From<input aria-label="From" type="date" min={calendar?.firstTimestamp ? shiftDate(new Date(Math.ceil(calendar.firstTimestamp / 86400000) * 86400000).toISOString().slice(0,10),HISTORY_PREROLL_DAYS) : undefined} max={calendar?.lastTimestamp ? new Date(calendar.lastTimestamp).toISOString().slice(0,10) : undefined} value={from} disabled={status === 'loading'} onChange={e=>{selectionTouched.current=true;setFrom(e.target.value);setFormError(null)}}/></label><label>Through<input aria-label="Through" type="date" min={calendar?.firstTimestamp ? shiftDate(new Date(Math.ceil(calendar.firstTimestamp / 86400000) * 86400000).toISOString().slice(0,10),HISTORY_PREROLL_DAYS) : undefined} max={calendar?.lastTimestamp ? new Date(calendar.lastTimestamp).toISOString().slice(0,10) : undefined} value={shiftDate(to,-1)} disabled={status === 'loading'} onChange={e=>{selectionTouched.current=true;setEndMoved(true);setTo(shiftDate(e.target.value,1));setFormError(null)}}/></label></div>
-  const readiness = useMemo(()=>calendar && !selected.error ? rangeCoverage(calendar,{from,to}) : null,[calendar,from,to,selected.error])
-  const presets = useMemo(()=>BACKTEST_DAY_PRESETS.map(days=>calendar ? cachedPreset(calendar,days,endMoved ? to : undefined) : null),[calendar,endMoved,to])
-  const chartLayout = <fieldset className="layout-controls"><legend>Charts</legend>{[1,2,3].map(count=><label key={count}><input type="radio" name="chart-count" value={count} checked={chartCount === count} onChange={()=>{ synchronizer.deactivate(); setChartCount(count) }}/>{count}</label>)}</fieldset>
+  const warmupRequirements = useMemo(()=>workspaceWarmupRequirements(uiWorkspace),[uiWorkspace])
+  const clearSelectionErrors = () => { setFormError(null); setError(null); setRandomError(null) }
+  const firstCalendarDate = calendar?.days[0]?.date
+  const dateFields = <div className="period-fields"><label>From<input aria-label="From" type="date" min={firstCalendarDate} max={calendar?.lastTimestamp ? new Date(calendar.lastTimestamp).toISOString().slice(0,10) : undefined} value={from} disabled={status === 'loading'} onChange={e=>{selectionTouched.current=true;setFrom(e.target.value);clearSelectionErrors()}}/></label><label>Through<input aria-label="Through" type="date" min={firstCalendarDate} max={calendar?.lastTimestamp ? new Date(calendar.lastTimestamp).toISOString().slice(0,10) : undefined} value={shiftDate(to,-1)} disabled={status === 'loading'} onChange={e=>{selectionTouched.current=true;setEndMoved(true);setTo(shiftDate(e.target.value,1));clearSelectionErrors()}}/></label></div>
+  const readiness = useMemo(()=>calendar && !selected.error ? rangeCoverage(calendar,{from,to},warmupRequirements) : null,[calendar,from,to,selected.error,warmupRequirements])
+  const presets = useMemo(()=>BACKTEST_DAY_PRESETS.map(days=>calendar ? cachedPreset(calendar,days,endMoved ? to : undefined,warmupRequirements) : null),[calendar,endMoved,to,warmupRequirements])
+  const chartLayout = <fieldset className="layout-controls"><legend>Charts</legend>{([1,2,3] as const).map(count=><label key={count}><input type="radio" name="chart-count" value={count} checked={chartCount === count} onChange={()=>{ synchronizer.deactivate(); setChartCount(count) }}/>{count}</label>)}</fieldset>
   const pnlDisplay = <div className={`account-pnl ${pnl && Math.abs(pnl.usd) >= 0.005 ? pnl.usd > 0 ? 'positive' : 'negative' : ''}`} aria-label="Account PnL"><span>Account PnL</span><strong>{pnl ? `$${pnl.usd.toFixed(2)} · ${pnl.percent.toFixed(2)}%` : 'PnL unavailable'}</strong></div>
   const workspaceDisabled = !sessions.initialized || sessions.busy || sessions.conflict || sessions.awaitingChoice || finishing
   return <main className={`app-shell phase-${lifecycle}`}>
@@ -301,28 +320,28 @@ export function App() {
         {!!sessions.legacySessions.length && <p className="chart-note">Older browser backtests are available. <button type="button" onClick={()=>setManage(true)}>Review browser backtests</button></p>}
         <form onSubmit={loadData} className="setup-form" id="setup-form">
           <section className="historical-period"><h3>Historical period <span>EURUSD · Mid · M1 · UTC</span></h3><p className="chart-note">Mid-price M1 candles. Simplified fills with no spread, slippage or financing.</p>
-            {calendar?.days.length ? <HistoryTimeline calendar={calendar} range={{from,to}} disabled={status === 'loading'} onEndChange={()=>setEndMoved(true)} onChange={range=>{selectionTouched.current=true;setFrom(range.from);setTo(range.to);setFormError(null);setError(null)}}/> : <p role="status">{coverageError ? coverageError : calendar ? 'No local EURUSD history is installed. Import the archive with the local import command to begin.' : 'Checking local history…'} {coverageError && <button type="button" onClick={()=>void refreshCoverage()}>Retry coverage</button>}</p>}
-            <div className="period-shortcuts">{BACKTEST_DAY_PRESETS.map((days,index)=><button type="button" key={days} disabled={status === 'loading' || !calendar || !presets[index]} aria-pressed={selected.days === days} onClick={()=>{const range=presets[index];if(range){selectionTouched.current=true;setFrom(range.from);setTo(range.to);setFormError(null);setError(null)}}}>{days} days</button>)}<span>{Number.isFinite(selected.days) ? selected.days : 0} calendar days · maximum {MAX_BACKTEST_DAYS}</span></div>
-            <div className="period-readiness" role="status">{calendar && (()=>{
+            {calendar?.days.length ? <HistoryTimeline calendar={calendar} range={{from,to}} warmupFrom={readiness?.warmupFrom ?? undefined} disabled={status === 'loading'} onEndChange={()=>setEndMoved(true)} onChange={range=>{selectionTouched.current=true;setFrom(range.from);setTo(range.to);clearSelectionErrors()}}/> : <p role="status">{coverageError ? coverageError : calendar ? 'No local EURUSD history is installed. Import the archive with the local import command to begin.' : 'Checking local history…'} {coverageError && <button type="button" onClick={()=>void refreshCoverage()}>Retry coverage</button>}</p>}
+            <div className="period-shortcuts">{BACKTEST_DAY_PRESETS.map((days,index)=><button type="button" key={days} disabled={status === 'loading' || !calendar || !presets[index]} aria-pressed={selected.days === days} onClick={()=>{const range=presets[index];if(range){selectionTouched.current=true;setFrom(range.from);setTo(range.to);clearSelectionErrors()}}}>{days} days</button>)}<button type="button" disabled={status === 'loading' || !calendar} onClick={()=>{if(!calendar)return;const range=randomCachedRange(calendar,Math.random,warmupRequirements);if(!range){setRandomError('No cached 120-day replay window has enough preceding history for the selected indicators.');return}selectionTouched.current=true;setEndMoved(false);setFrom(range.from);setTo(range.to);clearSelectionErrors()}}>Random Range</button><span>{Number.isFinite(selected.days) ? selected.days : 0} calendar days · maximum {MAX_BACKTEST_DAYS}</span></div>
+            <div className="period-readiness" role="status">{randomError && <p className="form-error">{randomError}</p>}{calendar && (()=>{
               if (selected.error) return <p className="form-error">Choose 1 to {MAX_BACKTEST_DAYS} completed UTC calendar days.</p>
               if (!readiness) return null
               return <><p><strong>{readiness.missing ? `${readiness.missing} days fall outside verified local history.` : `${selected.days} days selected · available locally.`}</strong></p>
-                {!readiness.missing && <p>Includes the 30-day indicator pre-roll. Market closures and missing observations remain gaps.</p>}
-                {readiness.replay && <><p>Replay begins automatically: <strong>{formatUtcDate(readiness.replay.timestamp)}, {new Date(readiness.replay.timestamp).toISOString().slice(11,16)} UTC</strong></p><p>{readiness.replay.count} completed H4 candles available · {readiness.replay.required} required for Ichimoku.</p>{readiness.replay.timestamp > Date.parse(from) && <p className="coverage-warning">The first tradable minute is later than your From date because of market closures, missing observations or indicator warm-up.</p>}</>}
-                {!readiness.missing && !readiness.replay && <p className="form-error">Insufficient historical candles for Ichimoku. Select a later starting period or a longer interval.</p>}
+                {!readiness.missing && readiness.warmupFrom && <p>Replay is {selected.days} days. Indicator warm-up is separate, from {formatUtcDate(readiness.warmupFrom)}. Market closures remain gaps.</p>}
+                {readiness.replay && <><p>Replay begins automatically: <strong>{formatUtcDate(readiness.replay.timestamp)}, {new Date(readiness.replay.timestamp).toISOString().slice(11,16)} UTC</strong></p><p>{readiness.replay.count} completed {readiness.replay.timeframe} candles available · {readiness.replay.required} required by the longest indicator warm-up.</p>{readiness.replay.timestamp > Date.parse(from) && <p className="coverage-warning">The first tradable minute is later than your From date because of a market closure or missing observation.</p>}</>}
+                {!readiness.missing && !readiness.replay && <p className="form-error">Insufficient completed historical candles before the replay start for the selected indicators.</p>}
               </>
             })()}</div>
           </section>
-          <section className="setup-account"><h3>Trading account <span>USD</span></h3><div className="account-fields">
+          <section className="setup-account"><h3>Backtest details <span>USD account</span></h3><div className="account-fields">
+            <label>Backtest name<input maxLength={200} aria-label="Backtest name" disabled={status === 'loading'} value={sessions.name} onChange={e=>sessions.editName(e.target.value)}/></label>
+            <label>Round-trip commission ($ / standard lot)<input aria-label="Round-trip commission (USD per standard lot)" type="number" min="0" step="any" disabled={status === 'loading'} value={trading.state.commission.roundTripUsdPerLot} onChange={e=>{const value={roundTripUsdPerLot:Number(e.target.value)};setFormError(commissionConfigError(value));trading.configureCommission(value)}}/></label>
             <label>Starting balance (USD)<input aria-label="Starting balance (USD)" type="number" min="0" step="any" disabled={status === 'loading'} value={trading.state.account.referenceBalance || ''} onChange={e=>trading.configure({...trading.state.account,referenceBalance:Number(e.target.value)})}/></label>
             <label>Maximum combined gross risk (%)<input aria-label="Maximum combined gross planned risk (%)" type="number" min="0" max="100" step="any" disabled={status === 'loading'} value={trading.state.account.maxRiskPercent || ''} onChange={e=>trading.configure({...trading.state.account,maxRiskPercent:Number(e.target.value)})}/></label>
           </div></section>
           <details className="setup-advanced"><summary>Advanced settings</summary><div className="advanced-fields">
-            <label>Backtest name<input maxLength={200} aria-label="Backtest name" disabled={status === 'loading'} value={sessions.name} onChange={e=>sessions.editName(e.target.value)}/></label>
-            <label>Round-trip commission ($ / standard lot)<input aria-label="Round-trip commission (USD per standard lot)" type="number" min="0" step="any" disabled={status === 'loading'} value={trading.state.commission.roundTripUsdPerLot} onChange={e=>{const value={roundTripUsdPerLot:Number(e.target.value)};setFormError(commissionConfigError(value));trading.configureCommission(value)}}/></label>
             <div className="initial-layout">{chartLayout}</div>
             <div><h4>Manual historical dates</h4>{dateFields}</div>
-            <p className="chart-note">30-day pre-roll · EURUSD Forex · local Parquet archive · mid-price M1 candles. Simplified single-price fills with no spread, slippage, swaps or financing. 1 standard lot = 100,000 EUR. Commission is split between entry and exit.</p>
+            <p className="chart-note">Observation-derived indicator warm-up · EURUSD Forex · local Parquet archive · mid-price M1 candles. Simplified single-price fills with no spread, slippage, swaps or financing. 1 standard lot = 100,000 EUR. Commission is split between entry and exit.</p>
           </div></details>
         </form>
           <footer className="setup-footer"><div aria-live="polite">

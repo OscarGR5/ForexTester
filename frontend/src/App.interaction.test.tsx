@@ -1326,7 +1326,7 @@ describe('commission configuration and replay accounting', () => {
     await act(async () => root.render(<App />))
     await waitForStartup()
     const rate = host.querySelector<HTMLInputElement>(`[aria-label="${rateLabel}"]`)!
-    expect(rate.value).toBe('0')
+    expect(rate.value).toBe('7')
     await setInput(rateLabel, '7.25')
     expect(rate.value).toBe('7.25')
     for (const invalid of ['-1', '', 'Infinity', 'NaN']) {

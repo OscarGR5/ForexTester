@@ -48,7 +48,7 @@ describe('session journal CSV', () => {
       setup_label: 'London, "pullback"', setup_tag: "'=SUM(1,2)", setup_notes: 'Line one\r\nLine "two", comma\nLine three' })
     expect(closed.net_pnl_usd).toBe(String(state.closed[0].netPnlUsd))
     expect(closed.net_r).toBe(String(state.closed[0].netPnlUsd / state.closed[0].initialRiskUsd))
-    expect(open).toMatchObject({ position_id: '7-2', status: 'open', entry_commission_usd: '0',
+    expect(open).toMatchObject({ position_id: '7-2', status: 'open', entry_commission_usd: '0.07',
       exit_timestamp_utc: '', exit_price: '', exit_reason: '', exit_commission_usd: '', total_commission_usd: '',
       gross_pnl_usd: '', net_pnl_usd: '', net_r: '' })
   })

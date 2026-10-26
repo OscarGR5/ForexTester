@@ -2,10 +2,29 @@ import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { validViewportState } from './chartSync'
 import { TIMEFRAMES } from './history'
 import { defaultIndicatorSettings, indicatorPreset, validateIndicatorSettings } from './indicators'
-import type { WorkspaceSettings } from './sessionTypes'
+import type { ChartModeSettings, WorkspaceSettings } from './sessionTypes'
 
-export const defaultWorkspace = (): WorkspaceSettings => ({ chartCount: 1, timeframes: ['H1', 'M5', 'H4'],
-  indicators: [{ H1: indicatorPreset('H1') }, { M5: indicatorPreset('M5') }, { H4: indicatorPreset('H4') }], statisticsScope: 'setups', journalScope: 'setups', viewport: null })
+export function defaultChartMode(count: 1 | 2 | 3): ChartModeSettings {
+  const timeframes = count === 1 ? ['D1', 'H4', 'H1'] as const : count === 2 ? ['H4', 'D1', 'H1'] as const : ['M5', 'H4', 'H1'] as const
+  return { timeframes: [...timeframes], indicators: timeframes.map(timeframe => ({ [timeframe]: indicatorPreset(timeframe) })) }
+}
+export const defaultWorkspace = (): WorkspaceSettings => {
+  const chartModes = { '1': defaultChartMode(1), '2': defaultChartMode(2), '3': defaultChartMode(3) }
+  return { chartCount: 2, ...chartModes['2'], chartModes, statisticsScope: 'setups', journalScope: 'setups', viewport: null }
+}
+export function selectChartMode(workspace: WorkspaceSettings, chartCount: 1 | 2 | 3): WorkspaceSettings {
+  const current = String(workspace.chartCount) as '1' | '2' | '3'
+  const target = String(chartCount) as '1' | '2' | '3'
+  const chartModes = { ...workspace.chartModes,
+    [current]: { timeframes: workspace.timeframes, indicators: workspace.indicators } }
+  const selected = chartModes[target] ?? defaultChartMode(chartCount)
+  return { ...workspace, chartCount, timeframes: selected.timeframes, indicators: selected.indicators,
+    chartModes: { ...chartModes, [target]: selected } }
+}
+export function updateActiveChartMode(workspace: WorkspaceSettings, update: Pick<ChartModeSettings, 'timeframes' | 'indicators'>): WorkspaceSettings {
+  const current = String(workspace.chartCount) as '1' | '2' | '3'
+  return { ...workspace, ...update, chartModes: { ...workspace.chartModes, [current]: update } }
+}
 export const UI_PREFIX = 'forextester:ui:v1:'
 export const uiKey = (id: string) => `${UI_PREFIX}${id}`
 export function validWorkspace(value: unknown): value is WorkspaceSettings {
@@ -13,15 +32,21 @@ export function validWorkspace(value: unknown): value is WorkspaceSettings {
     const w = value as WorkspaceSettings
     if (!w || ![1, 2, 3].includes(w.chartCount) || w.timeframes.length !== 3 || w.indicators.length !== 3 ||
       !w.timeframes.every((tf) => TIMEFRAMES.includes(tf)) || !['setups', 'positions'].includes(w.statisticsScope) || !['setups', 'positions'].includes(w.journalScope)) return false
-    for (const [i, groups] of w.indicators.entries()) {
-      if (!groups[w.timeframes[i]]) return false
-      for (const [tf, settings] of Object.entries(groups)) {
-        if (!TIMEFRAMES.includes(tf as typeof TIMEFRAMES[number]) || !settings || validateIndicatorSettings(settings)) return false
-        for (const [group, fields] of Object.entries(defaultIndicatorSettings())) for (const [key, sample] of Object.entries(fields)) {
-          if (typeof (settings as unknown as Record<string, Record<string, unknown>>)[group]?.[key] !== typeof sample) return false
+    const validMode = (mode: ChartModeSettings) => {
+      if (!mode || mode.timeframes.length !== 3 || mode.indicators.length !== 3 || !mode.timeframes.every((tf) => TIMEFRAMES.includes(tf))) return false
+      for (const [i, groups] of mode.indicators.entries()) {
+        if (!groups[mode.timeframes[i]]) return false
+        for (const [tf, settings] of Object.entries(groups)) {
+          if (!TIMEFRAMES.includes(tf as typeof TIMEFRAMES[number]) || !settings || validateIndicatorSettings(settings)) return false
+          for (const [group, fields] of Object.entries(defaultIndicatorSettings())) for (const [key, sample] of Object.entries(fields)) {
+            if (typeof (settings as unknown as Record<string, Record<string, unknown>>)[group]?.[key] !== typeof sample) return false
+          }
         }
       }
+      return true
     }
+    if (!validMode(w)) return false
+    if (w.chartModes !== undefined && (typeof w.chartModes !== 'object' || Object.entries(w.chartModes).some(([count, mode]) => !['1','2','3'].includes(count) || !validMode(mode!)))) return false
     return w.viewport === null || validViewportState(w.viewport)
   } catch { return false }
 }

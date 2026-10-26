@@ -2,7 +2,6 @@ import { createServer, type Server } from 'node:http'
 import { SessionStorage } from './sessionStorage.js'
 import { sessionApi } from './sessionApi.js'
 import { LocalArchive, DataError } from './localArchive.js'
-import { HISTORY_PREROLL_DAYS } from '../../frontend/src/history.js'
 
 export function createApp(history = new LocalArchive(), _now: () => Date = () => new Date(), storage = new SessionStorage()): Server {
   const server = createServer(async (request, response) => {
@@ -21,8 +20,8 @@ export function createApp(history = new LocalArchive(), _now: () => Date = () =>
       if (request.method === 'GET' && url.pathname === '/api/history') {
         if ([...url.searchParams.keys()].some(key => !['symbol','from','to','tradingFrom'].includes(key))) throw new DataError('INVALID_HISTORY_REQUEST', 'Only an installed symbol and UTC dates are accepted.')
         const from = url.searchParams.get('from') ?? '', tradingFrom = url.searchParams.get('tradingFrom') ?? ''
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || Date.parse(tradingFrom) - Date.parse(from) !== HISTORY_PREROLL_DAYS * 86400000) throw new DataError('INVALID_HISTORY_RANGE', `A ${HISTORY_PREROLL_DAYS}-day pre-roll is required.`)
-        response.end(JSON.stringify(await history.load(url.searchParams.get('symbol') ?? '', tradingFrom, url.searchParams.get('to') ?? ''))); return
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(tradingFrom) || Date.parse(from) >= Date.parse(tradingFrom)) throw new DataError('INVALID_HISTORY_RANGE', 'Indicator warm-up must begin before the replay period.')
+        response.end(JSON.stringify(await history.load(url.searchParams.get('symbol') ?? '', tradingFrom, url.searchParams.get('to') ?? '', from))); return
       }
       response.writeHead(404); response.end(JSON.stringify({ error: 'Not found' }))
     } catch (error) {
