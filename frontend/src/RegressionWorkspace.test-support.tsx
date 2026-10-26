@@ -214,7 +214,7 @@ export function RegressionWorkspace() {
       <TradingJournal sessionId={sessions.activeId} key={`${sessions.activeId}-${trading.state.session}`} state={trading.state} onUpdateSetup={trading.updateSetup} scope={statisticsScope} view={journalScope} onScopeChange={setStatisticsScope} onViewChange={setJournalScope} />
       <EquityChart sessionId={sessions.activeId} ledger={trading.equity} referenceBalance={trading.state.account.referenceBalance} />
       </fieldset>
-      <p className="chart-note">UTC dates · Start inclusive · End exclusive · Up to 90 completed days</p>
+      <p className="chart-note">UTC dates · Start inclusive · End exclusive · Up to 365 completed days</p>
     </main>
   )
 }

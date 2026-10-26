@@ -1,0 +1,68 @@
+{
+  "environment": "Installed EURUSD Parquet, Node core-path benchmark, real localhost storage API and synced temporary filesystem",
+  "range": {
+    "tradingFrom": "2025-09-26",
+    "through": "2026-09-25",
+    "queryFrom": "2025-08-27",
+    "to": "2026-09-26"
+  },
+  "candles": 399885,
+  "replayStartIndex": 31350,
+  "lateIndex": 363030,
+  "lateProgressPercent": 90,
+  "backend": {
+    "duckDbQueryMs": 556.8987470000001,
+    "responseBytes": 36003316,
+    "responseMiB": 34.3354377746582
+  },
+  "frontend": {
+    "jsonParseMs": 247.845781,
+    "validationMs": 59.6001110000002,
+    "initialThreePanesMs": 79.97141800000009,
+    "lateRestoreThreePanesMs": 519.2928939999997,
+    "responsiveness": {
+      "1x": {
+        "meanMs": 0.26223064000002066,
+        "maxMs": 8.830409000000145
+      },
+      "10x": {
+        "meanMs": 0.18071998000000802,
+        "maxMs": 0.47593600000027436
+      },
+      "100x": {
+        "meanMs": 0.3322261300000082,
+        "maxMs": 8.025208999999904
+      }
+    },
+    "equityDisplayMs": 164.07220600000073,
+    "equityDisplayPoints": 5677
+  },
+  "persistence": {
+    "historyUploadMs": 3546.0384520000002,
+    "historyGzipBytes": 4754388,
+    "checkpointCount": 18,
+    "engineAndCheckpointMs": 4992.912744000001,
+    "checkpointMeanMs": 267.0699935000001,
+    "checkpointMaxMs": 941.5172269999994,
+    "restoreMs": 3577.0866879999994,
+    "restoredEquityCount": 331681,
+    "restoredReplayTimestamp": 1787272200000
+  },
+  "memoryMiB": {
+    "before": {
+      "rss": 213.25,
+      "heapTotal": 54.8,
+      "heapUsed": 21.73,
+      "external": 24.03,
+      "arrayBuffers": 21.45
+    },
+    "after": {
+      "rss": 1276.77,
+      "heapTotal": 706.81,
+      "heapUsed": 583.38,
+      "external": 111.69,
+      "arrayBuffers": 73.33
+    },
+    "peakRss": 1411.16
+  }
+}

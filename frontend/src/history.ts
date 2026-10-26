@@ -53,6 +53,10 @@ export interface DateRange {
   to: string
 }
 
+export const MAX_BACKTEST_DAYS = 365
+export const HISTORY_PREROLL_DAYS = 30
+export const BACKTEST_DAY_PRESETS = [7, 30, 90, 365] as const
+
 export class HistoryRequestError extends Error {
   override name = 'HistoryRequestError'
   constructor(message: string, readonly code: string, readonly title = 'Historical data unavailable', readonly retryAfterMs?: number) {
@@ -104,8 +108,8 @@ export function validateDateRange({ from, to }: DateRange, todayUtc = new Date()
   const toMs = utcDate(to)
   const todayMs = utcDate(todayUtc)
   if (fromMs === null || toMs === null || todayMs === null || fromMs >= toMs ||
-    toMs > todayMs || (toMs - fromMs) / DAY_MS > 90) {
-    return 'Choose 1 to 90 completed UTC days. Start is inclusive; end is exclusive.'
+    toMs > todayMs || (toMs - fromMs) / DAY_MS > MAX_BACKTEST_DAYS) {
+    return `Choose 1 to ${MAX_BACKTEST_DAYS} completed UTC days. Start is inclusive; end is exclusive.`
   }
   return null
 }
@@ -191,7 +195,7 @@ export function toBidChartCandles(history: HistoryResponse | { bid: readonly Can
 }
 
 export async function fetchHistory(range: DateRange, signal?: AbortSignal): Promise<HistoryResponse> {
-  const params = new URLSearchParams({ symbol: 'EURUSD', from: range.from, to: range.to, tradingFrom: new Date(Date.parse(range.from) + 30 * DAY_MS).toISOString().slice(0,10) })
+  const params = new URLSearchParams({ symbol: 'EURUSD', from: range.from, to: range.to, tradingFrom: new Date(Date.parse(range.from) + HISTORY_PREROLL_DAYS * DAY_MS).toISOString().slice(0,10) })
   let response: Response
   try { response = await fetch(`/api/history?${params}`, { signal }) }
   catch {

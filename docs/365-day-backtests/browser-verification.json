@@ -1,0 +1,416 @@
+[
+  {
+    "width": 1100,
+    "height": 800,
+    "timeline": {
+      "start": {
+        "value": "30",
+        "max": "394"
+      },
+      "end": {
+        "value": "394",
+        "max": "394"
+      },
+      "dates": "From26 Sept 2025Through25 Sept 2026",
+      "scale": "27 Aug 202525 Sept 2026"
+    },
+    "tradingReadyMs": 2372.485778,
+    "savedMs": 8180.150231,
+    "restoreMs": 4052.335939999999,
+    "resultsRenderMs": 269.63441899999816,
+    "replay": {
+      "1x": {
+        "elapsedMs": 1208.5515520000008,
+        "observations": 4
+      },
+      "10x": {
+        "elapsedMs": 1231.8475199999993,
+        "observations": 40
+      },
+      "100x": {
+        "elapsedMs": 1210.1519819999994,
+        "observations": 400
+      }
+    },
+    "historyRequest": {
+      "name": "http://127.0.0.1:37247/api/history?symbol=EURUSD&from=2025-08-27&to=2026-09-26&tradingFrom=2025-09-26",
+      "duration": 966,
+      "transferSize": 36003589,
+      "encodedBodySize": 36003289,
+      "decodedBodySize": 36003289
+    },
+    "browserHeapAfterLoad": {
+      "usedJSHeapSize": 363815119,
+      "totalJSHeapSize": 422379355,
+      "jsHeapSizeLimit": 4395630592
+    },
+    "browserHeapAfterResults": {
+      "usedJSHeapSize": 281551674,
+      "totalJSHeapSize": 343494890,
+      "jsHeapSizeLimit": 4395630592
+    },
+    "cdpAfterLoad": {
+      "Nodes": 3216,
+      "LayoutCount": 198,
+      "RecalcStyleCount": 331,
+      "JSHeapUsedSize": 316720816,
+      "JSHeapTotalSize": 375140352
+    },
+    "cdpAfterResults": {
+      "Nodes": 3364,
+      "LayoutCount": 68,
+      "RecalcStyleCount": 109,
+      "JSHeapUsedSize": 238088780,
+      "JSHeapTotalSize": 299970560
+    },
+    "backendPeakRssMiB": 1132.27734375,
+    "performance": {
+      "samples": {
+        "react.commit": [
+          17.599999997764826,
+          13.100000001490116,
+          0,
+          10.600000001490116,
+          230.6000000052154,
+          99.10000000149012,
+          0,
+          211.19999999925494,
+          32.400000002235174,
+          24.300000000745058,
+          0,
+          8.899999998509884,
+          6.300000000745058,
+          11.899999998509884,
+          8.300000000745058,
+          6.5,
+          47.100000001490116,
+          23.599999997764826,
+          0,
+          8.800000004470348,
+          7.199999999254942,
+          10.5,
+          9.400000002235174,
+          11.699999999254942
+        ],
+        "bars.advance": [
+          2.199999999254942,
+          1.300000000745058,
+          0.9000000022351742,
+          1.199999999254942,
+          1.2000000029802322,
+          0.8999999985098839
+        ],
+        "timeline.prepare": [
+          0,
+          0.10000000149011612,
+          0.09999999776482582,
+          0,
+          0.09999999776482582,
+          0
+        ],
+        "candles.series": [
+          3.199999999254942,
+          16.299999997019768,
+          0.4000000022351742,
+          0.7000000029802322,
+          12.600000001490116,
+          0.30000000074505806
+        ],
+        "indicators.calculate": [
+          2.099999997764826,
+          45.5,
+          0.30000000074505806,
+          1.2999999970197678,
+          23.899999998509884,
+          0.09999999776482582
+        ],
+        "indicators.series": [
+          6.400000002235174,
+          36.900000002235174,
+          1,
+          3,
+          30.800000000745058,
+          0.9000000022351742
+        ],
+        "cloud.update": [
+          0.09999999776482582,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "sync.apply": [
+          0,
+          0,
+          0,
+          0.10000000149011612,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0.10000000149011612
+        ],
+        "chart.pane": [
+          14.300000000745058,
+          100.80000000074506,
+          2.7000000029802322,
+          6.299999997019768,
+          69.10000000149012,
+          2.199999999254942
+        ],
+        "cloud.draw": [
+          1,
+          0.19999999925494194,
+          0.7000000029802322,
+          0.30000000074505806,
+          0.30000000074505806,
+          0.19999999925494194
+        ]
+      },
+      "counts": {
+        "candles.setData": 6,
+        "indicators.replace": 34,
+        "indicators.setData": 34,
+        "cloud.redraw": 4,
+        "sync.request": 15,
+        "sync.setRange": 9,
+        "sync.crosshair.set": 2,
+        "sync.crosshair.clear": 2
+      },
+      "latest": {
+        "chart.0.cursor": 31795,
+        "chart.0.time": 1758870000,
+        "chart.1.cursor": 31795,
+        "chart.1.time": 1758871200,
+        "chart.2.cursor": 31795,
+        "chart.2.time": 1758859200
+      }
+    },
+    "overflow": false,
+    "session": {
+      "range": {
+        "from": "2025-09-26",
+        "to": "2026-09-26"
+      },
+      "totalCandles": 399885,
+      "replayTimestamp": 1758871440000,
+      "revision": 5
+    },
+    "external": [],
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "height": 1000,
+    "timeline": {
+      "start": {
+        "value": "30",
+        "max": "394"
+      },
+      "end": {
+        "value": "394",
+        "max": "394"
+      },
+      "dates": "From26 Sept 2025Through25 Sept 2026",
+      "scale": "27 Aug 202525 Sept 2026"
+    },
+    "tradingReadyMs": 2463.3499169999996,
+    "savedMs": 7964.896992000002,
+    "restoreMs": 3093.543448000004,
+    "resultsRenderMs": 215.73648700000194,
+    "replay": {
+      "1x": {
+        "elapsedMs": 1216.979011000003,
+        "observations": 4
+      },
+      "10x": {
+        "elapsedMs": 1204.6439210000026,
+        "observations": 40
+      },
+      "100x": {
+        "elapsedMs": 1148.4424660000004,
+        "observations": 400
+      }
+    },
+    "historyRequest": {
+      "name": "http://127.0.0.1:45925/api/history?symbol=EURUSD&from=2025-08-27&to=2026-09-26&tradingFrom=2025-09-26",
+      "duration": 1032.9000000022352,
+      "transferSize": 36003589,
+      "encodedBodySize": 36003289,
+      "decodedBodySize": 36003289
+    },
+    "browserHeapAfterLoad": {
+      "usedJSHeapSize": 363869285,
+      "totalJSHeapSize": 422117585,
+      "jsHeapSizeLimit": 4395630592
+    },
+    "browserHeapAfterResults": {
+      "usedJSHeapSize": 279533956,
+      "totalJSHeapSize": 345588976,
+      "jsHeapSizeLimit": 4395630592
+    },
+    "cdpAfterLoad": {
+      "Nodes": 3216,
+      "LayoutCount": 198,
+      "RecalcStyleCount": 331,
+      "JSHeapUsedSize": 316738312,
+      "JSHeapTotalSize": 374878208
+    },
+    "cdpAfterResults": {
+      "Nodes": 3364,
+      "LayoutCount": 64,
+      "RecalcStyleCount": 108,
+      "JSHeapUsedSize": 236157864,
+      "JSHeapTotalSize": 302067712
+    },
+    "backendPeakRssMiB": 1215.6328125,
+    "performance": {
+      "samples": {
+        "react.commit": [
+          16.5,
+          12.199999999254942,
+          0,
+          10.5,
+          171.4999999962747,
+          63.20000000298023,
+          0,
+          214.89999999850988,
+          52.19999999925494,
+          26.899999998509884,
+          0,
+          8,
+          6.400000002235174,
+          8.900000002235174,
+          7,
+          8.800000000745058,
+          33.100000001490116,
+          11.100000001490116,
+          13,
+          0,
+          11.5,
+          13,
+          10.00000000372529,
+          10.100000001490116
+        ],
+        "bars.advance": [
+          2.100000001490116,
+          1,
+          4.099999997764826,
+          1.699999999254942,
+          1.5,
+          0.6999999992549419
+        ],
+        "timeline.prepare": [
+          0.19999999925494194,
+          0.09999999776482582,
+          0,
+          0,
+          0,
+          0.09999999776482582
+        ],
+        "candles.series": [
+          2.800000000745058,
+          11.699999999254942,
+          0.5,
+          1,
+          11.5,
+          0.20000000298023224
+        ],
+        "indicators.calculate": [
+          2.800000000745058,
+          38.100000001490116,
+          0.5,
+          1,
+          24.800000000745058,
+          0.19999999925494194
+        ],
+        "indicators.series": [
+          6.399999998509884,
+          29.399999998509884,
+          1.199999999254942,
+          1.8999999985098839,
+          30.800000000745058,
+          0.8000000007450581
+        ],
+        "cloud.update": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "sync.apply": [
+          0.19999999925494194,
+          0.10000000149011612,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0.09999999776482582,
+          0,
+          0,
+          0,
+          0,
+          0.10000000149011612,
+          0,
+          0
+        ],
+        "chart.pane": [
+          14.800000000745058,
+          81,
+          6.5,
+          5.800000000745058,
+          69.39999999850988,
+          2
+        ],
+        "cloud.draw": [
+          1,
+          0.30000000074505806,
+          0.4000000022351742,
+          0.5,
+          0.6000000014901161,
+          0.30000000074505806
+        ]
+      },
+      "counts": {
+        "candles.setData": 6,
+        "indicators.replace": 34,
+        "indicators.setData": 34,
+        "cloud.redraw": 4,
+        "sync.request": 15,
+        "sync.setRange": 9,
+        "sync.crosshair.set": 2,
+        "sync.crosshair.clear": 2
+      },
+      "latest": {
+        "chart.0.cursor": 31795,
+        "chart.0.time": 1758870000,
+        "chart.1.cursor": 31795,
+        "chart.1.time": 1758871200,
+        "chart.2.cursor": 31795,
+        "chart.2.time": 1758859200
+      }
+    },
+    "overflow": false,
+    "session": {
+      "range": {
+        "from": "2025-09-26",
+        "to": "2026-09-26"
+      },
+      "totalCandles": 399885,
+      "replayTimestamp": 1758871440000,
+      "revision": 5
+    },
+    "external": [],
+    "errors": []
+  }
+]

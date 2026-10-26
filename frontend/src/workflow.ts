@@ -1,4 +1,4 @@
-import { validateDateRange } from './history.js'
+import { MAX_BACKTEST_DAYS, validateDateRange } from './history.js'
 import type { EquityLedger } from './equity.js'
 export interface Coverage {
   symbol: string; resolution: string; providerEarliestTimestamp: string | null; earliestSelectableDate: string | null;
@@ -15,7 +15,7 @@ export function selectedRange(from: string, through: string, coverage: Coverage 
   const range = { from, to: shiftDate(through, 1) }
   const invalid = coverage?.providerHealth.status === 'metadata-verified' && (coverage.earliestSelectableDate !== null && from < coverage.earliestSelectableDate || through > coverage.latestEligibleDate) ? 'Choose dates inside the advertised historical boundaries.'
     : validateDateRange(range, coverage ? shiftDate(coverage.latestEligibleDate, 1) : undefined)
-  return { range, error: invalid ? 'Choose 1 to 90 completed UTC calendar days within the historical boundaries. ' + invalid : null,
+  return { range, error: invalid ? `Choose 1 to ${MAX_BACKTEST_DAYS} completed UTC calendar days within the historical boundaries. ` + invalid : null,
     days: Math.max(0, (Date.parse(range.to) - Date.parse(from)) / 86400000) }
 }
 export function accountPnl(ledger: EquityLedger, reference: number) {
