@@ -4,8 +4,7 @@ import { copyFile, link, lstat, mkdir, mkdtemp, open, readFile, readdir, realpat
 import { createHash } from 'node:crypto'
 import { dirname, join, resolve, relative, isAbsolute, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { HistoryService } from '../backend/src/history.js'
-import { DatabentoClient } from '../backend/src/databento.js'
+import { LegacyHistoryCache } from '../backend/src/history.js'
 import { providerCachePaths } from '../backend/src/projectPaths.js'
 
 const digest = (value: Uint8Array) => createHash('sha256').update(value).digest('hex')
@@ -42,12 +41,11 @@ export async function migrateCache(source: string, destination: string) {
       hashes[name] = digest(copied)
       const file = await open(join(stage, name), 'r'); try { await file.sync() } finally { await file.close() }
     }
-    const offline = new DatabentoClient('')
-    const verified = new HistoryService(offline, stage, {})
+    const verified = new LegacyHistoryCache(stage)
     const dates = names.filter(name => name.endsWith('.ref.json')).map(name => name.slice(0, 10))
     for (const from of dates) await verified.readCached(from, new Date(Date.parse(from) + 86400000).toISOString().slice(0, 10))
-    // Also validate the persisted ledger through the application's normal reader.
-    await verified.estimate(dates[0], new Date(Date.parse(dates[0]) + 86400000).toISOString().slice(0, 10), 0)
+    const ledger = JSON.parse(await readFile(join(stage, 'verification-budget.json'), 'utf8'))
+    if (ledger.version !== 1 || !Array.isArray(ledger.reservations) || ledger.reservations.some((r: {reservedUsd: number; estimatedUsd: number}) => !Number.isFinite(r.reservedUsd) || r.reservedUsd < 0 || !Number.isFinite(r.estimatedUsd) || r.estimatedUsd < 0)) throw Error('Invalid legacy spending ledger.')
     // Publish data before the ledger under the shared paid-work lock; never overwrite.
     for (const name of [...names.filter(name => name !== 'verification-budget.json'), 'verification-budget.json']) {
       try { await link(join(stage, name), join(destination, name)) }

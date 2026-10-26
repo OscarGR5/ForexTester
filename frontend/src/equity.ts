@@ -38,7 +38,7 @@ export function recordEquity(ledger: EquityLedger, previous: TradingState, state
   const missingSides = new Set<'bid' | 'ask' | 'trade'>()
   let gross = 0
   for (const position of state.positions) {
-    const side = state.symbol === '6E' ? 'trade' : position.direction === 'buy' ? 'bid' : 'ask'
+    const side = state.quote && 'priceModel' in state.quote ? 'trade' : position.direction === 'buy' ? 'bid' : 'ask'
     const quote = quoteCandle(state.quote, side)
     if (!quote || quote.timestamp !== state.observedTimestamp) missingSides.add(side)
     else gross += grossPnl(position, quote.close).usd

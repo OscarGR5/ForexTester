@@ -24,6 +24,8 @@ interface ChartPaneProps {
   active?: boolean
   reviewing?: boolean
   instrument?: string
+  priceLabel?: string
+  priceDecimals?: number
   sessionId: string | null
   timeframe: Timeframe
   source: readonly Candle[]
@@ -43,7 +45,7 @@ interface ChartPaneProps {
   onTimeframeChange: (id: number, timeframe: Timeframe) => void
 }
 
-export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, active = false, reviewing = false, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, stops, placement, draftReference = null, onPick, stopInteraction, entries = [], onConfirmStop, confirmStopDisabled }: ChartPaneProps) {
+export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', priceLabel = 'Bid', priceDecimals = 5, id, active = false, reviewing = false, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, stops, placement, draftReference = null, onPick, stopInteraction, entries = [], onConfirmStop, confirmStopDisabled }: ChartPaneProps) {
   const [readiness, setReadiness] = useState('')
   const container = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
@@ -93,7 +95,7 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, ac
       upColor: '#ffffff', downColor: '#2962ff',
       borderUpColor: '#ffffff', borderDownColor: '#ffffff',
       wickUpColor: '#ffffff', wickDownColor: '#ffffff',
-      priceFormat: { type: 'price', precision: 5, minMove: 0.00001 },
+      priceFormat: { type: 'price', precision: priceDecimals, minMove: 10 ** -priceDecimals },
     })
     stopLines.current = new StopLines(series)
     entryLines.current = new EntryLines(series)
@@ -119,6 +121,11 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, ac
       previous.current = null
     }
   }, [id])
+
+  useEffect(() => {
+    seriesRef.current?.applyOptions({ priceFormat: { type: 'price', precision: priceDecimals, minMove: 10 ** -priceDecimals } })
+    chartRef.current?.applyOptions({ localization: { priceFormatter: (price: number) => price.toFixed(priceDecimals) } })
+  }, [priceDecimals])
 
   useEffect(() => {
     const element = container.current
@@ -250,11 +257,11 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', id, ac
   useDraftStopAnnotation(draftAnnotation, container, chartRef, seriesRef, placement, draftReference, onPick)
 
   return (
-    <section data-active={active} className={`chart-pane${placement ? " placing-stop" : ""}`} aria-label={`Chart ${id + 1}: ${instrument === '6E' ? 'EURUSD 6E' : instrument} ${timeframe} ${instrument === '6E' ? 'trade prices' : 'bid'}`}
+    <section data-active={active} className={`chart-pane${placement ? " placing-stop" : ""}`} aria-label={`Chart ${id + 1}: ${instrument === '6E' ? 'EURUSD 6E' : instrument} ${timeframe} ${instrument === '6E' ? 'trade prices' : priceLabel.toLowerCase()}`}
       onPointerDownCapture={() => synchronizer.activate(id)}
       onPointerMoveCapture={(event) => { if (event.buttons) synchronizer.activate(id) }}>
       <div className="pane-toolbar">
-        <span className="instrument"><strong>{instrument === '6E' ? 'EURUSD 6E' : instrument}</strong>{instrument !== '6E' && <span className="bid-label">Bid</span>}</span>
+        <span className="instrument"><strong>{instrument === '6E' ? 'EURUSD 6E' : instrument}</strong>{instrument !== '6E' && <span className="bid-label">{priceLabel}</span>}</span>
         <label>Timeframe <select aria-label={`Chart ${id + 1} timeframe`} value={timeframe}
           onChange={(event) => { synchronizer.activate(id); onTimeframeChange(id, event.target.value as Timeframe) }}>
           {timeframe === 'M1' && <option value="M1">M1 (legacy)</option>}

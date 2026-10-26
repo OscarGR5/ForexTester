@@ -1,11 +1,18 @@
 # Local Parquet migration inspection
 
-Inspected October 26, 2026. Migration stopped at the execution-semantics gate.
+Inspected October 26, 2026. The execution-semantics gate was subsequently resolved
+by the project lead in this conversation: prices are **mid**, `TS` is **UTC Unix
+seconds**, and each timestamp labels the **start** of its minute. OHLC column
+meanings and minute alignment were also confirmed. These are supplied semantics;
+the Parquet file itself has no corresponding metadata. Implementation proceeds
+using the simplified single-price model without a spread. The observations below
+preserve the original inspection evidence; its conditional UTC labels are now
+confirmed by the lead.
 
 The file contains one structurally valid OHLC series, but does not identify its
 price basis, timestamp timezone/origin, or whether timestamps label candle opens
-or closes. Do not implement execution behavior until the project lead supplies
-that information or explicitly approves documented assumptions. A candle close
+or closes. This uncertainty originally blocked implementation; the project lead subsequently
+provided the required semantics above. A candle close
 timestamp treated as an open timestamp would change information availability and
 next-observation fills.
 
@@ -33,7 +40,7 @@ environment files, saved sessions, or source data were deleted, migrated, or
 backed up by this branch operation.
 
 Read `AGENTS.md`, `DESIGN.md`, `PRODUCT.md`, workspace manifests, and ignore rules.
-No application code, financial formulas, session fingerprints, dependencies,
+At the initial inspection checkpoint, no application code, financial formulas, session fingerprints, dependencies,
 storage layout, or API was changed. Application-module investigation and design
 are deferred until the inspection gate is resolved. The Python script in this
 directory is a reproducible read-only investigation tool, not an application
@@ -268,10 +275,9 @@ and end-to-end import/save/resume verification are deferred because no migration
 has been implemented. Compatibility code and saved datasets remain unchanged;
 that is not a claim that the future migration has passed compatibility testing.
 The inspection made no application API calls or market-data requests. No Parquet
-data is tracked by Git. A migration PR will not be opened
-until implementation is approved and verified.
+data is tracked by Git. The later implementation and its PR are covered by [implementation.md](implementation.md).
 
-## Required project-lead decision
+## Project-lead decision, now resolved
 
 Provide producer documentation or an explicit approved interpretation identifying:
 
@@ -284,3 +290,8 @@ Provide producer documentation or an explicit approved interpretation identifyin
 Do not infer midpoint prices from decimal precision, invent bid/ask, or select
 execution behavior merely from the EURUSD filename. The supplied request
 explicitly requires stopping here before assumptions can alter backtest results.
+
+The project lead supplied mid-price OHLC and UTC Unix seconds at minute start.
+No producer identity or upstream empty-minute filling policy was supplied. Those
+remain provenance limitations and are not inferred; observed gaps are retained.
+See [implementation.md](implementation.md) for the completed migration and checks.

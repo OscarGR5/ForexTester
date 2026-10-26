@@ -69,7 +69,8 @@ it('keeps private environment files ignored and the example credential-free', as
     expect(execFileSync('git', ['check-ignore', '--no-index', path], { cwd: projectRoot, encoding: 'utf8' }).trim()).toBe(path)
   }
   const example = await readFile(join(projectRoot, '.env.example'), 'utf8')
-  expect(example).toMatch(/^DATABENTO_API_KEY=$/m)
+  expect(example).not.toMatch(/^DATABENTO_/m)
+  expect(example).toContain('No API keys')
   expect(example).not.toMatch(/^VITE_/m)
   expect(execFileSync('git', ['ls-files', '--', '.env', '.env.*'], { cwd: projectRoot, encoding: 'utf8' }).trim()).toBe('.env.example')
 })

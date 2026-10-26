@@ -25,10 +25,22 @@ export interface SinglePriceHistory {
   resolution: 'M1'; from: string; to: string
   contracts: ContractInterval[]; candles: TradeCandle[]
 }
-export type HistoryResponse = LegacyHistoryResponse | SinglePriceHistory
-export function isSinglePrice(history: HistoryResponse): history is SinglePriceHistory { return 'priceModel' in history && history.priceModel === 'single' }
+export interface ForexInstrument {
+  symbol: string; baseCurrency: string; quoteCurrency: string; pipSize: number; priceDecimals: number; unitsPerLot: number
+}
+export interface LocalForexHistory {
+  format: 'local-forex-v1'; source: 'local-parquet'; symbol: 'EURUSD'; resolution: 'M1'
+  datasetId: string; sourceChecksum: string; normalizationVersion: 1
+  priceModel: 'single'; priceBasis: 'mid'; executionModel: 'single-price-m1-v1'
+  timestampConvention: 'utc-minute-open'; instrument: ForexInstrument
+  from: string; to: string; candles: Candle[]
+}
+export type HistoryResponse = LegacyHistoryResponse | SinglePriceHistory | LocalForexHistory
+export function isLocalForex(history: HistoryResponse): history is LocalForexHistory { return 'source' in history && history.source === 'local-parquet' }
+export function isFuturesHistory(history: HistoryResponse): history is SinglePriceHistory { return 'source' in history && history.source === 'databento' }
+export function isSinglePrice(history: HistoryResponse): history is SinglePriceHistory | LocalForexHistory { return 'priceModel' in history && history.priceModel === 'single' }
 export function historyCandles(history: HistoryResponse): Candle[] { return isSinglePrice(history) ? history.candles : history.bid }
-export function historyLabel(history: HistoryResponse | null): string { return history && !isSinglePrice(history) ? 'EURUSD · Dukascopy · legacy bid/ask' : '6E — Euro FX Futures · Databento · trade prices' }
+export function historyLabel(history: HistoryResponse | null): string { return !history || isLocalForex(history) ? 'EURUSD · local archive · mid prices' : history && !isSinglePrice(history) ? 'EURUSD · Dukascopy · legacy bid/ask' : '6E — Euro FX Futures · Databento · trade prices' }
 export function rolloverIndex(candles: readonly Candle[], start: number): number {
   const first = (candles[start] as TradeCandle | undefined)?.instrumentId
   if (first === undefined) return candles.length
@@ -124,6 +136,24 @@ export function parseHistory(value: unknown, range: DateRange): HistoryResponse 
   if (!isRecord(value) || value.resolution !== 'M1' || value.from !== range.from || value.to !== range.to ||
     utcDate(range.from) === null || utcDate(range.to) === null || range.from >= range.to) throw new Error('Historical data has an unexpected response format.')
   const fromMs = utcDate(range.from)!, toMs = utcDate(range.to)!
+  if (value.source === 'local-parquet') {
+    const instrument = value.instrument
+    if (value.format !== 'local-forex-v1' || value.symbol !== 'EURUSD' || value.priceModel !== 'single' ||
+      value.priceBasis !== 'mid' || value.executionModel !== 'single-price-m1-v1' || value.timestampConvention !== 'utc-minute-open' ||
+      value.normalizationVersion !== 1 || typeof value.datasetId !== 'string' || !/^[a-f0-9]{64}$/.test(value.datasetId) ||
+      value.sourceChecksum !== value.datasetId || !isRecord(instrument) || instrument.symbol !== 'EURUSD' ||
+      instrument.baseCurrency !== 'EUR' || instrument.quoteCurrency !== 'USD' || instrument.pipSize !== 0.0001 ||
+      instrument.unitsPerLot !== 100000 || instrument.priceDecimals !== 7 ||
+      ['bid', 'ask', 'contracts', 'continuousSymbol', 'volume', 'stypeIn', 'dataset', 'schema'].some(key => key in value) ||
+      !Array.isArray(value.candles) || value.candles.some((bar: unknown) => !isRecord(bar) || Object.keys(bar).some(key => !['timestamp','open','high','low','close'].includes(key)))) {
+      throw new Error('Invalid local Forex history identity.')
+    }
+    return { format: 'local-forex-v1', source: 'local-parquet', symbol: 'EURUSD', resolution: 'M1',
+      datasetId: value.datasetId, sourceChecksum: value.sourceChecksum, normalizationVersion: 1,
+      priceModel: 'single', priceBasis: 'mid', executionModel: 'single-price-m1-v1', timestampConvention: 'utc-minute-open',
+      instrument: { symbol: 'EURUSD', baseCurrency: 'EUR', quoteCurrency: 'USD', pipSize: 0.0001, unitsPerLot: 100000, priceDecimals: 7 },
+      from: range.from, to: range.to, candles: parseCandles(value.candles, fromMs, toMs) }
+  }
   if (value.priceModel === 'single') {
     if (value.source !== 'databento' || value.symbol !== '6E' || value.dataset !== 'GLBX.MDP3' || value.schema !== 'ohlcv-1m' ||
       value.continuousSymbol !== '6E.v.0' || value.stypeIn !== 'continuous' || value.normalizationVersion !== 1 ||
@@ -161,7 +191,7 @@ export function toBidChartCandles(history: HistoryResponse | { bid: readonly Can
 }
 
 export async function fetchHistory(range: DateRange, signal?: AbortSignal): Promise<HistoryResponse> {
-  const params = new URLSearchParams({ symbol: '6E', from: range.from, to: range.to })
+  const params = new URLSearchParams({ symbol: 'EURUSD', from: range.from, to: range.to, tradingFrom: new Date(Date.parse(range.from) + 30 * DAY_MS).toISOString().slice(0,10) })
   let response: Response
   try { response = await fetch(`/api/history?${params}`, { signal }) }
   catch {

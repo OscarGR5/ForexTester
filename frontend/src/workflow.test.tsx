@@ -72,9 +72,13 @@ beforeEach(async()=>{
  Object.assign(globalThis,{IS_REACT_ACT_ENVIRONMENT:true});vi.spyOn(window,'confirm').mockReturnValue(true);vi.clearAllMocks()
  vi.stubGlobal('fetch',async(path:string,options?:RequestInit)=>{
   if(path.startsWith('/api/storage'))return disk.fetch(path,options)
-  if(path==='/api/history/calendar')return new Response(JSON.stringify({days:[]}))
+  if(path==='/api/history/datasets')return new Response(JSON.stringify({datasets:[{symbol:'EURUSD',tradingEnabled:true}]}))
+  if(path.startsWith('/api/history/calendar'))return new Response(JSON.stringify({days:Array.from({length:32},(_,i)=>{
+    const date=shiftDate('2023-12-10',i),bars=[...preroll,bid[0]].filter(b=>b.timestamp>=Date.parse(date)&&b.timestamp<Date.parse(shiftDate(date,1)))
+    return {date,status:bars.length?'cached':'gap',observations:bars.length,h4:bars}
+  })}))
   if(path==='/api/history/coverage')return new Response(JSON.stringify(coverage))
-  if(path.startsWith('/api/history/estimate')&&!failHistory) {const params=new URL(path,'http://local').searchParams;return new Response(JSON.stringify({id:'fixture-cached-quote',from:'2023-12-10',tradingFrom:params.get('from'),to:params.get('to'),cached:true,estimatedUsd:0,reservedUsd:0,remainingBudgetUsd:5,downloadAllowed:true,blockedReason:null,expiresAt:'2030-01-01T00:00:00Z',missingRanges:[]}))}
+
   historyCalls++;if(failHistory)return new Response(JSON.stringify({code:'DATABENTO_AUTH',error:"Databento credentials were rejected.",action:'Check backend configuration.'}),{status:502})
   const params=new URL(path,'http://local').searchParams,from=params.get('from')!,to=params.get('to')!
   return new Response(JSON.stringify({symbol:'EURUSD',resolution:'M1',from,to,bid:[...preroll,...bid].filter(b=>b.timestamp>=Date.parse(from)&&b.timestamp<Date.parse(to)),ask:[...preroll,...bid].filter(b=>b.timestamp>=Date.parse(from)&&b.timestamp<Date.parse(to)&&(!missingAsk||b.timestamp!==beginning+3*60000)).map(b=>({...b,open:b.open+.0002,close:b.close+.0002,high:b.high+.0002,low:b.low+.0002}))}))
@@ -391,102 +395,41 @@ it('keeps production chart candles behind the clock and offers explicit review a
  expect(after.checkpoint).toEqual(before.checkpoint)
 })
 
-it('shows an uncached quote, requires confirmation, and preserves the chosen name/start when installing single-price history', async () => {
- const { fixtureHistory } = await import('../../tests/databentoFixture')
- const original = globalThis.fetch, paid = vi.fn()
+it('starts local mid-price history without pricing or confirmation and preserves the chosen name',async()=>{
+ const underlying=globalThis.fetch,calls:string[]=[]
  vi.stubGlobal('fetch',async(path:string,options?:RequestInit)=>{
-  if(path.startsWith('/api/history/estimate'))return new Response(JSON.stringify({id:'fixture-approval',from:'2023-12-10',tradingFrom:'2024-01-09',to:'2024-01-10',cached:false,estimatedUsd:.01,reservedUsd:.02,remainingBudgetUsd:5,downloadAllowed:true,blockedReason:null,expiresAt:'2030-01-01T00:00:00Z',missingRanges:[{from:'2023-12-10',to:'2024-01-10'}]}))
-  if(path==='/api/history/download'){paid(options);return new Response(JSON.stringify({...fixtureHistory('2023-12-10','2024-01-10',undefined,true),tradingFrom:'2024-01-09'}))}
-  return original(path,options)
+  calls.push(path)
+  if(path.startsWith('/api/history?')) {
+   const params=new URL(path,'http://local').searchParams
+   return new Response(JSON.stringify({format:'local-forex-v1',source:'local-parquet',symbol:'EURUSD',resolution:'M1',datasetId:'a'.repeat(64),sourceChecksum:'a'.repeat(64),normalizationVersion:1,priceModel:'single',priceBasis:'mid',executionModel:'single-price-m1-v1',timestampConvention:'utc-minute-open',instrument:{symbol:'EURUSD',baseCurrency:'EUR',quoteCurrency:'USD',pipSize:.0001,priceDecimals:7,unitsPerLot:100000},from:params.get('from'),to:params.get('to'),candles:[...preroll,...bid]}))
+  }
+  return underlying(path,options)
  })
- await mount();await input('Backtest name','6E research draft')
- await click('Start backtest');await until(()=>host.querySelector('.paid-download-dialog'))
- expect(paid).not.toHaveBeenCalled();expect(host.textContent).toContain('$0.01')
- expect(button('Approve paid download — Estimated $0.01').disabled).toBe(true)
- await click('Cancel — No download');expect(paid).not.toHaveBeenCalled()
- await click('Start backtest');await until(()=>host.querySelector('.paid-download-dialog'))
- await act(async()=>host.querySelector<HTMLInputElement>('.download-acknowledgement input')!.click())
- await click('Approve paid download — Estimated $0.01');await until(()=>host.querySelector('.phase-trading'))
- expect(paid).toHaveBeenCalledOnce();expect(JSON.parse(paid.mock.calls[0][0].body)).toEqual({quoteId:'fixture-approval',confirm:true})
- expect(host.querySelector('.header-session')?.textContent).toContain('6E research draft')
- expect(host.querySelector('.pane-toolbar .instrument strong')?.textContent).toBe('EURUSD 6E')
- expect(host.querySelector('.pane-toolbar .instrument')?.textContent).toBe('EURUSD 6E')
- expect(host.querySelector('.pane-toolbar .bid-label')).toBeNull()
- expect(host.querySelector('.chart-workspace')?.getAttribute('aria-label')).toBe('EURUSD 6E chart workspace')
- expect(host.querySelector('.execution-details')?.textContent).toContain('6E trade prices')
- expect(host.querySelector('.workspace-toolbar')?.textContent).not.toMatch(/Ready for a new setup|Entries fill|Contract mappings/)
-
+ await mount();await input('Backtest name','EURUSD mid research');await load()
+ expect(host.querySelector('.header-session')?.textContent).toContain('EURUSD mid research')
+ expect(host.querySelector('.pane-toolbar .instrument')?.textContent).toBe('EURUSDMid')
+ expect(host.querySelector('.execution-details')?.textContent).toContain('EURUSD mid prices')
+ expect(host.textContent).not.toContain('6E')
+ expect(calls.some(path=>/estimate|download/.test(path))).toBe(false)
  await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
  const record=(await disk.storage.list()).sessions[0]
- expect(record.symbol).toBe('6E');expect(record.checkpoint.trading.quote).toHaveProperty('trade')
+ expect(record.symbol).toBe('EURUSD');expect(record.checkpoint.trading.executionModel).toBe('single-price-m1-v1')
+ await act(async()=>root.unmount());root=createRoot(host);await mount();await click('Resume backtest');await until(()=>host.querySelector('.phase-trading'))
+ expect(host.querySelector('.pane-toolbar .instrument')?.textContent).toBe('EURUSDMid')
+ expect((await new DiskSessionStore().recover(record.id)).record.historyId).toBe(record.historyId)
 })
-
-it('saves a replacement paid history under a new session before flushing the preserved name', async () => {
- const { fixtureHistory } = await import('../../tests/databentoFixture')
- const original = globalThis.fetch
- let paidMode = false, quote: any
- vi.stubGlobal('fetch',async(path:string,options?:RequestInit)=>{
-  if(paidMode && path.startsWith('/api/history/estimate')) {
-   const query=new URL(path,'http://local').searchParams,tradingFrom=query.get('from')!,to=query.get('to')!,from=shiftDate(tradingFrom,-30)
-   quote={id:'replacement-quote',from,tradingFrom,to,cached:false,estimatedUsd:.01,reservedUsd:.02,remainingBudgetUsd:5,downloadAllowed:true,blockedReason:null,expiresAt:'2030-01-01T00:00:00Z',missingRanges:[{from,to}]}
-   return new Response(JSON.stringify(quote))
-  }
-  if(path==='/api/history/download')return new Response(JSON.stringify({...fixtureHistory(quote.from,quote.to,undefined,true),tradingFrom:quote.tradingFrom}))
-  return original(path,options)
- })
- await mount();await load();await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
- const before=(await disk.storage.list()).sessions[0]
- await click('Sessions / settings');await click('New session');await until(()=>host.querySelector('.phase-setup'));await input('Backtest name','Preserved replacement name')
- paidMode=true;await input('From','2024-01-08');await click('Start backtest');await until(()=>host.querySelector('.paid-download-dialog'))
- await act(async()=>host.querySelector<HTMLInputElement>('.download-acknowledgement input')!.click())
- await click('Approve paid download — Estimated $0.01');await until(()=>host.querySelector('.phase-trading') && host.querySelector('.save-state')?.textContent==='Saved')
- expect(host.querySelector('.critical-save')).toBeNull()
- const records=(await disk.storage.list()).sessions
- expect(records).toHaveLength(2)
- const replacement=records.find(record=>record.id!==before.id)!
- expect(replacement.name).toBe('Preserved replacement name')
- expect(replacement.symbol).toBe('6E');expect(replacement.range.from).toBe('2024-01-08')
- expect(records.find(record=>record.id===before.id)!.historyId).toBe(before.historyId)
- expect((await new DiskSessionStore().recover(replacement.id)).record.historyId).toBe(replacement.historyId)
+it('keeps out-of-coverage dates unavailable without requesting a download',async()=>{
+ await mount();await input('From','2022-01-03');await input('Through','2022-01-04')
+ expect(button('Start backtest').disabled).toBe(true)
+ expect(host.textContent).toContain('outside verified local history')
+ expect(historyCalls).toBe(0);expect(host.textContent).not.toContain('Get more historical data')
 })
-
-it('keeps cache bounds out of the date picker and reaches approval for earlier history, with cached loads still free offline', async () => {
- const original=globalThis.fetch, paid=vi.fn(), estimates:string[]=[]
- const cacheCoverage={...coverage,providerEarliestTimestamp:null,earliestSelectableDate:null,cachedFrom:'2023-12-10',cachedTo:'2024-01-11',cachedDates:32,providerHealth:{status:'cache-validated'}}
- let access=true
- vi.stubGlobal('fetch',async(path:string,options?:RequestInit)=>{
-  if(path==='/api/history/coverage')return new Response(JSON.stringify(cacheCoverage))
-  if(path==='/api/history/download'){paid();throw Error('No download permitted in date-selection regression')}
-  if(path.startsWith('/api/history/estimate')) {
-   const query=new URL(path,'http://local').searchParams,from=query.get('from')!,to=query.get('to')!
-   estimates.push(from)
-   if(from==='2022-01-03') {
-    if(!access)return new Response(JSON.stringify({code:'DATABENTO_CONFIGURATION',error:'Set DATABENTO_API_KEY in the backend environment.'}),{status:503})
-    const start=shiftDate(from,-30)
-    return new Response(JSON.stringify({id:'earlier-history-quote',from:start,tradingFrom:from,to,cached:false,estimatedUsd:.02,reservedUsd:.04,remainingBudgetUsd:5,downloadAllowed:true,blockedReason:null,expiresAt:'2030-01-01T00:00:00Z',missingRanges:[{from:start,to}]}))
-   }
-  }
-  return original(path,options)
- })
- await mount();await until(()=>host.textContent?.includes('No downloaded history yet'))
- const from=host.querySelector<HTMLInputElement>('[aria-label="From"]')!
- expect(from.min).toBe('');expect(host.textContent).not.toContain('Earliest advertised M1')
- expect(host.textContent).toContain('Get more historical data')
- expect(selectedRange('2022-01-01','2022-03-31',cacheCoverage).error).toBeNull()
- expect(selectedRange('2022-01-01','2022-04-01',cacheCoverage).error).toBeTruthy()
- await input('From','2022-01-03');await input('Through','2022-01-04');await click('Start backtest')
- await until(()=>host.querySelector('.paid-download-dialog'))
- expect(estimates).toEqual(['2022-01-03']);expect(host.textContent).toContain('2022-01-03 through 2022-01-04')
- expect(button('Approve paid download — Estimated $0.02').disabled).toBe(true)
- await act(async()=>host.querySelector<HTMLInputElement>('.download-acknowledgement input')!.click())
- expect(button('Approve paid download — Estimated $0.02').disabled).toBe(false)
- await click('Cancel — No download');expect(paid).not.toHaveBeenCalled()
- access=false;await click('Start backtest');await until(()=>host.querySelector('.form-error[role=alert]'))
- expect(host.textContent).toContain('Set DATABENTO_API_KEY');expect(host.textContent).toContain('Get more historical data')
- await input('From','2024-01-09');await input('Through','2024-01-09');await click('Start backtest')
- await until(()=>host.querySelector('.phase-trading'))
- expect(host.querySelector('.phase-trading')).not.toBeNull()
- expect(host.querySelector('.paid-download-dialog')).toBeNull();expect(paid).not.toHaveBeenCalled()
+it('shows an explicit empty local archive without offering online data',async()=>{
+ const original=globalThis.fetch
+ vi.stubGlobal('fetch',(path:string,options?:RequestInit)=>path==='/api/history/datasets'?Promise.resolve(new Response(JSON.stringify({datasets:[]}))):original(path,options))
+ await mount();await until(()=>host.textContent?.includes('No local EURUSD history is installed'))
+ expect(button('Start backtest').disabled).toBe(true);expect(historyCalls).toBe(0)
+ expect(host.textContent).not.toMatch(/Databento|credits|paid/)
 })
 
 async function seedSaved(name = 'Saved research', legacy = false) {
@@ -608,18 +551,6 @@ it('keeps a restored session\'s original start timestamp and indices even when a
  expect(saved.checkpoint.replay.startTimestamp).toBe(original.checkpoint.replay.startTimestamp)
  expect(saved.checkpoint.replay.startIndex).toBe(original.checkpoint.replay.startIndex)
  expect(saved.checkpoint.replay.index).toBe(original.checkpoint.replay.index)
-})
-it('keeps an expired quote unsubmitted and asks for a fresh estimate',async()=>{
- const underlying=globalThis.fetch,paid=vi.fn()
- vi.stubGlobal('fetch',async(path:string,options?:RequestInit)=>{
-  if(path==='/api/history/download'){paid();throw Error('No paid submission allowed')}
-  const response=await underlying(path,options)
-  if(path.startsWith('/api/history/estimate')){const quote=await response.json();return new Response(JSON.stringify({...quote,cached:false,estimatedUsd:.01,reservedUsd:.02,expiresAt:'2020-01-01T00:00:00Z',missingRanges:[{from:quote.from,to:quote.to}]}))}
-  return response
- })
- await mount();await click('Start backtest');await until(()=>host.querySelector('.paid-download-dialog'))
- expect(host.textContent).toContain('Quote expired');expect(button('Approve paid download — Estimated $0.01').disabled).toBe(true)
- await click('Cancel — No download');expect(paid).not.toHaveBeenCalled();expect(host.querySelector('.phase-setup')).not.toBeNull()
 })
 it('cancels an in-flight cached load without creating or starting a session',async()=>{
  await mount();const underlying=globalThis.fetch

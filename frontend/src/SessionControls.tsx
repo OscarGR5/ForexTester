@@ -110,9 +110,9 @@ export function SessionControls({ sessions, range, timestamp, startup = false }:
     {sessions.error && <p className="form-error" role="alert">{sessions.error}</p>}
     {sessions.error && <button type="button" disabled={sessions.busy} onClick={sessions.retry}>Retry storage connection</button>}
     {sessions.repairTarget && <div aria-label="Historical data repair">
-      <p>“{sessions.repairTarget.name}” needs its original historical data. Repair downloads the saved range and 30-day pre-roll and requires an exact fingerprint match. Trading records are preserved.</p>
+      <p>“{sessions.repairTarget.name}” needs its original historical data. Repair reads the installed local archive and requires an exact fingerprint match. Legacy sessions need their original history object from backup. Trading records are preserved.</p>
       <button type="button" disabled={sessions.busy} onClick={() => void sessions.repair()}>Repair historical data</button>
-      {sessions.repairProgress && <p role="status">{sessions.busy ? 'Repairing historical data' : 'Last repair download'}: {sessions.repairProgress.completed} / {sessions.repairProgress.total} chunks</p>}
+      {sessions.repairProgress && <p role="status">{sessions.busy ? 'Repairing historical data' : 'Last repair read'}: {sessions.repairProgress.completed} / {sessions.repairProgress.total} chunks</p>}
     </div>}
     {sessions.migrationWarning && <p className="coverage-warning" role="status">{sessions.migrationWarning}</p>}
     {sessions.cacheWarning && <p className="coverage-warning" role="status">{sessions.cacheWarning}</p>}

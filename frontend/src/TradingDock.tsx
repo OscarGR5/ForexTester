@@ -16,7 +16,7 @@ export function draftEstimate(state: TradingState, draft: StopDraft) {
   const price = draftObservedPrice(state, draft)
   const stop = draft.price
   if (!stop || !Number.isFinite(stop) || stop <= 0) return { error: 'Click the price chart to select a stop-loss.', lots: null, risk: null }
-  if (price === null) return { error: state.symbol === '6E' ? 'Current trade-price candle unavailable.' : 'Current bid/ask quote unavailable.', lots: null, risk: null }
+  if (price === null) return { error: state.executionModel ? 'Current mid-price candle unavailable.' : state.symbol === '6E' ? 'Current trade-price candle unavailable.' : 'Current bid/ask quote unavailable.', lots: null, risk: null }
   const sideError = draft.direction === 'buy' ? stop >= price : stop <= price
   if (!position && sideError) return { error: `${draft.direction === 'buy' ? 'Buy SL must be below' : 'Sell SL must be above'} the observed entry price.`, lots: null, risk: null }
   const lots = position?.lots ?? (typeof draft.sizing === 'number' ? draft.sizing : sizeFromRisk(state.account.referenceBalance * draft.sizing.riskPercent / 100, price, stop))
@@ -52,7 +52,7 @@ export function TradingDock({ reviewing = false, shortcutsBlocked = false, tradi
       </div>
       <button ref={confirm} aria-label={draft.positionId ? 'Confirm SL change' : 'Confirm order'} disabled={!canOrder || !!estimate?.error} onClick={onConfirm}>Confirm</button>
       <button aria-label="Cancel placement" onClick={()=>setDraft(null)}>Cancel</button>
-      <details><summary aria-label="Enter price with keyboard" title="Enter price with keyboard">Type SL</summary><label>SL price<input data-draft-sl-price aria-label="SL price" type="number" step="0.00001" value={draft.price ?? ''} onChange={e=>setDraft({...draft,price:e.target.value ? Number(e.target.value) : null})}/></label></details>
+      <details><summary aria-label="Enter price with keyboard" title="Enter price with keyboard">Type SL</summary><label>SL price<input data-draft-sl-price aria-label="SL price" type="number" step={state.executionModel ? '0.0000001' : '0.00001'} value={draft.price ?? ''} onChange={e=>setDraft({...draft,price:e.target.value ? Number(e.target.value) : null})}/></label></details>
       <small>{draft.direction === 'buy' ? 'B' : 'S'} to confirm · Esc to cancel</small>
     </div>}
     {!reviewing && slots > 0 && <div className="active-positions" role="region" aria-label="Pending and open positions" tabIndex={0}>

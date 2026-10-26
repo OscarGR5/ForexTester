@@ -204,8 +204,31 @@ def inspect(path):
     return out
 
 
+def verify_node_benchmarks(path, benchmarks_path):
+    import pyarrow.dataset as ds
+    source = ds.dataset(path, format='parquet')
+    with open(benchmarks_path) as evidence:
+        benchmarks = json.load(evidence)
+    matches = []
+    for case in benchmarks:
+        start = int(dt.datetime.fromisoformat(case['from']).replace(tzinfo=dt.timezone.utc).timestamp())
+        end = int(dt.datetime.fromisoformat(case['to']).replace(tzinfo=dt.timezone.utc).timestamp())
+        table = source.to_table(filter=(ds.field('TS') >= start) & (ds.field('TS') < end))
+        # Integer multiplication precedes conversion. These millisecond values
+        # are exactly representable below 2**53; no integer precision is lost.
+        columns = [table['TS'].combine_chunks().to_numpy() * 1000]
+        columns += [table[key].combine_chunks().to_numpy() for key in ['O', 'H', 'L', 'C']]
+        digest = hashlib.sha256(np.column_stack(columns).astype('<f8').tobytes()).hexdigest()
+        if table.num_rows != case['selectedRows'] or digest != case['candleDigest']:
+            raise ValueError(f"Node/PyArrow data mismatch in {case['year']}")
+        matches.append({'year': case['year'], 'rows': table.num_rows, 'candleDigest': digest, 'matched': True})
+    return matches
+
+
 if __name__ == "__main__":
-    if sys.argv[1] == "--range":
+    if sys.argv[1] == "--verify-node":
+        result = verify_node_benchmarks(sys.argv[2], sys.argv[3])
+    elif sys.argv[1] == "--range":
         result = range_read(sys.argv[2], int(sys.argv[3]), int(sys.argv[4]))
     else:
         result = inspect(sys.argv[1])

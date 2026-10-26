@@ -4,7 +4,8 @@ import { App } from './App'
 it('hides setup until session discovery completes, without mounting charts or results', () => {
   const html = renderToStaticMarkup(<App/>)
   expect(html).toContain('Set up a backtest')
-  expect(html).toContain('Get more historical data')
+  expect(html).toContain('Checking local history')
+  expect(html).not.toMatch(/Databento|Get more historical data|paid-download/)
   expect(html).not.toContain('datetime-local')
   expect(html).toContain('Start backtest')
   expect(html).toContain('Through')

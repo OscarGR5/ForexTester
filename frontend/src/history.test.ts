@@ -75,7 +75,7 @@ describe('historical chart data', () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ error: 'Provider unavailable' }), { status: 502 }))
     vi.stubGlobal('fetch', mock)
     await expect(fetchHistory(range)).resolves.toMatchObject({ bid: [bid], ask: [ask] })
-    expect(mock.mock.calls[0][0]).toBe('/api/history?symbol=6E&from=2024-01-09&to=2024-01-10')
+    expect(mock.mock.calls[0][0]).toBe('/api/history?symbol=EURUSD&from=2024-01-09&to=2024-01-10&tradingFrom=2024-02-08')
     await expect(fetchHistory(range)).rejects.toThrow('Provider unavailable')
   })
 

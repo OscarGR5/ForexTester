@@ -6,7 +6,7 @@ export const PREROLL_DAYS = 30
 export type LoadedHistory = HistoryResponse & { tradingFrom: string }
 export interface LoadProgress { completed: number; total: number }
 
-// This path can only read cached history. New paid downloads use quoteHistory/downloadHistory.
+// Read installed local observations, including the unchanged 30-day pre-roll.
 export class HistoryLoader {
   constructor(private download = fetchHistory) {}
   async load(range: DateRange, signal: AbortSignal, progress: (value: LoadProgress) => void): Promise<LoadedHistory> {
