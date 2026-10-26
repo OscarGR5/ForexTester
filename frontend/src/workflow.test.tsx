@@ -9,6 +9,9 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { createChart, type CandlestickData, type ISeriesApi, type UTCTimestamp } from 'lightweight-charts'
 import { App } from './App'
 import * as persistence from './useSessionPersistence'
+import * as dock from './TradingDock'
+import * as tradingHook from './useTrading'
+import * as replayHook from './useReplay'
 import { selectedRange, shiftDate, accountPnl } from './workflow'
 import { PreferenceTabGuard } from './uiPreferenceCleanup'
 import { uiKey } from './uiPreferences'
@@ -1251,4 +1254,141 @@ it('focuses the surviving saved label after deleting another backtest', async ()
  await until(() => host.querySelectorAll('.saved-session').length === 1)
  await until(() => document.activeElement === button('Rename backtest Keep this one'))
  expect((await disk.storage.list()).sessions[0].name).toBe('Keep this one')
+})
+
+it.each([['Buy', 1.097, 'B'], ['Sell', 1.103, 'S']] as const)('Enter confirms a selected %s draft once through the mouse confirmation path', async (direction, price, identity) => {
+ await start(); await click(direction); await pick(price)
+ expect(host.querySelector('.stop-placement')?.textContent).toContain('Enter to confirm · Esc to cancel')
+ const tick = button('Confirm draft stop-loss'), confirm = button('Confirm order')
+ const first = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+ await act(async () => {
+  window.dispatchEvent(first)
+  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }))
+  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', repeat: true, cancelable: true }))
+  tick.click(); confirm.click()
+ })
+ expect(first.defaultPrevented).toBe(true)
+ expect(host.querySelectorAll('[data-order-id]')).toHaveLength(1)
+ expect(host.querySelector('.active-positions')?.textContent).toContain(`Pending ${identity}1`)
+ expect((await tradeKey('Enter')).defaultPrevented).toBe(false)
+ await click(direction); await pick(price)
+ for (let i = 0; i < 3; i++) expect((await tradeKey('Enter', window, { repeat: true })).defaultPrevented).toBe(false)
+ expect(host.querySelectorAll('[data-order-id]')).toHaveLength(1)
+ await tradeKey('Escape'); expect(host.querySelector('.stop-placement')).toBeNull()
+ await click('Next Candle')
+ expect(host.querySelectorAll('[data-position-id]')).toHaveLength(1)
+})
+it('Enter confirms from the dedicated numeric SL input, but leaves missing and invalid prices alone', async () => {
+ await start(); await click('Buy')
+ const details = host.querySelector<HTMLDetailsElement>('.stop-placement details')!
+ await act(async () => { details.open = true })
+ const price = host.querySelector<HTMLInputElement>('[aria-label="SL price"]')!
+ price.focus()
+ for (const value of ['', '0', '-1', '1.2']) {
+  await input('SL price', value)
+  expect((await tradeKey('Enter', price)).defaultPrevented).toBe(false)
+  expect(host.querySelector('[data-order-id]')).toBeNull()
+ }
+ await input('SL price', '1.097')
+ expect((await tradeKey('Enter', price)).defaultPrevented).toBe(true)
+ expect(host.querySelectorAll('[data-order-id]')).toHaveLength(1)
+})
+it('ignores modified, repeated, composing and prevented Enter and preserves unrelated shortcuts', async () => {
+ await start(); await click('Buy'); await pick(1.097)
+ for (const init of [{ repeat: true }, { ctrlKey: true }, { altKey: true }, { metaKey: true }, { shiftKey: true }, { isComposing: true }]) {
+  expect((await tradeKey('Enter', window, init)).defaultPrevented).toBe(false)
+ }
+ const prevented = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true })
+ prevented.preventDefault(); await act(async () => window.dispatchEvent(prevented))
+ for (const key of ['b', 's', 'ArrowRight', ' ']) expect((await tradeKey(key)).defaultPrevented).toBe(false)
+ expect(host.querySelector('[data-order-id]')).toBeNull()
+ expect((await tradeKey('Enter')).defaultPrevented).toBe(true)
+ expect(host.querySelectorAll('[data-order-id]')).toHaveLength(1)
+})
+it('preserves native Enter on Cancel, Confirm and other interactive elements', async () => {
+ await start(); await click('Buy'); await pick(1.097)
+ for (const name of ['Cancel placement', 'Confirm order', 'Confirm draft stop-loss', 'Sessions / settings']) {
+  const control = button(name); control.focus()
+  expect((await tradeKey('Enter', control)).defaultPrevented).toBe(false)
+  expect((await tradeKey('Enter')).defaultPrevented).toBe(false)
+  expect(host.querySelector('[data-order-id]')).toBeNull()
+  control.blur()
+ }
+ const elements = ['<input>', '<select><option>Test</option></select>', '<textarea></textarea>', '<a href="#">Link</a>', '<details><summary>Summary</summary></details>', '<div contenteditable="true">Edit</div>', '<div role="button" tabindex="0">Button</div>']
+ for (const html of elements) {
+  const wrapper = document.createElement('div'); wrapper.innerHTML = html; host.append(wrapper)
+  const control = wrapper.querySelector('summary') ?? wrapper.firstElementChild!
+  expect((await tradeKey('Enter', control)).defaultPrevented).toBe(false)
+  wrapper.remove()
+ }
+ // jsdom does not synthesize native Enter clicks; exercise the native action explicitly.
+ await tradeKey('Enter', button('Cancel placement')); await click('Cancel placement')
+ expect(host.querySelector('.stop-placement')).toBeNull(); expect(host.querySelector('[data-order-id]')).toBeNull()
+ await click('Buy'); await pick(1.097)
+ await tradeKey('Enter', button('Confirm order')); await click('Confirm order')
+ expect(host.querySelectorAll('[data-order-id]')).toHaveLength(1)
+})
+it('blocks Enter for dialogs, settings overlays, management and session workspace guards', async () => {
+ await start(); await click('Buy'); await pick(1.097)
+ for (const selector of ['.indicator-controls', '.execution-details']) {
+  const panel = host.querySelector<HTMLDetailsElement>(selector)!
+  await act(async () => { panel.open = true })
+  expect((await tradeKey('Enter')).defaultPrevented).toBe(false)
+  await act(async () => { panel.open = false })
+ }
+ for (const html of ['<dialog open></dialog>', '<div role="dialog"></div>', '<div aria-modal="true"></div>', '<div class="stop-selector"></div>']) {
+  const overlay = document.createElement('div'); overlay.innerHTML = html; host.append(overlay)
+  expect((await tradeKey('Enter')).defaultPrevented).toBe(false)
+  overlay.remove()
+ }
+ const original = persistence.useSessionPersistence
+ let guards: Partial<ReturnType<typeof original>> = {}
+ vi.spyOn(persistence, 'useSessionPersistence').mockImplementation(options => ({ ...original(options), ...guards }))
+ for (const guard of [{ initialized: false }, { busy: true }, { conflict: true }, { awaitingChoice: true }]) {
+  guards = guard; await act(async () => root.render(<StrictMode><App/></StrictMode>))
+  expect((await tradeKey('Enter')).defaultPrevented).toBe(false)
+  expect(host.querySelector('[data-order-id]')).toBeNull()
+ }
+ guards = {}; await act(async () => root.render(<StrictMode><App/></StrictMode>))
+ await click('Sessions / settings')
+ expect((await tradeKey('Enter')).defaultPrevented).toBe(false)
+ await click('Close management'); expect(host.querySelector('[data-order-id]')).toBeNull()
+})
+it('respects replay and trading permissions even with a selected draft retained', async () => {
+ await start(); await click('Buy'); await pick(1.097)
+ const original = tradingHook.useTrading
+ let permission: Partial<ReturnType<typeof original>['permission']> = {}
+ vi.spyOn(tradingHook, 'useTrading').mockImplementation((...args) => {
+  const trading = original(...args)
+  return { ...trading, permission: { ...trading.permission, ...permission } }
+ })
+ for (const blocked of [{ active: false }, { playing: true }, { hasFuture: false }]) {
+  permission = blocked; await act(async () => root.render(<StrictMode><App/></StrictMode>))
+  expect((await tradeKey('Enter')).defaultPrevented).toBe(false)
+  expect(host.querySelector('[data-order-id]')).toBeNull()
+ }
+ permission = {}; const originalReplay = replayHook.useReplay
+ vi.spyOn(replayHook, 'useReplay').mockImplementation((...args) => ({ ...originalReplay(...args), reviewing: true }))
+ await act(async () => root.render(<StrictMode><App/></StrictMode>))
+ expect((await tradeKey('Enter')).defaultPrevented).toBe(false)
+ expect(host.querySelector('[data-order-id]')).toBeNull()
+})
+it('Enter confirms a valid existing-position SL draft through confirmDraft', async () => {
+ await start(); await order('Buy', 1.097); await click('Next Candle')
+ const original = dock.TradingDock
+ // Expose an existing-position draft without adding a new production entry point.
+ vi.spyOn(dock, 'TradingDock').mockImplementation(props => <>{original(props)}<button onClick={() => {
+  const position = props.trading.state.positions[0]
+  props.setDraft({ direction: position.direction, sizing: position.lots, setupId: position.setupId, positionId: position.id, slot: 1, price: 1.098 })
+ }}>Test modify draft</button></>)
+ await act(async () => root.render(<StrictMode><App/></StrictMode>))
+ await click('Test modify draft')
+ expect(button('Confirm SL change').disabled).toBe(false)
+ expect((await tradeKey('Enter')).defaultPrevented).toBe(true)
+ expect(host.querySelector('.stop-placement')).toBeNull()
+ expect(host.querySelector('[data-order-id]')).toBeNull()
+ await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
+ const state = (await disk.storage.list()).sessions[0].checkpoint.trading
+ expect(state.positions).toHaveLength(1)
+ expect(state.positions[0].stopPrice).toBe(1.098)
 })

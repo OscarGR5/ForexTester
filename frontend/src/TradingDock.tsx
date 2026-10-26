@@ -51,7 +51,8 @@ export function TradingDock({ reviewing = false, shortcutsBlocked = false, tradi
       </div>
       <button aria-label={draft.positionId ? 'Confirm SL change' : 'Confirm order'} disabled={!canOrder || !!estimate?.error} onClick={onConfirm}>Confirm</button>
       <button aria-label="Cancel placement" onClick={()=>setDraft(null)}>Cancel</button>
-      <details><summary aria-label="Enter price with keyboard" title="Enter price with keyboard">Type SL</summary><label>SL price<input aria-label="SL price" type="number" step="0.00001" value={draft.price ?? ''} onChange={e=>setDraft({...draft,price:e.target.value ? Number(e.target.value) : null})}/></label></details>
+      <details><summary aria-label="Enter price with keyboard" title="Enter price with keyboard">Type SL</summary><label>SL price<input data-draft-sl-price aria-label="SL price" type="number" step="0.00001" value={draft.price ?? ''} onChange={e=>setDraft({...draft,price:e.target.value ? Number(e.target.value) : null})}/></label></details>
+      <small>Enter to confirm · Esc to cancel</small>
     </div>}
     {!reviewing && slots > 0 && <div className="active-positions" role="region" aria-label="Pending and open positions" tabIndex={0}>
       {stops.map(stop => {

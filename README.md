@@ -10,10 +10,10 @@ Use Node.js 24 and npm 11 or newer.
 
 ```sh
 npm ci
-npm run dev:backend
-# Another terminal:
-npm run dev:frontend
+npm run dev
 ```
+
+Both servers run in this terminal with labeled backend/frontend output. Ctrl+C stops both; if either exits, the other is stopped and a failure returns a nonzero exit code. The separate `npm run dev:backend` and `npm run dev:frontend` commands remain available.
 
 Vite prints the frontend URL. The backend binds to `127.0.0.1:3001` by default. Set `PORT` to override it. Build with `npm run build`; run the compiled backend with `npm start --workspace backend`.
 
