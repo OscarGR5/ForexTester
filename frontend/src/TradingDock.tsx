@@ -30,7 +30,8 @@ export function TradingDock({ reviewing = false, shortcutsBlocked = false, tradi
   const { state, permission } = trading
   const [risk, setRisk] = useState('1')
   const buy = useRef<HTMLButtonElement>(null), sell = useRef<HTMLButtonElement>(null)
-  useTradeKeyboard({ buy, sell, blocked: shortcutsBlocked || reviewing || !!draft })
+  const confirm = useRef<HTMLButtonElement>(null)
+  useTradeKeyboard({ buy, sell, confirm, draftDirection: draft?.direction ?? null, blocked: shortcutsBlocked || reviewing })
   const canOrder = canRequestOrder(permission), slots = state.pending.length + state.positions.length
   const setupId = activeSetupId(state)
   const estimate = draft ? draftEstimate(state, draft) : null
@@ -49,10 +50,10 @@ export function TradingDock({ reviewing = false, shortcutsBlocked = false, tradi
       <strong>{draft.positionId ? `Modify SL ${draft.positionId}` : `${draft.direction === 'buy' ? 'Buy' : 'Sell'} · slot ${draft.slot}`} · {draft.price === null ? 'Click the price chart to place SL' : `SL ${draft.price.toFixed(5)}`}</strong>
       {estimate?.error ? <span className="form-error" role="status">{estimate.error}</span> : <span>{draft.positionId ? 'Position risk preview:' : 'Observed-price estimate:'} {estimate?.lots?.toFixed(2)} lots · ${estimate?.risk?.toFixed(2)} risk ({((estimate?.risk ?? 0)/state.account.referenceBalance*100).toFixed(2)}%). {draft.positionId ? 'Effective after the current M1 candle.' : 'Final size checked at entry.'}</span>}
       </div>
-      <button aria-label={draft.positionId ? 'Confirm SL change' : 'Confirm order'} disabled={!canOrder || !!estimate?.error} onClick={onConfirm}>Confirm</button>
+      <button ref={confirm} aria-label={draft.positionId ? 'Confirm SL change' : 'Confirm order'} disabled={!canOrder || !!estimate?.error} onClick={onConfirm}>Confirm</button>
       <button aria-label="Cancel placement" onClick={()=>setDraft(null)}>Cancel</button>
       <details><summary aria-label="Enter price with keyboard" title="Enter price with keyboard">Type SL</summary><label>SL price<input data-draft-sl-price aria-label="SL price" type="number" step="0.00001" value={draft.price ?? ''} onChange={e=>setDraft({...draft,price:e.target.value ? Number(e.target.value) : null})}/></label></details>
-      <small>Enter to confirm · Esc to cancel</small>
+      <small>{draft.direction === 'buy' ? 'B' : 'S'} to confirm · Esc to cancel</small>
     </div>}
     {!reviewing && slots > 0 && <div className="active-positions" role="region" aria-label="Pending and open positions" tabIndex={0}>
       {stops.map(stop => {

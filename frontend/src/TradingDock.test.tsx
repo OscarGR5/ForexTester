@@ -60,7 +60,7 @@ it('obeys native button and ancestor fieldset states, permission changes, drafts
 it('ignores repeats, modifier combinations, composition, handled events and unrelated keys', async () => {
  const setDraft = vi.fn(), state = createTradingState()
  await act(async () => root.render(<TradingDock trading={{ state, permission } as ReturnType<typeof useTrading>} draft={null} setDraft={setDraft} stops={[]} onConfirm={vi.fn()}/>))
- for (const init of [{ repeat: true }, { ctrlKey: true }, { altKey: true }, { metaKey: true }, { isComposing: true }]) {
+ for (const init of [{ repeat: true }, { ctrlKey: true }, { altKey: true }, { metaKey: true }, { shiftKey: true }, { isComposing: true }]) {
   for (const letter of ['b', 's']) expect((await key(letter, init)).defaultPrevented).toBe(false)
  }
  expect((await key('ArrowRight', { shiftKey: true })).defaultPrevented).toBe(false)
