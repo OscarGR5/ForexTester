@@ -1,8 +1,8 @@
-import { aggregateBidCandles, fetchHistory, parseHistory, validateDateRange, type Candle, type DateRange, type HistoryResponse, type TradeCandle } from './history.js'
+import { aggregateBidCandles, fetchHistory, HISTORY_PREROLL_DAYS, parseHistory, validateDateRange, type Candle, type DateRange, type HistoryResponse, type TradeCandle } from './history.js'
 
 const DAY = 86_400_000
 const date = (ms: number) => new Date(ms).toISOString().slice(0, 10)
-export const PREROLL_DAYS = 30
+export const PREROLL_DAYS = HISTORY_PREROLL_DAYS
 export type LoadedHistory = HistoryResponse & { tradingFrom: string }
 export interface LoadProgress { completed: number; total: number }
 

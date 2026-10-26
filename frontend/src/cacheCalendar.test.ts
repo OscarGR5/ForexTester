@@ -10,6 +10,17 @@ function calendar(): CacheCalendar {
     return {date,status:'cached',observations:6,h4:Array.from({length:6},(_,hour)=>bar(Date.parse(date)+hour*14400000))}
   }) }
 }
+function yearCalendar(): CacheCalendar {
+  return { days: Array.from({length:395},(_,index)=>{
+    const date=shiftDate('2023-12-02',index)
+    return {date,status:'cached',observations:6,h4:Array.from({length:6},(_,hour)=>bar(Date.parse(date)+hour*14400000))}
+  }) }
+}
+it('selects a complete 365-day preset plus the separate 30-day pre-roll',()=>{
+  expect(cachedPreset(yearCalendar(),365)).toEqual({from:'2024-01-01',to:'2024-12-31'})
+  expect(rangeCoverage(yearCalendar(),{from:'2024-01-01',to:'2024-12-31'}).missing).toBe(0)
+  expect(rangeCoverage(yearCalendar(),{from:'2024-01-01',to:'2025-01-01'}).replay).toBeNull()
+})
 it.each([[90,'2024-01-01'],[30,'2024-03-01'],[7,'2024-03-24']])('anchors the %i-day preset to validated history with pre-roll', (days,from)=>{
   expect(cachedPreset(calendar(),days)).toEqual({from,to:'2024-03-31'})
 })

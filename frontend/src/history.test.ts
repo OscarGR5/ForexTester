@@ -65,7 +65,8 @@ describe('historical chart data', () => {
 
   it('uses the backend UTC date limits', () => {
     expect(validateDateRange(range, '2024-01-11')).toBeNull()
-    expect(validateDateRange({ from: '2024-01-01', to: '2024-04-02' }, '2024-04-03')).not.toBeNull()
+    expect(validateDateRange({ from: '2024-01-01', to: '2024-12-31' }, '2025-01-01')).toBeNull()
+    expect(validateDateRange({ from: '2024-01-01', to: '2025-01-01' }, '2025-01-02')).not.toBeNull()
     expect(validateDateRange({ from: '2024-01-09', to: '2024-01-12' }, '2024-01-11')).not.toBeNull()
     expect(validateDateRange({ from: '2024-02-30', to: '2024-03-01' }, '2024-03-02')).not.toBeNull()
   })

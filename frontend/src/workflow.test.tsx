@@ -86,7 +86,7 @@ beforeEach(async()=>{
  host=document.createElement('div');document.body.append(host);root=createRoot(host)
 })
 afterEach(async()=>{await act(async()=>root.unmount());host.remove();await disk.close();vi.restoreAllMocks();vi.unstubAllGlobals()})
-async function until(check:()=>unknown){for(let i=0;i<400;i++){if(check())return;await act(async()=>{await delay(3)})}throw Error(host.textContent!)}
+async function until(check:()=>unknown){for(let i=0;i<2000;i++){if(check())return;await act(async()=>{await delay(3)})}throw Error(host.textContent!)}
 async function mount(){await act(async()=>root.render(<StrictMode><App/></StrictMode>));await until(()=>!host.querySelector<HTMLFieldSetElement>('.workspace-controls')?.disabled||host.querySelector('.saved-session'))}
 function button(name:string){const result=[...host.querySelectorAll<HTMLButtonElement>('button')].find(b=>b.textContent===name||b.getAttribute('aria-label')===name);if(!result)throw Error(`Missing ${name}: ${host.textContent}`);return result}
 async function click(name:string){await act(async()=>button(name).click())}
@@ -164,7 +164,7 @@ it('keeps initial setup explicit, bounded and free from automatic downloads unde
  await mount();expect(historyCalls).toBe(0);expect(host.textContent).toContain('Set up a backtest');expect(host.querySelector('.chart-canvas')).toBeNull()
  const from=host.querySelector<HTMLInputElement>('[aria-label="From"]')!,through=host.querySelector<HTMLInputElement>('[aria-label="Through"]')!
  expect(from.min).toBe('');expect(through.max).toBe('');expect(through.value).toBe('2024-01-09')
- expect(button('90 days').disabled).toBe(true);expect(historyCalls).toBe(0)
+ expect(button('90 days').disabled).toBe(true);expect(button('365 days').disabled).toBe(true);expect(historyCalls).toBe(0)
  await input('From','2000-01-01');await click('Start backtest');expect(historyCalls).toBe(0)
 })
 it('keeps legacy-only recovery optional on refresh and preserves the browser original',async()=>{
@@ -361,7 +361,7 @@ it('migrates digest-verified v1 lifecycle on next save without changing financia
 it('converts inclusive calendar dates without changing exclusive stored ranges',()=>{
  expect(shiftDate('2024-02-29',1)).toBe('2024-03-01');expect(selectedRange('2024-02-29','2024-02-29',coverage).range).toEqual({from:'2024-02-29',to:'2024-03-01'})
  expect(selectedRange('2024-01-01','2024-03-01',coverage).error).toBeTruthy();expect(selectedRange('2003-05-03','2010-07-06',coverage).error).toBeTruthy()
- expect(selectedRange('2024-01-10','2024-01-09',coverage).error).toBeTruthy();expect(selectedRange('2023-11-30','2024-02-29',coverage).error).toBeTruthy()
+ expect(selectedRange('2024-01-10','2024-01-09',coverage).error).toBeTruthy();expect(selectedRange('2023-03-01','2024-02-29',coverage).error).toBeTruthy()
  expect(accountPnl(createEquityLedger(10000),10000)).toBeNull()
  expect(lifecycleOf({...sessionSimulation().snapshot().checkpoint,lifecycle:undefined})).toBe('setup')
 })

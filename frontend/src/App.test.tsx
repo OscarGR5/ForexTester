@@ -9,6 +9,8 @@ it('hides setup until session discovery completes, without mounting charts or re
   expect(html).not.toContain('datetime-local')
   expect(html).toContain('Start backtest')
   expect(html).toContain('Through')
+  expect(html).toContain('365 days')
+  expect(html).toContain('maximum 365')
   expect(html).toContain('Checking saved backtests')
   expect(html).toMatch(/class="workspace-controls"[^>]*hidden=""/)
   expect(html).not.toContain('chart-canvas')

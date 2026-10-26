@@ -2,12 +2,18 @@ import { expect, it, vi } from 'vitest'
 import { HistoryLoader, ichimokuWarmup, replayStartIndex } from './historyLoader'
 import { validateDateRange } from './history'
 import { fixtureHistory } from '../../tests/databentoFixture'
-it.each([1, 7, 30, 90])('accepts %i selected calendar days', days => {
+it.each([1, 7, 30, 90, 365])('accepts %i selected calendar days', days => {
   expect(validateDateRange({ from: '2024-01-01', to: new Date(Date.UTC(2024, 0, 1 + days)).toISOString().slice(0, 10) }, '2025-01-01')).toBeNull()
 })
-it('rejects 91 selected days and invalid dates', () => {
-  expect(validateDateRange({ from: '2024-01-01', to: '2024-04-01' }, '2025-01-01')).not.toBeNull()
+it('rejects 366 selected days and invalid dates', () => {
+  expect(validateDateRange({ from: '2024-01-01', to: '2025-01-01' }, '2025-01-02')).not.toBeNull()
   expect(validateDateRange({ from: '2024-02-30', to: '2024-03-01' })).not.toBeNull()
+})
+it('requests exactly 30 pre-roll days for the 365-day maximum across a leap year', async () => {
+  const download = vi.fn(async range => fixtureHistory(range.from, range.to))
+  const history = await new HistoryLoader(download).load({ from: '2024-03-01', to: '2025-03-01' }, new AbortController().signal, () => {})
+  expect(download).toHaveBeenCalledWith({ from: '2024-01-31', to: '2025-03-01' }, expect.any(AbortSignal))
+  expect(history.tradingFrom).toBe('2024-03-01')
 })
 it('reads the complete cached interval with pre-roll in one non-billable request', async () => {
   const download = vi.fn(async range => fixtureHistory(range.from, range.to)), progress = vi.fn()
