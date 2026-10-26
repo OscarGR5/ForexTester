@@ -147,8 +147,8 @@ export function App() {
     enabled: lifecycle === 'trading' && replay.active,
     playing: replay.playing,
     busy: !!draft || !!stopPreview || manage || finishing || sessions.busy || sessions.conflict || sessions.awaitingChoice || !sessions.initialized,
-    onPlaying: () => setKeyboardNotice('Pause replay to use Shift + Arrow keys.'),
-    navigate: direction => { setKeyboardNotice(''); return replay.navigate(direction, timeframes[activeChart] ?? timeframes[0], chartOffset) },
+    onPlaying: () => setKeyboardNotice('Pause replay to use Shift + Arrow or Ctrl + Shift + Arrow keys.'),
+    navigate: (direction, timeframe) => { setKeyboardNotice(''); return replay.navigate(direction, timeframe ?? timeframes[activeChart] ?? timeframes[0], chartOffset) },
   })
   useEffect(() => { if (!replay.playing) setKeyboardNotice('') }, [replay.playing])
   useLayoutEffect(() => { synchronizer.advance(bounds) }, [synchronizer, bounds])
@@ -293,14 +293,14 @@ export function App() {
     <header className="app-header"><h1>ForexTester</h1><span className="header-session"><span className="session-name">{sessions.name}</span> <span className="save-state">{history ? sessions.saveStatus : 'Not started'}</span></span>
       {lifecycle === 'trading' && <details ref={executionDetails} className="execution-details"><summary aria-label="Execution details" title="Execution details"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v2"/></svg></summary><div className="execution-popover">
         <strong>Execution details</strong>
-        <p>While paused: Shift + Right completes the active chart’s next candle. Shift + Left reviews earlier candles without rewinding trade execution. Select a chart by clicking, panning, scrolling or changing its timeframe. Return to current replay to trade.</p>
+        <p>While paused: Shift + Left/Right navigates the focused chart’s timeframe. Ctrl + Shift + Left/Right navigates one available M1 observation, independent of the focused timeframe. Backward navigation is historical review only and does not rewind trade execution. Select a chart by clicking, panning, scrolling or changing its timeframe. Return to current replay to trade.</p>
         {history && isLocalForex(history) ? <p>EURUSD mid prices · simplified single-price execution. 1 standard lot = 100,000 EUR; PnL is in USD. No spread, bid/ask, tick sequence, slippage, swaps or financing are modeled. Entries and manual exits use the next observed M1 open; stops use M1 high/low and gap opens.</p> : history && isFuturesHistory(history) ? <p>6E trade prices · hypothetical forex-style sizing (1 lot = 100,000 EUR). No spread; entries fill at the next eligible M1 opening, with high/low stops and gap-open handling. Not exchange-accurate futures or EUR/USD CFD execution.</p> : <p>Original legacy bid/ask execution. Entries fill at the next synchronized M1 opening.</p>}
         <p>SL amounts are net at the stop level, including entry and exit commissions. Pending values estimate the next fill from the observed price. Gaps can change the outcome. Entry lines mark the fill price; net breakeven also includes commissions.</p>
         {history && isFuturesHistory(history) && <details><summary>Contract mappings and rollover events</summary>{history.contracts.map(c=><p key={c.from}>{c.from} to {c.to} (exclusive): {c.rawSymbol} · instrument {c.instrumentId}</p>)}</details>}
       </div></details>}
       {lifecycle === 'trading' && (
         <fieldset className="header-replay" aria-label="Market replay" disabled={workspaceDisabled || status === 'loading' || pendingStart || manage || !!stopPreview} hidden={!sessions.initialized || sessions.awaitingChoice}>
-          <button disabled={!replay.canPlay || !!stopPreview} onClick={()=>{setDraft(null);replay.play()}}>Play</button><button disabled={!replay.canPause} onClick={replay.pause}>Pause</button><button disabled={!replay.canNext || !!stopPreview} onClick={()=>{setDraft(null);replay.next()}}>Next Candle</button>
+          <button disabled={!replay.canPlay || !!stopPreview} onClick={()=>{setDraft(null);replay.play()}}>Play</button><button disabled={!replay.canPause} onClick={replay.pause}>Pause</button><button disabled={!replay.canNext || !!stopPreview} onClick={()=>{setDraft(null);replay.next()}}>Next Min</button>
           <label>Speed<select aria-label="Replay speed" value={replay.speed} onChange={e=>replay.setSpeed(Number(e.target.value) as 1|10|100)}>{[1,10,100].map(s=><option key={s} value={s}>{s}×</option>)}</select></label>
           {chartLayout}<div className="replay-state"><span aria-label="Replay status" className="replay-status">{replay.status}</span><span className="replay-progress" aria-label="Replay progress">{replay.revealed-replay.startIndex} / {replay.total-replay.startIndex} candles</span></div><button disabled={replay.reviewing} onClick={()=>void finish()}>{replay.complete || replay.blocked ? 'Review Results' : 'Finish backtest'}</button>
         </fieldset>

@@ -53,7 +53,7 @@ export async function verifyReplayWorkspace(page: Page) {
     await page.getByRole('button', { name: 'Buy', exact: true }).click()
     state = requestEntry(state, 'buy', lots, stop, manualPermission)
   }
-  await page.getByRole('button', { name: 'Next Candle', exact: true }).click()
+  await page.getByRole('button', { name: 'Next Min', exact: true }).click()
   const filled = await equivalent(); assert.equal(state.positions.length, 2)
   for (const [index, position] of state.positions.entries()) {
     const replacement = Number((state.quote!.bid!.close - (index ? .0025 : .00005)).toFixed(5))
@@ -81,7 +81,7 @@ export async function verifyReplayWorkspace(page: Page) {
   const remaining = state.positions[0]
   await page.getByRole('button', { name: `Close position ${remaining.id}`, exact: true }).click()
   state = requestClose(state, remaining.id, manualPermission)
-  await page.getByRole('button', { name: 'Next Candle', exact: true }).click()
+  await page.getByRole('button', { name: 'Next Min', exact: true }).click()
   await equivalent(); assert.equal(state.closed.length, 2); assert.equal(state.closed[1].exitReason, 'manual')
   const setup = state.setups[0]
   await page.locator('button[aria-label^="Details for setup "]').first().click()
@@ -101,7 +101,7 @@ export async function verifyReplayWorkspace(page: Page) {
   assert.equal(await page.locator('[aria-label="Replay status"]').textContent(), 'Paused')
   assert.equal(await page.getByLabel('Chart 1 BB #1 Length', { exact: true }).inputValue(), '21')
   await equivalent()
-  await page.getByRole('button', { name: 'Next Candle', exact: true }).click(); await equivalent()
+  await page.getByRole('button', { name: 'Next Min', exact: true }).click(); await equivalent()
   assert.equal(state.closed.length, 2)
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 1000 })

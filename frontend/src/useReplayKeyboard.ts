@@ -7,13 +7,13 @@ export function keyboardContextBlocked(event: KeyboardEvent): boolean {
 }
 
 export function shortcutBlocked(event: KeyboardEvent): boolean {
-  return !event.shiftKey || event.ctrlKey || event.altKey || event.metaKey || event.isComposing || event.defaultPrevented ||
+  return !event.shiftKey || event.altKey || event.metaKey || event.isComposing || event.defaultPrevented ||
     (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') || keyboardContextBlocked(event)
 }
 
 export function useReplayKeyboard(options: {
   enabled: boolean; playing: boolean; busy: boolean
-  navigate: (direction: 'backward' | 'forward') => boolean
+  navigate: (direction: 'backward' | 'forward', timeframe?: 'M1') => boolean
   onPlaying: () => void
 }) {
   const latest = useRef(options)
@@ -24,7 +24,7 @@ export function useReplayKeyboard(options: {
       if (!current.enabled || current.busy || shortcutBlocked(event)) return
       // Report disabled feedback without taking the browser's arrow behavior.
       if (current.playing) { current.onPlaying(); return }
-      if (current.navigate(event.key === 'ArrowLeft' ? 'backward' : 'forward')) event.preventDefault()
+      if (current.navigate(event.key === 'ArrowLeft' ? 'backward' : 'forward', event.ctrlKey ? 'M1' : undefined)) event.preventDefault()
     }
     window.addEventListener('keydown', key)
     return () => window.removeEventListener('keydown', key)

@@ -233,7 +233,7 @@ it.each(['Buy','Sell'])('requires chart selection and confirmation for %s; rejec
  expect(host.textContent).not.toContain('Choose another level');await input('SL price',direction==='Buy'?'1.099':'1.103')
  expect(host.querySelectorAll('[data-order-id]').length).toBe(0);expect(button('Confirm order').disabled).toBe(false)
  await click('Confirm order');expect(host.querySelectorAll('[data-order-id]').length).toBe(1);expect(host.querySelectorAll('[data-position-id]').length).toBe(0)
- await click('Next Candle');expect(host.querySelectorAll('[data-position-id]').length).toBe(1)
+ await click('Next Min');expect(host.querySelectorAll('[data-position-id]').length).toBe(1)
 })
 it('cancels drafts on Escape, play, restart and session switch without submitting orders',async()=>{
  await start();await click('Buy');await pick(1.099);await act(async()=>window.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'})));expect(host.querySelector('.stop-placement')).toBeNull()
@@ -242,36 +242,36 @@ it('cancels drafts on Escape, play, restart and session switch without submittin
  await click('Buy');await click('Sessions / settings');await click('New session');await until(()=>host.querySelector('[aria-label="Backtest setup"]'));expect(host.querySelector('.stop-placement')).toBeNull()
 })
 it('maintains independent stops and setup grouping, changes stop history, executes one stop and one manual close',async()=>{
- await start();await order('Buy',1.099);await click('Next Candle')
+ await start();await order('Buy',1.099);await click('Next Min')
  const first=host.querySelector('[data-position-id]')!.getAttribute('data-position-id')!
  expect(host.querySelector('[aria-label="Setup assignment"]')).toBeNull()
- await order('Buy',1.098);await click('Next Candle')
+ await order('Buy',1.098);await click('Next Min')
  expect(host.querySelectorAll('[data-position-id]').length).toBe(2);expect(button('Buy').disabled).toBe(true)
- await dragStop(1.099,1.0995);await click('Next Candle');await click('Next Candle');await click('Next Candle')
+ await dragStop(1.099,1.0995);await click('Next Min');await click('Next Min');await click('Next Min')
  expect(host.querySelectorAll('[data-position-id]').length).toBe(1)
- const remaining=host.querySelector('[data-position-id]')!.getAttribute('data-position-id')!;await click(`Close ${remaining}`);expect(host.textContent).toContain('Close pending');await click('Next Candle')
+ const remaining=host.querySelector('[data-position-id]')!.getAttribute('data-position-id')!;await click(`Close ${remaining}`);expect(host.textContent).toContain('Close pending');await click('Next Min')
  await until(()=>host.querySelector('.save-state')?.textContent==='Saved');const records=await disk.storage.list();const state=records.sessions[0].checkpoint.trading
  expect(state.closed).toHaveLength(2);expect(state.setups).toHaveLength(1);expect(state.closed[0].stopModifications).toHaveLength(1);expect(state.closed[0].exitReason).toBe('stop_loss');expect(state.closed[1].exitReason).toBe('manual')
 })
 it('reports account equity PnL including fees, and unavailable equity when a required quote is missing',async()=>{
- missingAsk=true;await mount();await input('Round-trip commission (USD per standard lot)','7');await load();await order('Sell',1.103);await click('Next Candle')
+ missingAsk=true;await mount();await input('Round-trip commission (USD per standard lot)','7');await load();await order('Sell',1.103);await click('Next Min')
  await until(()=>host.querySelector('.save-state')?.textContent==='Saved');const row=(await disk.storage.list()).sessions[0];const state=stateOf(row)
  const net=(state.quote!.bid!.close-state.positions[0].entryPrice)*-100000*state.positions[0].lots-state.positions[0].entryCommissionUsd-state.positions[0].lots*20 // ask spread .0002
  expect(host.querySelector('[aria-label="Account PnL"]')?.textContent).toContain(`$${net.toFixed(2)}`)
- await click('Next Candle');await click('Next Candle');expect(host.querySelector('[aria-label="Account PnL"]')?.textContent).toContain('PnL unavailable')
+ await click('Next Min');await click('Next Min');expect(host.querySelector('[aria-label="Account PnL"]')?.textContent).toContain('PnL unavailable')
 })
 function stateOf(row:Awaited<ReturnType<typeof disk.storage.list>>['sessions'][number]){return row.checkpoint.trading}
 it('confirms finishing with open positions, preserves them, and restores finished results without downloads',async()=>{
- await start();await order();await click('Next Candle');vi.mocked(window.confirm).mockReturnValueOnce(false)
+ await start();await order();await click('Next Min');vi.mocked(window.confirm).mockReturnValueOnce(false)
  await click('Finish backtest');await until(()=>!host.querySelector<HTMLFieldSetElement>('.workspace-controls')!.disabled);expect(host.querySelector('.phase-trading')).toBeTruthy();expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('1 open positions'))
  await click('Finish backtest');await until(()=>host.querySelector('.phase-finished')&&host.querySelector('.save-state')?.textContent==='Saved')
  expect(host.querySelector('.results-primary')).toBeTruthy();const record=(await disk.storage.list()).sessions[0];expect(record.checkpoint.lifecycle).toBe('finished');expect(record.checkpoint.trading.positions).toHaveLength(1);expect(record.checkpoint.trading.closed).toHaveLength(0)
  const before=historyCalls;await act(async()=>root.unmount());root=createRoot(host);await mount();await click('Resume backtest');await until(()=>host.querySelector('.phase-finished'));expect(historyCalls).toBe(before);expect(host.querySelector('.stop-placement')).toBeNull()
 })
 it('resumes a restored finished backtest paused, preserves every record, reloads Trading, and counts subsequent trades', async () => {
- await start(); await order(); await click('Next Candle')
+ await start(); await order(); await click('Next Min')
  const id=host.querySelector('[data-position-id]')!.getAttribute('data-position-id')!
- await click(`Close ${id}`); await click('Next Candle')
+ await click(`Close ${id}`); await click('Next Min')
  await click('Finish backtest'); await until(()=>host.querySelector('.phase-finished')&&host.querySelector('.save-state')?.textContent==='Saved')
  const store=new DiskSessionStore(), before=(await disk.storage.list()).sessions[0]
  const recovered=await store.recover(before.id,async()=>{throw Error('History download forbidden')})
@@ -292,9 +292,9 @@ it('resumes a restored finished backtest paused, preserves every record, reloads
  await act(async()=>root.unmount()); root=createRoot(host); await mount(); await click('Resume backtest')
  await until(()=>host.querySelector('.phase-trading'))
  expect(host.querySelector('[aria-label="Replay status"]')?.textContent).toBe('Paused')
- await order('Buy',1.098); await click('Next Candle')
+ await order('Buy',1.098); await click('Next Min')
  const nextId=host.querySelector('[data-position-id]')!.getAttribute('data-position-id')!
- await click(`Close ${nextId}`); await click('Next Candle')
+ await click(`Close ${nextId}`); await click('Next Min')
  await click('Finish backtest'); await until(()=>host.querySelector('.phase-finished')&&host.querySelector('.save-state')?.textContent==='Saved')
  const after=(await disk.storage.list()).sessions[0]
  expect(after.checkpoint.trading.closed).toHaveLength(2)
@@ -307,7 +307,7 @@ it('resumes a restored finished backtest paused, preserves every record, reloads
  expect(historyCalls).toBe(historyBefore); expect((await disk.storage.list()).sessions).toHaveLength(1)
 })
 it('resumes with open positions, pending orders, modified stops and independent chart preferences intact', async () => {
- await start(); await order('Buy',1.099); await click('Next Candle')
+ await start(); await order('Buy',1.099); await click('Next Min')
  await dragStop(1.099,1.0995); await order('Buy',1.098)
  await act(async()=>host.querySelector<HTMLInputElement>('input[name="chart-count"][value="2"]')!.click())
  await select('Chart 1 timeframe','M5'); await select('Chart 2 timeframe','H1')
@@ -324,7 +324,7 @@ it('resumes with open positions, pending orders, modified stops and independent 
  expect(after.checkpoint.executionCursor).toBe(before.checkpoint.executionCursor)
  expect(after.checkpoint.workspace).toEqual(before.checkpoint.workspace)
  expect([...host.querySelectorAll<HTMLSelectElement>('select[aria-label$="timeframe"]')].map(s=>s.value)).toEqual(['M5','H1'])
- await until(()=>!button('Next Candle').matches(':disabled')); await click('Next Candle'); await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
+ await until(()=>!button('Next Min').matches(':disabled')); await click('Next Min'); await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
  const advanced=(await disk.storage.list()).sessions[0]
  expect(advanced.checkpoint.trading.pending).toHaveLength(0); expect(advanced.checkpoint.trading.positions).toHaveLength(2)
  expect(advanced.checkpoint.executionCursor).toBe(before.checkpoint.executionCursor+1)
@@ -351,7 +351,7 @@ it('disables Results resume during saves and rolls back a failed lifecycle save 
  vi.stubGlobal('fetch',underlying)
 })
 it('restores active sessions paused without drafts and keeps charts alive through next-candle updates',async()=>{
- await start();const count=vi.mocked(createChart).mock.calls.length;await order();await click('Next Candle');expect(vi.mocked(createChart).mock.calls.length).toBe(count)
+ await start();const count=vi.mocked(createChart).mock.calls.length;await order();await click('Next Min');expect(vi.mocked(createChart).mock.calls.length).toBe(count)
  await click('Play');await click('Sessions / settings');await click('Save now');await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
  await act(async()=>root.unmount());root=createRoot(host);await mount();await click('Resume backtest');await until(()=>host.querySelector('.phase-trading'))
  expect(host.querySelector('[aria-label="Replay status"]')?.textContent).toBe('Paused');expect(host.querySelector('.stop-placement')).toBeNull()
@@ -389,14 +389,14 @@ it('never publishes a finished view when the finished checkpoint fails to save',
 it('keeps production chart candles behind the clock and offers explicit review at natural exhaustion',async()=>{
  await start();const candlestick=()=>vi.mocked(chart().addSeries).mock.results[0].value.data()
  expect(candlestick().at(-1).time).toBe(beginning/1000)
- for(let i=1;i<12;i++)await click('Next Candle')
+ for(let i=1;i<12;i++)await click('Next Min')
  expect(candlestick().at(-1).time).toBe(beginning/1000);expect(candlestick().at(-1).close).toBe(bid.at(-1)!.close);expect(host.querySelector('.phase-trading')).toBeTruthy();expect(button('Buy').disabled).toBe(true)
  await click('Review Results');await until(()=>host.querySelector('.phase-finished'));expect(host.querySelector('.results-primary')).toBeTruthy()
  await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
  const before=(await disk.storage.list()).sessions[0]
  await until(()=>!button('Return to charts').matches(':disabled')); await click('Return to charts');await until(()=>host.querySelector('.phase-trading')&&host.querySelector('.save-state')?.textContent==='Saved')
- expect(button('Next Candle').disabled).toBe(true);expect(button('Play').disabled).toBe(true);expect(button('Buy').disabled).toBe(true)
- await until(()=>!button('Review Results').matches(':disabled'));await click('Next Candle');await click('Play');await click('Review Results');await until(()=>host.querySelector('.phase-finished')&&host.querySelector('.save-state')?.textContent==='Saved')
+ expect(button('Next Min').disabled).toBe(true);expect(button('Play').disabled).toBe(true);expect(button('Buy').disabled).toBe(true)
+ await until(()=>!button('Review Results').matches(':disabled'));await click('Next Min');await click('Play');await click('Review Results');await until(()=>host.querySelector('.phase-finished')&&host.querySelector('.save-state')?.textContent==='Saved')
  const after=(await disk.storage.list()).sessions[0]
  expect(after.checkpoint).toEqual(before.checkpoint)
 })
@@ -582,16 +582,18 @@ it('preserves the production rollover blocker after one-click startup',async()=>
   }
   return underlying(path,options)
  })
- await mount();await input('Through','2024-01-10');await load();await click('Next Candle')
+ await mount();await input('Through','2024-01-10');await load();await click('Next Min')
  expect(host.querySelector('[aria-label="Replay status"]')?.textContent).toBe('Rollover blocked')
- expect(button('Next Candle').disabled).toBe(true);expect(button('Play').disabled).toBe(true)
+ expect(button('Next Min').disabled).toBe(true);expect(button('Play').disabled).toBe(true)
+ expect((await shortcut('ArrowRight',window,true)).defaultPrevented).toBe(false)
+ expect(host.querySelector('.replay-clock')?.textContent).toContain('00:01')
  await until(()=>host.querySelector('.save-state')?.textContent==='Saved');expect((await disk.storage.list()).sessions[0].checkpoint.replay.timestamp).toBe(beginning+60000)
  await click('Review Results');await until(()=>host.querySelector('.phase-finished')&&host.querySelector('.save-state')?.textContent==='Saved')
  const before=(await disk.storage.list()).sessions[0]
  await until(()=>!button('Return to charts').matches(':disabled')); await click('Return to charts');await until(()=>host.querySelector('.phase-trading')&&host.querySelector('.save-state')?.textContent==='Saved')
  expect(host.querySelector('[aria-label="Replay status"]')?.textContent).toBe('Rollover blocked')
- expect(button('Next Candle').disabled).toBe(true);expect(button('Play').disabled).toBe(true);expect(button('Buy').disabled).toBe(true)
- await until(()=>!button('Review Results').matches(':disabled'));await click('Next Candle');await click('Play');await click('Review Results');await until(()=>host.querySelector('.phase-finished')&&host.querySelector('.save-state')?.textContent==='Saved')
+ expect(button('Next Min').disabled).toBe(true);expect(button('Play').disabled).toBe(true);expect(button('Buy').disabled).toBe(true)
+ await until(()=>!button('Review Results').matches(':disabled'));await click('Next Min');await click('Play');await click('Review Results');await until(()=>host.querySelector('.phase-finished')&&host.querySelector('.save-state')?.textContent==='Saved')
  expect((await disk.storage.list()).sessions[0].checkpoint).toEqual(before.checkpoint)
 })
 
@@ -604,7 +606,7 @@ it('keeps confirmed pending stops visible before a candle and retains the line o
  await start(); await order('Buy', 1.099)
  const [line] = activeStopLines(); expect(line.options()).toMatchObject({ price: 1.099, color: '#ef9a9a', lineStyle: 2, axisLabelVisible: true })
  expect(host.querySelector('[data-order-id]')?.textContent).toBe('Pending B11% riskCancel')
- await click('Next Candle'); expect(activeStopLines()).toEqual([line]); expect(line.options()).toMatchObject({ lineStyle: 0 })
+ await click('Next Min'); expect(activeStopLines()).toEqual([line]); expect(line.options()).toMatchObject({ lineStyle: 0 })
  expect(host.querySelector('[data-position-id]')?.textContent).toMatch(/^B1.*lotsEst. net.*Close$/)
 })
 it('restores both pending stops from durable session state and removes a cancelled one immediately', async () => {
@@ -620,14 +622,14 @@ it('restores both pending stops from durable session state and removes a cancell
  await click(`Cancel entry ${before.trading.pending[0].id}`); expect(activeStopLines()).toHaveLength(1)
  expect(activeStopLines()[0].options().price).toBe(1.098)
  expect(host.querySelector('[data-order-id]')?.textContent).toContain('Pending B21% riskCancel')
- await click('Next Candle'); expect(activeStopLines()).toHaveLength(1)
+ await click('Next Min'); expect(activeStopLines()).toHaveLength(1)
  expect(host.querySelectorAll('[data-position-id]')).toHaveLength(1)
  expect(host.querySelector('[data-position-id]')?.textContent).toMatch(/^B2.*lotsEst. net.*Close$/)
 })
 it('keeps SL 2 after SL 1 closes and after restoring the existing checkpoint format', async () => {
- await start(); await order('Buy', 1.099); await order('Buy', 1.098); await click('Next Candle')
+ await start(); await order('Buy', 1.099); await order('Buy', 1.098); await click('Next Min')
  const [first, second] = [...host.querySelectorAll('[data-position-id]')].map(row => row.getAttribute('data-position-id')!)
- await click(`Close ${first}`); await click('Next Candle')
+ await click(`Close ${first}`); await click('Next Min')
  expect(host.querySelectorAll('[data-position-id]')).toHaveLength(1)
  expect(host.querySelector(`[data-position-id="${second}"]`)?.textContent).toMatch(/^B2.*lotsEst. net.*Close$/)
  await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
@@ -654,7 +656,7 @@ it('removes a confirmed pending stop when its fill is rejected', async () => {
   return new Response(JSON.stringify(data))
  })
  await start(); await order('Sell', 1.1005); expect(activeStopLines()).toHaveLength(1)
- await click('Next Candle'); expect(activeStopLines()).toHaveLength(0)
+ await click('Next Min'); expect(activeStopLines()).toHaveLength(0)
  expect(host.textContent).toContain('Entry rejected:')
 })
 
@@ -701,7 +703,7 @@ it('derives two pending entry identities, keeps actual fills and recreates them 
  await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
  await act(async()=>root.unmount());root=createRoot(host);await mount();await click('Resume backtest');await until(()=>host.querySelector('.phase-trading'))
  expect(activeEntryLines()[0].options().title).toContain('Pending B2 (est.)')
- await click('Next Candle')
+ await click('Next Min')
  expect(activeEntryLines().map(line=>line.options())).toMatchObject([{title:'B1 · B2',price:1.1003,lineStyle:2}])
  await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
  const before=(await disk.storage.list()).sessions[0].checkpoint.trading
@@ -709,7 +711,7 @@ it('derives two pending entry identities, keeps actual fills and recreates them 
  expect(activeEntryLines()[0].options().title).toBe('B1 · B2')
  expect(activeEntryLines()[0].options().price).toBe(before.positions[0].entryPrice)
  const first=before.positions[0].id
- await click(`Close ${first}`);await click('Next Candle')
+ await click(`Close ${first}`);await click('Next Min')
  expect(activeEntryLines().map(line=>line.options().title)).toEqual(['B2'])
 })
 
@@ -734,8 +736,8 @@ it('groups the replay timestamp with Account PnL and discloses execution details
  expect(options.timeScale).toMatchObject({ fixRightEdge: false, rightOffset: 12 })
 })
 
-async function shortcut(key: 'ArrowLeft' | 'ArrowRight', target: EventTarget = window) {
- const event = new KeyboardEvent('keydown', { key, shiftKey: true, bubbles: true, cancelable: true })
+async function shortcut(key: 'ArrowLeft' | 'ArrowRight', target: EventTarget = window, ctrlKey = false) {
+ const event = new KeyboardEvent('keydown', { key, shiftKey: true, ctrlKey, bubbles: true, cancelable: true })
  await act(async () => target.dispatchEvent(event))
  return event
 }
@@ -773,7 +775,7 @@ it('uses percentage risk for both new entries and preserves rounded sizes after 
  await order('Buy', 1.098)
  await input('Risk per entry (%)', '.5'); await order('Buy', 1.097)
  expect([...host.querySelectorAll('[data-order-id]')].map(el => el.textContent)).toEqual([expect.stringContaining('1% risk'), expect.stringContaining('0.5% risk')])
- await click('Next Candle')
+ await click('Next Min')
  const expectedLots = [1000 / ((1.1003 - 1.098) * 100000), 500 / ((1.1003 - 1.097) * 100000)].map(n => Math.floor(n * 100) / 100)
  for (const lots of expectedLots) expect(host.querySelector('.active-positions')?.textContent).toContain(`${lots} lots`)
 })
@@ -800,23 +802,23 @@ it('reviews revealed history without changing the durable trading cursor, hides 
  await shortcut('ArrowLeft'); await click('Return to current replay')
  expect(button('Buy').disabled).toBe(false); expect(activeEntryLines()).toHaveLength(1)
 })
-it('blocks shortcuts in focused editors, open disclosures, management, drafts, and playback', async () => {
+it.each([false,true])('blocks replay shortcuts in editors, overlays, drafts and playback with Ctrl=%s', async ctrlKey => {
  await start(); const clock = () => host.querySelector('time')?.textContent
  const before = clock(), risk = host.querySelector<HTMLInputElement>('[aria-label="Risk per entry (%)"]')!
  for (const element of [risk, host.querySelector('select')!, document.createElement('textarea'), document.createElement('div')]) {
   if (!element.isConnected) { host.append(element); element.setAttribute('contenteditable', 'true') }
   await act(async () => (element as HTMLElement).focus())
-  expect((await shortcut('ArrowRight', element)).defaultPrevented).toBe(false); expect(clock()).toBe(before)
+  expect((await shortcut('ArrowRight', element, ctrlKey)).defaultPrevented).toBe(false); expect(clock()).toBe(before)
   ;(element as HTMLElement).blur()
  }
  for (const selector of ['.execution-details', '.indicator-controls']) {
   await act(async () => { host.querySelector<HTMLDetailsElement>(selector)!.open = true })
-  expect((await shortcut('ArrowRight')).defaultPrevented).toBe(false); expect(clock()).toBe(before)
+  expect((await shortcut('ArrowRight', window, ctrlKey)).defaultPrevented).toBe(false); expect(clock()).toBe(before)
   await act(async () => host.querySelector<HTMLDetailsElement>(selector)!.open = false)
  }
- await click('Sessions / settings'); expect((await shortcut('ArrowRight')).defaultPrevented).toBe(false); await click('Close management')
- await click('Buy'); expect((await shortcut('ArrowRight')).defaultPrevented).toBe(false); await click('Cancel placement')
- await click('Play'); expect((await shortcut('ArrowRight')).defaultPrevented).toBe(false)
+ await click('Sessions / settings'); expect((await shortcut('ArrowRight', window, ctrlKey)).defaultPrevented).toBe(false); await click('Close management')
+ await click('Buy'); expect((await shortcut('ArrowRight', window, ctrlKey)).defaultPrevented).toBe(false); await click('Cancel placement')
+ await click('Play'); expect((await shortcut('ArrowRight', window, ctrlKey)).defaultPrevented).toBe(false)
  expect(host.querySelector('.keyboard-notice')?.textContent).toContain('Pause replay')
  await click('Pause'); expect(clock()).toBe(before)
  const plain = new KeyboardEvent('keydown', { key: 'ArrowRight', cancelable: true }); window.dispatchEvent(plain)
@@ -842,7 +844,7 @@ it('dismisses execution and indicator disclosures outside and on Escape while re
 it('places one replay control group in the application header and keeps trading below it', async () => {
  await start()
  const header = host.querySelector('.app-header')!, toolbar = host.querySelector('.workspace-toolbar')!
- for (const name of ['Play', 'Pause', 'Next Candle', 'Finish backtest']) {
+ for (const name of ['Play', 'Pause', 'Next Min', 'Finish backtest']) {
   expect(header.contains(button(name))).toBe(true)
   expect([...host.querySelectorAll('button')].filter(b => b.textContent === name)).toHaveLength(1)
  }
@@ -855,15 +857,15 @@ it('places one replay control group in the application header and keeps trading 
  expect(toolbar.querySelector('.header-replay')).toBeNull()
  await click('Play')
  expect(button('Play').matches(':disabled')).toBe(true)
- expect(button('Next Candle').matches(':disabled')).toBe(true)
+ expect(button('Next Min').matches(':disabled')).toBe(true)
  expect(button('Pause').matches(':disabled')).toBe(false)
  await click('Pause'); await click('Sessions / settings')
  for (const control of header.querySelectorAll('.header-replay button, .header-replay select, .header-replay input')) expect(control.matches(':disabled')).toBe(true)
  await click('Close management')
- expect(button('Next Candle').matches(':disabled')).toBe(false)
+ expect(button('Next Min').matches(':disabled')).toBe(false)
  await shortcut('ArrowLeft')
  expect(button('Play').matches(':disabled')).toBe(true)
- expect(button('Next Candle').matches(':disabled')).toBe(true)
+ expect(button('Next Min').matches(':disabled')).toBe(true)
  expect(button('Finish backtest').matches(':disabled')).toBe(true)
 })
 
@@ -911,7 +913,7 @@ it('preserves all storage and startup fieldset guards after moving replay into t
  }
  guards = {}
  await act(async () => root.render(<StrictMode><App/></StrictMode>))
- expect(button('Next Candle').matches(':disabled')).toBe(false)
+ expect(button('Next Min').matches(':disabled')).toBe(false)
  let release!: () => void
  guards = { flush: () => new Promise<void>(resolve => { release = resolve }) }
  await act(async () => root.render(<StrictMode><App/></StrictMode>))
@@ -919,7 +921,7 @@ it('preserves all storage and startup fieldset guards after moving replay into t
  for (const control of host.querySelectorAll('.header-replay button, .header-replay select, .header-replay input')) expect(control.matches(':disabled')).toBe(true)
  vi.mocked(window.confirm).mockReturnValueOnce(false)
  await act(async () => release())
- expect(button('Next Candle').matches(':disabled')).toBe(false)
+ expect(button('Next Min').matches(':disabled')).toBe(false)
 })
 
 it('keeps pending, mixed and two open records inside the entry row with full accessible IDs and working actions', async () => {
@@ -927,12 +929,12 @@ it('keeps pending, mixed and two open records inside the entry row with full acc
  const strip = () => host.querySelector('.dock-controls .active-positions')!
  expect(strip().getAttribute('tabindex')).toBe('0')
  expect(strip().querySelectorAll('[data-order-id]')).toHaveLength(1)
- await click('Next Candle')
+ await click('Next Min')
  expect(strip().querySelectorAll('[data-position-id]')).toHaveLength(1)
  await order('Buy', 1.098)
  expect(strip().querySelectorAll('[data-position-id]')).toHaveLength(1)
  expect(strip().querySelectorAll('[data-order-id]')).toHaveLength(1)
- await click('Next Candle')
+ await click('Next Min')
  const records = [...strip().querySelectorAll('[data-position-id]')]
  expect(records).toHaveLength(2)
  for (const record of records) {
@@ -952,7 +954,7 @@ it('keeps pending, mixed and two open records inside the entry row with full acc
  await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
  const trading = (await disk.storage.list()).sessions[0].checkpoint.trading
  expect(trading.positions.find(p => p.id === first)!.stopModifications).toHaveLength(1)
- await click(`Close ${first}`); await click('Next Candle')
+ await click(`Close ${first}`); await click('Next Min')
  expect(strip().querySelectorAll('[data-position-id]')).toHaveLength(1)
 })
 
@@ -987,14 +989,14 @@ it.each(['b', 's'])('confirms initial and second %s entries through the existing
  expect(host.querySelector('.active-positions')?.textContent).toContain('0.4% risk')
  const other = key === 'b' ? 's' : 'b'
  expect((await tradeKey(other)).defaultPrevented).toBe(false)
- await click('Next Candle')
+ await click('Next Min')
  await input('Risk per entry (%)', '.2')
  expect((await tradeKey(key.toUpperCase())).defaultPrevented).toBe(true)
  expect(host.querySelector('.stop-placement')?.textContent).toContain('slot 2')
  await pick(stop); await click('Confirm order')
  expect(host.querySelector('.active-positions')?.textContent).toContain('0.2% risk')
  for (const letter of ['b', 's']) expect((await tradeKey(letter)).defaultPrevented).toBe(false)
- await click('Next Candle'); await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
+ await click('Next Min'); await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
  const state = (await disk.storage.list()).sessions[0].checkpoint.trading
  expect(state.pending).toHaveLength(0); expect(state.positions).toHaveLength(2)
  expect(state.setups).toHaveLength(1)
@@ -1059,17 +1061,17 @@ it('trade shortcuts respect every session guard and an outstanding finish confir
  expect((await tradeKey()).defaultPrevented).toBe(true)
 })
 it('updates individual and combined net PnL through quotes, close, journal and saved-session restoration', async () => {
- await start(); await order('Buy', 1.097); await click('Next Candle')
- await order('Buy', 1.096); await click('Next Candle')
+ await start(); await order('Buy', 1.097); await click('Next Min')
+ await order('Buy', 1.096); await click('Next Min')
  const total = () => host.querySelector('.open-total strong')!.textContent
  const firstTotal = total()
- await click('Next Candle'); expect(total()).not.toBe(firstTotal)
+ await click('Next Min'); expect(total()).not.toBe(firstTotal)
  await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
  let saved = (await disk.storage.list()).sessions[0], state = saved.checkpoint.trading
  const first = state.positions[0].id
  const accountBefore = host.querySelector('[aria-label="Account PnL"]')!.textContent
  expect(combinedOpenPnl(state)!.estimatedNetPnlUsd).toBeCloseTo(state.positions.reduce((sum, p) => sum + markPosition(p, state.quote)!.estimatedNetPnlUsd, 0), 10)
- await click(`Close ${first}`); await click('Next Candle'); await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
+ await click(`Close ${first}`); await click('Next Min'); await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
  saved = (await disk.storage.list()).sessions[0]; state = saved.checkpoint.trading
  expect(state.closed).toHaveLength(1); expect(state.positions).toHaveLength(1)
  const individual = host.querySelector('.active-positions [data-position-id] span.positive, .active-positions [data-position-id] span.negative')!.textContent!
@@ -1151,8 +1153,8 @@ it('keeps placement guidance, draft estimate, keyboard price and confirmation in
 it('Close all queues both exits, preserves net commissions and journal/account data through reload', async () => {
  await start()
  expect(host.querySelector('.close-all')).toBeNull()
- await order('Buy', 1.097); expect(host.querySelector('.close-all')).toBeNull(); await click('Next Candle')
- await order('Buy', 1.096); await click('Next Candle')
+ await order('Buy', 1.097); expect(host.querySelector('.close-all')).toBeNull(); await click('Next Min')
+ await order('Buy', 1.096); await click('Next Min')
  expect(button('Close all').disabled).toBe(false)
  await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
  const before = (await disk.storage.list()).sessions[0].checkpoint.trading
@@ -1161,7 +1163,7 @@ it('Close all queues both exits, preserves net commissions and journal/account d
  expect(host.querySelectorAll('.active-positions [data-position-id]')).toHaveLength(2)
  expect(host.querySelector('.open-total')).not.toBeNull()
  expect(vi.mocked(window.confirm).mock.calls).toHaveLength(confirmations)
- await click('Next Candle'); await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
+ await click('Next Min'); await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
  const saved = (await disk.storage.list()).sessions[0], state = saved.checkpoint.trading
  expect(state.positions).toHaveLength(0); expect(state.closed).toHaveLength(2)
  expect(state.closed.map(p => p.id)).toEqual(before.positions.map(p => p.id))
@@ -1180,7 +1182,7 @@ it('Close all queues both exits, preserves net commissions and journal/account d
  for (const position of state.closed) expect(host.querySelector('.results-breakdown')!.textContent).toContain(position.id)
 })
 it('Close all leaves a pending entry intact and obeys playback and review constraints', async () => {
- await start(); await order('Buy', 1.097); await click('Next Candle'); await order('Buy', 1.096)
+ await start(); await order('Buy', 1.097); await click('Next Min'); await order('Buy', 1.096)
  await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
  const before = (await disk.storage.list()).sessions[0].checkpoint.trading
  await click('Play'); expect(button('Close all').disabled).toBe(true); await click('Pause')
@@ -1223,7 +1225,7 @@ it.each([['Buy', 1.097, 'B'], ['Sell', 1.103, 'S']] as const)('directional key s
  for (let i = 0; i < 3; i++) expect((await tradeKey(identity, window, { repeat: true })).defaultPrevented).toBe(false)
  expect(host.querySelectorAll('[data-order-id]')).toHaveLength(1)
  await tradeKey('Escape'); expect(host.querySelector('.stop-placement')).toBeNull()
- await click('Next Candle')
+ await click('Next Min')
  expect(host.querySelectorAll('[data-position-id]')).toHaveLength(1)
 })
 it.each([['Buy', 'b', '1.2', '1.097'], ['Sell', 's', '1', '1.103']] as const)('%s confirms from the dedicated numeric SL input, but leaves missing and invalid prices alone', async (direction, key, invalid, valid) => {
@@ -1327,7 +1329,7 @@ it('respects replay and trading permissions even with a selected draft retained'
  expect(host.querySelector('[data-order-id]')).toBeNull()
 })
 it.each([['Buy', 1.097, 1.098, 'b'], ['Sell', 1.103, 1.104, 's']] as const)('directional confirmation modifies an existing %s position through confirmDraft', async (direction, stop, newStop, key) => {
- await start(); await order(direction, stop); await click('Next Candle')
+ await start(); await order(direction, stop); await click('Next Min')
  const original = dock.TradingDock
  // Expose an existing-position draft without adding a new production entry point.
  vi.spyOn(dock, 'TradingDock').mockImplementation(props => <>{original(props)}<button onClick={() => {
@@ -1393,4 +1395,41 @@ it('recalculates historical readiness when switching between zero-indicator and 
  expect(button('Start backtest').disabled).toBe(false)
  expect(host.textContent).toContain('No indicator warm-up required')
  expect(historyCalls).toBe(0)
+})
+
+
+it.each(['H4','D1'])('uses M1 shortcuts on focused %s, synchronizes charts and keeps executed trades during review', async timeframe => {
+ const original=tradingHook.useTrading
+ let trading!:ReturnType<typeof original>
+ vi.spyOn(tradingHook,'useTrading').mockImplementation((...args)=>{trading=original(...args);return trading})
+ await mount();await load();await select('Chart 1 timeframe',timeframe)
+ const panes=[...host.querySelectorAll('.chart-pane')]
+ const timeframes=()=>[...host.querySelectorAll<HTMLSelectElement>('[aria-label$="timeframe"]')].map(el=>el.value)
+ const selected=timeframes(),active=panes.map(pane=>pane.getAttribute('data-active'))
+ const closes=()=>panes.map(pane=>chartForCanvas(pane.querySelector('.chart-canvas')!).addSeries.mock.results[0].value.data().at(-1)?.close)
+ await order('Buy',1.098)
+ expect((await shortcut('ArrowRight',window,true)).defaultPrevented).toBe(true)
+ expect(host.querySelector('.replay-clock')?.textContent).toContain('00:01')
+ expect(trading.state.positions).toHaveLength(1)
+ expect(closes()).toEqual([bid[1].close,bid[1].close])
+ const state=trading.state,ledger=trading.equity,cursor=trading.executionCursor
+ await shortcut('ArrowLeft',window,true)
+ expect(host.querySelector('.history-review')?.textContent).toContain('00:00')
+ expect(closes()).toEqual([bid[0].close,bid[0].close])
+ expect(trading.state).toBe(state);expect(trading.equity).toBe(ledger);expect(trading.executionCursor).toBe(cursor)
+ expect(button('Next Min').disabled).toBe(true);expect(button('Buy').disabled).toBe(true)
+ await shortcut('ArrowRight',window,true)
+ expect(host.querySelector('.history-review')).toBeNull();expect(trading.state).toBe(state)
+ expect(closes()).toEqual([bid[1].close,bid[1].close])
+ expect(button('Next Min').textContent).toBe('Next Min')
+ expect([...host.querySelectorAll('button')].some(button=>button.textContent==='Next Candle')).toBe(false)
+ await click('Next Min')
+ expect(host.querySelector('.replay-clock')?.textContent).toContain('00:02')
+ expect(closes()).toEqual([bid[2].close,bid[2].close])
+ await shortcut('ArrowRight')
+ expect(host.querySelector('.replay-clock')?.textContent).toContain('00:11')
+ expect((await shortcut('ArrowRight',window,true)).defaultPrevented).toBe(false)
+ expect(button('Next Min').disabled).toBe(true)
+ expect(timeframes()).toEqual(selected)
+ expect(panes.map(pane=>pane.getAttribute('data-active'))).toEqual(active)
 })
