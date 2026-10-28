@@ -64,6 +64,8 @@ it('requires confirmation for cleanup, and cancel preserves eligible files', asy
   const h = await harness()
   const path = join(disk.directory, 'checkpoints', `${'f'.repeat(64)}.json`)
   await writeFile(path, 'obsolete'); const { utimes, readFile } = await import('node:fs/promises'); const age = new Date(Date.now() - 8 * 86_400_000); await utimes(path, age, age)
+  await act(async () => container.querySelector<HTMLElement>('.storage-maintenance > summary')!.click())
+  expect(container.querySelector<HTMLDetailsElement>('.storage-maintenance')!.open).toBe(true)
   await click('Preview cleanup'); await waitFor(() => !!h.sessions.cleanupPreview)
   const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
   await click('Clean up unused files'); expect(confirm).toHaveBeenCalledOnce(); expect(await readFile(path, 'utf8')).toBe('obsolete')

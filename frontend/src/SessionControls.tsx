@@ -134,7 +134,8 @@ export function SessionControls({ sessions, range, timestamp, startup = false }:
       </li>)}</ul>
     </section></details>}
     <details className="storage-maintenance">
-      <summary>Storage maintenance</summary>
+      <summary>Advanced</summary>
+      <h2>Storage maintenance</h2>
       <p>Remove unused chart and display preferences from this browser.</p>
       <button type="button" disabled={sessions.busy || !sessions.initialized} onClick={() => void sessions.previewPreferences()}>Clean up unused UI preferences</button>
       {sessions.uiCleanupPreview && <div role="status">

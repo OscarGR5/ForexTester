@@ -103,7 +103,7 @@ try {
   }, { savedId: saved.id, legacyId: legacy.id })
   const protectedKeys = await page.evaluate(() => Object.keys(localStorage).filter(key => !key.endsWith(':orphan')))
   await page.getByRole('button', { name: 'Sessions / settings', exact: true }).click()
-  await page.getByText('Storage maintenance', { exact: true }).click()
+  await page.locator('.storage-maintenance > summary').filter({ hasText: 'Advanced' }).click()
   await page.getByRole('button', { name: 'Clean up unused UI preferences', exact: true }).click()
   await page.getByText('1 unused UI preference entries safe to remove.', { exact: true }).waitFor()
   page.once('dialog', dialog => dialog.dismiss())

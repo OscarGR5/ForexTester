@@ -571,6 +571,8 @@ it('previews UI cleanup, requires confirmation and revalidates before removing o
  // The current unsaved session has presentation preferences copied by fresh().
  const activeKeys=Object.keys(localStorage).filter(key=>key.startsWith('forextester:ui:v1:')&&![saved.id,legacy.id,'orphan'].some(id=>key===uiKey(id)))
  expect(activeKeys).toHaveLength(1)
+ await act(async()=>host.querySelector<HTMLElement>('.storage-maintenance > summary')!.click())
+ expect(host.querySelector<HTMLDetailsElement>('.storage-maintenance')!.open).toBe(true)
  await click('Clean up unused UI preferences');await until(()=>host.textContent?.includes('1 unused UI preference entries safe to remove'))
  expect(localStorage.getItem(uiKey('orphan'))).toBe('keep')
  vi.mocked(window.confirm).mockReturnValueOnce(false);await click('Confirm UI preference cleanup')
@@ -583,6 +585,7 @@ it('previews UI cleanup, requires confirmation and revalidates before removing o
 it('refuses cleanup with unreadable disk inventory',async()=>{
  vi.spyOn(PreferenceTabGuard.prototype,'exclusive').mockImplementation(operation=>operation())
  await mount();localStorage.setItem(uiKey('orphan'),'keep');await click('Sessions / settings')
+ await act(async()=>host.querySelector<HTMLElement>('.storage-maintenance > summary')!.click())
  const underlying=globalThis.fetch
  vi.stubGlobal('fetch',(path:string,options?:RequestInit)=>path==='/api/storage/sessions'?Promise.resolve(new Response(JSON.stringify({sessions:[],errors:[{id:'broken',error:'Unreadable',revision:null}]}))):underlying(path,options))
  await click('Clean up unused UI preferences');await until(()=>host.textContent?.includes('inventory contains unreadable sessions'))
