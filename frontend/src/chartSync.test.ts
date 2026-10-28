@@ -75,7 +75,7 @@ describe('independent chart navigation', () => {
   it.each([false, true])('restores a legacy shared range with following=%s', following => {
     const sync = new ChartSynchronizer({ from: 0, to: 29700 }); sync.restore({ range: { from: 300, to: 1500 }, following })
     const f = fake(); register(sync, 0, f)
-    expect(f.range()).toEqual(following ? { from: 97, to: 101 } : { from: 1, to: 5 })
+    expect(f.range()).toEqual(following ? { from: 97, to: 102 } : { from: 0, to: 5 })
   })
   it.each(['M1', 'M5', 'M15', 'H1', 'H4', 'D1'] as const)('starts %s with recent observed bars and retains permitted projection', tf => {
     const sync = new ChartSynchronizer(), f = fake(), t = times(400, TIMEFRAME_MS[tf] / 1000)
@@ -264,4 +264,79 @@ it('holds a visible manual view until the two-bar safety boundary, then restores
  expect(f.range().to-103).toBe(FOLLOW_RIGHT_OFFSET)
  expect(sync.onViewportChange).toHaveBeenCalledTimes(1)
  expect(sync.snapshot().charts!['0'].following).toBe(true)
+})
+
+describe('timeframe zoom and anchors', () => {
+  const history = (tf: Timeframe) => times(Math.floor(86400 * 20 / (TIMEFRAME_MS[tf] / 1000)) + 1, TIMEFRAME_MS[tf] / 1000)
+  it.each([['H1', 'M5'], ['M5', 'H1'], ['H4', 'M15'], ['H1', 'D1']] as const)('keeps the bar count through repeated %s → %s round trips, even with sparse target history', (from, to) => {
+    const sync = new ChartSynchronizer(), f = fake()
+    register(sync, 0, f, from, history(from))
+    const initial = { ...f.range() }, span = initial.to - initial.from
+    for (let i = 0; i < 4; i++) {
+      sync.update(0, candles(history(to)), to, () => 26)
+      expect(f.range().to - f.range().from).toBeCloseTo(span)
+      expect(f.range().to).toBe(history(to).length - 1 + 26)
+      sync.update(0, candles(history(from)), from, () => 0)
+      expect(f.range()).toEqual(initial)
+    }
+  })
+  it('maps a manual historical right anchor through a weekend without multiplying the zoom', () => {
+    const sync = new ChartSynchronizer(), f = fake()
+    const h1 = [...times(48, 3600), ...times(100, 3600).map(t => t + 4 * 86400)]
+    const m5 = [...times(48 * 12, 300), ...times(100 * 12, 300).map(t => t + 4 * 86400)]
+    register(sync, 0, f, 'H1', h1)
+    sync.activate(0); f.pan({ from: 5.25, to: 48.25 })
+    const initial = sync.snapshot().charts!['0']
+    for (let i = 0; i < 3; i++) {
+      sync.update(0, candles(m5), 'M5', () => 0)
+      expect(f.range().to - f.range().from).toBe(43)
+      expect(sync.snapshot().charts!['0'].range!.to).toBeCloseTo(initial.range!.to)
+      sync.update(0, candles(h1), 'H1', () => 0)
+      expect(f.range().from).toBeCloseTo(5.25); expect(f.range().to).toBeCloseTo(48.25)
+      expect(sync.snapshot().charts!['0'].following).toBe(false)
+    }
+  })
+  it('keeps a manual future margin in bars on a timeframe switch and JSON restoration', () => {
+    const sync = new ChartSynchronizer(), f = fake(); register(sync, 0, f, 'H1', history('H1'))
+    const last = history('H1').length - 1
+    sync.activate(0); f.pan({ from: last - 70, to: last + 30 })
+    sync.update(0, candles(history('M5')), 'M5', () => 0)
+    expect(f.range()).toEqual({ from: history('M5').length - 71, to: history('M5').length + 29 })
+    const restored = new ChartSynchronizer(), next = fake(); restored.restore(JSON.parse(JSON.stringify(sync.snapshot())))
+    register(restored, 0, next, 'M5', history('M5'))
+    restored.update(0, candles(history('H1')), 'H1', () => 0)
+    expect(next.range()).toEqual({ from: last - 70, to: last + 30 })
+    expect(restored.snapshot().charts!['0'].following).toBe(false)
+  })
+  it('does not let projection whitespace consume a narrow viewport during axis dragging or wheel zoom', () => {
+    const sync = new ChartSynchronizer(), f = fake(); register(sync, 0, f)
+    sync.update(0, candles(times()), 'M5', () => 26)
+    sync.activate(0); f.pan({ from: 120, to: 122 })
+    expect(f.range()).toEqual({ from: 97, to: 102 })
+    expect(f.range().from).toBeLessThan(99)
+    sync.wheel(0, -100)
+    expect(f.range()).toEqual({ from: 97, to: 102 })
+    sync.refresh(0); expect(f.range()).toEqual({ from: 97, to: 102 })
+  })
+  it('records the requested range while the library defers setVisibleLogicalRange until its next render', () => {
+    const sync = new ChartSynchronizer(), f = fake(); register(sync, 0, f)
+    let queued: LogicalRange | null = null
+    f.scale.setVisibleLogicalRange.mockImplementation(range => { queued = range })
+    sync.wheel(0, -150)
+    const saved = sync.snapshot().charts!['0']
+    expect(saved.logical).not.toEqual(f.range())
+    f.pan(queued!)
+    expect(sync.snapshot().charts!['0']).toEqual(saved)
+    sync.refresh(0)
+    expect(f.range()).toEqual(saved.logical)
+  })
+  it('initializes empty and single-candle history with a finite window that keeps its candle visible', () => {
+    const sync = new ChartSynchronizer(), f = fake(); register(sync, 0, f, 'H1', [])
+    expect(sync.snapshot().charts).toEqual({})
+    sync.update(0, candles([3600]), 'H1', () => 26)
+    expect(f.range().from).toBeLessThan(0); expect(f.range().to).toBeGreaterThan(0)
+    const span = f.range().to - f.range().from
+    sync.update(0, candles([3600]), 'M5', () => 0)
+    expect(f.range().to - f.range().from).toBe(span)
+  })
 })

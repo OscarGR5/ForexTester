@@ -1,0 +1,3 @@
+Verified initial timeframe and price-scale reproduction
+Verified empty history, one candle and market gaps
+Verified 11 scenario groups with real Chromium gestures; no page errors or external requests

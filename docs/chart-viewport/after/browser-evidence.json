@@ -1,0 +1,2305 @@
+{
+  "reports": [
+    {
+      "h1": {
+        "range": {
+          "from": 330,
+          "to": 555
+        },
+        "span": 225,
+        "barSpacing": 6.008849557522124,
+        "plotWidth": 1358,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 1197.7654867256638,
+        "lastY": 334.79729750610954,
+        "visible": 200,
+        "price": {
+          "from": 1.0987007545852288,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1705600800,
+            "to": 1706756400
+          },
+          "logical": {
+            "from": 330,
+            "to": 555
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "m5": {
+        "range": {
+          "from": 6143,
+          "to": 6368
+        },
+        "span": 225,
+        "barSpacing": 5.95575221238938,
+        "plotWidth": 1346,
+        "timeHeight": 28,
+        "height": 637,
+        "last": 6356,
+        "lastX": 1270.5530973451328,
+        "lastY": 251.69717475889883,
+        "visible": 214,
+        "price": {
+          "from": 1.0987188631572673,
+          "to": 1.1012992402792117
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706601300,
+            "to": 1706668800
+          },
+          "logical": {
+            "from": 6143,
+            "to": 6368
+          },
+          "step": 300,
+          "following": true
+        }
+      },
+      "back": {
+        "range": {
+          "from": 330,
+          "to": 555
+        },
+        "span": 225,
+        "barSpacing": 6.008849557522124,
+        "plotWidth": 1358,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 1197.7654867256638,
+        "lastY": 334.79729750610954,
+        "visible": 200,
+        "price": {
+          "from": 1.0987007545852288,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1705600800,
+            "to": 1706756400
+          },
+          "logical": {
+            "from": 330,
+            "to": 555
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "axis": {
+        "range": {
+          "from": 392.0121951219512,
+          "to": 555
+        },
+        "span": 162.9878048780488,
+        "barSpacing": 8.28110359187923,
+        "plotWidth": 1358,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 1137.5507548152004,
+        "lastY": 334.79729750610954,
+        "visible": 137,
+        "price": {
+          "from": 1.0987007545852288,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1705996843.902439,
+            "to": 1706756400
+          },
+          "logical": {
+            "from": 392.0121951219512,
+            "to": 555
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "manual": {
+        "range": {
+          "from": 392.0121951219512,
+          "to": 555
+        },
+        "span": 162.9878048780488,
+        "barSpacing": 8.28110359187923,
+        "plotWidth": 1358,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 1137.5507548152004,
+        "lastY": 355.5252220112436,
+        "visible": 137,
+        "price": {
+          "from": 1.098459169410226,
+          "to": 1.1015408299025609
+        },
+        "autoScale": false,
+        "view": {
+          "range": {
+            "from": 1705996843.902439,
+            "to": 1706756400
+          },
+          "logical": {
+            "from": 392.0121951219512,
+            "to": 555
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "unsavedPrice": {
+        "range": {
+          "from": 1967.0121951219512,
+          "to": 2130
+        },
+        "span": 162.9878048780488,
+        "barSpacing": 8.207927418755112,
+        "plotWidth": 1346,
+        "timeHeight": 28,
+        "height": 637,
+        "last": 2118,
+        "lastX": 1242.400907265561,
+        "lastY": 271.8890040940261,
+        "visible": 151,
+        "price": {
+          "from": 1.0983434338094251,
+          "to": 1.1016532484496624
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706528710.9756098,
+            "to": 1706675400
+          },
+          "logical": {
+            "from": 1967.0121951219512,
+            "to": 2130
+          },
+          "step": 900,
+          "following": true
+        }
+      }
+    },
+    {
+      "check": "empty, one candle and weekend gap",
+      "sparse": [
+        {
+          "count": 0,
+          "range": null,
+          "lastIndex": null,
+          "lastX": null,
+          "width": 944,
+          "view": {
+            "range": null,
+            "following": true,
+            "charts": {}
+          }
+        },
+        {
+          "count": 1,
+          "range": {
+            "from": -1.9999999999999964,
+            "to": 24
+          },
+          "lastIndex": 0,
+          "lastX": 85.48148148148141,
+          "width": 934,
+          "view": {
+            "range": {
+              "from": 1704276000,
+              "to": 1704369600
+            },
+            "following": true,
+            "charts": {
+              "0": {
+                "range": {
+                  "from": 1704276000,
+                  "to": 1704369600
+                },
+                "logical": {
+                  "from": -2,
+                  "to": 24
+                },
+                "step": 3600,
+                "following": true
+              }
+            }
+          }
+        },
+        {
+          "count": 60,
+          "range": {
+            "from": 57,
+            "to": 83
+          },
+          "lastIndex": 59,
+          "lastX": 85.48148148148141,
+          "width": 934,
+          "view": {
+            "range": {
+              "from": 1704488400,
+              "to": 1704582000
+            },
+            "following": true,
+            "charts": {
+              "0": {
+                "range": {
+                  "from": 1704488400,
+                  "to": 1704582000
+                },
+                "logical": {
+                  "from": 57,
+                  "to": 83
+                },
+                "step": 3600,
+                "following": true
+              }
+            }
+          }
+        },
+        {
+          "count": 61,
+          "range": {
+            "from": 58,
+            "to": 84
+          },
+          "lastIndex": 60,
+          "lastX": 85.48148148148141,
+          "width": 934,
+          "view": {
+            "range": {
+              "from": 1704492000,
+              "to": 1704758400
+            },
+            "following": true,
+            "charts": {
+              "0": {
+                "range": {
+                  "from": 1704492000,
+                  "to": 1704758400
+                },
+                "logical": {
+                  "from": 58,
+                  "to": 84
+                },
+                "step": 3600,
+                "following": true
+              }
+            }
+          }
+        },
+        {
+          "count": 62,
+          "range": {
+            "from": 59,
+            "to": 85
+          },
+          "lastIndex": 61,
+          "lastX": 85.48148148148141,
+          "width": 934,
+          "view": {
+            "range": {
+              "from": 1704495600,
+              "to": 1704762000
+            },
+            "following": true,
+            "charts": {
+              "0": {
+                "range": {
+                  "from": 1704495600,
+                  "to": 1704762000
+                },
+                "logical": {
+                  "from": 59,
+                  "to": 85
+                },
+                "step": 3600,
+                "following": true
+              }
+            }
+          }
+        },
+        {
+          "count": 65,
+          "range": {
+            "from": 62,
+            "to": 88
+          },
+          "lastIndex": 64,
+          "lastX": 85.48148148148141,
+          "width": 934,
+          "view": {
+            "range": {
+              "from": 1704679200,
+              "to": 1704772800
+            },
+            "following": true,
+            "charts": {
+              "0": {
+                "range": {
+                  "from": 1704679200,
+                  "to": 1704772800
+                },
+                "logical": {
+                  "from": 62,
+                  "to": 88
+                },
+                "step": 3600,
+                "following": true
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "check": "independent vertical preferences",
+      "restoredManual": {
+        "range": {
+          "from": 392.0121951219512,
+          "to": 555
+        },
+        "span": 162.9878048780488,
+        "barSpacing": 8.281103591879228,
+        "plotWidth": 1358,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 1137.5507548152004,
+        "lastY": 355.5252220112436,
+        "visible": 137,
+        "price": {
+          "from": 1.098459169410226,
+          "to": 1.1015408299025609
+        },
+        "autoScale": false,
+        "view": {
+          "range": {
+            "from": 1705996843.902439,
+            "to": 1706756400
+          },
+          "logical": {
+            "from": 392.0121951219512,
+            "to": 555
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "manualM5": {
+        "range": {
+          "from": 6205.012195121952,
+          "to": 6368
+        },
+        "span": 162.98780487804834,
+        "barSpacing": 8.207927418755135,
+        "plotWidth": 1346,
+        "timeHeight": 28,
+        "height": 637,
+        "last": 6356,
+        "lastX": 1242.4009072655608,
+        "lastY": 227.20704464009577,
+        "visible": 151,
+        "price": {
+          "from": 1.098951098505016,
+          "to": 1.101048952657137
+        },
+        "autoScale": false,
+        "view": {
+          "range": {
+            "from": 1706619903.6585367,
+            "to": 1706668800
+          },
+          "logical": {
+            "from": 6205.012195121952,
+            "to": 6368
+          },
+          "step": 300,
+          "following": true
+        }
+      },
+      "restoredM5": {
+        "range": {
+          "from": 6205.012195121952,
+          "to": 6368
+        },
+        "span": 162.98780487804834,
+        "barSpacing": 8.207927418755135,
+        "plotWidth": 1346,
+        "timeHeight": 28,
+        "height": 637,
+        "last": 6356,
+        "lastX": 1242.4009072655608,
+        "lastY": 227.20704464009577,
+        "visible": 151,
+        "price": {
+          "from": 1.098951098505016,
+          "to": 1.101048952657137
+        },
+        "autoScale": false,
+        "view": {
+          "range": {
+            "from": 1706619903.6585367,
+            "to": 1706668800
+          },
+          "logical": {
+            "from": 6205.012195121952,
+            "to": 6368
+          },
+          "step": 300,
+          "following": true
+        }
+      }
+    },
+    {
+      "check": "layout gestures and switches",
+      "count": 1,
+      "pane": 0,
+      "start": {
+        "range": {
+          "from": 455,
+          "to": 555
+        },
+        "span": 100,
+        "barSpacing": 13.445544554455445,
+        "plotWidth": 1358,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 1000.6930693069307,
+        "lastY": 335.18112774582096,
+        "visible": 75,
+        "price": {
+          "from": 1.0987067926787315,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706223600,
+            "to": 1706756400
+          },
+          "logical": {
+            "from": 455,
+            "to": 555
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "axisIn": {
+        "range": {
+          "from": 469.53237410071944,
+          "to": 555
+        },
+        "span": 85.46762589928056,
+        "barSpacing": 15.705299941758883,
+        "plotWidth": 1358,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 940.8095515433896,
+        "lastY": 335.18112774582096,
+        "visible": 60,
+        "price": {
+          "from": 1.0987067926787315,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706275916.5467627,
+            "to": 1706756400
+          },
+          "logical": {
+            "from": 469.53237410071944,
+            "to": 555
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "wheelIn": {
+        "range": {
+          "from": 474.02780574080566,
+          "to": 555
+        },
+        "span": 80.97219425919434,
+        "barSpacing": 16.566593248754973,
+        "plotWidth": 1358,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 917.9852789079932,
+        "lastY": 335.1874609546985,
+        "visible": 55,
+        "price": {
+          "from": 1.098706892072113,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706292100.100667,
+            "to": 1706756400
+          },
+          "logical": {
+            "from": 474.02780574080566,
+            "to": 555
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "bottomWheel": {
+        "range": {
+          "from": 488.7055744157932,
+          "to": 555
+        },
+        "span": 66.2944255842068,
+        "barSpacing": 20.179977586712713,
+        "plotWidth": 1358,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 822.230593952113,
+        "lastY": 335.1874609546985,
+        "visible": 41,
+        "price": {
+          "from": 1.098706892072113,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706517740.0678968,
+            "to": 1706756400
+          },
+          "logical": {
+            "from": 488.7055744157932,
+            "to": 555
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "historical": {
+        "range": {
+          "from": 429.7821368218149,
+          "to": 510.75433108100924
+        },
+        "span": 80.97219425919434,
+        "barSpacing": 16.566593248754973,
+        "plotWidth": 1358,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 1650.9852789079932,
+        "lastY": 334.79729750610954,
+        "visible": 81,
+        "price": {
+          "from": 1.0987007545852288,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706132815.6925585,
+            "to": 1706597115.5918915
+          },
+          "logical": {
+            "from": 429.7821368218149,
+            "to": 510.75433108100924
+          },
+          "step": 3600,
+          "following": false
+        }
+      },
+      "narrowWheel": {
+        "range": {
+          "from": 527,
+          "to": 532
+        },
+        "span": 5,
+        "barSpacing": 226.33333333333334,
+        "plotWidth": 1358,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 564.8333333333333,
+        "lastY": 494.3667040303205,
+        "visible": 3,
+        "price": {
+          "from": 1.099994069275999,
+          "to": 1.1012811880048856
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706655600,
+            "to": 1706673600
+          },
+          "logical": {
+            "from": 527,
+            "to": 532
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "narrowAxis": {
+        "range": {
+          "from": 527,
+          "to": 532
+        },
+        "span": 5,
+        "barSpacing": 226.33333333333334,
+        "plotWidth": 1358,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 564.8333333333333,
+        "lastY": 494.3667040303205,
+        "visible": 3,
+        "price": {
+          "from": 1.099994069275999,
+          "to": 1.1012811880048856
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706655600,
+            "to": 1706673600
+          },
+          "logical": {
+            "from": 527,
+            "to": 532
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "future": {
+        "range": {
+          "from": 527,
+          "to": 532
+        },
+        "span": 5,
+        "barSpacing": 226.33333333333334,
+        "plotWidth": 1358,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 564.8333333333333,
+        "lastY": 494.3667040303205,
+        "visible": 3,
+        "price": {
+          "from": 1.099994069275999,
+          "to": 1.1012811880048856
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706655600,
+            "to": 1706673600
+          },
+          "logical": {
+            "from": 527,
+            "to": 532
+          },
+          "step": 3600,
+          "following": true
+        }
+      }
+    },
+    {
+      "check": "layout gestures and switches",
+      "count": 2,
+      "pane": 0,
+      "start": {
+        "range": {
+          "from": 455,
+          "to": 555
+        },
+        "span": 100,
+        "barSpacing": 6.376237623762377,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 474.029702970297,
+        "lastY": 335.18112774582096,
+        "visible": 75,
+        "price": {
+          "from": 1.0987067926787315,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706223600,
+            "to": 1706756400
+          },
+          "logical": {
+            "from": 455,
+            "to": 555
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "axisIn": {
+        "range": {
+          "from": 481.4052287581699,
+          "to": 555
+        },
+        "span": 73.59477124183007,
+        "barSpacing": 8.633312888811005,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 414.2172084465084,
+        "lastY": 335.1874609546985,
+        "visible": 48,
+        "price": {
+          "from": 1.098706892072113,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706491458.8235295,
+            "to": 1706756400
+          },
+          "logical": {
+            "from": 481.4052287581699,
+            "to": 555
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "wheelIn": {
+        "range": {
+          "from": 464.9557954719681,
+          "to": 555
+        },
+        "span": 90.04420452803191,
+        "barSpacing": 7.073487031255423,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 455.5525936717313,
+        "lastY": 335.18112774582096,
+        "visible": 65,
+        "price": {
+          "from": 1.0987067926787315,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706259440.8636992,
+            "to": 1706756400
+          },
+          "logical": {
+            "from": 464.9557954719681,
+            "to": 555
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "bottomWheel": {
+        "range": {
+          "from": 481.2780406164566,
+          "to": 555
+        },
+        "span": 73.72195938354338,
+        "barSpacing": 8.61861767695874,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 414.6066315605934,
+        "lastY": 335.1874609546985,
+        "visible": 48,
+        "price": {
+          "from": 1.098706892072113,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706491000.9462192,
+            "to": 1706756400
+          },
+          "logical": {
+            "from": 481.2780406164566,
+            "to": 555
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "historical": {
+        "range": {
+          "from": 415.75799550961545,
+          "to": 505.80220003764737
+        },
+        "span": 90.04420452803191,
+        "barSpacing": 7.073487031255423,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 803.5525936717312,
+        "lastY": 334.79729750610954,
+        "visible": 90,
+        "price": {
+          "from": 1.0987007545852288,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706082328.7838347,
+            "to": 1706579287.9201355
+          },
+          "logical": {
+            "from": 415.75799550961545,
+            "to": 505.80220003764737
+          },
+          "step": 3600,
+          "following": false
+        }
+      },
+      "narrowWheel": {
+        "range": {
+          "from": 527,
+          "to": 532
+        },
+        "span": 5,
+        "barSpacing": 107.33333333333333,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 267.33333333333337,
+        "lastY": 494.3667040303205,
+        "visible": 3,
+        "price": {
+          "from": 1.099994069275999,
+          "to": 1.1012811880048856
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706655600,
+            "to": 1706673600
+          },
+          "logical": {
+            "from": 527,
+            "to": 532
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "narrowAxis": {
+        "range": {
+          "from": 527,
+          "to": 532
+        },
+        "span": 5,
+        "barSpacing": 107.33333333333333,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 267.33333333333337,
+        "lastY": 494.3667040303205,
+        "visible": 3,
+        "price": {
+          "from": 1.099994069275999,
+          "to": 1.1012811880048856
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706655600,
+            "to": 1706673600
+          },
+          "logical": {
+            "from": 527,
+            "to": 532
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "future": {
+        "range": {
+          "from": 527,
+          "to": 532
+        },
+        "span": 5,
+        "barSpacing": 107.33333333333333,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 267.33333333333337,
+        "lastY": 494.3667040303205,
+        "visible": 3,
+        "price": {
+          "from": 1.099994069275999,
+          "to": 1.1012811880048856
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706655600,
+            "to": 1706673600
+          },
+          "logical": {
+            "from": 527,
+            "to": 532
+          },
+          "step": 3600,
+          "following": true
+        }
+      }
+    },
+    {
+      "check": "layout gestures and switches",
+      "count": 2,
+      "pane": 1,
+      "start": {
+        "range": {
+          "from": 455,
+          "to": 555
+        },
+        "span": 100,
+        "barSpacing": 6.376237623762377,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 474.029702970297,
+        "lastY": 335.18112774582096,
+        "visible": 75,
+        "price": {
+          "from": 1.0987067926787315,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706223600,
+            "to": 1706756400
+          },
+          "logical": {
+            "from": 455,
+            "to": 555
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "axisIn": {
+        "range": {
+          "from": 481.4052287581699,
+          "to": 555
+        },
+        "span": 73.59477124183007,
+        "barSpacing": 8.633312888811005,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 414.2172084465084,
+        "lastY": 335.1874609546985,
+        "visible": 48,
+        "price": {
+          "from": 1.098706892072113,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706491458.8235295,
+            "to": 1706756400
+          },
+          "logical": {
+            "from": 481.4052287581699,
+            "to": 555
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "wheelIn": {
+        "range": {
+          "from": 464.9557954719681,
+          "to": 555
+        },
+        "span": 90.04420452803191,
+        "barSpacing": 7.073487031255423,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 455.5525936717313,
+        "lastY": 335.18112774582096,
+        "visible": 65,
+        "price": {
+          "from": 1.0987067926787315,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706259440.8636992,
+            "to": 1706756400
+          },
+          "logical": {
+            "from": 464.9557954719681,
+            "to": 555
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "bottomWheel": {
+        "range": {
+          "from": 481.2780406164566,
+          "to": 555
+        },
+        "span": 73.72195938354338,
+        "barSpacing": 8.61861767695874,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 414.6066315605934,
+        "lastY": 335.1874609546985,
+        "visible": 48,
+        "price": {
+          "from": 1.098706892072113,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706491000.9462192,
+            "to": 1706756400
+          },
+          "logical": {
+            "from": 481.2780406164566,
+            "to": 555
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "historical": {
+        "range": {
+          "from": 415.75799550961545,
+          "to": 505.80220003764737
+        },
+        "span": 90.04420452803191,
+        "barSpacing": 7.073487031255423,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 803.5525936717312,
+        "lastY": 334.79729750610954,
+        "visible": 90,
+        "price": {
+          "from": 1.0987007545852288,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706082328.7838347,
+            "to": 1706579287.9201355
+          },
+          "logical": {
+            "from": 415.75799550961545,
+            "to": 505.80220003764737
+          },
+          "step": 3600,
+          "following": false
+        }
+      },
+      "narrowWheel": {
+        "range": {
+          "from": 527,
+          "to": 532
+        },
+        "span": 5,
+        "barSpacing": 107.33333333333333,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 267.33333333333337,
+        "lastY": 494.3667040303205,
+        "visible": 3,
+        "price": {
+          "from": 1.099994069275999,
+          "to": 1.1012811880048856
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706655600,
+            "to": 1706673600
+          },
+          "logical": {
+            "from": 527,
+            "to": 532
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "narrowAxis": {
+        "range": {
+          "from": 527,
+          "to": 532
+        },
+        "span": 5,
+        "barSpacing": 107.33333333333333,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 267.33333333333337,
+        "lastY": 494.3667040303205,
+        "visible": 3,
+        "price": {
+          "from": 1.099994069275999,
+          "to": 1.1012811880048856
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706655600,
+            "to": 1706673600
+          },
+          "logical": {
+            "from": 527,
+            "to": 532
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "future": {
+        "range": {
+          "from": 527,
+          "to": 532
+        },
+        "span": 5,
+        "barSpacing": 107.33333333333333,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 267.33333333333337,
+        "lastY": 494.3667040303205,
+        "visible": 3,
+        "price": {
+          "from": 1.099994069275999,
+          "to": 1.1012811880048856
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706655600,
+            "to": 1706673600
+          },
+          "logical": {
+            "from": 527,
+            "to": 532
+          },
+          "step": 3600,
+          "following": true
+        }
+      }
+    },
+    {
+      "check": "layout gestures and switches",
+      "count": 3,
+      "pane": 0,
+      "start": {
+        "range": {
+          "from": 455,
+          "to": 555
+        },
+        "span": 100,
+        "barSpacing": 6.376237623762377,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 474.029702970297,
+        "lastY": 335.18112774582096,
+        "visible": 75,
+        "price": {
+          "from": 1.0987067926787315,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706223600,
+            "to": 1706756400
+          },
+          "logical": {
+            "from": 455,
+            "to": 555
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "axisIn": {
+        "range": {
+          "from": 481.4052287581699,
+          "to": 555
+        },
+        "span": 73.59477124183007,
+        "barSpacing": 8.633312888811005,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 414.2172084465084,
+        "lastY": 335.1874609546985,
+        "visible": 48,
+        "price": {
+          "from": 1.098706892072113,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706491458.8235295,
+            "to": 1706756400
+          },
+          "logical": {
+            "from": 481.4052287581699,
+            "to": 555
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "wheelIn": {
+        "range": {
+          "from": 464.9557954719681,
+          "to": 555
+        },
+        "span": 90.04420452803191,
+        "barSpacing": 7.073487031255423,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 455.5525936717313,
+        "lastY": 335.18112774582096,
+        "visible": 65,
+        "price": {
+          "from": 1.0987067926787315,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706259440.8636992,
+            "to": 1706756400
+          },
+          "logical": {
+            "from": 464.9557954719681,
+            "to": 555
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "bottomWheel": {
+        "range": {
+          "from": 481.2780406164566,
+          "to": 555
+        },
+        "span": 73.72195938354338,
+        "barSpacing": 8.61861767695874,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 414.6066315605934,
+        "lastY": 335.1874609546985,
+        "visible": 48,
+        "price": {
+          "from": 1.098706892072113,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706491000.9462192,
+            "to": 1706756400
+          },
+          "logical": {
+            "from": 481.2780406164566,
+            "to": 555
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "historical": {
+        "range": {
+          "from": 415.75799550961545,
+          "to": 505.80220003764737
+        },
+        "span": 90.04420452803191,
+        "barSpacing": 7.073487031255423,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 803.5525936717312,
+        "lastY": 334.79729750610954,
+        "visible": 90,
+        "price": {
+          "from": 1.0987007545852288,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706082328.7838347,
+            "to": 1706579287.9201355
+          },
+          "logical": {
+            "from": 415.75799550961545,
+            "to": 505.80220003764737
+          },
+          "step": 3600,
+          "following": false
+        }
+      },
+      "narrowWheel": {
+        "range": {
+          "from": 527,
+          "to": 532
+        },
+        "span": 5,
+        "barSpacing": 107.33333333333333,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 267.33333333333337,
+        "lastY": 494.3667040303205,
+        "visible": 3,
+        "price": {
+          "from": 1.099994069275999,
+          "to": 1.1012811880048856
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706655600,
+            "to": 1706673600
+          },
+          "logical": {
+            "from": 527,
+            "to": 532
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "narrowAxis": {
+        "range": {
+          "from": 527,
+          "to": 532
+        },
+        "span": 5,
+        "barSpacing": 107.33333333333333,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 267.33333333333337,
+        "lastY": 494.3667040303205,
+        "visible": 3,
+        "price": {
+          "from": 1.099994069275999,
+          "to": 1.1012811880048856
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706655600,
+            "to": 1706673600
+          },
+          "logical": {
+            "from": 527,
+            "to": 532
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "future": {
+        "range": {
+          "from": 527,
+          "to": 532
+        },
+        "span": 5,
+        "barSpacing": 107.33333333333333,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 850,
+        "last": 529,
+        "lastX": 267.33333333333337,
+        "lastY": 494.3667040303205,
+        "visible": 3,
+        "price": {
+          "from": 1.099994069275999,
+          "to": 1.1012811880048856
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706655600,
+            "to": 1706673600
+          },
+          "logical": {
+            "from": 527,
+            "to": 532
+          },
+          "step": 3600,
+          "following": true
+        }
+      }
+    },
+    {
+      "check": "layout gestures and switches",
+      "count": 3,
+      "pane": 1,
+      "start": {
+        "range": {
+          "from": 455,
+          "to": 555
+        },
+        "span": 100,
+        "barSpacing": 6.376237623762377,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 392,
+        "last": 529,
+        "lastX": 474.029702970297,
+        "lastY": 154.42781199614052,
+        "visible": 75,
+        "price": {
+          "from": 1.0987067926787315,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706223600,
+            "to": 1706756400
+          },
+          "logical": {
+            "from": 455,
+            "to": 555
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "axisIn": {
+        "range": {
+          "from": 481.4052287581699,
+          "to": 555
+        },
+        "span": 73.59477124183007,
+        "barSpacing": 8.633312888811005,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 392,
+        "last": 529,
+        "lastX": 414.2172084465084,
+        "lastY": 154.43072697813898,
+        "visible": 48,
+        "price": {
+          "from": 1.098706892072113,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706491458.8235295,
+            "to": 1706756400
+          },
+          "logical": {
+            "from": 481.4052287581699,
+            "to": 555
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "wheelIn": {
+        "range": {
+          "from": 464.9557954719681,
+          "to": 555
+        },
+        "span": 90.04420452803191,
+        "barSpacing": 7.073487031255423,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 392,
+        "last": 529,
+        "lastX": 455.5525936717313,
+        "lastY": 154.42781199614052,
+        "visible": 65,
+        "price": {
+          "from": 1.0987067926787315,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706259440.8636992,
+            "to": 1706756400
+          },
+          "logical": {
+            "from": 464.9557954719681,
+            "to": 555
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "bottomWheel": {
+        "range": {
+          "from": 481.2780406164566,
+          "to": 555
+        },
+        "span": 73.72195938354338,
+        "barSpacing": 8.61861767695874,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 392,
+        "last": 529,
+        "lastX": 414.6066315605934,
+        "lastY": 154.43072697813898,
+        "visible": 48,
+        "price": {
+          "from": 1.098706892072113,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706491000.9462192,
+            "to": 1706756400
+          },
+          "logical": {
+            "from": 481.2780406164566,
+            "to": 555
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "historical": {
+        "range": {
+          "from": 415.75799550961545,
+          "to": 505.80220003764737
+        },
+        "span": 90.04420452803191,
+        "barSpacing": 7.073487031255423,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 392,
+        "last": 529,
+        "lastX": 803.5525936717312,
+        "lastY": 154.25114669725644,
+        "visible": 90,
+        "price": {
+          "from": 1.0987007545852288,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706082328.7838347,
+            "to": 1706579287.9201355
+          },
+          "logical": {
+            "from": 415.75799550961545,
+            "to": 505.80220003764737
+          },
+          "step": 3600,
+          "following": false
+        }
+      },
+      "narrowWheel": {
+        "range": {
+          "from": 527,
+          "to": 532
+        },
+        "span": 5,
+        "barSpacing": 107.33333333333333,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 392,
+        "last": 529,
+        "lastX": 267.33333333333337,
+        "lastY": 227.6960553567165,
+        "visible": 3,
+        "price": {
+          "from": 1.099994069275999,
+          "to": 1.1012811880048856
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706655600,
+            "to": 1706673600
+          },
+          "logical": {
+            "from": 527,
+            "to": 532
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "narrowAxis": {
+        "range": {
+          "from": 527,
+          "to": 532
+        },
+        "span": 5,
+        "barSpacing": 107.33333333333333,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 392,
+        "last": 529,
+        "lastX": 267.33333333333337,
+        "lastY": 227.6960553567165,
+        "visible": 3,
+        "price": {
+          "from": 1.099994069275999,
+          "to": 1.1012811880048856
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706655600,
+            "to": 1706673600
+          },
+          "logical": {
+            "from": 527,
+            "to": 532
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "future": {
+        "range": {
+          "from": 527,
+          "to": 532
+        },
+        "span": 5,
+        "barSpacing": 107.33333333333333,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 392,
+        "last": 529,
+        "lastX": 267.33333333333337,
+        "lastY": 227.6960553567165,
+        "visible": 3,
+        "price": {
+          "from": 1.099994069275999,
+          "to": 1.1012811880048856
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706655600,
+            "to": 1706673600
+          },
+          "logical": {
+            "from": 527,
+            "to": 532
+          },
+          "step": 3600,
+          "following": true
+        }
+      }
+    },
+    {
+      "check": "layout gestures and switches",
+      "count": 3,
+      "pane": 2,
+      "start": {
+        "range": {
+          "from": 455,
+          "to": 555
+        },
+        "span": 100,
+        "barSpacing": 6.376237623762377,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 392,
+        "last": 529,
+        "lastX": 474.029702970297,
+        "lastY": 154.42781199614052,
+        "visible": 75,
+        "price": {
+          "from": 1.0987067926787315,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706223600,
+            "to": 1706756400
+          },
+          "logical": {
+            "from": 455,
+            "to": 555
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "axisIn": {
+        "range": {
+          "from": 481.4052287581699,
+          "to": 555
+        },
+        "span": 73.59477124183007,
+        "barSpacing": 8.633312888811005,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 392,
+        "last": 529,
+        "lastX": 414.2172084465084,
+        "lastY": 154.43072697813898,
+        "visible": 48,
+        "price": {
+          "from": 1.098706892072113,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706491458.8235295,
+            "to": 1706756400
+          },
+          "logical": {
+            "from": 481.4052287581699,
+            "to": 555
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "wheelIn": {
+        "range": {
+          "from": 464.9557954719681,
+          "to": 555
+        },
+        "span": 90.04420452803191,
+        "barSpacing": 7.073487031255423,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 392,
+        "last": 529,
+        "lastX": 455.5525936717313,
+        "lastY": 154.42781199614052,
+        "visible": 65,
+        "price": {
+          "from": 1.0987067926787315,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706259440.8636992,
+            "to": 1706756400
+          },
+          "logical": {
+            "from": 464.9557954719681,
+            "to": 555
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "bottomWheel": {
+        "range": {
+          "from": 481.2780406164566,
+          "to": 555
+        },
+        "span": 73.72195938354338,
+        "barSpacing": 8.61861767695874,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 392,
+        "last": 529,
+        "lastX": 414.6066315605934,
+        "lastY": 154.43072697813898,
+        "visible": 48,
+        "price": {
+          "from": 1.098706892072113,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706491000.9462192,
+            "to": 1706756400
+          },
+          "logical": {
+            "from": 481.2780406164566,
+            "to": 555
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "historical": {
+        "range": {
+          "from": 415.75799550961545,
+          "to": 505.80220003764737
+        },
+        "span": 90.04420452803191,
+        "barSpacing": 7.073487031255423,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 392,
+        "last": 529,
+        "lastX": 803.5525936717312,
+        "lastY": 154.25114669725644,
+        "visible": 90,
+        "price": {
+          "from": 1.0987007545852288,
+          "to": 1.1012992447275582
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706082328.7838347,
+            "to": 1706579287.9201355
+          },
+          "logical": {
+            "from": 415.75799550961545,
+            "to": 505.80220003764737
+          },
+          "step": 3600,
+          "following": false
+        }
+      },
+      "narrowWheel": {
+        "range": {
+          "from": 527,
+          "to": 532
+        },
+        "span": 5,
+        "barSpacing": 107.33333333333333,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 392,
+        "last": 529,
+        "lastX": 267.33333333333337,
+        "lastY": 227.6960553567165,
+        "visible": 3,
+        "price": {
+          "from": 1.099994069275999,
+          "to": 1.1012811880048856
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706655600,
+            "to": 1706673600
+          },
+          "logical": {
+            "from": 527,
+            "to": 532
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "narrowAxis": {
+        "range": {
+          "from": 527,
+          "to": 532
+        },
+        "span": 5,
+        "barSpacing": 107.33333333333333,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 392,
+        "last": 529,
+        "lastX": 267.33333333333337,
+        "lastY": 227.6960553567165,
+        "visible": 3,
+        "price": {
+          "from": 1.099994069275999,
+          "to": 1.1012811880048856
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706655600,
+            "to": 1706673600
+          },
+          "logical": {
+            "from": 527,
+            "to": 532
+          },
+          "step": 3600,
+          "following": true
+        }
+      },
+      "future": {
+        "range": {
+          "from": 527,
+          "to": 532
+        },
+        "span": 5,
+        "barSpacing": 107.33333333333333,
+        "plotWidth": 644,
+        "timeHeight": 28,
+        "height": 392,
+        "last": 529,
+        "lastX": 267.33333333333337,
+        "lastY": 227.6960553567165,
+        "visible": 3,
+        "price": {
+          "from": 1.099994069275999,
+          "to": 1.1012811880048856
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706655600,
+            "to": 1706673600
+          },
+          "logical": {
+            "from": 527,
+            "to": 532
+          },
+          "step": 3600,
+          "following": true
+        }
+      }
+    },
+    {
+      "check": "paused history and forward replay",
+      "paused": {
+        "range": {
+          "from": 6234.726597325409,
+          "to": 6334.726597325409
+        },
+        "span": 100,
+        "barSpacing": 13.326732673267326,
+        "plotWidth": 1346,
+        "timeHeight": 28,
+        "height": 637,
+        "last": 6356,
+        "lastX": 1621.8415841584124,
+        "lastY": 246.06067283388137,
+        "visible": 100,
+        "price": {
+          "from": 1.0987605705536685,
+          "to": 1.1012394886591248
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706628817.9791977,
+            "to": 1706658817.9791977
+          },
+          "logical": {
+            "from": 6234.726597325409,
+            "to": 6334.726597325409
+          },
+          "step": 300,
+          "following": false
+        }
+      },
+      "advanced": {
+        "range": {
+          "from": 6268,
+          "to": 6368
+        },
+        "span": 100,
+        "barSpacing": 13.326732673267326,
+        "plotWidth": 1346,
+        "timeHeight": 28,
+        "height": 637,
+        "last": 6356,
+        "lastX": 1178.4158415841584,
+        "lastY": 255.05252638044487,
+        "visible": 89,
+        "price": {
+          "from": 1.0987605705536685,
+          "to": 1.1012811880048856
+        },
+        "autoScale": true,
+        "view": {
+          "range": {
+            "from": 1706638800,
+            "to": 1706668800
+          },
+          "logical": {
+            "from": 6268,
+            "to": 6368
+          },
+          "step": 300,
+          "following": true
+        }
+      },
+      "executionBefore": "101 / 4319 candles",
+      "executionAfter": "102 / 4319 candles"
+    },
+    {
+      "check": "session reload",
+      "beforeReload": [
+        {
+          "range": {
+            "from": 461.41614906832297,
+            "to": 541.416149068323
+          },
+          "span": 80,
+          "barSpacing": 7.950617283950617,
+          "plotWidth": 644,
+          "timeHeight": 28,
+          "height": 850,
+          "last": 529,
+          "lastX": 540.3086419753088,
+          "lastY": 351.9477842855869,
+          "visible": 68,
+          "price": {
+            "from": 1.0985704673977104,
+            "to": 1.1014355700085794
+          },
+          "autoScale": false,
+          "view": {
+            "range": {
+              "from": 1706246698.136646,
+              "to": 1706707498.136646
+            },
+            "logical": {
+              "from": 461.41614906832297,
+              "to": 541.416149068323
+            },
+            "step": 3600,
+            "following": false
+          }
+        },
+        {
+          "range": {
+            "from": 2004.2215189873418,
+            "to": 2119.221518987342
+          },
+          "span": 115,
+          "barSpacing": 5.448275862068965,
+          "plotWidth": 632,
+          "timeHeight": 28,
+          "height": 293,
+          "last": 2118,
+          "lastX": 621.6206896551721,
+          "lastY": 130.64924953202515,
+          "visible": 114,
+          "price": {
+            "from": 1.0980947445996743,
+            "to": 1.1019019376594132
+          },
+          "autoScale": false,
+          "view": {
+            "range": {
+              "from": 1706562199.3670886,
+              "to": 1706665699.3670886
+            },
+            "logical": {
+              "from": 2004.2215189873418,
+              "to": 2119.221518987342
+            },
+            "step": 900,
+            "following": false
+          }
+        },
+        {
+          "range": {
+            "from": 6193.294303797468,
+            "to": 6343.294303797468
+          },
+          "span": 150,
+          "barSpacing": 4.185430463576159,
+          "plotWidth": 632,
+          "timeHeight": 28,
+          "height": 293,
+          "last": 6356,
+          "lastX": 682.0860927152321,
+          "lastY": 123.52891750492961,
+          "visible": 150,
+          "price": {
+            "from": 1.098466195682313,
+            "to": 1.10153385547984
+          },
+          "autoScale": false,
+          "view": {
+            "range": {
+              "from": 1706616388.2911391,
+              "to": 1706661388.2911391
+            },
+            "logical": {
+              "from": 6193.294303797468,
+              "to": 6343.294303797468
+            },
+            "step": 300,
+            "following": false
+          }
+        }
+      ],
+      "afterReload": [
+        {
+          "range": {
+            "from": 461.41614906832297,
+            "to": 541.416149068323
+          },
+          "span": 80,
+          "barSpacing": 7.950617283950617,
+          "plotWidth": 644,
+          "timeHeight": 28,
+          "height": 850,
+          "last": 529,
+          "lastX": 540.3086419753088,
+          "lastY": 351.9477842855869,
+          "visible": 68,
+          "price": {
+            "from": 1.0985704673977104,
+            "to": 1.1014355700085794
+          },
+          "autoScale": false,
+          "view": {
+            "range": {
+              "from": 1706246698.136646,
+              "to": 1706707498.136646
+            },
+            "logical": {
+              "from": 461.41614906832297,
+              "to": 541.416149068323
+            },
+            "step": 3600,
+            "following": false
+          }
+        },
+        {
+          "range": {
+            "from": 2004.2215189873418,
+            "to": 2119.221518987342
+          },
+          "span": 115,
+          "barSpacing": 5.448275862068965,
+          "plotWidth": 632,
+          "timeHeight": 28,
+          "height": 293,
+          "last": 2118,
+          "lastX": 621.6206896551721,
+          "lastY": 130.64924953202515,
+          "visible": 114,
+          "price": {
+            "from": 1.0980947445996743,
+            "to": 1.1019019376594132
+          },
+          "autoScale": false,
+          "view": {
+            "range": {
+              "from": 1706562199.3670886,
+              "to": 1706665699.3670886
+            },
+            "logical": {
+              "from": 2004.2215189873418,
+              "to": 2119.221518987342
+            },
+            "step": 900,
+            "following": false
+          }
+        },
+        {
+          "range": {
+            "from": 6193.294303797468,
+            "to": 6343.294303797468
+          },
+          "span": 150,
+          "barSpacing": 4.185430463576159,
+          "plotWidth": 632,
+          "timeHeight": 28,
+          "height": 293,
+          "last": 6356,
+          "lastX": 682.0860927152321,
+          "lastY": 123.52891750492961,
+          "visible": 150,
+          "price": {
+            "from": 1.098466195682313,
+            "to": 1.10153385547984
+          },
+          "autoScale": false,
+          "view": {
+            "range": {
+              "from": 1706616388.2911391,
+              "to": 1706661388.2911391
+            },
+            "logical": {
+              "from": 6193.294303797468,
+              "to": 6343.294303797468
+            },
+            "step": 300,
+            "following": false
+          }
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "external": []
+}
