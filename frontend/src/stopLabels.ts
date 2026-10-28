@@ -22,6 +22,9 @@ export class StopLabels implements ISeriesPrimitive {
   private requestUpdate: (() => void) | null = null
   private stops: readonly StopOverlay[] = []
   private bounds: { id: string; x: number; top: number; width: number; height: number }[] = []
+  overlaps(x: number, y: number, width: number, height: number): boolean {
+    return this.bounds.some(row => x < row.x + row.width && x + width > row.x && y < row.top + row.height && y + height > row.top)
+  }
   hitAnnotation(x: number, y: number): string | null {
     return this.bounds.find(row => x >= row.x && x <= row.x + row.width && y >= row.top && y <= row.top + row.height)?.id ?? null
   }
@@ -58,6 +61,7 @@ export class StopLines {
   private readonly lines = new Map<string, IPriceLine>()
   private readonly labels = new StopLabels()
   constructor(private readonly series: ISeriesApi<'Candlestick'>) { series.attachPrimitive(this.labels) }
+  overlaps(x: number, y: number, width: number, height: number) { return this.labels.overlaps(x, y, width, height) }
   hitTest(x: number, y: number) { return this.labels.hitAnnotation(x, y) }
   update(stops: readonly StopOverlay[]) {
     const ids = new Set(stops.map(stop => stop.id))

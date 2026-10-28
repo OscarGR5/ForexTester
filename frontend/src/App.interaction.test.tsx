@@ -612,7 +612,12 @@ describe('per-chart indicators', () => {
     await act(async () => root.unmount()); rootMounted = false
     expect(chart.removeSeries).toHaveBeenCalledTimes(17)
     expect(chart.remove).toHaveBeenCalledTimes(1)
-    for (const result of add.mock.results) if (vi.mocked(result.value.attachPrimitive).mock.calls.length) expect(result.value.detachPrimitive).toHaveBeenCalledTimes(1)
+    for (const result of add.mock.results) {
+      const attached = vi.mocked(result.value.attachPrimitive).mock.calls.map(([primitive]: [unknown]) => primitive)
+      const detached = vi.mocked(result.value.detachPrimitive).mock.calls.map(([primitive]: [unknown]) => primitive)
+      expect(detached).toHaveLength(attached.length)
+      for (const primitive of attached) expect(detached.filter((value: unknown) => value === primitive)).toHaveLength(1)
+    }
     expect(chart.unsubscribeCrosshairMove).toHaveBeenCalledTimes(vi.mocked(chart.subscribeCrosshairMove).mock.calls.length)
   })
 
