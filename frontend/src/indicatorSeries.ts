@@ -7,7 +7,7 @@ import { TIMEFRAME_MS, type Timeframe } from './history'
 // TradingView-inspired template; colors remain provisional for visual fine-tuning.
 export const INDICATOR_COLORS = {
   upper: '#ffffff', middle: '#2962ff', lower: '#ffffff',
-  upper2: '#ffffff', middle2: '#2962ff', lower2: '#ffffff', k: '#2962ff', d: '#ff9800',
+  upper2: 'rgba(255, 255, 255, 0.55)', middle2: '#2962ff', lower2: 'rgba(255, 255, 255, 0.55)', k: '#2962ff', d: '#ff9800',
   tenkan: '#81d4fa', kijun: '#4caf50', spanA: '#b2b5be', spanB: '#b2b5be', chikou: '#cddc39',
 }
 type LineKey = keyof typeof INDICATOR_COLORS
