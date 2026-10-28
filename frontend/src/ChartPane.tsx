@@ -84,7 +84,7 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', priceL
         horzLine: { color: '#9598a1', style: LineStyle.Dashed, width: 1 },
       },
       rightPriceScale: { borderColor: '#354250' },
-      timeScale: { borderColor: '#354250', timeVisible: true, secondsVisible: false, fixLeftEdge: false, fixRightEdge: false, rightOffset: FOLLOW_RIGHT_OFFSET },
+      timeScale: { borderColor: '#354250', timeVisible: true, secondsVisible: false, lockVisibleTimeRangeOnResize: true, fixLeftEdge: false, fixRightEdge: false, rightOffset: FOLLOW_RIGHT_OFFSET },
       localization: {
         timeFormatter: (time: Time) => typeof time === 'number'
           ? `${new Date(time * 1000).toISOString().slice(0, 16).replace('T', ' ')} UTC`
@@ -134,7 +134,7 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', priceL
       if (!chartRef.current || placement || stopInteraction?.preview) return
       const box = element.getBoundingClientRect(), chart = chartRef.current
       const x = event.clientX - box.left, y = event.clientY - box.top
-      if (x < 0 || x >= box.width || y < 0 || y >= chart.panes().reduce((height, pane) => height + pane.getHeight(), 0)) return
+      if (x < 0 || x >= box.width || y < 0 || y >= box.height) return
       synchronizer.activate(id)
       const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? box.height : 1)
       if (x >= chart.timeScale().width()) {
@@ -194,6 +194,28 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', priceL
   }, [id, synchronizer])
 
   useLayoutEffect(() => {
+    const scale = seriesRef.current!.priceScale()
+    const stored = readUi(sessionId, `price:${id}:${timeframe}`, null as PriceView | null, (v): v is PriceView | null => v === null || validPriceView(v))
+    // This runs before the candle-data layout effect. Cleanup saves the old
+    // timeframe against its own data, then an unsaved target starts in autoscale.
+    const manual = stored?.autoScale === false && stored.range !== null
+    scale.applyOptions({ autoScale: !manual })
+    if (manual) scale.setVisibleRange(stored.range!)
+    const save = () => {
+      if (!seriesRef.current || !scale.getVisibleRange || !scale.options) return
+      const autoScale = scale.options().autoScale
+      writeUi(sessionId, `price:${id}:${timeframe}`, { autoScale, range: autoScale ? null : scale.getVisibleRange() })
+    }
+    savePriceRef.current = save
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const schedule = () => { if (!timer) timer = setTimeout(() => { timer = null; save() }, 250) }
+    const element = container.current
+    element?.addEventListener('pointerup', schedule); element?.addEventListener('wheel', schedule)
+    window.addEventListener('pagehide', save); document.addEventListener('visibilitychange', save)
+    return () => { if (timer) clearTimeout(timer); save(); if (savePriceRef.current === save) savePriceRef.current = null; element?.removeEventListener('pointerup', schedule); element?.removeEventListener('wheel', schedule); window.removeEventListener('pagehide', save); document.removeEventListener('visibilitychange', save) }
+  }, [sessionId, id, timeframe])
+
+  useLayoutEffect(() => {
     const frame = performanceStart()
     const series = seriesRef.current!
     const last = previous.current
@@ -236,29 +258,16 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', priceL
 
   useLayoutEffect(() => { entryLines.current!.update(entries) }, [entries])
 
-  useEffect(() => {
-    const scale = seriesRef.current!.priceScale()
-    const stored = readUi(sessionId, `price:${id}:${timeframe}`, null as PriceView | null, (v): v is PriceView | null => v === null || validPriceView(v))
-    if (stored) { scale.applyOptions({ autoScale: stored.autoScale }); if (!stored.autoScale && stored.range) scale.setVisibleRange(stored.range) }
-    const save = () => {
-      if (!seriesRef.current || !scale.getVisibleRange || !scale.options) return
-      const autoScale = scale.options().autoScale
-      writeUi(sessionId, `price:${id}:${timeframe}`, { autoScale, range: autoScale ? null : scale.getVisibleRange() })
-    }
-    savePriceRef.current = save
-    let timer: ReturnType<typeof setTimeout> | null = null
-    const schedule = () => { if (!timer) timer = setTimeout(() => { timer = null; save() }, 250) }
-    const element = container.current
-    element?.addEventListener('pointerup', schedule); element?.addEventListener('wheel', schedule)
-    window.addEventListener('pagehide', save); document.addEventListener('visibilitychange', save)
-    return () => { if (timer) clearTimeout(timer); save(); element?.removeEventListener('pointerup', schedule); element?.removeEventListener('wheel', schedule); window.removeEventListener('pagehide', save); document.removeEventListener('visibilitychange', save) }
-  }, [sessionId, id, timeframe])
-
   useDraftStopAnnotation(draftAnnotation, container, chartRef, seriesRef, placement, draftReference, onPick)
 
   return (
     <section data-active={active} className={`chart-pane${placement ? " placing-stop" : ""}`} aria-label={`Chart ${id + 1}: ${instrument === '6E' ? 'EURUSD 6E' : instrument} ${timeframe} ${instrument === '6E' ? 'trade prices' : priceLabel.toLowerCase()}`}
-      onPointerDownCapture={() => synchronizer.activate(id)}
+      onPointerDownCapture={(event) => {
+        synchronizer.activate(id)
+        // Native chart drags can continue outside this pane. Keep their range
+        // callbacks owned by the starting chart when crossing another pane.
+        if ((event.target as Element).closest('.chart-canvas')) event.currentTarget.setPointerCapture?.(event.pointerId)
+      }}
       onPointerMoveCapture={(event) => { if (event.buttons) synchronizer.activate(id) }}>
       <div className="pane-toolbar">
         <span className="instrument"><strong>{instrument === '6E' ? 'EURUSD 6E' : instrument}</strong>{instrument !== '6E' && <span className="bid-label">{priceLabel}</span>}</span>

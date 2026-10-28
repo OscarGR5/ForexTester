@@ -7,12 +7,12 @@ export const FOLLOW_RIGHT_OFFSET = 12
 const MAX_RIGHT_OFFSET = 80
 // Keep the candle body in the plot even when zoom is tighter than the projection.
 const followOffset = (entry: Entry, width = Infinity) => Math.min(Math.max(FOLLOW_RIGHT_OFFSET, entry.projectedBars), Math.max(1, width - 2))
-const maxRightOffset = (entry: Entry, width: number) => Math.max(followOffset(entry), Math.min(MAX_RIGHT_OFFSET, width * 0.4))
+const maxRightOffset = (entry: Entry, width: number) => Math.min(width - 2, Math.max(followOffset(entry, width), Math.min(MAX_RIGHT_OFFSET, width * 0.4)))
 
 export interface UtcRange { from: number; to: number }
 
-// Logical coordinates are local to a chart. Convert them through candle UTC times
-// before applying a viewport to a chart with another resolution.
+// Convert the time anchor across resolutions and market gaps. Zoom is measured
+// separately in logical bars, so changing resolution never scales candle count.
 export function logicalToUtc(times: readonly number[], logical: number, stepSeconds: number): number {
   if (times.length === 0) return 0
   if (times.length === 1) return times[0] + logical * stepSeconds
@@ -113,6 +113,12 @@ export class ChartSynchronizer {
       try { entry.chart.clearCrosshairPosition(); entry.crosshair = null } finally { this.applyingCrosshair = false }
     }
     try {
+      const view = this.views.get(id)
+      const changedStep = entry.step !== TIMEFRAME_MS[timeframe] / 1000
+      // Future whitespace is a count of bars, not a UTC duration. Keep it
+      // separate from the last observed candle when changing resolution.
+      const whitespace = changedStep && view?.logical && entry.times.length
+        ? Math.max(0, view.logical.to - (entry.times.length - 1)) : 0
       if (dirty === 0) { entry.times = []; entry.byTime.clear(); entry.crosshair = undefined }
       for (let index = dirty; index < candles.length; index++) {
         const candle = candles[index]
@@ -120,9 +126,14 @@ export class ChartSynchronizer {
       }
       entry.step = TIMEFRAME_MS[timeframe] / 1000
       entry.projectedBars = applyData() ?? 0
+      if (whitespace && view?.range && view.logical && !view.following) {
+        const to = entry.times.length - 1 + whitespace
+        view.logical = { from: to - (view.logical.to - view.logical.from), to }
+        view.step = entry.step
+      }
       this.ensureView(id, entry)
       this.applyViewport(id, entry, recoverVisibility)
-      entry.pending = entry.chart.timeScale().getVisibleLogicalRange()
+      if (changedStep) this.onViewportChange?.()
     } finally { entry.setting = false }
     if (dirty === 0) this.refreshCrosshair()
   }
@@ -177,12 +188,12 @@ export class ChartSynchronizer {
       if (Math.abs(range.from - pending.from) < 0.001 && Math.abs(range.to - pending.to) < 0.001) return
     }
     if (this.activeId !== id || Date.now() > this.activeUntil) return
-    const width = range.to - range.from
+    const width = Math.max(5, Math.min(entry.times.length - 1 + followOffset(entry), range.to - range.from))
     const to = Math.min(range.to, entry.times.length - 1 + maxRightOffset(entry, width))
     const bounded = { from: to - width, to }
-    if (to !== range.to) {
+    if (to !== range.to || width !== range.to - range.from) {
       entry.setting = true
-      try { entry.chart.timeScale().setVisibleLogicalRange(bounded); entry.pending = entry.chart.timeScale().getVisibleLogicalRange() }
+      try { entry.pending = bounded as LogicalRange; entry.chart.timeScale().setVisibleLogicalRange(bounded) }
       finally { entry.setting = false }
     }
     this.recordRange(id, entry, bounded); this.onViewportChange?.()
@@ -191,21 +202,21 @@ export class ChartSynchronizer {
   wheel(id: number, delta: number): void {
     const entry = this.entries.get(id), range = entry?.chart.timeScale().getVisibleLogicalRange()
     if (!entry || !range || !Number.isFinite(delta) || !delta || entry.times.length < 2) return
-    const available = entry.times.length - 1 + followOffset(entry)
-    const width = Math.max(Math.min(5, available), Math.min(available, (range.to - range.from) * Math.exp(Math.max(-1, Math.min(1, delta * 0.002)))))
+    const width = Math.max(5, Math.min(entry.times.length - 1 + followOffset(entry),
+      (range.to - range.from) * Math.exp(Math.max(-1, Math.min(1, delta * 0.002)))))
     const to = Math.min(entry.times.length - 1 + maxRightOffset(entry, width), range.to), next = { from: to - width, to }
     this.activate(id); entry.setting = true
-    try { entry.chart.timeScale().setVisibleLogicalRange(next); entry.pending = entry.chart.timeScale().getVisibleLogicalRange() }
+    try { entry.pending = next as LogicalRange; entry.chart.timeScale().setVisibleLogicalRange(next) }
     finally { entry.setting = false }
-    this.recordRange(id, entry, entry.pending ?? next); this.onViewportChange?.(); this.refreshCrosshair()
+    this.recordRange(id, entry, next); this.onViewportChange?.(); this.refreshCrosshair()
   }
   private applyViewport(id: number, entry: Entry, recoverVisibility = false): void {
     const view = this.views.get(id), last = entry.times.length - 1
     if (!view?.range || last < 0) return
     const started = performanceStart(); performanceCount('sync.request')
     const sameStep = view.step === entry.step && view.logical
-    const width = Math.max(1, Math.min(last + followOffset(entry),
-      sameStep ? view.logical!.to - view.logical!.from : utcToLogical(entry.times, view.range.to, entry.step) - utcToLogical(entry.times, view.range.from, entry.step)))
+    const width = Math.max(5, view.logical ? view.logical.to - view.logical.from :
+      utcToLogical(entry.times, view.range.to, entry.step) - utcToLogical(entry.times, view.range.from, entry.step))
     const current = entry.chart.timeScale().getVisibleLogicalRange()
     // Only a forward replay observation may recover a manual view. Resizes,
     // settings, restore and historical review must leave paused navigation alone.
@@ -221,8 +232,8 @@ export class ChartSynchronizer {
     if (!current || Math.abs(current.from - next.from) > 0.001 || Math.abs(current.to - next.to) > 0.001) {
       const setting = entry.setting; entry.setting = true
       try {
-        performanceCount('sync.setRange'); entry.chart.timeScale().setVisibleLogicalRange(next)
-        entry.pending = entry.chart.timeScale().getVisibleLogicalRange()
+        performanceCount('sync.setRange'); entry.pending = next as LogicalRange
+        entry.chart.timeScale().setVisibleLogicalRange(next)
       } finally { entry.setting = setting }
     }
     this.recordRange(id, entry, next); this.views.get(id)!.following = following

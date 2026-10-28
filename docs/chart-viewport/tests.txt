@@ -1,0 +1,12 @@
+
+> test
+> vitest run --maxWorkers=2 --testTimeout=30000
+
+
+ RUN  v5.0.5 /home/admin/Documents/Trading/ForexTester
+
+
+ Test Files  60 passed (60)
+      Tests  830 passed (830)
+   Start at  10:45:23
+   Duration  201.95s (tests 95%, environment 4%, import 1%)
