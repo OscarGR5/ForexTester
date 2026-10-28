@@ -1,6 +1,6 @@
 # Quick chart measurement
 
-Shift + left drag measures between revealed candle anchors. Shift + click, free movement, then another click finishes the same ruler without holding the button. A 3 px movement threshold distinguishes a drag from the first click. Ordinary clicks on that chart and Escape clear completed rulers. Escape, pointer cancellation, capture loss, and window blur cancel active gestures. Each chart owns its overlay independently.
+Shift + left drag measures between revealed candle anchors. Shift + click, free movement, then another click finishes the same ruler without holding the button. A 3 px movement threshold distinguishes a drag from the first click. Ordinary clicks on that chart and Escape clear completed rulers. Escape, pointer cancellation, capture loss, and window blur cancel active gestures. While awaiting the second click, clicking outside the originating candle pane cancels the ruler and leaves that same click available to another chart, toolbar, axis, indicator pane, or trading control. Each chart owns its overlay independently.
 
 The candlestick primitive renders only signed pips and real bar count with calendar elapsed time. EURUSD/6E use 0.0001 per pip; local instrument metadata supplies pip size where available. Pip calculations retain floating-point precision, with one decimal for display and no negative zero. Reverse gestures use signed price movement and absolute bar/time spans.
 
@@ -42,3 +42,9 @@ PLAYWRIGHT_MODULE=/absolute/path/to/playwright-core/index.mjs \
 ```
 
 Chromium desktop mouse/keyboard input is covered; touch and other browser engines are outside this feature's verification. The production build retains Vite's existing advisory about a chunk larger than 500 kB.
+
+## Outside-click interaction correction
+
+The pending click-to-click ruler now cancels before an external pointerdown proceeds, including clearing compatibility-mouse suppression. Regression tests cover another chart, an order control, the chart toolbar, price axis, and indicator pane, asserting that pointerdown/mousedown/pointerup/mouseup/click all reach their target without prevention. A Shift click can also start a ruler on another chart. Captured drags and the second click inside the originating candle pane retain their existing behavior.
+
+Validation: **65 relevant tests passed** across measurement calculations, gestures, lifecycle, stop dragging, and draft-stop annotations. Typecheck and the production build passed. A targeted Chromium run (`SKIP_LAYOUTS=1`, with `BROWSER_OUTPUT` set to a temporary directory) passed **7 scenario groups**, including the same click activating another chart and opening Buy placement, normal measurement gestures, stop dragging/placement, replay shortcuts, cancellation, reload, and session switching. There were no page errors or external requests.

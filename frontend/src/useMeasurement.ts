@@ -39,6 +39,10 @@ export function bindMeasurement({ element, chart, series, candles, blocked, setD
     if (value && end) { value = { start: value.start, end }; setData(value) }
   }
   const down = (event: PointerEvent) => {
+    // Pending click-to-click rulers must not own another chart or control's click.
+    if (gesture?.awaiting && !gesture.finishing && (!element.contains(event.target as Node) || point(event, true) === null)) {
+      swallowMouse = false; clear(); return
+    }
     if (gesture) {
       consume(event)
       if (event.pointerId !== gesture.pointerId || event.button !== 0) return

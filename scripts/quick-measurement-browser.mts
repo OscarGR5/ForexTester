@@ -158,6 +158,24 @@ try {
   await page.goto(origin)
   await page.locator('.saved-session').filter({ has: page.getByRole('button', { name: 'Rename backtest Quick measurement regression', exact: true }) }).getByRole('button', { name: 'Resume backtest', exact: true }).click()
   await page.locator('.phase-trading').waitFor(); await settle()
+  // An awaiting ruler cancels before an external pointerdown reaches its target.
+  await page.locator('input[name="chart-count"][value="2"]').check(); await switchTo('H1')
+  const pending = async () => {
+    const p=await points()
+    await page.keyboard.down('Shift'); await page.mouse.click(p.x1,p.y1); await page.keyboard.up('Shift')
+    await page.mouse.move(p.x2,p.y2); await settle(); assert(await measurement())
+  }
+  await pending()
+  const otherBox=(await page.locator('.chart-canvas').nth(1).boundingBox())!
+  await page.mouse.click(otherBox.x+80,otherBox.y+80); await settle()
+  assert.equal(await measurement(),null,'another chart click cancels the pending ruler')
+  assert.equal(await page.locator('.chart-pane').nth(1).getAttribute('data-active'),'true','the same click activates the other chart')
+  await pending()
+  await page.getByRole('button',{name:'Buy',exact:true}).click(); await settle()
+  assert.equal(await measurement(),null,'order-control click cancels the pending ruler')
+  assert.equal(await page.getByRole('region',{name:'Place stop-loss',exact:true}).isVisible(),true,'the same click opens order placement')
+  await page.getByRole('button',{name:'Cancel placement',exact:true}).click()
+  reports.push({check:'awaiting ruler yields the same click to another chart and an order control'})
   for(const count of (process.env.SKIP_LAYOUTS ? [] : [1,2,3])) {
     await page.locator(`input[name="chart-count"][value="${count}"]`).check(); await settle()
     for(let pane=0;pane<count;pane++) {

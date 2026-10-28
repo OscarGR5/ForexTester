@@ -39,6 +39,47 @@ it('supports click, free movement across chart boundaries, click to finish', () 
  expect(value!.end.index).toBe(20); expect(captured.size).toBe(0)
  pointer('pointermove',300,100); expect(value!.end.index).toBe(20)
 })
+it.each(['another chart','order control','chart toolbar','price axis','indicator pane'])('cancels an awaiting measurement without consuming a click on %s', targetName => {
+ const pane=document.createElement('section'); pane.className='chart-pane'; document.body.append(pane); pane.append(element)
+ const external=document.createElement(targetName==='order control' || targetName==='chart toolbar' ? 'button' : 'div')
+ external.textContent=targetName==='order control' ? 'Buy' : targetName
+ if(targetName==='chart toolbar') pane.append(external); else document.body.append(external)
+ const target=targetName==='price axis' || targetName==='indicator pane' ? element : external
+ const x=targetName==='price axis' ? 410 : 100, y=targetName==='indicator pane' ? 310 : 100
+ const handler=vi.fn<(event: Event) => void>()
+ for(const type of ['pointerdown','mousedown','pointerup','mouseup','click']) target.addEventListener(type,handler)
+ try {
+  pointer('pointerdown',100,100,true); pointer('pointerup'); pointer('pointermove',200,50)
+  expect(value).not.toBeNull(); expect(captured.size).toBe(0)
+  const down=pointer('pointerdown',x,y,false,target)
+  expect(down.defaultPrevented).toBe(false); expect(value).toBeNull()
+  expect(applyOptions).toHaveBeenLastCalledWith({handleScroll:originalScroll,handleScale:originalScale})
+  const mouseDown=new MouseEvent('mousedown',{bubbles:true,cancelable:true}); target.dispatchEvent(mouseDown)
+  const up=pointer('pointerup',x,y,false,target)
+  const mouseUp=new MouseEvent('mouseup',{bubbles:true,cancelable:true}); target.dispatchEvent(mouseUp)
+  const click=new MouseEvent('click',{bubbles:true,cancelable:true}); target.dispatchEvent(click)
+  for(const event of [mouseDown,up,mouseUp,click]) expect(event.defaultPrevented).toBe(false)
+  expect(handler.mock.calls.map(([event])=>event.type)).toEqual(['pointerdown','mousedown','pointerup','mouseup','click'])
+  expect(captured.size).toBe(0); expect(element.style.cursor).toBe('')
+  pointer('pointermove',300,100); expect(value).toBeNull()
+ } finally {
+  for(const type of ['pointerdown','mousedown','pointerup','mouseup','click']) target.removeEventListener(type,handler)
+  document.body.append(element); pane.remove(); external.remove()
+ }
+})
+it('lets a Shift click start a measurement in another chart while cancelling the awaiting ruler', () => {
+ const other=document.createElement('div'); document.body.append(other)
+ other.setPointerCapture=element.setPointerCapture; other.hasPointerCapture=element.hasPointerCapture; other.releasePointerCapture=element.releasePointerCapture
+ let otherValue:Measurement|null=null
+ const otherController=bindMeasurement({element:other,chart,series,candles:()=>data,blocked:()=>false,setData:v=>{otherValue=v}})
+ try {
+  pointer('pointerdown',100,100,true); pointer('pointerup')
+  pointer('pointerdown',100,100,true,other)
+  expect(value).toBeNull(); expect(otherValue).not.toBeNull()
+  pointer('pointermove',200,50,false,other); pointer('pointerup',200,50,false,other)
+  expect(otherValue).toMatchObject({start:{index:10},end:{index:20}}); expect(captured.size).toBe(0)
+ } finally { otherController.dispose(); other.remove() }
+})
 it.each(['Escape','pointercancel','lostpointercapture','blur','dispose'])('cancels and releases on %s', reason => {
  pointer('pointerdown',100,100,true); pointer('pointermove',200,50)
  if(reason==='Escape') window.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'}))
