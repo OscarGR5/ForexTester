@@ -15,6 +15,7 @@ import * as replayHook from './useReplay'
 import { selectedRange, shiftDate, accountPnl } from './workflow'
 import { PreferenceTabGuard } from './uiPreferenceCleanup'
 import { uiKey } from './uiPreferences'
+import { isLocalForex, VISIBLE_TIMEFRAMES } from './history'
 import * as preferences from './uiPreferences'
 import { SessionStore } from './sessionStore'
 import { DiskSessionStore } from './diskSessionStore'
@@ -423,6 +424,44 @@ it('starts local mid-price history without pricing or confirmation and preserves
  await act(async()=>root.unmount());root=createRoot(host);await mount();await click('Resume backtest');await until(()=>host.querySelector('.phase-trading'))
  expect(host.querySelector('.pane-toolbar .instrument')?.textContent).toBe('EURUSDMid')
  expect((await new DiskSessionStore().recover(record.id)).record.historyId).toBe(record.historyId)
+})
+it('formats chart prices to five decimals on every timeframe without rounding seven-decimal history', async () => {
+ const underlying = globalThis.fetch
+ const instrument = { symbol: 'EURUSD', baseCurrency: 'EUR', quoteCurrency: 'USD', pipSize: .0001, priceDecimals: 7, unitsPerLot: 100000 }
+ const candles = [...preroll, ...bid].map(c => ({ ...c, open: 1.1000001, high: 1.1002007, low: 1.0999003, close: 1.1001009 }))
+ const original = JSON.stringify({ instrument, candles })
+ vi.stubGlobal('fetch', async (path: string, options?: RequestInit) => {
+  if (!path.startsWith('/api/history?')) return underlying(path, options)
+  const params = new URL(path, 'http://local').searchParams
+  return new Response(JSON.stringify({ format: 'local-forex-v1', source: 'local-parquet', symbol: 'EURUSD', resolution: 'M1',
+   datasetId: 'a'.repeat(64), sourceChecksum: 'a'.repeat(64), normalizationVersion: 1, priceModel: 'single', priceBasis: 'mid',
+   executionModel: 'single-price-m1-v1', timestampConvention: 'utc-minute-open', instrument,
+   from: params.get('from'), to: params.get('to'), candles }))
+ })
+ await start()
+ for (const timeframe of VISIBLE_TIMEFRAMES) {
+  await select('Chart 1 timeframe', timeframe)
+  const canvas = host.querySelector('.chart-canvas')!, active = chartForCanvas(canvas)
+  const index = vi.mocked(createChart).mock.calls.map(([element]) => element).lastIndexOf(canvas as HTMLElement)
+  const format = vi.mocked(createChart).mock.calls[index][1]!.localization!.priceFormatter as (price: number) => string
+  const series = vi.mocked(active.addSeries).mock.results[0].value
+  expect(vi.mocked(active.addSeries).mock.calls[0][1]!.priceFormat).toEqual({ type: 'price', precision: 5, minMove: .00001 })
+  // Axis ticks, current price, order/SL/TP price lines and crosshair labels all
+  // share this chart formatter and the candle series' display price format.
+  for (const [price, label] of [[1.1, '1.10000'], [1.1001009, '1.10010'], [1.1000001, '1.10000'], [1.0999003, '1.09990'], [1.1002007, '1.10020'], [1.1012345, '1.10123']] as const) {
+   expect(format(price)).toBe(label)
+  }
+  expect(series.data().at(-1)).toMatchObject({ open: 1.1000001, high: 1.1002007, low: 1.0999003, close: 1.1001009 })
+ }
+ await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
+ const record = (await disk.storage.list()).sessions[0]
+ const recovered = await new DiskSessionStore().recover(record.id)
+ expect(isLocalForex(recovered.history)).toBe(true)
+ if (!isLocalForex(recovered.history)) throw Error('Expected original local Forex history')
+ expect(recovered.history.instrument).toEqual(instrument)
+ expect(recovered.history.candles).toEqual(candles)
+ expect(recovered.checkpoint.trading.quote).toMatchObject({ priceModel: 'single', trade: { open: 1.1000001, close: 1.1001009 } })
+ expect(JSON.stringify({ instrument, candles })).toBe(original)
 })
 it('keeps out-of-coverage dates unavailable without requesting a download',async()=>{
  await mount();await input('From','2022-01-03');await input('Through','2022-01-04')

@@ -19,13 +19,15 @@ import { VISIBLE_TIMEFRAMES, type Timeframe, type Candle } from './history'
 import type { Position } from './trading'
 import type { StopDraft } from './TradingDock'
 
+// Chart presentation is independent of source-data and execution precision.
+const CHART_PRICE_DECIMALS = 5
+
 interface ChartPaneProps {
   id: number
   active?: boolean
   reviewing?: boolean
   instrument?: string
   priceLabel?: string
-  priceDecimals?: number
   sessionId: string | null
   timeframe: Timeframe
   source: readonly Candle[]
@@ -45,7 +47,7 @@ interface ChartPaneProps {
   onTimeframeChange: (id: number, timeframe: Timeframe) => void
 }
 
-export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', priceLabel = 'Bid', priceDecimals = 5, id, active = false, reviewing = false, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, stops, placement, draftReference = null, onPick, stopInteraction, entries = [], onConfirmStop, confirmStopDisabled }: ChartPaneProps) {
+export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', priceLabel = 'Bid', id, active = false, reviewing = false, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, stops, placement, draftReference = null, onPick, stopInteraction, entries = [], onConfirmStop, confirmStopDisabled }: ChartPaneProps) {
   const [readiness, setReadiness] = useState('')
   const container = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
@@ -86,6 +88,7 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', priceL
       rightPriceScale: { borderColor: '#354250' },
       timeScale: { borderColor: '#354250', timeVisible: true, secondsVisible: false, lockVisibleTimeRangeOnResize: true, fixLeftEdge: false, fixRightEdge: false, rightOffset: FOLLOW_RIGHT_OFFSET },
       localization: {
+        priceFormatter: (price: number) => price.toFixed(CHART_PRICE_DECIMALS),
         timeFormatter: (time: Time) => typeof time === 'number'
           ? `${new Date(time * 1000).toISOString().slice(0, 16).replace('T', ' ')} UTC`
           : String(time),
@@ -95,7 +98,7 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', priceL
       upColor: '#ffffff', downColor: '#2962ff',
       borderUpColor: '#ffffff', borderDownColor: '#ffffff',
       wickUpColor: '#ffffff', wickDownColor: '#ffffff',
-      priceFormat: { type: 'price', precision: priceDecimals, minMove: 10 ** -priceDecimals },
+      priceFormat: { type: 'price', precision: CHART_PRICE_DECIMALS, minMove: 10 ** -CHART_PRICE_DECIMALS },
     })
     stopLines.current = new StopLines(series)
     entryLines.current = new EntryLines(series)
@@ -121,11 +124,6 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', priceL
       previous.current = null
     }
   }, [id])
-
-  useEffect(() => {
-    seriesRef.current?.applyOptions({ priceFormat: { type: 'price', precision: priceDecimals, minMove: 10 ** -priceDecimals } })
-    chartRef.current?.applyOptions({ localization: { priceFormatter: (price: number) => price.toFixed(priceDecimals) } })
-  }, [priceDecimals])
 
   useEffect(() => {
     const element = container.current
