@@ -85,6 +85,7 @@ export function validOrderDraft(v: unknown): v is OrderDraft {
 }
 export const validSelection = (v: unknown): v is string | null => v === null || typeof v === 'string' && v.length <= 128
 export const validBoolean = (v: unknown): v is boolean => typeof v === 'boolean'
+export const validPaneShare = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v > 0 && v < 1
 export interface PriceView { autoScale: boolean; range: { from: number; to: number } | null }
 export const validPriceView = (v: unknown): v is PriceView => {
   const p = v as PriceView

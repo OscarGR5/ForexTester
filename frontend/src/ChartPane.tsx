@@ -1,4 +1,5 @@
 import { useMeasurement } from './useMeasurement'
+import { useStochasticPaneHeight } from './useStochasticPaneHeight'
 import { FOLLOW_RIGHT_OFFSET } from './chartSync'
 import { EntryLines, type EntryOverlay } from './entryOverlays'
 import { DraftStopAnnotation, useDraftStopAnnotation } from './DraftStopAnnotation'
@@ -251,6 +252,9 @@ export const ChartPane = memo(function ChartPane({ measurementLayout = 1, pipSiz
     previousSettings.current = settings
     previous.current = { source, count, bars, timeframe, synchronizer }
   }, [id, source, count, synchronizer, timeframe, settings, reviewing])
+
+  // IndicatorSeries creates/removes the oscillator pane in the layout effect above.
+  useStochasticPaneHeight(container, chartRef, sessionId, id, settings.stochastic.enabled)
 
   const measurementCleanup = useMeasurement(container, chartRef, seriesRef, () => previous.current?.bars.candles ?? [],
     !!placement || !!stopInteraction?.preview, `${sessionId}:${timeframe}:${measurementLayout}`, pipSize,

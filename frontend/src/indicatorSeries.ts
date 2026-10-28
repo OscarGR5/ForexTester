@@ -74,8 +74,6 @@ export class IndicatorSeries {
         if (key === 'k') {
           for (const price of [80, 40]) series.createPriceLine({ price, color: '#7d8996', lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: '' })
           series.priceScale().applyOptions({ scaleMargins: { top: 0.05, bottom: 0.05 } })
-          this.chart.panes()[0].setStretchFactor(3)
-          this.chart.panes()[1].setStretchFactor(1)
         }
         if (key === 'spanA') { this.cloud = new IchimokuCloudPrimitive(); series.attachPrimitive(this.cloud) }
       }

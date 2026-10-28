@@ -1,0 +1,245 @@
+{
+  "reports": [
+    {
+      "check": "native-drag-slot-0",
+      "state": {
+        "factors": [
+          2.481743227326266,
+          1.518256772673734
+        ],
+        "heights": [
+          527,
+          322
+        ],
+        "share": 0.3795641931684335,
+        "actual": 0.3792697290930506
+      }
+    },
+    {
+      "check": "native-drag-slot-1",
+      "state": {
+        "factors": [
+          2.3350383631713556,
+          1.6649616368286444
+        ],
+        "heights": [
+          228,
+          163
+        ],
+        "share": 0.4162404092071611,
+        "actual": 0.41687979539641945
+      }
+    },
+    {
+      "check": "native-drag-slot-2",
+      "state": {
+        "factors": [
+          3.3069053708439897,
+          0.6930946291560103
+        ],
+        "heights": [
+          323,
+          68
+        ],
+        "share": 0.17327365728900257,
+        "actual": 0.17391304347826086
+      }
+    },
+    {
+      "check": "native-drag-layout-1-slot-0",
+      "state": {
+        "factors": [
+          2.557126030624264,
+          1.4428739693757362
+        ],
+        "heights": [
+          543,
+          306
+        ],
+        "share": 0.36071849234393405,
+        "actual": 0.36042402826855124
+      }
+    },
+    {
+      "check": "native-drag-layout-2-slot-0",
+      "state": {
+        "factors": [
+          2.6325088339222615,
+          1.3674911660777385
+        ],
+        "heights": [
+          559,
+          290
+        ],
+        "share": 0.3418727915194346,
+        "actual": 0.3415783274440518
+      }
+    },
+    {
+      "check": "native-drag-layout-2-slot-1",
+      "state": {
+        "factors": [
+          2.259655559873358,
+          1.7403444401266421
+        ],
+        "heights": [
+          480,
+          369
+        ],
+        "share": 0.43508611003166053,
+        "actual": 0.43462897526501765
+      }
+    },
+    {
+      "check": "native-drag-layout-3-slot-0",
+      "state": {
+        "factors": [
+          2.7078916372202593,
+          1.2921083627797407
+        ],
+        "heights": [
+          575,
+          274
+        ],
+        "share": 0.3230270906949352,
+        "actual": 0.32273262661955243
+      }
+    },
+    {
+      "check": "native-drag-layout-3-slot-1",
+      "state": {
+        "factors": [
+          2.09597269542323,
+          1.9040273045767702
+        ],
+        "heights": [
+          205,
+          186
+        ],
+        "share": 0.47600682614419254,
+        "actual": 0.47570332480818417
+      }
+    },
+    {
+      "check": "native-drag-layout-3-slot-2",
+      "state": {
+        "factors": [
+          3.4705882352941178,
+          0.5294117647058822
+        ],
+        "heights": [
+          339,
+          52
+        ],
+        "share": 0.13235294117647056,
+        "actual": 0.1329923273657289
+      }
+    },
+    {
+      "check": "independent-slots-across-all-layouts",
+      "expected": [
+        0.3230270906949352,
+        0.47600682614419254,
+        0.13235294117647056
+      ]
+    },
+    {
+      "check": "timeframe-and-disable-reenable",
+      "state": {
+        "factors": [
+          2.7078916372202593,
+          1.2921083627797407
+        ],
+        "heights": [
+          575,
+          274
+        ],
+        "share": 0.3230270906949352,
+        "actual": 0.32273262661955243
+      }
+    },
+    {
+      "check": "browser-resize",
+      "viewport": {
+        "width": 1100,
+        "height": 720
+      }
+    },
+    {
+      "check": "browser-resize",
+      "viewport": {
+        "width": 1600,
+        "height": 1100
+      }
+    },
+    {
+      "check": "browser-resize",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "check": "container-minimum-and-recovery",
+      "small": {
+        "factors": [
+          2.3098591549295775,
+          1.6901408450704225
+        ],
+        "heights": [
+          41,
+          30
+        ],
+        "share": 0.4225352112676056,
+        "actual": 0.4225352112676056
+      }
+    },
+    {
+      "check": "switch-backtests-without-leaking",
+      "second": {
+        "factors": [
+          2.811542991755006,
+          1.1884570082449941
+        ],
+        "heights": [
+          597,
+          252
+        ],
+        "share": 0.29711425206124853,
+        "actual": 0.2968197879858657
+      }
+    },
+    {
+      "check": "reload",
+      "state": {
+        "factors": [
+          2.7078916372202593,
+          1.2921083627797407
+        ],
+        "heights": [
+          575,
+          274
+        ],
+        "share": 0.3230270906949352,
+        "actual": 0.32273262661955243
+      }
+    },
+    {
+      "check": "full-browser-close-and-reopen",
+      "state": {
+        "factors": [
+          2.7078916372202593,
+          1.2921083627797407
+        ],
+        "heights": [
+          575,
+          274
+        ],
+        "share": 0.3230270906949352,
+        "actual": 0.32273262661955243
+      }
+    }
+  ],
+  "errors": [],
+  "external": []
+}
