@@ -1,0 +1,1430 @@
+{
+  "reports": [
+    {
+      "count": 1,
+      "tf": "H1",
+      "pane": 0,
+      "style": "drag",
+      "positive": true,
+      "m": {
+        "start": {
+          "index": 502,
+          "time": 1706565600,
+          "price": 1.1000008861649073
+        },
+        "end": {
+          "index": 526,
+          "time": 1706652000,
+          "price": 1.1007428028016526
+        },
+        "pips": 7.4191663674527675,
+        "bars": 24,
+        "seconds": 86400
+      },
+      "label": {
+        "pipLabel": "+7.4 pips",
+        "spanLabel": "24 bars · 1d",
+        "x": 390.4325260099817,
+        "y": 475.50000000000506,
+        "width": 85.36445617675781,
+        "height": 46,
+        "paneWidth": 1358,
+        "paneHeight": 850
+      }
+    },
+    {
+      "count": 1,
+      "tf": "H1",
+      "pane": 0,
+      "style": "click",
+      "positive": false,
+      "m": {
+        "start": {
+          "index": 502,
+          "time": 1706565600,
+          "price": 1.1000008861649073
+        },
+        "end": {
+          "index": 526,
+          "time": 1706652000,
+          "price": 1.099258969528162
+        },
+        "pips": -7.4191663674527675,
+        "bars": 24,
+        "seconds": 86400
+      },
+      "label": {
+        "pipLabel": "-7.4 pips",
+        "spanLabel": "24 bars · 1d",
+        "x": 390.4325260099817,
+        "y": 645.4999999999934,
+        "width": 85.36445617675781,
+        "height": 46,
+        "paneWidth": 1358,
+        "paneHeight": 850
+      }
+    },
+    {
+      "count": 1,
+      "tf": "M5",
+      "pane": 0,
+      "style": "drag",
+      "positive": true,
+      "m": {
+        "start": {
+          "index": 6329,
+          "time": 1706657100,
+          "price": 1.1000641503355393
+        },
+        "end": {
+          "index": 6353,
+          "time": 1706664300,
+          "price": 1.100759600379952
+        },
+        "pips": 6.954500444127376,
+        "bars": 24,
+        "seconds": 7200
+      },
+      "label": {
+        "pipLabel": "+7.0 pips",
+        "spanLabel": "24 bars · 2h",
+        "x": 430.70961023549575,
+        "y": 358.35000610351887,
+        "width": 85.40045166015625,
+        "height": 46,
+        "paneWidth": 1346,
+        "paneHeight": 637
+      }
+    },
+    {
+      "count": 1,
+      "tf": "M5",
+      "pane": 0,
+      "style": "click",
+      "positive": false,
+      "m": {
+        "start": {
+          "index": 6329,
+          "time": 1706657100,
+          "price": 1.1000641503355393
+        },
+        "end": {
+          "index": 6353,
+          "time": 1706664300,
+          "price": 1.0993687002911265
+        },
+        "pips": -6.954500444127376,
+        "bars": 24,
+        "seconds": 7200
+      },
+      "label": {
+        "pipLabel": "-7.0 pips",
+        "spanLabel": "24 bars · 2h",
+        "x": 430.70961023549575,
+        "y": 485.7500000000016,
+        "width": 85.40045166015625,
+        "height": 46,
+        "paneWidth": 1346,
+        "paneHeight": 637
+      }
+    },
+    {
+      "count": 1,
+      "tf": "D1",
+      "pane": 0,
+      "style": "drag",
+      "positive": true,
+      "m": {
+        "start": {
+          "index": 0,
+          "time": 1704067200,
+          "price": 1.0999978125505467
+        },
+        "end": {
+          "index": 19,
+          "time": 1706227200,
+          "price": 1.100741488281083
+        },
+        "pips": 7.436757305363528,
+        "bars": 19,
+        "seconds": 2160000
+      },
+      "label": {
+        "pipLabel": "+7.4 pips",
+        "spanLabel": "19 bars · 25d",
+        "x": 230.0286069597517,
+        "y": 475.49999999998084,
+        "width": 92.22850036621094,
+        "height": 46,
+        "paneWidth": 1358,
+        "paneHeight": 850
+      }
+    },
+    {
+      "count": 1,
+      "tf": "D1",
+      "pane": 0,
+      "style": "click",
+      "positive": false,
+      "m": {
+        "start": {
+          "index": 0,
+          "time": 1704067200,
+          "price": 1.0999978125505467
+        },
+        "end": {
+          "index": 19,
+          "time": 1706227200,
+          "price": 1.0992541368200102
+        },
+        "pips": -7.436757305365749,
+        "bars": 19,
+        "seconds": 2160000
+      },
+      "label": {
+        "pipLabel": "-7.4 pips",
+        "spanLabel": "19 bars · 25d",
+        "x": 230.0286069597517,
+        "y": 645.5000000000207,
+        "width": 92.22850036621094,
+        "height": 46,
+        "paneWidth": 1358,
+        "paneHeight": 850
+      }
+    },
+    {
+      "count": 1,
+      "pane": 0,
+      "check": "cross-boundary drag",
+      "cross": {
+        "start": {
+          "index": 502,
+          "time": 1706565600,
+          "price": 1.1000008861649073
+        },
+        "end": {
+          "index": 529,
+          "time": 1706662800,
+          "price": 1.0983359379477406
+        },
+        "pips": -16.64948217166673,
+        "bars": 27,
+        "seconds": 97200
+      }
+    },
+    {
+      "count": 2,
+      "tf": "H1",
+      "pane": 0,
+      "style": "drag",
+      "positive": true,
+      "m": {
+        "start": {
+          "index": 502,
+          "time": 1706565600,
+          "price": 1.1000008861649073
+        },
+        "end": {
+          "index": 526,
+          "time": 1706652000,
+          "price": 1.1007428028016526
+        },
+        "pips": 7.4191663674527675,
+        "bars": 24,
+        "seconds": 86400
+      },
+      "label": {
+        "pipLabel": "+7.4 pips",
+        "spanLabel": "24 bars · 1d",
+        "x": 162.1866243706375,
+        "y": 475.50000000000506,
+        "width": 85.36445617675781,
+        "height": 46,
+        "paneWidth": 644,
+        "paneHeight": 850
+      }
+    },
+    {
+      "count": 2,
+      "tf": "H1",
+      "pane": 0,
+      "style": "click",
+      "positive": false,
+      "m": {
+        "start": {
+          "index": 502,
+          "time": 1706565600,
+          "price": 1.1000008861649073
+        },
+        "end": {
+          "index": 526,
+          "time": 1706652000,
+          "price": 1.099258969528162
+        },
+        "pips": -7.4191663674527675,
+        "bars": 24,
+        "seconds": 86400
+      },
+      "label": {
+        "pipLabel": "-7.4 pips",
+        "spanLabel": "24 bars · 1d",
+        "x": 162.1866243706375,
+        "y": 645.4999999999934,
+        "width": 85.36445617675781,
+        "height": 46,
+        "paneWidth": 644,
+        "paneHeight": 850
+      }
+    },
+    {
+      "count": 2,
+      "tf": "M5",
+      "pane": 0,
+      "style": "drag",
+      "positive": true,
+      "m": {
+        "start": {
+          "index": 6329,
+          "time": 1706657100,
+          "price": 1.1000641503355393
+        },
+        "end": {
+          "index": 6353,
+          "time": 1706664300,
+          "price": 1.100759600379952
+        },
+        "pips": 6.954500444127376,
+        "bars": 24,
+        "seconds": 7200
+      },
+      "label": {
+        "pipLabel": "+7.0 pips",
+        "spanLabel": "24 bars · 2h",
+        "x": 179.0538725305776,
+        "y": 358.35000610351887,
+        "width": 85.40045166015625,
+        "height": 46,
+        "paneWidth": 632,
+        "paneHeight": 637
+      }
+    },
+    {
+      "count": 2,
+      "tf": "M5",
+      "pane": 0,
+      "style": "click",
+      "positive": false,
+      "m": {
+        "start": {
+          "index": 6329,
+          "time": 1706657100,
+          "price": 1.1000641503355393
+        },
+        "end": {
+          "index": 6353,
+          "time": 1706664300,
+          "price": 1.0993687002911265
+        },
+        "pips": -6.954500444127376,
+        "bars": 24,
+        "seconds": 7200
+      },
+      "label": {
+        "pipLabel": "-7.0 pips",
+        "spanLabel": "24 bars · 2h",
+        "x": 179.0538725305776,
+        "y": 485.7500000000016,
+        "width": 85.40045166015625,
+        "height": 46,
+        "paneWidth": 632,
+        "paneHeight": 637
+      }
+    },
+    {
+      "count": 2,
+      "tf": "D1",
+      "pane": 0,
+      "style": "drag",
+      "positive": true,
+      "m": {
+        "start": {
+          "index": 0,
+          "time": 1704067200,
+          "price": 1.0999978125505467
+        },
+        "end": {
+          "index": 19,
+          "time": 1706227200,
+          "price": 1.100741488281083
+        },
+        "pips": 7.436757305363528,
+        "bars": 19,
+        "seconds": 2160000
+      },
+      "label": {
+        "pipLabel": "+7.4 pips",
+        "spanLabel": "19 bars · 25d",
+        "x": 84.31432124546595,
+        "y": 475.49999999998084,
+        "width": 92.22850036621094,
+        "height": 46,
+        "paneWidth": 644,
+        "paneHeight": 850
+      }
+    },
+    {
+      "count": 2,
+      "tf": "D1",
+      "pane": 0,
+      "style": "click",
+      "positive": false,
+      "m": {
+        "start": {
+          "index": 0,
+          "time": 1704067200,
+          "price": 1.0999978125505467
+        },
+        "end": {
+          "index": 19,
+          "time": 1706227200,
+          "price": 1.0992541368200102
+        },
+        "pips": -7.436757305365749,
+        "bars": 19,
+        "seconds": 2160000
+      },
+      "label": {
+        "pipLabel": "-7.4 pips",
+        "spanLabel": "19 bars · 25d",
+        "x": 84.31432124546595,
+        "y": 645.5000000000207,
+        "width": 92.22850036621094,
+        "height": 46,
+        "paneWidth": 644,
+        "paneHeight": 850
+      }
+    },
+    {
+      "count": 2,
+      "pane": 0,
+      "check": "cross-boundary drag",
+      "cross": {
+        "start": {
+          "index": 502,
+          "time": 1706565600,
+          "price": 1.1000008861649073
+        },
+        "end": {
+          "index": 529,
+          "time": 1706662800,
+          "price": 1.0983359379477406
+        },
+        "pips": -16.64948217166673,
+        "bars": 27,
+        "seconds": 97200
+      }
+    },
+    {
+      "count": 2,
+      "tf": "H1",
+      "pane": 1,
+      "style": "drag",
+      "positive": true,
+      "m": {
+        "start": {
+          "index": 502,
+          "time": 1706565600,
+          "price": 1.1000008861649073
+        },
+        "end": {
+          "index": 526,
+          "time": 1706652000,
+          "price": 1.1007428028016526
+        },
+        "pips": 7.4191663674527675,
+        "bars": 24,
+        "seconds": 86400
+      },
+      "label": {
+        "pipLabel": "+7.4 pips",
+        "spanLabel": "24 bars · 1d",
+        "x": 162.1866243706375,
+        "y": 475.50000000000506,
+        "width": 85.36445617675781,
+        "height": 46,
+        "paneWidth": 644,
+        "paneHeight": 850
+      }
+    },
+    {
+      "count": 2,
+      "tf": "H1",
+      "pane": 1,
+      "style": "click",
+      "positive": false,
+      "m": {
+        "start": {
+          "index": 502,
+          "time": 1706565600,
+          "price": 1.1000008861649073
+        },
+        "end": {
+          "index": 526,
+          "time": 1706652000,
+          "price": 1.099258969528162
+        },
+        "pips": -7.4191663674527675,
+        "bars": 24,
+        "seconds": 86400
+      },
+      "label": {
+        "pipLabel": "-7.4 pips",
+        "spanLabel": "24 bars · 1d",
+        "x": 162.1866243706375,
+        "y": 645.4999999999934,
+        "width": 85.36445617675781,
+        "height": 46,
+        "paneWidth": 644,
+        "paneHeight": 850
+      }
+    },
+    {
+      "count": 2,
+      "tf": "M5",
+      "pane": 1,
+      "style": "drag",
+      "positive": true,
+      "m": {
+        "start": {
+          "index": 6329,
+          "time": 1706657100,
+          "price": 1.1000641503355393
+        },
+        "end": {
+          "index": 6353,
+          "time": 1706664300,
+          "price": 1.100759600379952
+        },
+        "pips": 6.954500444127376,
+        "bars": 24,
+        "seconds": 7200
+      },
+      "label": {
+        "pipLabel": "+7.0 pips",
+        "spanLabel": "24 bars · 2h",
+        "x": 179.0538725305776,
+        "y": 358.35000610351887,
+        "width": 85.40045166015625,
+        "height": 46,
+        "paneWidth": 632,
+        "paneHeight": 637
+      }
+    },
+    {
+      "count": 2,
+      "tf": "M5",
+      "pane": 1,
+      "style": "click",
+      "positive": false,
+      "m": {
+        "start": {
+          "index": 6329,
+          "time": 1706657100,
+          "price": 1.1000641503355393
+        },
+        "end": {
+          "index": 6353,
+          "time": 1706664300,
+          "price": 1.0993687002911265
+        },
+        "pips": -6.954500444127376,
+        "bars": 24,
+        "seconds": 7200
+      },
+      "label": {
+        "pipLabel": "-7.0 pips",
+        "spanLabel": "24 bars · 2h",
+        "x": 179.0538725305776,
+        "y": 485.7500000000016,
+        "width": 85.40045166015625,
+        "height": 46,
+        "paneWidth": 632,
+        "paneHeight": 637
+      }
+    },
+    {
+      "count": 2,
+      "tf": "D1",
+      "pane": 1,
+      "style": "drag",
+      "positive": true,
+      "m": {
+        "start": {
+          "index": 0,
+          "time": 1704067200,
+          "price": 1.0999978125505467
+        },
+        "end": {
+          "index": 19,
+          "time": 1706227200,
+          "price": 1.100741488281083
+        },
+        "pips": 7.436757305363528,
+        "bars": 19,
+        "seconds": 2160000
+      },
+      "label": {
+        "pipLabel": "+7.4 pips",
+        "spanLabel": "19 bars · 25d",
+        "x": 84.31432124546595,
+        "y": 475.49999999998084,
+        "width": 92.22850036621094,
+        "height": 46,
+        "paneWidth": 644,
+        "paneHeight": 850
+      }
+    },
+    {
+      "count": 2,
+      "tf": "D1",
+      "pane": 1,
+      "style": "click",
+      "positive": false,
+      "m": {
+        "start": {
+          "index": 0,
+          "time": 1704067200,
+          "price": 1.0999978125505467
+        },
+        "end": {
+          "index": 19,
+          "time": 1706227200,
+          "price": 1.0992541368200102
+        },
+        "pips": -7.436757305365749,
+        "bars": 19,
+        "seconds": 2160000
+      },
+      "label": {
+        "pipLabel": "-7.4 pips",
+        "spanLabel": "19 bars · 25d",
+        "x": 84.31432124546595,
+        "y": 645.5000000000207,
+        "width": 92.22850036621094,
+        "height": 46,
+        "paneWidth": 644,
+        "paneHeight": 850
+      }
+    },
+    {
+      "count": 2,
+      "pane": 1,
+      "check": "cross-boundary drag",
+      "cross": {
+        "start": {
+          "index": 502,
+          "time": 1706565600,
+          "price": 1.1000008861649073
+        },
+        "end": {
+          "index": 529,
+          "time": 1706662800,
+          "price": 1.0983359379477406
+        },
+        "pips": -16.64948217166673,
+        "bars": 27,
+        "seconds": 97200
+      }
+    },
+    {
+      "count": 3,
+      "tf": "H1",
+      "pane": 0,
+      "style": "drag",
+      "positive": true,
+      "m": {
+        "start": {
+          "index": 502,
+          "time": 1706565600,
+          "price": 1.1000008861649073
+        },
+        "end": {
+          "index": 526,
+          "time": 1706652000,
+          "price": 1.1007428028016526
+        },
+        "pips": 7.4191663674527675,
+        "bars": 24,
+        "seconds": 86400
+      },
+      "label": {
+        "pipLabel": "+7.4 pips",
+        "spanLabel": "24 bars · 1d",
+        "x": 162.1866243706375,
+        "y": 475.50000000000506,
+        "width": 85.36445617675781,
+        "height": 46,
+        "paneWidth": 644,
+        "paneHeight": 850
+      }
+    },
+    {
+      "count": 3,
+      "tf": "H1",
+      "pane": 0,
+      "style": "click",
+      "positive": false,
+      "m": {
+        "start": {
+          "index": 502,
+          "time": 1706565600,
+          "price": 1.1000008861649073
+        },
+        "end": {
+          "index": 526,
+          "time": 1706652000,
+          "price": 1.099258969528162
+        },
+        "pips": -7.4191663674527675,
+        "bars": 24,
+        "seconds": 86400
+      },
+      "label": {
+        "pipLabel": "-7.4 pips",
+        "spanLabel": "24 bars · 1d",
+        "x": 162.1866243706375,
+        "y": 645.4999999999934,
+        "width": 85.36445617675781,
+        "height": 46,
+        "paneWidth": 644,
+        "paneHeight": 850
+      }
+    },
+    {
+      "count": 3,
+      "tf": "M5",
+      "pane": 0,
+      "style": "drag",
+      "positive": true,
+      "m": {
+        "start": {
+          "index": 6329,
+          "time": 1706657100,
+          "price": 1.1000641503355393
+        },
+        "end": {
+          "index": 6353,
+          "time": 1706664300,
+          "price": 1.100759600379952
+        },
+        "pips": 6.954500444127376,
+        "bars": 24,
+        "seconds": 7200
+      },
+      "label": {
+        "pipLabel": "+7.0 pips",
+        "spanLabel": "24 bars · 2h",
+        "x": 179.0538725305776,
+        "y": 358.35000610351887,
+        "width": 85.40045166015625,
+        "height": 46,
+        "paneWidth": 632,
+        "paneHeight": 637
+      }
+    },
+    {
+      "count": 3,
+      "tf": "M5",
+      "pane": 0,
+      "style": "click",
+      "positive": false,
+      "m": {
+        "start": {
+          "index": 6329,
+          "time": 1706657100,
+          "price": 1.1000641503355393
+        },
+        "end": {
+          "index": 6353,
+          "time": 1706664300,
+          "price": 1.0993687002911265
+        },
+        "pips": -6.954500444127376,
+        "bars": 24,
+        "seconds": 7200
+      },
+      "label": {
+        "pipLabel": "-7.0 pips",
+        "spanLabel": "24 bars · 2h",
+        "x": 179.0538725305776,
+        "y": 485.7500000000016,
+        "width": 85.40045166015625,
+        "height": 46,
+        "paneWidth": 632,
+        "paneHeight": 637
+      }
+    },
+    {
+      "count": 3,
+      "tf": "D1",
+      "pane": 0,
+      "style": "drag",
+      "positive": true,
+      "m": {
+        "start": {
+          "index": 0,
+          "time": 1704067200,
+          "price": 1.0999978125505467
+        },
+        "end": {
+          "index": 19,
+          "time": 1706227200,
+          "price": 1.100741488281083
+        },
+        "pips": 7.436757305363528,
+        "bars": 19,
+        "seconds": 2160000
+      },
+      "label": {
+        "pipLabel": "+7.4 pips",
+        "spanLabel": "19 bars · 25d",
+        "x": 84.31432124546595,
+        "y": 475.49999999998084,
+        "width": 92.22850036621094,
+        "height": 46,
+        "paneWidth": 644,
+        "paneHeight": 850
+      }
+    },
+    {
+      "count": 3,
+      "tf": "D1",
+      "pane": 0,
+      "style": "click",
+      "positive": false,
+      "m": {
+        "start": {
+          "index": 0,
+          "time": 1704067200,
+          "price": 1.0999978125505467
+        },
+        "end": {
+          "index": 19,
+          "time": 1706227200,
+          "price": 1.0992541368200102
+        },
+        "pips": -7.436757305365749,
+        "bars": 19,
+        "seconds": 2160000
+      },
+      "label": {
+        "pipLabel": "-7.4 pips",
+        "spanLabel": "19 bars · 25d",
+        "x": 84.31432124546595,
+        "y": 645.5000000000207,
+        "width": 92.22850036621094,
+        "height": 46,
+        "paneWidth": 644,
+        "paneHeight": 850
+      }
+    },
+    {
+      "count": 3,
+      "pane": 0,
+      "check": "cross-boundary drag",
+      "cross": {
+        "start": {
+          "index": 502,
+          "time": 1706565600,
+          "price": 1.1000008861649073
+        },
+        "end": {
+          "index": 529,
+          "time": 1706662800,
+          "price": 1.0983359379477406
+        },
+        "pips": -16.64948217166673,
+        "bars": 27,
+        "seconds": 97200
+      }
+    },
+    {
+      "count": 3,
+      "tf": "H1",
+      "pane": 1,
+      "style": "drag",
+      "positive": true,
+      "m": {
+        "start": {
+          "index": 502,
+          "time": 1706565600,
+          "price": 1.0999983272784088
+        },
+        "end": {
+          "index": 526,
+          "time": 1706652000,
+          "price": 1.1007417060450675
+        },
+        "pips": 7.433787666586422,
+        "bars": 24,
+        "seconds": 86400
+      },
+      "label": {
+        "pipLabel": "+7.4 pips",
+        "spanLabel": "24 bars · 1d",
+        "x": 162.1866243706375,
+        "y": 223.600006103508,
+        "width": 85.36445617675781,
+        "height": 46,
+        "paneWidth": 644,
+        "paneHeight": 392
+      }
+    },
+    {
+      "count": 3,
+      "tf": "H1",
+      "pane": 1,
+      "style": "click",
+      "positive": false,
+      "m": {
+        "start": {
+          "index": 502,
+          "time": 1706565600,
+          "price": 1.0999983272784088
+        },
+        "end": {
+          "index": 526,
+          "time": 1706652000,
+          "price": 1.09925494851175
+        },
+        "pips": -7.433787666588643,
+        "bars": 24,
+        "seconds": 86400
+      },
+      "label": {
+        "pipLabel": "-7.4 pips",
+        "spanLabel": "24 bars · 1d",
+        "x": 162.1866243706375,
+        "y": 302.000000000005,
+        "width": 85.36445617675781,
+        "height": 46,
+        "paneWidth": 644,
+        "paneHeight": 392
+      }
+    },
+    {
+      "count": 3,
+      "tf": "M5",
+      "pane": 1,
+      "style": "drag",
+      "positive": true,
+      "m": {
+        "start": {
+          "index": 6329,
+          "time": 1706657100,
+          "price": 1.1000609302624784
+        },
+        "end": {
+          "index": 6353,
+          "time": 1706664300,
+          "price": 1.1007582203335577
+        },
+        "pips": 6.972900710793262,
+        "bars": 24,
+        "seconds": 7200
+      },
+      "label": {
+        "pipLabel": "+7.0 pips",
+        "spanLabel": "24 bars · 2h",
+        "x": 179.0538725305776,
+        "y": 169.14999389648156,
+        "width": 85.40045166015625,
+        "height": 46,
+        "paneWidth": 632,
+        "paneHeight": 293
+      }
+    },
+    {
+      "count": 3,
+      "tf": "M5",
+      "pane": 1,
+      "style": "click",
+      "positive": false,
+      "m": {
+        "start": {
+          "index": 6329,
+          "time": 1706657100,
+          "price": 1.1000609302624784
+        },
+        "end": {
+          "index": 6353,
+          "time": 1706664300,
+          "price": 1.0993636400098323
+        },
+        "pips": -6.972902526460878,
+        "bars": 24,
+        "seconds": 7200
+      },
+      "label": {
+        "pipLabel": "-7.0 pips",
+        "spanLabel": "24 bars · 2h",
+        "x": 179.0538725305776,
+        "y": 227.75000000000426,
+        "width": 85.40045166015625,
+        "height": 46,
+        "paneWidth": 632,
+        "paneHeight": 293
+      }
+    },
+    {
+      "count": 3,
+      "tf": "D1",
+      "pane": 1,
+      "style": "drag",
+      "positive": true,
+      "m": {
+        "start": {
+          "index": 0,
+          "time": 1704067200,
+          "price": 1.0999952475968957
+        },
+        "end": {
+          "index": 19,
+          "time": 1706227200,
+          "price": 1.100740388924074
+        },
+        "pips": 7.451413271784002,
+        "bars": 19,
+        "seconds": 2160000
+      },
+      "label": {
+        "pipLabel": "+7.5 pips",
+        "spanLabel": "19 bars · 25d",
+        "x": 84.31432124546595,
+        "y": 223.60000610350664,
+        "width": 92.22850036621094,
+        "height": 46,
+        "paneWidth": 644,
+        "paneHeight": 392
+      }
+    },
+    {
+      "count": 3,
+      "tf": "D1",
+      "pane": 1,
+      "style": "click",
+      "positive": false,
+      "m": {
+        "start": {
+          "index": 0,
+          "time": 1704067200,
+          "price": 1.0999952475968957
+        },
+        "end": {
+          "index": 19,
+          "time": 1706227200,
+          "price": 1.099250106269717
+        },
+        "pips": -7.4514132717862225,
+        "bars": 19,
+        "seconds": 2160000
+      },
+      "label": {
+        "pipLabel": "-7.5 pips",
+        "spanLabel": "19 bars · 25d",
+        "x": 84.31432124546595,
+        "y": 302.0000000000084,
+        "width": 92.22850036621094,
+        "height": 46,
+        "paneWidth": 644,
+        "paneHeight": 392
+      }
+    },
+    {
+      "count": 3,
+      "pane": 1,
+      "check": "cross-boundary drag",
+      "cross": {
+        "start": {
+          "index": 502,
+          "time": 1706565600,
+          "price": 1.0999983272784088
+        },
+        "end": {
+          "index": 529,
+          "time": 1706662800,
+          "price": 1.0983352068538474
+        },
+        "pips": -16.63120424561404,
+        "bars": 27,
+        "seconds": 97200
+      }
+    },
+    {
+      "count": 3,
+      "tf": "H1",
+      "pane": 2,
+      "style": "drag",
+      "positive": true,
+      "m": {
+        "start": {
+          "index": 502,
+          "time": 1706565600,
+          "price": 1.0999983275677725
+        },
+        "end": {
+          "index": 526,
+          "time": 1706652000,
+          "price": 1.1007417060450675
+        },
+        "pips": 7.433784772949981,
+        "bars": 24,
+        "seconds": 86400
+      },
+      "label": {
+        "pipLabel": "+7.4 pips",
+        "spanLabel": "24 bars · 1d",
+        "x": 162.1866243706375,
+        "y": 223.59997558594551,
+        "width": 85.36445617675781,
+        "height": 46,
+        "paneWidth": 644,
+        "paneHeight": 392
+      }
+    },
+    {
+      "count": 3,
+      "tf": "H1",
+      "pane": 2,
+      "style": "click",
+      "positive": false,
+      "m": {
+        "start": {
+          "index": 502,
+          "time": 1706565600,
+          "price": 1.0999983275677725
+        },
+        "end": {
+          "index": 526,
+          "time": 1706652000,
+          "price": 1.09925494851175
+        },
+        "pips": -7.433790560225084,
+        "bars": 24,
+        "seconds": 86400
+      },
+      "label": {
+        "pipLabel": "-7.4 pips",
+        "spanLabel": "24 bars · 1d",
+        "x": 162.1866243706375,
+        "y": 302.000000000005,
+        "width": 85.36445617675781,
+        "height": 46,
+        "paneWidth": 644,
+        "paneHeight": 392
+      }
+    },
+    {
+      "count": 3,
+      "tf": "M5",
+      "pane": 2,
+      "style": "drag",
+      "positive": true,
+      "m": {
+        "start": {
+          "index": 6329,
+          "time": 1706657100,
+          "price": 1.1000609298993451
+        },
+        "end": {
+          "index": 6353,
+          "time": 1706664300,
+          "price": 1.1007582205151243
+        },
+        "pips": 6.97290615779167,
+        "bars": 24,
+        "seconds": 7200
+      },
+      "label": {
+        "pipLabel": "+7.0 pips",
+        "spanLabel": "24 bars · 2h",
+        "x": 179.0538725305776,
+        "y": 169.15002441406529,
+        "width": 85.40045166015625,
+        "height": 46,
+        "paneWidth": 632,
+        "paneHeight": 293
+      }
+    },
+    {
+      "count": 3,
+      "tf": "M5",
+      "pane": 2,
+      "style": "click",
+      "positive": false,
+      "m": {
+        "start": {
+          "index": 6329,
+          "time": 1706657100,
+          "price": 1.1000609298993451
+        },
+        "end": {
+          "index": 6353,
+          "time": 1706664300,
+          "price": 1.0993636400098323
+        },
+        "pips": -6.972898895127866,
+        "bars": 24,
+        "seconds": 7200
+      },
+      "label": {
+        "pipLabel": "-7.0 pips",
+        "spanLabel": "24 bars · 2h",
+        "x": 179.0538725305776,
+        "y": 227.75000000000426,
+        "width": 85.40045166015625,
+        "height": 46,
+        "paneWidth": 632,
+        "paneHeight": 293
+      }
+    },
+    {
+      "count": 3,
+      "tf": "D1",
+      "pane": 2,
+      "style": "drag",
+      "positive": true,
+      "m": {
+        "start": {
+          "index": 0,
+          "time": 1704067200,
+          "price": 1.0999952478869455
+        },
+        "end": {
+          "index": 19,
+          "time": 1706227200,
+          "price": 1.100740388924074
+        },
+        "pips": 7.451410371286382,
+        "bars": 19,
+        "seconds": 2160000
+      },
+      "label": {
+        "pipLabel": "+7.5 pips",
+        "spanLabel": "19 bars · 25d",
+        "x": 84.31432124546595,
+        "y": 223.59997558594068,
+        "width": 92.22850036621094,
+        "height": 46,
+        "paneWidth": 644,
+        "paneHeight": 392
+      }
+    },
+    {
+      "count": 3,
+      "tf": "D1",
+      "pane": 2,
+      "style": "click",
+      "positive": false,
+      "m": {
+        "start": {
+          "index": 0,
+          "time": 1704067200,
+          "price": 1.0999952478869455
+        },
+        "end": {
+          "index": 19,
+          "time": 1706227200,
+          "price": 1.099250106269717
+        },
+        "pips": -7.451416172283842,
+        "bars": 19,
+        "seconds": 2160000
+      },
+      "label": {
+        "pipLabel": "-7.5 pips",
+        "spanLabel": "19 bars · 25d",
+        "x": 84.31432124546595,
+        "y": 302.0000000000084,
+        "width": 92.22850036621094,
+        "height": 46,
+        "paneWidth": 644,
+        "paneHeight": 392
+      }
+    },
+    {
+      "count": 3,
+      "pane": 2,
+      "check": "cross-boundary drag",
+      "cross": {
+        "start": {
+          "index": 502,
+          "time": 1706565600,
+          "price": 1.0999983275677725
+        },
+        "end": {
+          "index": 529,
+          "time": 1706662800,
+          "price": 1.0983352068538474
+        },
+        "pips": -16.63120713925048,
+        "bars": 27,
+        "seconds": 97200
+      }
+    },
+    {
+      "check": "placement priority and stop drag",
+      "beforeStop": {
+        "id": "7-1",
+        "setupId": "7-S1",
+        "direction": "buy",
+        "mode": "risk",
+        "lots": 0.59,
+        "requestedRiskPercent": 1,
+        "requestedRiskUsd": 100,
+        "stopPrice": 1.09907,
+        "requestedAt": 1706665200000,
+        "initialStopPrice": 1.09907,
+        "commission": {
+          "roundTripUsdPerLot": 7
+        },
+        "entryCommissionUsd": 2.065,
+        "initialRiskUsd": 99.81951635673147,
+        "initialRiskPercent": 0.9981951635673147,
+        "referenceBalance": 10000,
+        "entryTime": 1706665260000,
+        "entryPrice": 1.1007618562094361,
+        "closeRequestedAt": null,
+        "stopEffectiveAfter": 1706665200000,
+        "stopModifications": [],
+        "coverageWarnings": []
+      },
+      "afterStop": {
+        "id": "7-1",
+        "setupId": "7-S1",
+        "direction": "buy",
+        "mode": "risk",
+        "lots": 0.59,
+        "requestedRiskPercent": 1,
+        "requestedRiskUsd": 100,
+        "stopPrice": 1.09902,
+        "requestedAt": 1706665200000,
+        "initialStopPrice": 1.09907,
+        "commission": {
+          "roundTripUsdPerLot": 7
+        },
+        "entryCommissionUsd": 2.065,
+        "initialRiskUsd": 99.81951635673147,
+        "initialRiskPercent": 0.9981951635673147,
+        "referenceBalance": 10000,
+        "entryTime": 1706665260000,
+        "entryPrice": 1.1007618562094361,
+        "closeRequestedAt": null,
+        "stopEffectiveAfter": 1706665260000,
+        "stopModifications": [
+          {
+            "oldPrice": 1.09907,
+            "newPrice": 1.09902,
+            "timestamp": 1706665260000
+          }
+        ],
+        "coverageWarnings": []
+      }
+    },
+    {
+      "check": "Shift and Ctrl+Shift replay shortcuts",
+      "initial": "102 / 4319 candles",
+      "oneMinute": "103 / 4319 candles",
+      "final": "120 / 4319 candles"
+    },
+    {
+      "check": "tiny-neutral",
+      "m": {
+        "start": {
+          "index": 526,
+          "time": 1706652000,
+          "price": 1.1000008861649073
+        },
+        "end": {
+          "index": 526,
+          "time": 1706652000,
+          "price": 1.1000008861649073
+        },
+        "pips": 0,
+        "bars": 0,
+        "seconds": 0
+      },
+      "label": {
+        "pipLabel": "0.0 pips",
+        "spanLabel": "0 bars · 0m",
+        "x": 659.0920756605805,
+        "y": 475.50000000000506,
+        "width": 82.34043884277344,
+        "height": 46,
+        "paneWidth": 1358,
+        "paneHeight": 850
+      }
+    },
+    {
+      "check": "top-right",
+      "m": {
+        "start": {
+          "index": 529,
+          "time": 1706662800,
+          "price": 1.1020324284849365
+        },
+        "end": {
+          "index": 529,
+          "time": 1706662800,
+          "price": 1.1020324284849365
+        },
+        "pips": 0,
+        "bars": 0,
+        "seconds": 0
+      },
+      "label": {
+        "pipLabel": "0.0 pips",
+        "spanLabel": "0 bars · 0m",
+        "x": 725.8789609064821,
+        "y": 9.999999999981014,
+        "width": 82.34043884277344,
+        "height": 46,
+        "paneWidth": 1358,
+        "paneHeight": 850
+      }
+    },
+    {
+      "check": "bottom-left",
+      "m": {
+        "start": {
+          "index": 495,
+          "time": 1706540400,
+          "price": 1.098340302163251
+        },
+        "end": {
+          "index": 495,
+          "time": 1706540400,
+          "price": 1.098340302163251
+        },
+        "pips": 0,
+        "bars": 0,
+        "seconds": 0
+      },
+      "label": {
+        "pipLabel": "0.0 pips",
+        "spanLabel": "0 bars · 0m",
+        "x": 4,
+        "y": 800,
+        "width": 82.34043884277344,
+        "height": 46,
+        "paneWidth": 1358,
+        "paneHeight": 850
+      }
+    },
+    {
+      "check": "reload and session switch clear overlays"
+    }
+  ],
+  "errors": [],
+  "external": []
+}

@@ -1,3 +1,4 @@
+import { useMeasurement } from './useMeasurement'
 import { FOLLOW_RIGHT_OFFSET } from './chartSync'
 import { EntryLines, type EntryOverlay } from './entryOverlays'
 import { DraftStopAnnotation, useDraftStopAnnotation } from './DraftStopAnnotation'
@@ -26,6 +27,8 @@ interface ChartPaneProps {
   id: number
   active?: boolean
   reviewing?: boolean
+  measurementLayout?: number
+  pipSize?: number
   instrument?: string
   priceLabel?: string
   sessionId: string | null
@@ -47,7 +50,7 @@ interface ChartPaneProps {
   onTimeframeChange: (id: number, timeframe: Timeframe) => void
 }
 
-export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', priceLabel = 'Bid', id, active = false, reviewing = false, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, stops, placement, draftReference = null, onPick, stopInteraction, entries = [], onConfirmStop, confirmStopDisabled }: ChartPaneProps) {
+export const ChartPane = memo(function ChartPane({ measurementLayout = 1, pipSize = 0.0001, instrument = 'EURUSD', priceLabel = 'Bid', id, active = false, reviewing = false, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, stops, placement, draftReference = null, onPick, stopInteraction, entries = [], onConfirmStop, confirmStopDisabled }: ChartPaneProps) {
   const [readiness, setReadiness] = useState('')
   const container = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
@@ -62,8 +65,6 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', priceL
   const previousSettings = useRef<IndicatorSettings | null>(null)
   const unregisterRef = useRef<(() => void) | null>(null)
   const previous = useRef<{ source: readonly Candle[]; count: number; bars: ReplayBars; timeframe: Timeframe; synchronizer: ChartSynchronizer } | null>(null)
-
-  useStopDrag(container, chartRef, seriesRef, stopLines, positions, synchronizer, stopInteraction, !!placement)
 
   useLayoutEffect(() => {
     if (!container.current) return
@@ -107,6 +108,7 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', priceL
     timeSlots.current = new ChartTimeSlots(chart)
     indicatorsRef.current = new IndicatorSeries(chart)
     return () => {
+      measurementCleanup.current?.()
       savePriceRef.current?.()
       unregisterRef.current?.()
       unregisterRef.current = null
@@ -249,6 +251,12 @@ export const ChartPane = memo(function ChartPane({ instrument = 'EURUSD', priceL
     previousSettings.current = settings
     previous.current = { source, count, bars, timeframe, synchronizer }
   }, [id, source, count, synchronizer, timeframe, settings, reviewing])
+
+  const measurementCleanup = useMeasurement(container, chartRef, seriesRef, () => previous.current?.bars.candles ?? [],
+    !!placement || !!stopInteraction?.preview, `${sessionId}:${timeframe}:${measurementLayout}`, pipSize,
+    (x, y, width, height) => stopLines.current?.overlaps(x, y, width, height) ?? false)
+
+  useStopDrag(container, chartRef, seriesRef, stopLines, positions, synchronizer, stopInteraction, !!placement)
 
   useLayoutEffect(() => {
     stopLines.current!.update(stops)
