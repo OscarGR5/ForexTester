@@ -721,20 +721,60 @@ it('places trade entry above the charts and renders no empty position area when 
  expect(host.querySelector('.chart-workspace')?.textContent).not.toContain('Contract mappings and rollover events')
  expect(host.querySelector('.pane-toolbar .instrument strong')?.textContent).toBe('EURUSD')
 })
-it('keeps drafts uncommitted until the on-chart tick is clicked, and retains cancellation and validation', async () => {
+it('keeps drafts uncommitted until toolbar confirmation, without an on-chart button, and retains cancellation and validation', async () => {
  await start(); await click('Buy'); await pick(1.099)
  const annotation = host.querySelector('.draft-stop-annotation')!
  expect(annotation.textContent).toContain('Draft SL · 13.0 pips')
- expect(annotation.firstElementChild?.getAttribute('aria-label')).toBe('Confirm draft stop-loss')
+ expect(annotation.querySelector('button')).toBeNull()
+ expect(host.querySelector('.confirm-draft-stop')).toBeNull()
+ expect(host.querySelector('[aria-label="Confirm draft stop-loss"]')).toBeNull()
  expect(host.querySelector('[data-order-id]')).toBeNull()
- const tick = button('Confirm draft stop-loss'), toolbarConfirm = button('Confirm order')
- await act(async () => { tick.click(); toolbarConfirm.click(); tick.click() })
+ const toolbarConfirm = button('Confirm order')
+ await act(async () => { toolbarConfirm.click(); toolbarConfirm.click() })
  expect(host.querySelectorAll('[data-order-id]')).toHaveLength(1)
  expect(host.querySelector('.draft-stop-annotation')).toBeNull()
  await click('Buy'); await pick(1.2)
- expect(button('Confirm draft stop-loss').disabled).toBe(true)
- await click('Confirm draft stop-loss'); expect(host.querySelectorAll('[data-order-id]')).toHaveLength(1)
+ expect(host.querySelector('.draft-stop-annotation')?.textContent).toContain('Invalid SL side')
+ expect(button('Confirm order').disabled).toBe(true)
+ expect((await tradeKey('b')).defaultPrevented).toBe(false)
+ await click('Confirm order'); expect(host.querySelectorAll('[data-order-id]')).toHaveLength(1)
  await act(async () => window.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'})))
+ expect(host.querySelector('.draft-stop-annotation')).toBeNull()
+})
+it.each([['Buy', 1.099, 1.104, 1.098, 'b'], ['Sell', 1.103, 1.096, 1.104, 's']] as const)('drags the %s draft annotation without confirming and validates the result before keyboard confirmation', async (direction, initial, invalid, valid, key) => {
+ await start(); await click(direction); await pick(initial)
+ const canvas = host.querySelector<HTMLElement>('.chart-canvas')!, plot = canvas.parentElement!
+ const series = vi.mocked(chartForCanvas(canvas).addSeries).mock.results[0].value as ISeriesApi<'Candlestick'>
+ vi.spyOn(series, 'priceToCoordinate').mockImplementation((price: number) => (1.2 - price) * 1000 as ReturnType<typeof series.priceToCoordinate>)
+ vi.spyOn(series, 'coordinateToPrice').mockImplementation((y: number) => 1.2 - y / 1000 as ReturnType<typeof series.coordinateToPrice>)
+ vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, width: 800, height: 500 } as DOMRect)
+ Object.assign(plot, { setPointerCapture: vi.fn(), hasPointerCapture: () => false, releasePointerCapture: vi.fn() })
+ const annotation = host.querySelector<HTMLElement>('.draft-stop-annotation')!
+ const pointer = (type: string, price: number, target: Element = plot) => {
+  const event = new MouseEvent(type, { bubbles: true, cancelable: true, clientX: 80, clientY: (1.2 - price) * 1000, button: 0 })
+  Object.defineProperty(event, 'pointerId', { value: 1 }); target.dispatchEvent(event)
+ }
+ await act(async () => annotation.click())
+ expect(host.querySelector('[data-order-id]')).toBeNull()
+ for (const [from, to] of [[initial, invalid], [invalid, valid]]) {
+  await act(async () => { pointer('pointerdown', from, annotation.querySelector('span')!); pointer('pointermove', to) })
+  expect(host.querySelector('[data-order-id]')).toBeNull()
+  await act(async () => pointer('pointerup', to))
+  expect(host.querySelector('.stop-placement')?.textContent).toContain(`SL ${to.toFixed(5)}`)
+  expect(host.querySelector('[data-order-id]')).toBeNull()
+  expect(annotation.querySelector('button')).toBeNull()
+  if (to === invalid) {
+   expect(annotation.textContent).toContain('Invalid SL side')
+   expect(annotation.dataset.invalid).toBe('true')
+   expect(button('Confirm order').disabled).toBe(true)
+   expect((await tradeKey(key)).defaultPrevented).toBe(false)
+   await click('Confirm order'); expect(host.querySelector('[data-order-id]')).toBeNull()
+  }
+ }
+ expect(annotation.textContent).toContain('Draft SL · ')
+ expect(annotation.textContent).not.toContain('Invalid SL side')
+ expect((await tradeKey(key)).defaultPrevented).toBe(true)
+ expect(host.querySelectorAll('[data-order-id]')).toHaveLength(1)
  expect(host.querySelector('.draft-stop-annotation')).toBeNull()
 })
 it('derives two pending entry identities, keeps actual fills and recreates them after durable restore', async () => {
@@ -1251,13 +1291,15 @@ it.each([['Buy', 1.097, 'B'], ['Sell', 1.103, 'S']] as const)('directional key s
   expect(host.querySelector('[data-order-id]')).toBeNull()
   expect(host.querySelector('.stop-placement')).not.toBeNull()
  }
- const tick = button('Confirm draft stop-loss'), confirm = button('Confirm order')
+ expect(host.querySelector('.draft-stop-annotation button')).toBeNull()
+ expect(host.querySelector('[data-order-id]')).toBeNull()
+ const confirm = button('Confirm order')
  const first = new KeyboardEvent('keydown', { key: identity, bubbles: true, cancelable: true })
  await act(async () => {
   window.dispatchEvent(first)
   window.dispatchEvent(new KeyboardEvent('keydown', { key: identity, cancelable: true }))
   window.dispatchEvent(new KeyboardEvent('keydown', { key: identity, repeat: true, cancelable: true }))
-  tick.click(); confirm.click()
+  confirm.click()
  })
  expect(first.defaultPrevented).toBe(true)
  expect(host.querySelectorAll('[data-order-id]')).toHaveLength(1)
@@ -1301,7 +1343,7 @@ it('ignores modified, repeated, composing and prevented B/S and preserves unrela
 })
 it('preserves native Enter on Cancel, Confirm and other interactive elements', async () => {
  await start(); await click('Buy'); await pick(1.097)
- for (const name of ['Cancel placement', 'Confirm order', 'Confirm draft stop-loss', 'Sessions / settings']) {
+ for (const name of ['Cancel placement', 'Confirm order', 'Sessions / settings']) {
   const control = button(name); control.focus()
   expect((await tradeKey('Enter', control)).defaultPrevented).toBe(false)
   expect((await tradeKey('Enter')).defaultPrevented).toBe(false)

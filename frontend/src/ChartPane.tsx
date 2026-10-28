@@ -40,8 +40,6 @@ interface ChartPaneProps {
   stopInteraction?: StopInteraction
   stops: StopOverlay[]
   entries?: EntryOverlay[]
-  onConfirmStop?: () => void
-  confirmStopDisabled?: boolean
   positions: Position[]
   draftReference?: number | null
   placement: StopDraft | null
@@ -51,7 +49,7 @@ interface ChartPaneProps {
   onTimeframeChange: (id: number, timeframe: Timeframe) => void
 }
 
-export const ChartPane = memo(function ChartPane({ measurementLayout = 1, pipSize = 0.0001, instrument = 'EURUSD', priceLabel = 'Bid', id, active = false, reviewing = false, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, stops, placement, draftReference = null, onPick, stopInteraction, entries = [], onConfirmStop, confirmStopDisabled }: ChartPaneProps) {
+export const ChartPane = memo(function ChartPane({ measurementLayout = 1, pipSize = 0.0001, instrument = 'EURUSD', priceLabel = 'Bid', id, active = false, reviewing = false, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, stops, placement, draftReference = null, onPick, stopInteraction, entries = [] }: ChartPaneProps) {
   const [readiness, setReadiness] = useState('')
   const container = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
@@ -290,7 +288,7 @@ export const ChartPane = memo(function ChartPane({ measurementLayout = 1, pipSiz
       </div>
       <div className="chart-plot">
         <div ref={container} className="chart-canvas" aria-hidden="true" />
-        {placement && onConfirmStop && <DraftStopAnnotation element={draftAnnotation} selected={placement.price !== null} onConfirm={onConfirmStop} disabled={confirmStopDisabled} />}
+        {placement && <DraftStopAnnotation element={draftAnnotation} selected={placement.price !== null} />}
       </div>
     </section>
   )

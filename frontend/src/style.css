@@ -332,7 +332,6 @@ button:disabled { opacity: 0.45; cursor: default; }
 .draft-stop-annotation[hidden] { display: none; }
 .draft-stop-annotation > span { overflow: hidden; text-overflow: ellipsis; }
 .draft-stop-price { font-variant-numeric: tabular-nums; }
-.confirm-draft-stop { display: grid; place-items: center; min-width: 36px; min-height: 36px; padding: 4px; color: #f2f7f8; background: #315e60; border: 0; border-radius: 2px 0 0 2px; }
 
 
 /* Compact application and trading controls for desktop and laptops. */
@@ -410,9 +409,7 @@ button:disabled { opacity: 0.45; cursor: default; }
 .open-total { display: flex; flex: none; align-items: center; gap: 6px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .open-total > span { color: #b2b5be; }
 .draft-stop-annotation { min-height: 30px; padding-left: 8px; touch-action: none; }
-.draft-stop-annotation:has(.confirm-draft-stop:not([hidden])) { padding-left: 0; }
 .draft-stop-annotation[data-invalid="true"] { border-color: #e2a2a6; color: #e2a2a6; }
-.confirm-draft-stop[hidden] { display: none; }
 .draft-stop-annotation > span { overflow-wrap: anywhere; white-space: normal; cursor: ns-resize; font-variant-numeric: tabular-nums; }
 
 @media (max-width: 1350px) {

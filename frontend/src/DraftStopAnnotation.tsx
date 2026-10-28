@@ -62,7 +62,7 @@ export function useDraftStopAnnotation(element: RefObject<HTMLDivElement | null>
     }
     const consume = (event: PointerEvent) => { event.preventDefault(); event.stopImmediatePropagation() }
     const down = (event: PointerEvent) => {
-      if (draft.price === null || event.button !== 0 || drag || (event.target as Element).closest('button')) return
+      if (draft.price === null || event.button !== 0 || drag) return
       const box = canvas.getBoundingClientRect(), x = event.clientX - box.left, y = event.clientY - box.top
       const at = series.priceToCoordinate(draft.price)
       const onLabel = node.contains(event.target as Node)
@@ -70,7 +70,6 @@ export function useDraftStopAnnotation(element: RefObject<HTMLDivElement | null>
       consume(event)
       drag = { pointerId: event.pointerId, original: draft.price }
       plot.setPointerCapture(event.pointerId)
-      node.querySelector('button')!.disabled = true
       plot.style.cursor = 'ns-resize'
     }
     const pointerMove = (event: PointerEvent) => {
@@ -87,9 +86,7 @@ export function useDraftStopAnnotation(element: RefObject<HTMLDivElement | null>
       plot.style.cursor = ''
       if (commit && price !== null) onPick(price)
       else preview(completed.original)
-      node.querySelector('button')!.disabled = confirmDisabled
     }
-    const confirmDisabled = node.querySelector('button')!.disabled
     const up = (event: PointerEvent) => { if (drag && event.pointerId === drag.pointerId) { consume(event); finish(true) } }
     const cancel = () => finish(false)
     const key = (event: KeyboardEvent) => { if (event.key === 'Escape') cancel() }
@@ -114,14 +111,11 @@ export function useDraftStopAnnotation(element: RefObject<HTMLDivElement | null>
   }, [chartRef, seriesRef, container, element, draft, reference, onPick])
 }
 
-export function DraftStopAnnotation({ element, selected, onConfirm, disabled }: {
-  element: RefObject<HTMLDivElement | null>; selected: boolean; onConfirm: () => void; disabled?: boolean
+export function DraftStopAnnotation({ element, selected }: {
+  element: RefObject<HTMLDivElement | null>; selected: boolean
 }) {
   return <div ref={element} className="draft-stop-annotation" role="group" aria-label="Draft stop-loss" hidden={!selected}
     onPointerDown={event => event.stopPropagation()} onClick={event => event.stopPropagation()}>
-    <button type="button" hidden={!selected} className="confirm-draft-stop" aria-label="Confirm draft stop-loss" disabled={disabled} onClick={onConfirm}>
-      <svg aria-hidden="true" viewBox="0 0 20 20" width="20" height="20"><path d="m4 10 4 4 8-8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-    </button>
     <span data-draft-label>Draft SL</span>
   </div>
 }
