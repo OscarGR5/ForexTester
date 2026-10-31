@@ -53,7 +53,8 @@ it.each(TIMEFRAMES)('retains actual intrabar execution time on %s without insert
 
 it('draws exact-price triangles, dashed arrows only for revealed exits, historical levels and independent toggles', () => {
   const state = fixture(), closed = observeCandle(requestClose(state, state.positions[0].id, permission), { ...candle, timestamp: 300000 }, undefined, 'single')
-  const records = tradeOverlayRecords(closed.positions, closed.closed), primitive = new TradeOverlays()
+  let records = tradeOverlayRecords(closed.positions, closed.closed)
+  const primitive = new TradeOverlays()
   const context = Object.fromEntries(['save', 'restore', 'beginPath', 'rect', 'clip', 'moveTo', 'lineTo', 'closePath', 'fill', 'stroke', 'setLineDash'].map(key => [key, vi.fn()]))
   const redraw = vi.fn(), priceToCoordinate = vi.fn(price => price * 100), timeToCoordinate = vi.fn(time => 100 + time / 300 * 20)
   primitive.attached({ chart: { timeScale: () => ({ getVisibleRange: () => null, timeToCoordinate, options: () => ({ barSpacing: 20 }) }) }, series: { priceToCoordinate }, requestUpdate: redraw } as unknown as SeriesAttachedParameter)
@@ -71,12 +72,66 @@ it('draws exact-price triangles, dashed arrows only for revealed exits, historic
   draw(300000, true, false)
   expect(context.fill).toHaveBeenCalledTimes(3); expect(context.stroke).toHaveBeenCalledTimes(2)
   expect(context.setLineDash).toHaveBeenCalledWith([3, 4])
+  records = tradeOverlayRecords(state.positions, state.closed)
   draw(180000, false, true)
   expect(context.stroke).toHaveBeenCalledTimes(1); expect(context.fill).not.toHaveBeenCalled()
   draw(300000, false, true)
-  expect(context.stroke).toHaveBeenCalledTimes(3)
+  expect(context.stroke).toHaveBeenCalledTimes(2)
+  records = tradeOverlayRecords(closed.positions, closed.closed)
+  draw(300000, false, true)
+  expect(context.stroke).not.toHaveBeenCalled()
   expect(context.setLineDash).toHaveBeenCalledWith([4, 4])
   expect(context.strokeStyle).toBe('rgba(239, 154, 154, 0.28)')
   primitive.detached()
   expect(redraw).toHaveBeenCalledTimes(1)
+})
+
+it.each(['manual', 'stop_loss'] as const)('removes only the closed position’s SL history on %s execution across all panes and restores', reason => {
+  let state = fixture()
+  const [first, second] = state.positions
+  state = modifyStop(state, second.id, 1.0895, permission)
+  const history = state.positions.map(p => ({ id: p.id, initialStopPrice: p.initialStopPrice, stopModifications: structuredClone(p.stopModifications) }))
+  const contexts = Array.from({ length: 4 }, () => Object.fromEntries(['save', 'restore', 'beginPath', 'rect', 'clip', 'moveTo', 'lineTo', 'closePath', 'fill', 'stroke', 'setLineDash'].map(key => [key, vi.fn()])))
+  const panes = contexts.map(() => {
+    const primitive = new TradeOverlays()
+    primitive.attached({ chart: { timeScale: () => ({ getVisibleRange: () => null, timeToCoordinate: () => 100, options: () => ({ barSpacing: 20 }) }) },
+      series: { priceToCoordinate: (price: number) => price * 100 }, requestUpdate: vi.fn() } as unknown as SeriesAttachedParameter)
+    return primitive
+  })
+  const check = (expectedLines: number) => {
+    const before = JSON.stringify(state)
+    // Session restoration must produce the same visibility from durable records.
+    const restored = JSON.parse(before)
+    for (let i = 0; i < panes.length; i++) {
+      const context = contexts[i]; context.stroke.mockClear()
+      panes[i].update(tradeOverlayRecords(restored.positions, restored.closed), bars([0, 300]), ['H1', 'D1', 'M5', 'H4'][i] as typeof TIMEFRAMES[number], restored.observedTimestamp, false, true)
+      panes[i].paneViews()[0].renderer()!.draw({ useMediaCoordinateSpace: (callback: (scope: unknown) => void) => callback({ context, mediaSize: { width: 500, height: 500 } }) } as unknown as Parameters<IPrimitivePaneRenderer['draw']>[0])
+      expect(context.stroke).toHaveBeenCalledTimes(expectedLines)
+    }
+    expect(JSON.stringify(state)).toBe(before)
+    for (const saved of history) {
+      const position = [...state.positions, ...state.closed].find(p => p.id === saved.id)!
+      expect(position.initialStopPrice).toBe(saved.initialStopPrice)
+      expect(position.stopModifications).toEqual(saved.stopModifications)
+    }
+  }
+  check(3)
+  if (reason === 'manual') {
+    state = requestClose(state, first.id, permission)
+    expect(state.positions[0].closeRequestedAt).not.toBeNull()
+    check(3)
+  }
+  state = observeCandle(state, { ...candle, timestamp: 300000, low: reason === 'stop_loss' ? 1.0901 : candle.low }, undefined, 'single')
+  expect(state.closed[0].id).toBe(first.id)
+  expect(state.closed[0].exitReason).toBe(reason)
+  expect(state.positions.map(p => p.id)).toEqual([second.id])
+  check(1)
+  state = observeCandle(state, { ...candle, timestamp: 360000 }, undefined, 'single')
+  check(1)
+  state = requestClose(state, second.id, permission)
+  check(1)
+  state = observeCandle(state, { ...candle, timestamp: 420000 }, undefined, 'single')
+  expect(state.positions).toHaveLength(0)
+  check(0)
+  for (const pane of panes) pane.detached()
 })

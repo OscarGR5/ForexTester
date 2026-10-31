@@ -111,7 +111,8 @@ try {
       await resetDraws(); await button('Executions').click(); await settle()
       const executions = await draws(); assert(executions.triangles >= 7 && executions.arrows >= 3)
       await resetDraws(); await button('SL History').click(); await settle()
-      const historyDraws = await draws(); assert(historyDraws.stops > 0)
+      // All modified positions in this restored fixture are closed.
+      const historyDraws = await draws(); assert.equal(historyDraws.stops, 0)
       await page.screenshot({ path: `${output}/four-${width}.png` })
       // Each pane can switch independently and receives the same global overlays.
       for (let pane = 0; pane < 4; pane++) {
