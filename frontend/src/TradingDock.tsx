@@ -77,10 +77,7 @@ export function TradingDock({ reviewing = false, shortcutsBlocked = false, tradi
       <span>Open total</span>
       <strong className={total ? total.estimatedNetPnlUsd < 0 ? 'negative' : 'positive' : ''}>{total ? `${total.estimatedNetPnlUsd < 0 ? '-' : ''}$${Math.abs(total.estimatedNetPnlUsd).toFixed(2)} (${total.percent.toFixed(2)}%)` : 'PnL unavailable'}</strong>
     </div>}
-    {!reviewing && state.positions.length > 0 && <button className="close-all" disabled={!canOrder || closable.length === 0} onClick={() => {
-      // Stable entry-ID order, using exactly the same queued close action as each record.
-      for (const position of [...closable].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0)) trading.close(position.id)
-    }}>Close all</button>}
+    {!reviewing && state.positions.length > 0 && <button className="close-all" disabled={!canOrder || closable.length === 0} onClick={trading.closeAll}>Close all</button>}
     {(permission.playing || !permission.hasFuture) && <span className="trading-message">{permission.playing ? 'Pause to trade' : 'End of history; positions remain open'}</span>}
     </div>
     {!reviewing && state.rejected.at(-1)?.rejectedAt === state.observedTimestamp && <p className="form-error" role="alert">Entry rejected: {state.rejected.at(-1)?.reason}</p>}

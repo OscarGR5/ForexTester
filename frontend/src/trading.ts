@@ -181,6 +181,13 @@ export function requestClose(state: TradingState, id: string, permission: Tradin
     ? { ...item, closeRequestedAt: state.observedTimestamp } : item) }
 }
 
+export function requestCloseAll(state: TradingState, permission: TradingPermission): TradingState {
+  if (!canRequestOrder(permission) || state.observedTimestamp === null ||
+    !state.positions.some(position => position.closeRequestedAt === null)) return state
+  return { ...state, positions: state.positions.map(position => position.closeRequestedAt === null
+    ? { ...position, closeRequestedAt: state.observedTimestamp } : position) }
+}
+
 export function stopModificationError(state: TradingState, position: Position, price: number, permission: TradingPermission): string | null {
   if (!canRequestOrder(permission)) return 'SL changes require paused replay with another candle available.'
   if (!validStopPrice(price)) return 'Enter a positive, finite SL price.'

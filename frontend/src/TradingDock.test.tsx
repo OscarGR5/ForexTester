@@ -140,19 +140,20 @@ it.each(['buy', 'sell'] as const)('keeps compact %s identities, signed USD, styl
  expect(close).toHaveBeenCalledExactlyOnceWith(position.id); expect(setDraft).not.toHaveBeenCalled()
 })
 
-it('Close all calls close once per eligible position in deterministic ID order, excluding pending entries', async () => {
+it('Close all dispatches one bulk action and retains its placement and permission guards', async () => {
  let state = observeCandle(createTradingState(), candle, undefined, 'single')
  for (const stop of [1.05, 1.04]) state = requestAutomaticEntry(state, 'buy', .1, stop, permission)
- const close = vi.fn(), render = (currentPermission = permission, reviewing = false) => act(async () => root.render(<TradingDock trading={{state, permission: currentPermission, close} as unknown as ReturnType<typeof useTrading>} reviewing={reviewing} draft={null} setDraft={vi.fn()} stops={stopOverlays(state)} onConfirm={vi.fn()}/>))
+ const closeAll = vi.fn(), render = (currentPermission = permission, reviewing = false) => act(async () => root.render(<TradingDock trading={{state, permission: currentPermission, closeAll} as unknown as ReturnType<typeof useTrading>} reviewing={reviewing} draft={null} setDraft={vi.fn()} stops={stopOverlays(state)} onConfirm={vi.fn()}/>))
  await render(); expect(host.querySelector('.close-all')).toBeNull()
  state = observeCandle(state, {...candle,timestamp:120000}, undefined, 'single')
  state = {...state, positions: [...state.positions].reverse()}
  await render(); await act(async () => host.querySelector<HTMLButtonElement>('.close-all')!.click())
- expect(close.mock.calls.map(([id]) => id)).toEqual(state.positions.map(p => p.id).sort())
- close.mockClear()
+ expect(closeAll).toHaveBeenCalledTimes(1)
+ expect(host.querySelector('.open-total')!.nextElementSibling).toBe(host.querySelector('.close-all'))
+ closeAll.mockClear()
  state = {...state, positions: state.positions.map((p,i) => i ? p : {...p, closeRequestedAt:120000})}
  await render(); await act(async () => host.querySelector<HTMLButtonElement>('.close-all')!.click())
- expect(close).toHaveBeenCalledExactlyOnceWith(state.positions[1].id)
+ expect(closeAll).toHaveBeenCalledTimes(1)
  for (const denied of [{...permission,active:false},{...permission,playing:true},{...permission,hasFuture:false}]) {
   await render(denied); expect(host.querySelector<HTMLButtonElement>('.close-all')!.disabled).toBe(true)
  }

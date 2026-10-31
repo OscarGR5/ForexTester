@@ -1,0 +1,146 @@
+[
+  {
+    "width": 1100,
+    "production": true,
+    "outcomes": [
+      {
+        "cycle": 0,
+        "queuedAt": 1758844860000,
+        "exits": [
+          {
+            "id": "2-1",
+            "exitTime": 1758844920000,
+            "exitPrice": 1.166095,
+            "commission": 7,
+            "netPnlUsd": -4.999999999986898
+          },
+          {
+            "id": "2-2",
+            "exitTime": 1758844920000,
+            "exitPrice": 1.166095,
+            "commission": 7,
+            "netPnlUsd": -4.999999999986898
+          }
+        ],
+        "resumedQueuedCloses": false
+      },
+      {
+        "cycle": 1,
+        "queuedAt": 1758848640000,
+        "exits": [
+          {
+            "id": "2-3",
+            "exitTime": 1758848700000,
+            "exitPrice": 1.16732,
+            "commission": 7,
+            "netPnlUsd": 129.49999999998386
+          },
+          {
+            "id": "2-4",
+            "exitTime": 1758848700000,
+            "exitPrice": 1.16732,
+            "commission": 7,
+            "netPnlUsd": 129.49999999998386
+          }
+        ],
+        "resumedQueuedCloses": true
+      },
+      {
+        "cycle": 2,
+        "queuedAt": 1758852240000,
+        "exits": [
+          {
+            "id": "2-5",
+            "exitTime": 1758852300000,
+            "exitPrice": 1.166995,
+            "commission": 7,
+            "netPnlUsd": -39.0000000000098
+          },
+          {
+            "id": "2-6",
+            "exitTime": 1758852300000,
+            "exitPrice": 1.166995,
+            "commission": 7,
+            "netPnlUsd": -39.0000000000098
+          }
+        ],
+        "resumedQueuedCloses": false
+      }
+    ],
+    "errors": [],
+    "dialogs": [],
+    "external": []
+  },
+  {
+    "width": 1440,
+    "production": true,
+    "outcomes": [
+      {
+        "cycle": 0,
+        "queuedAt": 1758844860000,
+        "exits": [
+          {
+            "id": "2-1",
+            "exitTime": 1758844920000,
+            "exitPrice": 1.166095,
+            "commission": 7,
+            "netPnlUsd": -4.999999999986898
+          },
+          {
+            "id": "2-2",
+            "exitTime": 1758844920000,
+            "exitPrice": 1.166095,
+            "commission": 7,
+            "netPnlUsd": -4.999999999986898
+          }
+        ],
+        "resumedQueuedCloses": false
+      },
+      {
+        "cycle": 1,
+        "queuedAt": 1758848640000,
+        "exits": [
+          {
+            "id": "2-3",
+            "exitTime": 1758848700000,
+            "exitPrice": 1.16732,
+            "commission": 7,
+            "netPnlUsd": 129.49999999998386
+          },
+          {
+            "id": "2-4",
+            "exitTime": 1758848700000,
+            "exitPrice": 1.16732,
+            "commission": 7,
+            "netPnlUsd": 129.49999999998386
+          }
+        ],
+        "resumedQueuedCloses": true
+      },
+      {
+        "cycle": 2,
+        "queuedAt": 1758852240000,
+        "exits": [
+          {
+            "id": "2-5",
+            "exitTime": 1758852300000,
+            "exitPrice": 1.166995,
+            "commission": 7,
+            "netPnlUsd": -39.0000000000098
+          },
+          {
+            "id": "2-6",
+            "exitTime": 1758852300000,
+            "exitPrice": 1.166995,
+            "commission": 7,
+            "netPnlUsd": -39.0000000000098
+          }
+        ],
+        "resumedQueuedCloses": false
+      }
+    ],
+    "errors": [],
+    "dialogs": [],
+    "external": []
+  }
+]
