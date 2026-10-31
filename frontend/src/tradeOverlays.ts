@@ -86,10 +86,10 @@ export class TradeOverlays implements ISeriesPrimitive {
         ctx.strokeStyle = 'rgba(239, 154, 154, 0.28)'; ctx.lineWidth = 1; ctx.setLineDash([4, 4])
         for (const record of this.records) for (const stop of record.stops) {
           // Only currently open positions retain history; close requests have no exit.
-          if (record.exit || stop.to > this.cutoff || stop.to < left || stop.from > right) continue
-          const x1 = xAt(stop.from), x2 = xAt(stop.to), y = this.series.priceToCoordinate(stop.price)
-          if (x1 === null || x2 === null || y === null || Math.max(x1, x2) < 0 || Math.min(x1, x2) > mediaSize.width) continue
-          ctx.beginPath(); ctx.moveTo(x1, y); ctx.lineTo(x2, y); ctx.stroke()
+          if (record.exit || stop.to > this.cutoff) continue
+          const y = this.series.priceToCoordinate(stop.price)
+          if (y === null || y < 0 || y > mediaSize.height) continue
+          ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(mediaSize.width, y); ctx.stroke()
         }
       }
       if (this.executions) {

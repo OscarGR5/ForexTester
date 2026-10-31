@@ -56,8 +56,9 @@ it('draws exact-price triangles, dashed arrows only for revealed exits, historic
   let records = tradeOverlayRecords(closed.positions, closed.closed)
   const primitive = new TradeOverlays()
   const context = Object.fromEntries(['save', 'restore', 'beginPath', 'rect', 'clip', 'moveTo', 'lineTo', 'closePath', 'fill', 'stroke', 'setLineDash'].map(key => [key, vi.fn()]))
+  let visibleRange: { from: UTCTimestamp; to: UTCTimestamp } | null = null
   const redraw = vi.fn(), priceToCoordinate = vi.fn(price => price * 100), timeToCoordinate = vi.fn(time => 100 + time / 300 * 20)
-  primitive.attached({ chart: { timeScale: () => ({ getVisibleRange: () => null, timeToCoordinate, options: () => ({ barSpacing: 20 }) }) }, series: { priceToCoordinate }, requestUpdate: redraw } as unknown as SeriesAttachedParameter)
+  primitive.attached({ chart: { timeScale: () => ({ getVisibleRange: () => visibleRange, timeToCoordinate, options: () => ({ barSpacing: 20 }) }) }, series: { priceToCoordinate }, requestUpdate: redraw } as unknown as SeriesAttachedParameter)
   const draw = (cutoff: number, executions: boolean, history: boolean) => {
     vi.clearAllMocks()
     primitive.update(records, bars([0, 300]), 'M5', cutoff, executions, history)
@@ -77,6 +78,16 @@ it('draws exact-price triangles, dashed arrows only for revealed exits, historic
   expect(context.stroke).toHaveBeenCalledTimes(1); expect(context.fill).not.toHaveBeenCalled()
   draw(300000, false, true)
   expect(context.stroke).toHaveBeenCalledTimes(2)
+  for (const [x] of context.moveTo.mock.calls) expect(x).toBe(0)
+  for (const [x] of context.lineTo.mock.calls) expect(x).toBe(500)
+  // Rays remain full-width when panning past their original time intervals,
+  // without requiring either endpoint to exist in the current chart data.
+  visibleRange = { from: 900 as UTCTimestamp, to: 1200 as UTCTimestamp }
+  timeToCoordinate.mockImplementation(() => { throw new Error('SL history must not resolve time coordinates') })
+  draw(300000, false, true)
+  expect(context.stroke).toHaveBeenCalledTimes(2)
+  for (const [x] of context.moveTo.mock.calls) expect(x).toBe(0)
+  for (const [x] of context.lineTo.mock.calls) expect(x).toBe(500)
   records = tradeOverlayRecords(closed.positions, closed.closed)
   draw(300000, false, true)
   expect(context.stroke).not.toHaveBeenCalled()

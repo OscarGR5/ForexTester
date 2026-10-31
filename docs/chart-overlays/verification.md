@@ -8,7 +8,7 @@ The chart primitive renders buy executions as green upward triangles and sell ex
 
 Recorded M1 execution timestamps retain their fractional position within larger timeframe candles. Candle timestamps anchor coordinates even when indicator whitespace adds chart time slots. Historical review suppresses unrevealed entries, exits, and SL replacements.
 
-SL history shows the original and subsequent retired levels over their recorded lifetimes for currently open positions only. A pending close request keeps these lines visible until execution; closing removes them from every pane without deleting stored SL history. An unchanged open position has no retired level. Thin dashed lines use 28% opacity, without axis labels, drag targets, or autoscale changes. Existing active SL lines and annotations remain unchanged. Overlay data is not derived while both toggles are off; rendering clips and culls offscreen records.
+SL history shows the original and subsequent retired levels as horizontal rays extending to both chart edges for currently open positions only. They remain visible when panning beyond their original time intervals. A pending close request keeps these lines visible until execution; closing removes them from every pane without deleting stored SL history. An unchanged open position has no retired level. Thin dashed lines use 28% opacity, without axis labels, drag targets, or autoscale changes. Existing active SL lines and annotations remain unchanged. Overlay data is not derived while both toggles are off; rendering clips and culls offscreen records.
 
 ## Verification
 
