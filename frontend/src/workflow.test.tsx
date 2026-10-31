@@ -24,6 +24,7 @@ import { sessionHistory, sessionSimulation } from './sessionFixtures'
 import { createEquityLedger } from './equity'
 import { lifecycleOf } from './sessionTypes'
 import { combinedOpenPnl, markPosition } from './trading'
+import { TradeOverlays } from './tradeOverlays'
 vi.mock('lightweight-charts', () => ({
   CrosshairMode: { Normal: 0 }, CandlestickSeries: {}, LineSeries: {}, LineStyle: { Solid: 0, Dashed: 2, Dotted: 1 }, ColorType: { Solid: 'solid' },
   createChart: vi.fn(() => {
@@ -1575,21 +1576,33 @@ it.each([false, true])('sustains native replay key events without act batching w
 }, 30_000)
 
 it('applies overlay toggles to every pane and restores them with the session while keeping trading unchanged', async () => {
+ const updates = vi.spyOn(TradeOverlays.prototype, 'update')
+ const checkToggles = (count: number, executions: boolean, originalSl: boolean) => {
+  const calls = updates.mock.calls.slice(-count)
+  expect(calls).toHaveLength(count)
+  for (const call of calls) expect(call.slice(4)).toEqual([executions, originalSl])
+ }
  await start()
  expect(button('Executions').getAttribute('aria-pressed')).toBe('false')
- expect(button('SL History').getAttribute('aria-pressed')).toBe('false')
+ expect(button('Original SL').getAttribute('aria-pressed')).toBe('false')
+ checkToggles(1, false, false)
  await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
  const before=(await disk.storage.list()).sessions[0]
- await click('Executions');await click('SL History')
+ await click('Executions');await click('Original SL')
  await act(async()=>host.querySelector<HTMLInputElement>('input[name="chart-count"][value="4"]')!.click())
  expect([...host.querySelectorAll<HTMLSelectElement>('.pane-toolbar select')].map(s=>s.value)).toEqual(['H1','D1','M5','H4'])
+ checkToggles(4, true, true)
  await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
  expect((await disk.storage.list()).sessions[0].checkpoint.trading).toEqual(before.checkpoint.trading)
+ expect(JSON.parse(window.localStorage.getItem(uiKey(before.id))!).slHistory).toBe(true)
  await act(async()=>root.unmount());root=createRoot(host);await mount();await click('Resume backtest');await until(()=>host.querySelector('.phase-trading'))
  expect(host.querySelectorAll('.chart-pane')).toHaveLength(4)
  expect(button('Executions').getAttribute('aria-pressed')).toBe('true')
- expect(button('SL History').getAttribute('aria-pressed')).toBe('true')
- await click('Executions');await click('SL History')
+ expect(button('Original SL').getAttribute('aria-pressed')).toBe('true')
+ checkToggles(4, true, true)
+ await click('Executions');await click('Original SL')
  expect(button('Executions').getAttribute('aria-pressed')).toBe('false')
- expect(button('SL History').getAttribute('aria-pressed')).toBe('false')
+ expect(button('Original SL').getAttribute('aria-pressed')).toBe('false')
+ checkToggles(4, false, false)
+ expect(JSON.parse(window.localStorage.getItem(uiKey(before.id))!).slHistory).toBe(false)
 })

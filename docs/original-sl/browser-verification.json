@@ -1,0 +1,344 @@
+[
+  {
+    "width": 1100,
+    "rectangles": [
+      {
+        "x": 8,
+        "y": 131,
+        "width": 540,
+        "height": 332.5
+      },
+      {
+        "x": 552,
+        "y": 131,
+        "width": 540,
+        "height": 332.5
+      },
+      {
+        "x": 8,
+        "y": 467.5,
+        "width": 540,
+        "height": 332.5
+      },
+      {
+        "x": 552,
+        "y": 467.5,
+        "width": 540,
+        "height": 332.5
+      }
+    ],
+    "executions": {
+      "triangles": 44,
+      "arrows": 16,
+      "stops": 0
+    },
+    "historyDraws": {
+      "triangles": 44,
+      "arrows": 16,
+      "stops": 16
+    },
+    "restoredLines": [
+      {
+        "pane": 0,
+        "points": [
+          [
+            0,
+            82.45925925925695
+          ],
+          [
+            474,
+            82.45925925925695
+          ]
+        ],
+        "lineWidth": 1
+      },
+      {
+        "pane": 0,
+        "points": [
+          [
+            0,
+            89.47407407407121
+          ],
+          [
+            474,
+            89.47407407407121
+          ]
+        ],
+        "lineWidth": 1
+      },
+      {
+        "pane": 1,
+        "points": [
+          [
+            0,
+            82.45925925925695
+          ],
+          [
+            474,
+            82.45925925925695
+          ]
+        ],
+        "lineWidth": 1
+      },
+      {
+        "pane": 1,
+        "points": [
+          [
+            0,
+            89.47407407407121
+          ],
+          [
+            474,
+            89.47407407407121
+          ]
+        ],
+        "lineWidth": 1
+      },
+      {
+        "pane": 2,
+        "points": [
+          [
+            0,
+            61.50370370370197
+          ],
+          [
+            468,
+            61.50370370370197
+          ]
+        ],
+        "lineWidth": 1
+      },
+      {
+        "pane": 2,
+        "points": [
+          [
+            0,
+            66.72962962962748
+          ],
+          [
+            468,
+            66.72962962962748
+          ]
+        ],
+        "lineWidth": 1
+      },
+      {
+        "pane": 3,
+        "points": [
+          [
+            0,
+            82.45925925925695
+          ],
+          [
+            474,
+            82.45925925925695
+          ]
+        ],
+        "lineWidth": 1
+      },
+      {
+        "pane": 3,
+        "points": [
+          [
+            0,
+            89.47407407407121
+          ],
+          [
+            474,
+            89.47407407407121
+          ]
+        ],
+        "lineWidth": 1
+      }
+    ],
+    "errors": [],
+    "external": [],
+    "checks": [
+      "1/2/3/4 switching",
+      "2x2 ordering",
+      "global toggles off by default",
+      "multiple open/closed buy/sell fills",
+      "one original SL per position after multiple changes",
+      "all pane/timeframe combinations",
+      "indicator dropdown",
+      "restored slHistory preference and records",
+      "synchronized replay cursors",
+      "no future modification leaked during historical review",
+      "pending close retained before and after restoration",
+      "executed closes remove only their reference",
+      "no overflow",
+      "no drawing when off"
+    ]
+  },
+  {
+    "width": 1440,
+    "rectangles": [
+      {
+        "x": 8,
+        "y": 131,
+        "width": 710,
+        "height": 432.5
+      },
+      {
+        "x": 722,
+        "y": 131,
+        "width": 710,
+        "height": 432.5
+      },
+      {
+        "x": 8,
+        "y": 567.5,
+        "width": 710,
+        "height": 432.5
+      },
+      {
+        "x": 722,
+        "y": 567.5,
+        "width": 710,
+        "height": 432.5
+      }
+    ],
+    "executions": {
+      "triangles": 44,
+      "arrows": 16,
+      "stops": 0
+    },
+    "historyDraws": {
+      "triangles": 44,
+      "arrows": 16,
+      "stops": 16
+    },
+    "restoredLines": [
+      {
+        "pane": 0,
+        "points": [
+          [
+            0,
+            112.82962962962642
+          ],
+          [
+            644,
+            112.82962962962642
+          ]
+        ],
+        "lineWidth": 1
+      },
+      {
+        "pane": 0,
+        "points": [
+          [
+            0,
+            122.43703703703306
+          ],
+          [
+            644,
+            122.43703703703306
+          ]
+        ],
+        "lineWidth": 1
+      },
+      {
+        "pane": 1,
+        "points": [
+          [
+            0,
+            112.82962962962642
+          ],
+          [
+            644,
+            112.82962962962642
+          ]
+        ],
+        "lineWidth": 1
+      },
+      {
+        "pane": 1,
+        "points": [
+          [
+            0,
+            122.43703703703306
+          ],
+          [
+            644,
+            122.43703703703306
+          ]
+        ],
+        "lineWidth": 1
+      },
+      {
+        "pane": 2,
+        "points": [
+          [
+            0,
+            84.28148148147912
+          ],
+          [
+            638,
+            84.28148148147912
+          ]
+        ],
+        "lineWidth": 1
+      },
+      {
+        "pane": 2,
+        "points": [
+          [
+            0,
+            91.45185185184889
+          ],
+          [
+            638,
+            91.45185185184889
+          ]
+        ],
+        "lineWidth": 1
+      },
+      {
+        "pane": 3,
+        "points": [
+          [
+            0,
+            112.82962962962642
+          ],
+          [
+            644,
+            112.82962962962642
+          ]
+        ],
+        "lineWidth": 1
+      },
+      {
+        "pane": 3,
+        "points": [
+          [
+            0,
+            122.43703703703306
+          ],
+          [
+            644,
+            122.43703703703306
+          ]
+        ],
+        "lineWidth": 1
+      }
+    ],
+    "errors": [],
+    "external": [],
+    "checks": [
+      "1/2/3/4 switching",
+      "2x2 ordering",
+      "global toggles off by default",
+      "multiple open/closed buy/sell fills",
+      "one original SL per position after multiple changes",
+      "all pane/timeframe combinations",
+      "indicator dropdown",
+      "restored slHistory preference and records",
+      "synchronized replay cursors",
+      "no future modification leaked during historical review",
+      "pending close retained before and after restoration",
+      "executed closes remove only their reference",
+      "no overflow",
+      "no drawing when off"
+    ]
+  }
+]

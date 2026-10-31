@@ -29,7 +29,7 @@ interface ChartPaneProps {
   id: number
   tradeRecords?: readonly TradeOverlayRecord[]
   showExecutions?: boolean
-  showSlHistory?: boolean
+  showOriginalSl?: boolean
   active?: boolean
   reviewing?: boolean
   measurementLayout?: number
@@ -53,7 +53,7 @@ interface ChartPaneProps {
   onTimeframeChange: (id: number, timeframe: Timeframe) => void
 }
 
-export const ChartPane = memo(function ChartPane({ tradeRecords = [], showExecutions = false, showSlHistory = false, measurementLayout = 1, pipSize = 0.0001, instrument = 'EURUSD', priceLabel = 'Bid', id, active = false, reviewing = false, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, stops, placement, draftReference = null, onPick, stopInteraction, entries = [] }: ChartPaneProps) {
+export const ChartPane = memo(function ChartPane({ tradeRecords = [], showExecutions = false, showOriginalSl = false, measurementLayout = 1, pipSize = 0.0001, instrument = 'EURUSD', priceLabel = 'Bid', id, active = false, reviewing = false, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, stops, placement, draftReference = null, onPick, stopInteraction, entries = [] }: ChartPaneProps) {
   const [readiness, setReadiness] = useState('')
   const container = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
@@ -276,8 +276,8 @@ export const ChartPane = memo(function ChartPane({ tradeRecords = [], showExecut
   useLayoutEffect(() => { entryLines.current!.update(entries) }, [entries])
 
   useLayoutEffect(() => {
-    tradeOverlays.current!.update(tradeRecords, previous.current?.bars.candles ?? [], timeframe, source[count - 1]?.timestamp ?? 0, showExecutions, showSlHistory)
-  }, [tradeRecords, timeframe, source, count, showExecutions, showSlHistory])
+    tradeOverlays.current!.update(tradeRecords, previous.current?.bars.candles ?? [], timeframe, source[count - 1]?.timestamp ?? 0, showExecutions, showOriginalSl)
+  }, [tradeRecords, timeframe, source, count, showExecutions, showOriginalSl])
 
   useDraftStopAnnotation(draftAnnotation, container, chartRef, seriesRef, placement, draftReference, onPick)
 

@@ -4,23 +4,18 @@ import type { ChartCandle } from './indicators'
 import type { ClosedTrade, Direction, Position } from './trading'
 
 export interface ExecutionPoint { timestamp: number; price: number; direction: Direction }
-export interface HistoricalStop { from: number; to: number; price: number }
-export interface TradeOverlayRecord { id: string; entry: ExecutionPoint; exit: ExecutionPoint | null; stops: HistoricalStop[] }
+export interface OriginalStop { price: number; modifiedAt: number }
+export interface TradeOverlayRecord { id: string; entry: ExecutionPoint; exit: ExecutionPoint | null; originalStop: OriginalStop | null }
 const BUY = '#75c4b5', SELL = '#e2a2a6'
 
 // Read only durable fills and modifications. Pending orders have no execution.
 export function tradeOverlayRecords(positions: readonly Position[], closed: readonly ClosedTrade[]): TradeOverlayRecord[] {
   return [...positions, ...closed].map(position => {
     const exit = 'exitTime' in position ? position as ClosedTrade : null
-    const stops: HistoricalStop[] = []
-    let from = position.entryTime, price = position.initialStopPrice
-    for (const change of position.stopModifications) {
-      stops.push({ from, to: change.timestamp, price })
-      from = change.timestamp; price = change.newPrice
-    }
-    if (exit) stops.push({ from, to: exit.exitTime, price })
+    const firstChange = position.stopModifications[0]
+    const originalStop = firstChange ? { price: position.initialStopPrice, modifiedAt: firstChange.timestamp } : null
     return { id: position.id, entry: { timestamp: position.entryTime, price: position.entryPrice, direction: position.direction },
-      exit: exit ? { timestamp: exit.exitTime, price: exit.exitPrice, direction: position.direction === 'buy' ? 'sell' : 'buy' } : null, stops }
+      exit: exit ? { timestamp: exit.exitTime, price: exit.exitPrice, direction: position.direction === 'buy' ? 'sell' : 'buy' } : null, originalStop }
   })
 }
 
@@ -50,10 +45,10 @@ export class TradeOverlays implements ISeriesPrimitive {
   private timeframe: Timeframe = 'M1'
   private cutoff = 0
   private executions = false
-  private history = false
+  private originalSl = false
   private readonly renderer: IPrimitivePaneRenderer = {
     draw: target => target.useMediaCoordinateSpace(({ context: ctx, mediaSize }) => {
-      if (!this.chart || !this.series || (!this.executions && !this.history)) return
+      if (!this.chart || !this.series || (!this.executions && !this.originalSl)) return
       const scale = this.chart.timeScale()
       const visible = scale.getVisibleRange()
       const left = typeof visible?.from === 'number' ? visible.from * 1000 : -Infinity
@@ -80,13 +75,14 @@ export class TradeOverlays implements ISeriesPrimitive {
       }
       ctx.save()
       ctx.beginPath(); ctx.rect(0, 0, mediaSize.width, mediaSize.height); ctx.clip()
-      // History sits beneath executions and never changes the active SL lines,
+      // Original SL sits beneath executions and never changes the active SL lines,
       // annotations, hit targets or automatic price range.
-      if (this.history) {
+      if (this.originalSl) {
         ctx.strokeStyle = 'rgba(239, 154, 154, 0.28)'; ctx.lineWidth = 1; ctx.setLineDash([4, 4])
-        for (const record of this.records) for (const stop of record.stops) {
-          // Only currently open positions retain history; close requests have no exit.
-          if (record.exit || stop.to > this.cutoff) continue
+        for (const record of this.records) {
+          const stop = record.originalStop
+          // Only currently open positions retain the reference; close requests have no exit.
+          if (record.exit || !stop || stop.modifiedAt > this.cutoff) continue
           const y = this.series.priceToCoordinate(stop.price)
           if (y === null || y < 0 || y > mediaSize.height) continue
           ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(mediaSize.width, y); ctx.stroke()
@@ -123,8 +119,8 @@ export class TradeOverlays implements ISeriesPrimitive {
   attached({ chart, series, requestUpdate }: SeriesAttachedParameter) { this.chart = chart; this.series = series as ISeriesApi<'Candlestick'>; this.requestUpdate = requestUpdate }
   detached() { this.chart = null; this.series = null; this.requestUpdate = null }
   paneViews() { return this.views }
-  update(records: readonly TradeOverlayRecord[], candles: readonly ChartCandle[], timeframe: Timeframe, cutoff: number, executions: boolean, history: boolean) {
-    this.records = records; this.candles = candles; this.timeframe = timeframe; this.cutoff = cutoff; this.executions = executions; this.history = history
+  update(records: readonly TradeOverlayRecord[], candles: readonly ChartCandle[], timeframe: Timeframe, cutoff: number, executions: boolean, originalSl: boolean) {
+    this.records = records; this.candles = candles; this.timeframe = timeframe; this.cutoff = cutoff; this.executions = executions; this.originalSl = originalSl
     this.requestUpdate?.()
   }
 }
