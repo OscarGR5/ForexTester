@@ -160,7 +160,9 @@ export function useSessionPersistence(options: Options) {
       !before?.snapshot?.checkpoint.replay.started
     if (!changed && savedAt) return
     if (important) {
-      setSaveStatus('Saving')
+      // Paused navigation can change snapshots while the same save is pending.
+      // Do not schedule another effect update for an unchanged status.
+      if (saveStatus !== 'Saving') setSaveStatus('Saving')
       // A short queue groups metadata keystrokes and paired React updates.
       if (promptTimer.current === null) promptTimer.current = setTimeout(() => { promptTimer.current = null; void queue.current?.flush().catch(() => {}) }, 150)
     }

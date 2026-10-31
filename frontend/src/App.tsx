@@ -152,7 +152,7 @@ export function App() {
     playing: replay.playing,
     busy: !!draft || !!stopPreview || manage || finishing || sessions.busy || sessions.conflict || sessions.awaitingChoice || !sessions.initialized,
     onPlaying: () => setKeyboardNotice('Pause replay to use Shift + Arrow or Ctrl + Shift + Arrow keys.'),
-    navigate: (direction, timeframe) => { setKeyboardNotice(''); return replay.navigate(direction, timeframe ?? timeframes[activeChart] ?? timeframes[0], chartOffset) },
+    navigate: (direction, timeframe) => replay.navigate(direction, timeframe ?? timeframes[activeChart] ?? timeframes[0], chartOffset),
   })
   useEffect(() => { if (!replay.playing) setKeyboardNotice('') }, [replay.playing])
   useLayoutEffect(() => { synchronizer.advance(bounds) }, [synchronizer, bounds])

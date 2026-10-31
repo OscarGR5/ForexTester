@@ -903,6 +903,7 @@ it.each([false,true])('blocks replay shortcuts in editors, overlays, drafts and 
  await click('Play'); expect((await shortcut('ArrowRight', window, ctrlKey)).defaultPrevented).toBe(false)
  expect(host.querySelector('.keyboard-notice')?.textContent).toContain('Pause replay')
  await click('Pause'); expect(clock()).toBe(before)
+ expect(host.querySelector('.keyboard-notice')).toBeNull()
  const plain = new KeyboardEvent('keydown', { key: 'ArrowRight', cancelable: true }); window.dispatchEvent(plain)
  expect(plain.defaultPrevented).toBe(false); expect(clock()).toBe(before)
 })
@@ -1517,6 +1518,61 @@ it.each(['H4','D1'])('uses M1 shortcuts on focused %s, synchronizes charts and k
  expect(timeframes()).toEqual(selected)
  expect(panes.map(pane=>pane.getAttribute('data-active'))).toEqual(active)
 })
+
+it.each([false, true])('sustains native replay key events without act batching with Ctrl=%s', async ctrlKey => {
+ const original = tradingHook.useTrading
+ let trading!: ReturnType<typeof original>
+ vi.spyOn(tradingHook, 'useTrading').mockImplementation((...args) => { trading = original(...args); return trading })
+ const length = bid.length
+ bid.push(...Array.from({ length: 700 }, (_, i) => ({ ...bid[0], timestamp: beginning + (length + i) * 60000 })))
+ let releaseSave!: () => void
+ const saving = new Promise<void>(resolve => { releaseSave = resolve })
+ try {
+  await mount(); await load(); await select('Chart 1 timeframe', 'M5')
+  await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
+  const fetch = globalThis.fetch
+  vi.stubGlobal('fetch', async (path: string, options?: RequestInit) => {
+   if (path.endsWith('/checkpoint') && options?.method === 'PUT') await saving
+   return fetch(path, options)
+  })
+  const panes = [...host.querySelectorAll('.chart-pane')]
+  await act(async () => panes[ctrlKey ? 1 : 0].dispatchEvent(new MouseEvent('pointerdown', { bubbles: true })))
+  // act() drains React's queues differently from separate browser key events.
+  // Let the real scheduler commit each event; React errors still fail the test.
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: false })
+  const event = (key: string, repeat = false) => new KeyboardEvent('keydown', { key, shiftKey: true, ctrlKey, repeat, cancelable: true })
+  const committed = async (check: () => boolean) => {
+   for (let attempt = 0; attempt < 200; attempt++) { if (check()) return; await delay(1) }
+   expect(check()).toBe(true)
+  }
+  for (let step = 0; step < 120; step++) {
+   const index = ctrlKey ? step + 1 : (step + 1) * 5 - 1
+   const key = event('ArrowRight', step >= 60)
+   window.dispatchEvent(key)
+   expect(key.defaultPrevented).toBe(true)
+   await committed(() => trading.state.observedTimestamp === bid[index].timestamp)
+   expect(trading.executionCursor).toBe(preroll.length + index + 1)
+   for (const pane of panes) expect(chartForCanvas(pane.querySelector('.chart-canvas')!).addSeries.mock.results[0].value.data().at(-1)?.close).toBe(bid[index].close)
+  }
+  const state = trading.state, equity = trading.equity, cursor = trading.executionCursor
+  for (let step = 0; step < 60; step++) {
+   window.dispatchEvent(event('ArrowLeft', step > 0))
+   await committed(() => !!host.querySelector('.history-review'))
+   expect(button('Buy').disabled).toBe(true)
+   window.dispatchEvent(event('ArrowRight', step > 0))
+   await committed(() => !host.querySelector('.history-review'))
+  }
+  expect(trading.state).toBe(state); expect(trading.equity).toBe(equity); expect(trading.executionCursor).toBe(cursor)
+  releaseSave()
+  await committed(() => host.querySelector('.save-state')?.textContent === 'Saved')
+  const saved = (await disk.storage.list()).sessions[0]
+  expect(saved.checkpoint.executionCursor).toBe(cursor); expect(saved.checkpoint.trading).toEqual(state)
+ } finally {
+  releaseSave()
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
+  bid.splice(length)
+ }
+}, 30_000)
 
 it('applies overlay toggles to every pane and restores them with the session while keeping trading unchanged', async () => {
  await start()
