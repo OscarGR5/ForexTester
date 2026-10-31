@@ -1,3 +1,4 @@
+import { TradeOverlays, type TradeOverlayRecord } from './tradeOverlays'
 import { useMeasurement } from './useMeasurement'
 import { useStochasticPaneHeight } from './useStochasticPaneHeight'
 import { FOLLOW_RIGHT_OFFSET } from './chartSync'
@@ -26,6 +27,9 @@ const CHART_PRICE_DECIMALS = 5
 
 interface ChartPaneProps {
   id: number
+  tradeRecords?: readonly TradeOverlayRecord[]
+  showExecutions?: boolean
+  showSlHistory?: boolean
   active?: boolean
   reviewing?: boolean
   measurementLayout?: number
@@ -49,7 +53,7 @@ interface ChartPaneProps {
   onTimeframeChange: (id: number, timeframe: Timeframe) => void
 }
 
-export const ChartPane = memo(function ChartPane({ measurementLayout = 1, pipSize = 0.0001, instrument = 'EURUSD', priceLabel = 'Bid', id, active = false, reviewing = false, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, stops, placement, draftReference = null, onPick, stopInteraction, entries = [] }: ChartPaneProps) {
+export const ChartPane = memo(function ChartPane({ tradeRecords = [], showExecutions = false, showSlHistory = false, measurementLayout = 1, pipSize = 0.0001, instrument = 'EURUSD', priceLabel = 'Bid', id, active = false, reviewing = false, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, stops, placement, draftReference = null, onPick, stopInteraction, entries = [] }: ChartPaneProps) {
   const [readiness, setReadiness] = useState('')
   const container = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
@@ -58,6 +62,7 @@ export const ChartPane = memo(function ChartPane({ measurementLayout = 1, pipSiz
   const updateSettings = useCallback((next: IndicatorSettings) => onSettingsChange(id, next), [id, onSettingsChange])
   const indicatorsRef = useRef<IndicatorSeries | null>(null)
   const savePriceRef = useRef<(() => void) | null>(null)
+  const tradeOverlays = useRef<TradeOverlays | null>(null)
   const stopLines = useRef<StopLines | null>(null)
   const draftAnnotation = useRef<HTMLDivElement>(null)
   const entryLines = useRef<EntryLines | null>(null)
@@ -100,6 +105,8 @@ export const ChartPane = memo(function ChartPane({ measurementLayout = 1, pipSiz
       wickUpColor: '#ffffff', wickDownColor: '#ffffff',
       priceFormat: { type: 'price', precision: CHART_PRICE_DECIMALS, minMove: 10 ** -CHART_PRICE_DECIMALS },
     })
+    tradeOverlays.current = new TradeOverlays()
+    series.attachPrimitive(tradeOverlays.current)
     stopLines.current = new StopLines(series)
     entryLines.current = new EntryLines(series)
     chartRef.current = chart
@@ -119,6 +126,8 @@ export const ChartPane = memo(function ChartPane({ measurementLayout = 1, pipSiz
       entryLines.current = null
       stopLines.current?.dispose()
       stopLines.current = null
+      if (tradeOverlays.current) series.detachPrimitive(tradeOverlays.current)
+      tradeOverlays.current = null
       chart.remove()
       chartRef.current = null
       seriesRef.current = null
@@ -265,6 +274,10 @@ export const ChartPane = memo(function ChartPane({ measurementLayout = 1, pipSiz
   }, [stops])
 
   useLayoutEffect(() => { entryLines.current!.update(entries) }, [entries])
+
+  useLayoutEffect(() => {
+    tradeOverlays.current!.update(tradeRecords, previous.current?.bars.candles ?? [], timeframe, source[count - 1]?.timestamp ?? 0, showExecutions, showSlHistory)
+  }, [tradeRecords, timeframe, source, count, showExecutions, showSlHistory])
 
   useDraftStopAnnotation(draftAnnotation, container, chartRef, seriesRef, placement, draftReference, onPick)
 

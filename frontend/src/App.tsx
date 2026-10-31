@@ -1,3 +1,4 @@
+import { tradeOverlayRecords } from './tradeOverlays'
 import { useDismissibleDetails } from './useOutsideInteraction'
 import { useReplayKeyboard } from './useReplayKeyboard'
 import { entryOverlays } from './entryOverlays'
@@ -15,7 +16,7 @@ import { draftEstimate, draftObservedPrice, TradingDock, type StopDraft } from '
 import { accountPnl, selectedRange, shiftDate } from './workflow'
 import { lifecycleOf, type Lifecycle } from './sessionTypes'
 import { commissionConfigError } from './commissions'
-import { defaultWorkspace, readUi, selectChartMode, updateActiveChartMode, useUiValue, validWorkspace, writeUi } from './uiPreferences'
+import { defaultWorkspace, readUi, selectChartMode, updateActiveChartMode, useUiValue, validBoolean, validWorkspace, writeUi } from './uiPreferences'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { SessionControls } from './SessionControls'
 import { useSessionPersistence } from './useSessionPersistence'
@@ -128,10 +129,13 @@ export function App() {
   })
 
   const [uiWorkspace, setUiWorkspace] = useUiValue(sessions.activeId, 'workspace', hydration?.checkpoint.workspace ?? workspace, validWorkspace)
+  const [showExecutions, setShowExecutions] = useUiValue(sessions.activeId, 'executions', false, validBoolean)
+  const [showSlHistory, setShowSlHistory] = useUiValue(sessions.activeId, 'slHistory', false, validBoolean)
+  const tradeRecords = useMemo(() => showExecutions || showSlHistory ? tradeOverlayRecords(trading.state.positions, trading.state.closed) : [], [trading.state.positions, trading.state.closed, showExecutions, showSlHistory])
   const uiWorkspaceRef = useRef(uiWorkspace)
   useLayoutEffect(() => { uiWorkspaceRef.current = uiWorkspace }, [uiWorkspace])
   const { chartCount, timeframes, indicators: indicatorSettings } = uiWorkspace
-  const setChartCount = (chartCount: 1 | 2 | 3) => setUiWorkspace((w) => selectChartMode(w, chartCount))
+  const setChartCount = (chartCount: 1 | 2 | 3 | 4) => setUiWorkspace((w) => selectChartMode(w, chartCount))
   const synchronizer = useMemo(() => {
     const sync = new ChartSynchronizer(bounds)
     sync.restore(readUi(sessions.activeId, 'workspace', hydration?.checkpoint.workspace ?? workspace, validWorkspace).viewport)
@@ -286,7 +290,7 @@ export function App() {
   const dateFields = <div className="period-fields"><label>From<input aria-label="From" type="date" min={firstCalendarDate} max={calendar?.lastTimestamp ? new Date(calendar.lastTimestamp).toISOString().slice(0,10) : undefined} value={from} disabled={status === 'loading'} onChange={e=>{selectionTouched.current=true;setFrom(e.target.value);clearSelectionErrors()}}/></label><label>Through<input aria-label="Through" type="date" min={firstCalendarDate} max={calendar?.lastTimestamp ? new Date(calendar.lastTimestamp).toISOString().slice(0,10) : undefined} value={shiftDate(to,-1)} disabled={status === 'loading'} onChange={e=>{selectionTouched.current=true;setEndMoved(true);setTo(shiftDate(e.target.value,1));clearSelectionErrors()}}/></label></div>
   const readiness = useMemo(()=>calendar && !selected.error ? rangeCoverage(calendar,{from,to},warmupRequirements) : null,[calendar,from,to,selected.error,warmupRequirements])
   const presets = useMemo(()=>BACKTEST_DAY_PRESETS.map(days=>calendar ? cachedPreset(calendar,days,endMoved ? to : undefined,warmupRequirements) : null),[calendar,endMoved,to,warmupRequirements])
-  const chartLayout = <fieldset className="layout-controls"><legend>Charts</legend>{([1,2,3] as const).map(count=><label key={count}><input type="radio" name="chart-count" value={count} checked={chartCount === count} onChange={()=>{ synchronizer.deactivate(); setChartCount(count) }}/>{count}</label>)}</fieldset>
+  const chartLayout = <fieldset className="layout-controls"><legend>Charts</legend>{([1,2,3,4] as const).map(count=><label key={count}><input type="radio" name="chart-count" value={count} checked={chartCount === count} onChange={()=>{ synchronizer.deactivate(); setChartCount(count) }}/>{count}</label>)}</fieldset>
   const pnlDisplay = <div className={`account-pnl ${pnl && Math.abs(pnl.usd) >= 0.005 ? pnl.usd > 0 ? 'positive' : 'negative' : ''}`} aria-label="Account PnL"><span>Account PnL</span><strong>{pnl ? `$${pnl.usd.toFixed(2)} · ${pnl.percent.toFixed(2)}%` : 'PnL unavailable'}</strong></div>
   const workspaceDisabled = !sessions.initialized || sessions.busy || sessions.conflict || sessions.awaitingChoice || finishing
   return <main className={`app-shell phase-${lifecycle}`}>
@@ -302,7 +306,7 @@ export function App() {
         <fieldset className="header-replay" aria-label="Market replay" disabled={workspaceDisabled || status === 'loading' || pendingStart || manage || !!stopPreview} hidden={!sessions.initialized || sessions.awaitingChoice}>
           <button disabled={!replay.canPlay || !!stopPreview} onClick={()=>{setDraft(null);replay.play()}}>Play</button><button disabled={!replay.canPause} onClick={replay.pause}>Pause</button><button disabled={!replay.canNext || !!stopPreview} onClick={()=>{setDraft(null);replay.next()}}>Next Min</button>
           <label>Speed<select aria-label="Replay speed" value={replay.speed} onChange={e=>replay.setSpeed(Number(e.target.value) as 1|10|100)}>{[1,10,100].map(s=><option key={s} value={s}>{s}×</option>)}</select></label>
-          {chartLayout}<div className="replay-state"><span aria-label="Replay status" className="replay-status">{replay.status}</span><span className="replay-progress" aria-label="Replay progress">{replay.revealed-replay.startIndex} / {replay.total-replay.startIndex} candles</span></div><button disabled={replay.reviewing} onClick={()=>void finish()}>{replay.complete || replay.blocked ? 'Review Results' : 'Finish backtest'}</button>
+          {chartLayout}<div className="overlay-toggles"><button aria-pressed={showExecutions} onClick={()=>setShowExecutions(value=>!value)}>Executions</button><button aria-pressed={showSlHistory} onClick={()=>setShowSlHistory(value=>!value)}>SL History</button></div><div className="replay-state"><span aria-label="Replay status" className="replay-status">{replay.status}</span><span className="replay-progress" aria-label="Replay progress">{replay.revealed-replay.startIndex} / {replay.total-replay.startIndex} candles</span></div><button disabled={replay.reviewing} onClick={()=>void finish()}>{replay.complete || replay.blocked ? 'Review Results' : 'Finish backtest'}</button>
         </fieldset>
       )}
       {lifecycle !== 'setup' && <div className="header-account"><time className="replay-clock">{replay.timestamp === null ? 'Awaiting replay' : new Date(replay.timestamp).toISOString().slice(0,16).replace('T',' ') + ' UTC'}</time>{pnlDisplay}</div>}<button onClick={()=>{ replay.pause(); setDraft(null); setManage(true) }}>Sessions / settings</button>
@@ -359,7 +363,7 @@ export function App() {
         {keyboardNotice && <p className="keyboard-notice" role="status">{keyboardNotice}</p>}
         {replay.blocked && <p className="coverage-warning" role="alert">Replay blocked at contract rollover. No positions, stops or pending orders were executed across the boundary. Finish this backtest or select a replay start after the rollover. A carry/roll policy requires project-lead approval.</p>}
         <div className="chart-workspace" aria-label={`${history?.symbol === '6E' ? 'EURUSD 6E' : history?.symbol ?? 'EURUSD'} chart workspace`}><div className={`chart-stack charts-${chartCount}`}>
-          {timeframes.slice(0,chartCount).map((timeframe,id)=><ChartPane key={id} measurementLayout={chartCount} pipSize={history && isLocalForex(history) ? history.instrument.pipSize : 0.0001} instrument={history?.symbol ?? 'EURUSD'} priceLabel={history && isLocalForex(history) ? 'Mid' : undefined} id={id} active={id === activeChart} reviewing={replay.reviewing} timeframe={timeframe} sessionId={sessions.activeId} positions={replay.reviewing ? [] : trading.state.positions} entries={replay.reviewing ? [] : entries} stops={replay.reviewing ? [] : stops} stopInteraction={{ enabled: canRequestOrder(trading.permission) && !draft,
+          {timeframes.slice(0,chartCount).map((timeframe,id)=><ChartPane tradeRecords={tradeRecords} showExecutions={showExecutions} showSlHistory={showSlHistory} key={id} measurementLayout={chartCount} pipSize={history && isLocalForex(history) ? history.instrument.pipSize : 0.0001} instrument={history?.symbol ?? 'EURUSD'} priceLabel={history && isLocalForex(history) ? 'Mid' : undefined} id={id} active={id === activeChart} reviewing={replay.reviewing} timeframe={timeframe} sessionId={sessions.activeId} positions={replay.reviewing ? [] : trading.state.positions} entries={replay.reviewing ? [] : entries} stops={replay.reviewing ? [] : stops} stopInteraction={{ enabled: canRequestOrder(trading.permission) && !draft,
             preview: stopPreview, onPreview: setStopPreview, onCommit: (positionId, price) => {
               const position = trading.state.positions.find(p => p.id === positionId)
               const error = position ? stopModificationError(trading.state, position, price, trading.permission) : 'Position is no longer open.'

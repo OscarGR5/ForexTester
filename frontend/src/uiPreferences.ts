@@ -4,17 +4,17 @@ import { TIMEFRAMES } from './history'
 import { defaultIndicatorSettings, indicatorPreset, validateIndicatorSettings } from './indicators'
 import type { ChartModeSettings, WorkspaceSettings } from './sessionTypes'
 
-export function defaultChartMode(count: 1 | 2 | 3): ChartModeSettings {
-  const timeframes = count === 1 ? ['D1', 'H4', 'H1'] as const : count === 2 ? ['H4', 'D1', 'H1'] as const : ['M5', 'H4', 'H1'] as const
+export function defaultChartMode(count: 1 | 2 | 3 | 4): ChartModeSettings {
+  const timeframes = count === 4 ? ['H1', 'D1', 'M5', 'H4'] as const : count === 1 ? ['D1', 'H4', 'H1'] as const : count === 2 ? ['H4', 'D1', 'H1'] as const : ['M5', 'H4', 'H1'] as const
   return { timeframes: [...timeframes], indicators: timeframes.map(timeframe => ({ [timeframe]: indicatorPreset(timeframe) })) }
 }
 export const defaultWorkspace = (): WorkspaceSettings => {
-  const chartModes = { '1': defaultChartMode(1), '2': defaultChartMode(2), '3': defaultChartMode(3) }
+  const chartModes = { '1': defaultChartMode(1), '2': defaultChartMode(2), '3': defaultChartMode(3), '4': defaultChartMode(4) }
   return { chartCount: 2, ...chartModes['2'], chartModes, statisticsScope: 'setups', journalScope: 'setups', viewport: null }
 }
-export function selectChartMode(workspace: WorkspaceSettings, chartCount: 1 | 2 | 3): WorkspaceSettings {
-  const current = String(workspace.chartCount) as '1' | '2' | '3'
-  const target = String(chartCount) as '1' | '2' | '3'
+export function selectChartMode(workspace: WorkspaceSettings, chartCount: 1 | 2 | 3 | 4): WorkspaceSettings {
+  const current = String(workspace.chartCount) as '1' | '2' | '3' | '4'
+  const target = String(chartCount) as '1' | '2' | '3' | '4'
   const chartModes = { ...workspace.chartModes,
     [current]: { timeframes: workspace.timeframes, indicators: workspace.indicators } }
   const selected = chartModes[target] ?? defaultChartMode(chartCount)
@@ -22,7 +22,7 @@ export function selectChartMode(workspace: WorkspaceSettings, chartCount: 1 | 2 
     chartModes: { ...chartModes, [target]: selected } }
 }
 export function updateActiveChartMode(workspace: WorkspaceSettings, update: Pick<ChartModeSettings, 'timeframes' | 'indicators'>): WorkspaceSettings {
-  const current = String(workspace.chartCount) as '1' | '2' | '3'
+  const current = String(workspace.chartCount) as '1' | '2' | '3' | '4'
   return { ...workspace, ...update, chartModes: { ...workspace.chartModes, [current]: update } }
 }
 export const UI_PREFIX = 'forextester:ui:v1:'
@@ -30,10 +30,10 @@ export const uiKey = (id: string) => `${UI_PREFIX}${id}`
 export function validWorkspace(value: unknown): value is WorkspaceSettings {
   try {
     const w = value as WorkspaceSettings
-    if (!w || ![1, 2, 3].includes(w.chartCount) || w.timeframes.length !== 3 || w.indicators.length !== 3 ||
+    if (!w || ![1, 2, 3, 4].includes(w.chartCount) || w.timeframes.length !== (w.chartCount === 4 ? 4 : 3) || w.indicators.length !== w.timeframes.length ||
       !w.timeframes.every((tf) => TIMEFRAMES.includes(tf)) || !['setups', 'positions'].includes(w.statisticsScope) || !['setups', 'positions'].includes(w.journalScope)) return false
-    const validMode = (mode: ChartModeSettings) => {
-      if (!mode || mode.timeframes.length !== 3 || mode.indicators.length !== 3 || !mode.timeframes.every((tf) => TIMEFRAMES.includes(tf))) return false
+    const validMode = (mode: ChartModeSettings, count: number) => {
+      if (!mode || mode.timeframes.length !== (count === 4 ? 4 : 3) || mode.indicators.length !== mode.timeframes.length || !mode.timeframes.every((tf) => TIMEFRAMES.includes(tf))) return false
       for (const [i, groups] of mode.indicators.entries()) {
         if (!groups[mode.timeframes[i]]) return false
         for (const [tf, settings] of Object.entries(groups)) {
@@ -45,8 +45,8 @@ export function validWorkspace(value: unknown): value is WorkspaceSettings {
       }
       return true
     }
-    if (!validMode(w)) return false
-    if (w.chartModes !== undefined && (typeof w.chartModes !== 'object' || Object.entries(w.chartModes).some(([count, mode]) => !['1','2','3'].includes(count) || !validMode(mode!)))) return false
+    if (!validMode(w, w.chartCount)) return false
+    if (w.chartModes !== undefined && (typeof w.chartModes !== 'object' || Object.entries(w.chartModes).some(([count, mode]) => !['1','2','3','4'].includes(count) || !validMode(mode!, Number(count))))) return false
     return w.viewport === null || validViewportState(w.viewport)
   } catch { return false }
 }

@@ -1,0 +1,112 @@
+[
+  {
+    "width": 1100,
+    "rectangles": [
+      {
+        "x": 8,
+        "y": 131,
+        "width": 540,
+        "height": 332.5
+      },
+      {
+        "x": 552,
+        "y": 131,
+        "width": 540,
+        "height": 332.5
+      },
+      {
+        "x": 8,
+        "y": 467.5,
+        "width": 540,
+        "height": 332.5
+      },
+      {
+        "x": 552,
+        "y": 467.5,
+        "width": 540,
+        "height": 332.5
+      }
+    ],
+    "executions": {
+      "triangles": 52,
+      "arrows": 24,
+      "stops": 0
+    },
+    "historyDraws": {
+      "triangles": 52,
+      "arrows": 24,
+      "stops": 52
+    },
+    "errors": [],
+    "external": [],
+    "checks": [
+      "1/2/3/4 switching",
+      "2x2 ordering",
+      "global toggles off by default",
+      "multiple open/closed buy/sell fills",
+      "multiple SL changes",
+      "all pane/timeframe combinations",
+      "indicator dropdown",
+      "restored preferences and records",
+      "synchronized replay cursors",
+      "historical review",
+      "no overflow",
+      "no drawing when off"
+    ]
+  },
+  {
+    "width": 1440,
+    "rectangles": [
+      {
+        "x": 8,
+        "y": 131,
+        "width": 710,
+        "height": 432.5
+      },
+      {
+        "x": 722,
+        "y": 131,
+        "width": 710,
+        "height": 432.5
+      },
+      {
+        "x": 8,
+        "y": 567.5,
+        "width": 710,
+        "height": 432.5
+      },
+      {
+        "x": 722,
+        "y": 567.5,
+        "width": 710,
+        "height": 432.5
+      }
+    ],
+    "executions": {
+      "triangles": 52,
+      "arrows": 24,
+      "stops": 0
+    },
+    "historyDraws": {
+      "triangles": 52,
+      "arrows": 24,
+      "stops": 52
+    },
+    "errors": [],
+    "external": [],
+    "checks": [
+      "1/2/3/4 switching",
+      "2x2 ordering",
+      "global toggles off by default",
+      "multiple open/closed buy/sell fills",
+      "multiple SL changes",
+      "all pane/timeframe combinations",
+      "indicator dropdown",
+      "restored preferences and records",
+      "synchronized replay cursors",
+      "historical review",
+      "no overflow",
+      "no drawing when off"
+    ]
+  }
+]

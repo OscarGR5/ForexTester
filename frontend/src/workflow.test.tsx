@@ -107,7 +107,7 @@ function canvasWheel(canvas: Element, x: number, deltaY: number, deltaMode = 0, 
  canvas.dispatchEvent(event)
  return event
 }
-it.each([1, 2, 3])('scales only the hovered price axis in a %s-chart layout and retains plot wheel zoom', async count => {
+it.each([1, 2, 3, 4])('scales only the hovered price axis in a %s-chart layout and retains plot wheel zoom', async count => {
  await start()
  await act(async () => host.querySelector<HTMLInputElement>(`input[name="chart-count"][value="${count}"]`)!.click())
  const canvases = [...host.querySelectorAll('.chart-canvas')]
@@ -931,7 +931,7 @@ it('places one replay control group in the application header and keeps trading 
   expect([...host.querySelectorAll('button')].filter(b => b.textContent === name)).toHaveLength(1)
  }
  expect(header.querySelector('[aria-label="Replay speed"]')).not.toBeNull()
- expect(header.querySelectorAll('input[name="chart-count"]')).toHaveLength(3)
+ expect(header.querySelectorAll('input[name="chart-count"]')).toHaveLength(4)
  expect(header.querySelector('[aria-label="Replay status"]')).not.toBeNull()
  expect(header.querySelector('[aria-label="Replay progress"]')).not.toBeNull()
  for (const name of ['Buy', 'Sell']) expect(toolbar.contains(button(name))).toBe(true)
@@ -1435,12 +1435,12 @@ it.each([['Buy', 1.097, 1.098, 'b'], ['Sell', 1.103, 1.104, 's']] as const)('dir
 })
 
 
-it.each([1, 2, 3] as const)('starts and restores a %i-chart layout with every indicator disabled at the first cached date', async count => {
+it.each([1, 2, 3, 4] as const)('starts and restores a %i-chart layout with every indicator disabled at the first cached date', async count => {
  const workspace=preferences.defaultWorkspace()
  for(const mode of Object.values(workspace.chartModes!)) for(const pane of mode!.indicators) for(const settings of Object.values(pane)) for(const group of Object.values(settings!)) group.enabled=false
  workspace.chartModes!['1']!.timeframes[0]='M1'
  workspace.chartModes!['1']!.indicators[0]={M1:workspace.chartModes!['1']!.indicators[0].D1!}
- Object.assign(workspace,{chartCount:count,...workspace.chartModes![String(count) as '1'|'2'|'3']})
+ Object.assign(workspace,{chartCount:count,...workspace.chartModes![String(count) as '1'|'2'|'3'|'4']})
  vi.spyOn(preferences,'defaultWorkspace').mockImplementation(()=>structuredClone(workspace))
  await mount()
  const first=new Date(preroll[0].timestamp).toISOString().slice(0,10)
@@ -1516,4 +1516,24 @@ it.each(['H4','D1'])('uses M1 shortcuts on focused %s, synchronizes charts and k
  expect(button('Next Min').disabled).toBe(true)
  expect(timeframes()).toEqual(selected)
  expect(panes.map(pane=>pane.getAttribute('data-active'))).toEqual(active)
+})
+
+it('applies overlay toggles to every pane and restores them with the session while keeping trading unchanged', async () => {
+ await start()
+ expect(button('Executions').getAttribute('aria-pressed')).toBe('false')
+ expect(button('SL History').getAttribute('aria-pressed')).toBe('false')
+ await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
+ const before=(await disk.storage.list()).sessions[0]
+ await click('Executions');await click('SL History')
+ await act(async()=>host.querySelector<HTMLInputElement>('input[name="chart-count"][value="4"]')!.click())
+ expect([...host.querySelectorAll<HTMLSelectElement>('.pane-toolbar select')].map(s=>s.value)).toEqual(['H1','D1','M5','H4'])
+ await until(()=>host.querySelector('.save-state')?.textContent==='Saved')
+ expect((await disk.storage.list()).sessions[0].checkpoint.trading).toEqual(before.checkpoint.trading)
+ await act(async()=>root.unmount());root=createRoot(host);await mount();await click('Resume backtest');await until(()=>host.querySelector('.phase-trading'))
+ expect(host.querySelectorAll('.chart-pane')).toHaveLength(4)
+ expect(button('Executions').getAttribute('aria-pressed')).toBe('true')
+ expect(button('SL History').getAttribute('aria-pressed')).toBe('true')
+ await click('Executions');await click('SL History')
+ expect(button('Executions').getAttribute('aria-pressed')).toBe('false')
+ expect(button('SL History').getAttribute('aria-pressed')).toBe('false')
 })

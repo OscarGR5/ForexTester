@@ -45,7 +45,7 @@ it('saves and resumes a late checkpoint from a 365-day local-Forex session',asyn
   expect(restored.history).toEqual(history)
 })
 
-it.each([1, 2, 3] as const)('restores a %i-chart zero-indicator session with no warm-up and preserves its commission', async chartCount => {
+it.each([1, 2, 3, 4] as const)('restores a %i-chart zero-indicator session with no warm-up and preserves its commission', async chartCount => {
   const from='2024-01-01',to='2024-01-02'
   const history=validatedHistory({format:'local-forex-v1',source:'local-parquet',symbol:'EURUSD',resolution:'M1',datasetId:'a'.repeat(64),sourceChecksum:'a'.repeat(64),normalizationVersion:1,
     priceModel:'single',priceBasis:'mid',executionModel:'single-price-m1-v1',timestampConvention:'utc-minute-open',instrument:{symbol:'EURUSD',baseCurrency:'EUR',quoteCurrency:'USD',pipSize:.0001,priceDecimals:7,unitsPerLot:100000},
@@ -53,6 +53,7 @@ it.each([1, 2, 3] as const)('restores a %i-chart zero-indicator session with no 
   const ledger=createEquityLedger(100000)
   const workspace=sessionSimulation().snapshot().checkpoint.workspace
   workspace.chartCount=chartCount
+  if(chartCount===4) { workspace.timeframes.push('M1'); workspace.indicators.push(structuredClone(workspace.indicators[0])) }
   for(const pane of workspace.indicators) for(const settings of Object.values(pane)) for(const group of Object.values(settings!)) group.enabled=false
   const snapshot:SessionSnapshot={ledger,checkpoint:{lifecycle:'setup',trading:{...createTradingState(),executionModel:'single-price-m1-v1',commission:{roundTripUsdPerLot:3.75}},equity:equitySummary(ledger),executionCursor:0,
     replay:{started:false,index:null,timestamp:null,startIndex:0,startTimestamp:Date.parse(from),speed:1,complete:false,playing:false},workspace}}

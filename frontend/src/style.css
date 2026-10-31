@@ -313,7 +313,7 @@ button:disabled { opacity: 0.45; cursor: default; }
 /* Pane identity follows DOM order in every layout. */
 .chart-stack { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
 .chart-stack.charts-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.chart-stack.charts-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
+.chart-stack.charts-3, .chart-stack.charts-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
 .charts-3 > .chart-pane:first-child { grid-row: 1 / 3; }
 .chart-pane { min-width: 0; position: relative; }
 .stop-drag-status { margin: 0; padding: 4px 14px; background: #171e28; font-size: 12px; }
@@ -412,7 +412,7 @@ button:disabled { opacity: 0.45; cursor: default; }
 .draft-stop-annotation[data-invalid="true"] { border-color: #e2a2a6; color: #e2a2a6; }
 .draft-stop-annotation > span { overflow-wrap: anywhere; white-space: normal; cursor: ns-resize; font-variant-numeric: tabular-nums; }
 
-@media (max-width: 1350px) {
+@media (max-width: 1650px) {
   .phase-trading .app-header { grid-template-columns: max-content minmax(120px, 1fr) 30px 220px max-content; }
   .phase-trading .execution-popover { left: auto; right: 0; }
   .header-replay { grid-row: 2; grid-column: 1 / -1; }
@@ -549,3 +549,6 @@ button:disabled { opacity: 0.45; cursor: default; }
 }
 
 .results-help-dismissed:hover .results-help-text, .results-help-dismissed:focus .results-help-text { visibility: hidden; }
+
+.overlay-toggles { display: flex; gap: 4px; flex: none; }
+.overlay-toggles button[aria-pressed="true"] { color: #75c4b5; border-color: #75c4b5; background: #203733; }

@@ -1,0 +1,82 @@
+import { expect, it, vi } from 'vitest'
+import type { IPrimitivePaneRenderer, SeriesAttachedParameter, UTCTimestamp } from 'lightweight-charts'
+import { executionLogical, TradeOverlays, tradeOverlayRecords } from './tradeOverlays'
+import { createTradingState, modifyStop, observeCandle, requestAutomaticEntry, requestClose } from './trading'
+import { TIMEFRAMES, TIMEFRAME_MS } from './history'
+import type { ChartCandle } from './indicators'
+
+const permission = { active: true, playing: false, hasFuture: true }
+const candle = { timestamp: 60000, open: 1.1, high: 1.1005, low: 1.0999, close: 1.1002 }
+function fixture(direction: 'buy' | 'sell' = 'buy') {
+  let state = observeCandle(createTradingState(), candle, undefined, 'single')
+  const stop = direction === 'buy' ? 1.09 : 1.11
+  state = requestAutomaticEntry(state, direction, .01, stop, permission)
+  state = requestAutomaticEntry(state, direction, .01, stop, permission)
+  expect(tradeOverlayRecords(state.positions, state.closed)).toEqual([])
+  state = observeCandle(state, { ...candle, timestamp: 120000 }, undefined, 'single')
+  state = observeCandle(state, { ...candle, timestamp: 180000 }, undefined, 'single')
+  state = modifyStop(state, state.positions[0].id, stop + .0001, permission)
+  state = observeCandle(state, { ...candle, timestamp: 240000 }, undefined, 'single')
+  state = modifyStop(state, state.positions[0].id, stop + .0002, permission)
+  return state
+}
+function bars(times: number[]): ChartCandle[] { return times.map(time => ({ time: time as UTCTimestamp, open: 1.1, high: 1.11, low: 1.09, close: 1.1 })) }
+
+it.each(['buy', 'sell'] as const)('uses real %s fills, multiple historical levels and no fabricated open exit, also after restore', direction => {
+  const state = fixture(direction), before = JSON.stringify(state)
+  const records = tradeOverlayRecords(state.positions, state.closed)
+  expect(records).toHaveLength(2)
+  expect(records[0].entry).toEqual({ timestamp: 120000, price: 1.1, direction })
+  expect(records[0].exit).toBeNull()
+  expect(records[0].stops).toEqual([
+    { from: 120000, to: 180000, price: state.positions[0].initialStopPrice },
+    { from: 180000, to: 240000, price: state.positions[0].stopModifications[0].newPrice },
+  ])
+  expect(records[1].stops).toEqual([])
+  expect(JSON.stringify(state)).toBe(before)
+  const closed = observeCandle(requestClose(state, state.positions[0].id, permission), { ...candle, timestamp: 300000, open: 1.1003 }, undefined, 'single')
+  const restored = JSON.parse(JSON.stringify(closed))
+  const result = tradeOverlayRecords(restored.positions, restored.closed)
+  expect(result.find(r => r.id === records[0].id)?.exit).toEqual({ timestamp: 300000, price: 1.1003, direction: direction === 'buy' ? 'sell' : 'buy' })
+  expect(result.find(r => r.id === records[0].id)?.stops).toHaveLength(3)
+  expect(result.find(r => r.id === records[1].id)?.exit).toBeNull()
+})
+
+it.each(TIMEFRAMES)('retains actual intrabar execution time on %s without inserting chart slots', timeframe => {
+  const step = TIMEFRAME_MS[timeframe], candles = bars([0, step / 1000, 3 * step / 1000])
+  expect(executionLogical(step * 1.75, candles, timeframe)).toBeCloseTo(1.75)
+  expect(executionLogical(step * 3.25, candles, timeframe)).toBeCloseTo(2.25)
+  expect(executionLogical(-1, candles, timeframe)).toBeNull()
+  expect(executionLogical(step * 2.5, candles, timeframe)).toBeNull()
+  expect(executionLogical(step, [], timeframe)).toBeNull()
+})
+
+it('draws exact-price triangles, dashed arrows only for revealed exits, historical levels and independent toggles', () => {
+  const state = fixture(), closed = observeCandle(requestClose(state, state.positions[0].id, permission), { ...candle, timestamp: 300000 }, undefined, 'single')
+  const records = tradeOverlayRecords(closed.positions, closed.closed), primitive = new TradeOverlays()
+  const context = Object.fromEntries(['save', 'restore', 'beginPath', 'rect', 'clip', 'moveTo', 'lineTo', 'closePath', 'fill', 'stroke', 'setLineDash'].map(key => [key, vi.fn()]))
+  const redraw = vi.fn(), priceToCoordinate = vi.fn(price => price * 100), timeToCoordinate = vi.fn(time => 100 + time / 300 * 20)
+  primitive.attached({ chart: { timeScale: () => ({ getVisibleRange: () => null, timeToCoordinate, options: () => ({ barSpacing: 20 }) }) }, series: { priceToCoordinate }, requestUpdate: redraw } as unknown as SeriesAttachedParameter)
+  const draw = (cutoff: number, executions: boolean, history: boolean) => {
+    vi.clearAllMocks()
+    primitive.update(records, bars([0, 300]), 'M5', cutoff, executions, history)
+    primitive.paneViews()[0].renderer()!.draw({ useMediaCoordinateSpace: (callback: (scope: unknown) => void) => callback({ context, mediaSize: { width: 500, height: 500 } }) } as unknown as Parameters<IPrimitivePaneRenderer['draw']>[0])
+  }
+  draw(300000, false, false)
+  expect(context.fill).not.toHaveBeenCalled(); expect(context.stroke).not.toHaveBeenCalled()
+  draw(240000, true, false)
+  expect(context.fill).toHaveBeenCalledTimes(2); expect(context.stroke).not.toHaveBeenCalled()
+  expect(context.moveTo.mock.calls[0][0]).toBeCloseTo(108)
+  expect(context.moveTo.mock.calls[0][1]).toBeCloseTo(106) // actual 120s / 300s, price 1.1
+  draw(300000, true, false)
+  expect(context.fill).toHaveBeenCalledTimes(3); expect(context.stroke).toHaveBeenCalledTimes(2)
+  expect(context.setLineDash).toHaveBeenCalledWith([3, 4])
+  draw(180000, false, true)
+  expect(context.stroke).toHaveBeenCalledTimes(1); expect(context.fill).not.toHaveBeenCalled()
+  draw(300000, false, true)
+  expect(context.stroke).toHaveBeenCalledTimes(3)
+  expect(context.setLineDash).toHaveBeenCalledWith([4, 4])
+  expect(context.strokeStyle).toBe('rgba(239, 154, 154, 0.28)')
+  primitive.detached()
+  expect(redraw).toHaveBeenCalledTimes(1)
+})

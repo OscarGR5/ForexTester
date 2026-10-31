@@ -28,7 +28,7 @@ describe('independent chart navigation', () => {
     expect(logicalToUtc([0, 300, 900], -1, 300)).toBe(-300)
     expect(utcToLogical([0, 300, 900], 1200, 300)).toBe(3)
   })
-  it.each([1, 2, 3])('keeps zoom and pan local in a %i-chart layout and ignores resize callbacks', count => {
+  it.each([1, 2, 3, 4])('keeps zoom and pan local in a %i-chart layout and ignores resize callbacks', count => {
     const sync = new ChartSynchronizer(), charts = Array.from({ length: count }, fake)
     charts.forEach((f, id) => register(sync, id, f))
     const before = charts.map(f => ({ ...f.range() }))
@@ -164,7 +164,7 @@ it('caps a wide future margin at 80 bars and does not manufacture crosshair data
 })
 
 describe('visibility recovery on forward replay observations', () => {
-  it.each([1, 2, 3])('recovers only the offscreen pane in a %i-chart workspace without pointer activity', count => {
+  it.each([1, 2, 3, 4])('recovers only the offscreen pane in a %i-chart workspace without pointer activity', count => {
     const sync = new ChartSynchronizer(), charts = Array.from({ length: count }, fake)
     charts.forEach((f, id) => register(sync, id, f))
     charts.forEach((f, id) => { sync.activate(id); f.pan({ from: 60, to: 105 + id * 10 }) })
@@ -339,4 +339,16 @@ describe('timeframe zoom and anchors', () => {
     sync.update(0, candles([3600]), 'M5', () => 0)
     expect(f.range().to - f.range().from).toBe(span)
   })
+})
+
+it('accepts and restores the fourth pane viewport while rejecting out-of-range pane IDs', () => {
+  const sync = new ChartSynchronizer(), fourth = fake()
+  register(sync, 3, fourth, 'H4')
+  sync.activate(3); fourth.pan({ from: 4, to: 25 })
+  const saved = JSON.parse(JSON.stringify(sync.snapshot()))
+  expect(validViewportState(saved)).toBe(true)
+  const restored = new ChartSynchronizer(), next = fake()
+  restored.restore(saved); register(restored, 3, next, 'H4')
+  expect(next.range()).toEqual(fourth.range())
+  expect(validViewportState({ ...saved, charts: { 4: saved.charts[3] } })).toBe(false)
 })

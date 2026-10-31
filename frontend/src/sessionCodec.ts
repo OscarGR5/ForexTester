@@ -138,8 +138,8 @@ export async function validateRecord(record: SessionRecord): Promise<void> {
       (equity.maxDrawdownPercent === null || finite(equity.maxDrawdownPercent) && equity.maxDrawdownPercent >= 0) && typeof equity.nonpositiveEquity === 'boolean' && integer(equity.missingCount))
     const cash = trading.account.referenceBalance + trading.closed.reduce((sum, p) => sum + p.netPnlUsd, 0) - trading.positions.reduce((sum, p) => sum + p.entryCommissionUsd, 0)
     requireValid(near(cash, equity.cashUsd))
-    requireValid(workspace && [1, 2, 3].includes(workspace.chartCount) && Array.isArray(workspace.timeframes) && workspace.timeframes.length === 3 &&
-      workspace.timeframes.every((tf) => TIMEFRAMES.includes(tf)) && Array.isArray(workspace.indicators) && workspace.indicators.length === 3 &&
+    requireValid(workspace && [1, 2, 3, 4].includes(workspace.chartCount) && Array.isArray(workspace.timeframes) && workspace.timeframes.length === (workspace.chartCount === 4 ? 4 : 3) &&
+      workspace.timeframes.every((tf) => TIMEFRAMES.includes(tf)) && Array.isArray(workspace.indicators) && workspace.indicators.length === workspace.timeframes.length &&
       ['setups', 'positions'].includes(workspace.statisticsScope) && ['setups', 'positions'].includes(workspace.journalScope))
     workspace.indicators.forEach((settings, index) => {
       requireValid(settings && settings[workspace.timeframes[index]])
@@ -154,8 +154,8 @@ export async function validateRecord(record: SessionRecord): Promise<void> {
     if (workspace.chartModes !== undefined) {
       requireValid(workspace.chartModes && typeof workspace.chartModes === 'object')
       for (const [count, mode] of Object.entries(workspace.chartModes)) {
-        requireValid(['1', '2', '3'].includes(count) && mode && Array.isArray(mode.timeframes) && mode.timeframes.length === 3 &&
-          mode.timeframes.every((tf) => TIMEFRAMES.includes(tf)) && Array.isArray(mode.indicators) && mode.indicators.length === 3)
+        requireValid(['1', '2', '3', '4'].includes(count) && mode && Array.isArray(mode.timeframes) && mode.timeframes.length === (count === '4' ? 4 : 3) &&
+          mode.timeframes.every((tf) => TIMEFRAMES.includes(tf)) && Array.isArray(mode.indicators) && mode.indicators.length === mode.timeframes.length)
         mode!.indicators.forEach((settings, index) => {
           requireValid(settings && settings[mode!.timeframes[index]])
           for (const [tf, value] of Object.entries(settings)) {

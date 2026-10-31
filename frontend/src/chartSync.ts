@@ -56,7 +56,7 @@ export function validViewportState(value: unknown): value is ViewportState {
   if (!valid(value)) return false
   const charts = (value as ViewportState).charts
   return charts === undefined || !!charts && !Array.isArray(charts) && typeof charts === 'object' &&
-    Object.entries(charts).every(([id, view]) => /^[0-2]$/.test(id) && valid(view))
+    Object.entries(charts).every(([id, view]) => /^[0-3]$/.test(id) && valid(view))
 }
 
 interface Entry {

@@ -26,7 +26,7 @@ export interface WorkspaceSettings {
   chartCount: number
   timeframes: Timeframe[]
   indicators: Partial<Record<Timeframe, IndicatorSettings>>[]
-  chartModes?: Partial<Record<'1' | '2' | '3', ChartModeSettings>>
+  chartModes?: Partial<Record<'1' | '2' | '3' | '4', ChartModeSettings>>
   statisticsScope: AnalyticsScope
   journalScope: AnalyticsScope
   viewport: ViewportState | null

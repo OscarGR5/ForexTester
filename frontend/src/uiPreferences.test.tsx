@@ -55,3 +55,20 @@ it('restores unsubmitted sizing and SL drafts in StrictMode without requesting a
     expect(onEntry).not.toHaveBeenCalled()
   } finally { await act(async () => root.unmount()) }
 })
+
+it('restores four panes in row order and retains all four modes independently, including legacy settings', () => {
+  const legacy = { ...defaultWorkspace(), chartModes: undefined }
+  let workspace = selectChartMode(legacy, 4)
+  expect(workspace.timeframes).toEqual(['H1', 'D1', 'M5', 'H4'])
+  expect(validWorkspace(workspace)).toBe(true)
+  workspace = updateActiveChartMode(workspace, { timeframes: ['H1', 'D1', 'M15', 'H4'],
+    indicators: workspace.indicators.map((groups, index) => index === 2 ? { M15: groups.M5! } : groups) })
+  for (const count of [1, 2, 3, 4] as const) {
+    workspace = selectChartMode(workspace, count)
+    expect(validWorkspace(workspace)).toBe(true)
+    writeUi('four', 'workspace', workspace)
+    expect(readUi('four', 'workspace', defaultWorkspace(), validWorkspace)).toEqual(workspace)
+  }
+  expect(workspace.timeframes).toEqual(['H1', 'D1', 'M15', 'H4'])
+  expect(validWorkspace({ ...workspace, timeframes: workspace.timeframes.slice(0, 3) })).toBe(false)
+})
