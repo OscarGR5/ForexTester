@@ -30,13 +30,18 @@ try {
   await new Promise<void>((resolve, reject) => { child!.stdout!.once('data', () => resolve()); child!.once('exit', code => reject(Error(`Backend exited ${code}`))); child!.stderr!.on('data', d => process.stderr.write(d)) })
   globalThis.fetch = ((path: string, init?: RequestInit) => nativeFetch(api + path, { ...init, headers: { Origin: api, ...init?.headers } })) as typeof fetch
   const history = benchmarkHistory(2), source = history.bid, start = source.findIndex(c => c.timestamp >= Date.parse(history.tradingFrom)) + 61
-  // Make one next-minute wick touch a known, already confirmed M5 pivot.
+  // Seed a left-qualified high and low on the current forming M5 candle.
+  const beforeSeed = new ReplayBars('M5'); beforeSeed.advance(source, start + 1)
+  const left = beforeSeed.candles.slice(-3, -1)
+  source[start].high = Math.max(source[start].high, ...left.map(c => c.high + 0.00001))
+  source[start].low = Math.min(source[start].low, ...left.map(c => c.low - 0.00001))
+  history.ask[start].high = source[start].high + 0.0002
+  history.ask[start].low = source[start].low + 0.0002
   const initialBars = new ReplayBars('M5'); initialBars.advance(source, start + 1)
-  const initialLevels = new UntakenLevels(2); initialLevels.update(initialBars.candles, initialBars.candles.length - 1)
-  const targetHigh = initialLevels.visible(source[start].close, 10).find(level => level.side === 'high')
-  assert.ok(targetHigh)
-  source[start + 1].high = Math.max(source[start + 1].high, targetHigh.price)
-  history.ask[start + 1].high = source[start + 1].high + 0.0002
+  const latest = initialBars.candles.at(-1)!
+  // A later M5 candle touches the provisional high, never its own origin.
+  source[start + 5].high = Math.max(source[start + 5].high, latest.high)
+  history.ask[start + 5].high = source[start + 5].high + 0.0002
   const simulation = sessionSimulation(history); simulation.observe(0)
   const snapshot = simulation.snapshot(), initial = createTradingState(7, undefined, { roundTripUsdPerLot: 7 })
   const state = observeCandle(initial, source[start], history.ask[start]), ledger = recordEquity(createEquityLedger(initial.account.referenceBalance), initial, state)
@@ -116,6 +121,9 @@ try {
   const initialRays = await verify(start + 1)
   assert.ok(initialRays.some((p: any) => p.levels.some((l: any) => l.side === 'high')))
   assert.ok(initialRays.some((p: any) => p.levels.some((l: any) => l.side === 'low')))
+  const latestM5 = initialRays.find((p: any) => p.timeframe === 'M5')
+  assert.ok(latestM5.levels.some((l: any) => l.side === 'high' && l.time === latest.time && l.price === latest.high))
+  assert.ok(latestM5.levels.some((l: any) => l.side === 'low' && l.time === latest.time && l.price === latest.low))
   const paint = await page.evaluate(() => {
     const events = (window as any).paint
     return { colors: [...new Set(events.filter((p: any) => p.kind === 'ray').map((p: any) => p.color))],
@@ -149,7 +157,7 @@ try {
   assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('forextester:ui:v1:global')!).untakenLevels.count), 15)
   assert.equal(await page.getByLabel('Chart 3 Pivot Strength', { exact: true }).inputValue(), '3')
   assert.deepEqual(errors, [])
-  const evidence = { viewport: '1440 × 1000', checks: ['red/green rays', 'painted before candles', 'coexists with regression', 'P and input focus guard', 'forward invalidation', 'backward reconstruction', 'independent H1/D1/M5/H4 calculations', 'confirmed swing pivots only', 'immediate per-side count updates', 'shared pivot strength updates and persistence', 'zoom invariance', 'timeframe recalculation', 'reload persistence'], initialCounts: initialRays.map((p: any) => [p.timeframe, p.levels.length]), paint, errors }
+  const evidence = { viewport: '1440 × 1000', checks: ['red/green rays', 'painted before candles', 'coexists with regression', 'P and input focus guard', 'forward invalidation', 'backward reconstruction', 'independent H1/D1/M5/H4 calculations', 'latest forming local high and low rays', 'confirmed and provisional swing pivots', 'immediate per-side count updates', 'shared pivot strength updates and persistence', 'zoom invariance', 'timeframe recalculation', 'reload persistence'], initialCounts: initialRays.map((p: any) => [p.timeframe, p.levels.length]), paint, errors }
   await writeFile(join(output, 'smoke.json'), JSON.stringify(evidence, null, 2)); console.log(JSON.stringify(evidence))
 } finally {
   globalThis.fetch = nativeFetch

@@ -197,9 +197,10 @@ it('shares one M1 regression through four charts, timeframe switches, review, re
  await ctrlClick(2)
  expect(update.mock.calls.at(-1)![0]).not.toBeNull()
 }, 20000)
-it('admits M5 pivots only after right-side candle closes, takes them with forming wicks, and rebuilds on strength changes and review', async () => {
+it('shows provisional M5 pivots during formation, retains them through confirmation, and rebuilds on strength changes and review', async () => {
  const source = Array.from({ length: 26 }, (_, i) => ({ timestamp: beginning + i * 60000,
-  open: 1.1, close: 1.1, high: i >= 10 && i < 15 || i === 25 ? 1.12 : 1.11, low: i >= 10 && i < 15 || i === 25 ? 1.08 : 1.09 }))
+  open: 1.1, close: 1.1, high: i === 10 ? 1.12 : i > 10 && i < 15 || i === 25 ? 1.13 : 1.11,
+  low: i === 10 ? 1.08 : i > 10 && i < 15 || i === 25 ? 1.07 : 1.09 }))
  const rays = vi.spyOn(UntakenLevelsPrimitive.prototype, 'setData'), synchronizer = new ChartSynchronizer()
  const settings = defaultIndicatorSettings()
  let untaken = { enabled: true, count: 10, pivotStrength: 2 }
@@ -207,17 +208,24 @@ it('admits M5 pivots only after right-side candle closes, takes them with formin
   synchronizer={synchronizer} settings={settings} onSettingsChange={() => {}} onTimeframeChange={() => {}}
   untaken={untaken} stops={[]} positions={[]} placement={null} onPick={() => {}} />))
  const prices = () => rays.mock.lastCall![0].map(level => level.price)
- await render(20); expect(prices()).toEqual([])
- await render(24); expect(prices()).toEqual([])
- await render(25); expect(prices()).toEqual([1.12, 1.08])
- const confirmed = rays.mock.lastCall![0]
- expect(confirmed.every(level => level.time === (beginning + 10 * 60000) / 1000)).toBe(true)
+ await render(10); expect(prices()).toEqual([])
+ await render(11); expect(prices()).toEqual([1.12, 1.08])
+ await render(12); expect(prices()).toEqual([1.13, 1.07])
+ const provisional = rays.mock.lastCall![0]
+ for (const count of [15, 20, 24, 25]) {
+  await render(count); expect(rays.mock.lastCall![0]).toEqual(provisional)
+ }
+ expect(provisional.every(level => level.time === (beginning + 10 * 60000) / 1000)).toBe(true)
  untaken = { ...untaken, pivotStrength: 3 }; await render(25); expect(prices()).toEqual([])
- untaken = { ...untaken, pivotStrength: 2 }; await render(25); expect(rays.mock.lastCall![0]).toEqual(confirmed)
- await render(26); expect(prices()).toEqual([])
- await render(25); expect(rays.mock.lastCall![0]).toEqual(confirmed)
- await render(24); expect(prices()).toEqual([])
- await render(25); expect(rays.mock.lastCall![0]).toEqual(confirmed)
+ untaken = { ...untaken, pivotStrength: 2 }; await render(25); expect(rays.mock.lastCall![0]).toEqual(provisional)
+ await render(26)
+ expect(prices()).toEqual([1.13, 1.07])
+ expect(rays.mock.lastCall![0].every(level => level.time === (beginning + 25 * 60000) / 1000)).toBe(true)
+ for (const count of [25, 24]) {
+  await render(count); expect(rays.mock.lastCall![0]).toEqual(provisional)
+ }
+ await render(11); expect(prices()).toEqual([1.12, 1.08])
+ await render(10); expect(prices()).toEqual([])
 })
 it('preserves untaken visibility and replaces former saved settings with the default count', async () => {
  localStorage.setItem(uiKey(GLOBAL_UI_ID), JSON.stringify({ untakenLevels: { enabled: true, distanceAtr: 5 } }))
