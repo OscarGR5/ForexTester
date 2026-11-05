@@ -39,9 +39,17 @@ try {
   history.ask[start].low = source[start].low + 0.0002
   const initialBars = new ReplayBars('M5'); initialBars.advance(source, start + 1)
   const latest = initialBars.candles.at(-1)!
-  // A later M5 candle touches the provisional high, never its own origin.
-  source[start + 5].high = Math.max(source[start + 5].high, latest.high)
-  history.ask[start + 5].high = source[start + 5].high + 0.0002
+  // Two equal M5 candles extend the plateau, a weaker close confirms it,
+  // and a later forming candle takes both confirmed levels on exact touches.
+  for (let i = start + 1; i <= start + 19; i++) {
+    const elapsed = source[i].timestamp - latest.time * 1000
+    const weaker = elapsed >= 15 * 60000 && elapsed < 20 * 60000
+    Object.assign(source[i], { open: latest.close, close: latest.close,
+      high: weaker ? (latest.high + latest.close) / 2 : latest.high,
+      low: weaker ? (latest.low + latest.close) / 2 : latest.low })
+    Object.assign(history.ask[i], { open: latest.close + 0.0002, close: latest.close + 0.0002,
+      high: source[i].high + 0.0002, low: source[i].low + 0.0002 })
+  }
   const simulation = sessionSimulation(history); simulation.observe(0)
   const snapshot = simulation.snapshot(), initial = createTradingState(7, undefined, { roundTripUsdPerLot: 7 })
   const state = observeCandle(initial, source[start], history.ask[start]), ledger = recordEquity(createEquityLedger(initial.account.referenceBalance), initial, state)
@@ -130,25 +138,36 @@ try {
       behind: events.some((p: any, i: number) => p.kind === 'ray' && events.slice(i + 1).some((c: any) => c.kind === 'candle' && c.canvas === p.canvas)) }
   })
   assert.deepEqual(paint.colors.sort(), ['#26a69a', '#ef5350']); assert.equal(paint.behind, true)
-  await page.screenshot({ path: join(output, 'four-charts-1440.png'), fullPage: true })
   for (let i = 0; i < 12; i++) await page.getByRole('button', { name: 'Next Min', exact: true }).click()
-  const advanced = await verify(start + 13)
-  assert.ok(initialRays.some((p: any, i: number) => p.levels.some((l: any) => !advanced[i].levels.some((next: any) => next.time === l.time && next.side === l.side))))
+  const assertPlateau = (panes: any[]) => {
+    const levels = panes.find(p => p.timeframe === 'M5').levels
+    for (const side of ['high', 'low'] as const) {
+      const matches = levels.filter((l: any) => l.side === side && l.price === latest[side])
+      assert.equal(matches.length, 1); assert.equal(matches[0].time, latest.time)
+    }
+  }
+  assertPlateau(await verify(start + 13))
+  await page.screenshot({ path: join(output, 'four-charts-1440.png'), fullPage: true })
+  for (let i = 0; i < 6; i++) await page.getByRole('button', { name: 'Next Min', exact: true }).click()
+  assertPlateau(await verify(start + 19))
+  await page.getByRole('button', { name: 'Next Min', exact: true }).click()
+  const advanced = await verify(start + 20)
+  assert.ok(advanced.find((p: any) => p.timeframe === 'M5').levels.every((l: any) => l.time !== latest.time))
   await page.locator('.chart-canvas').nth(2).click({ position: { x: 200, y: 100 } })
-  await page.keyboard.press('Control+Shift+ArrowLeft'); await verify(start + 12)
-  await page.keyboard.press('Control+Shift+ArrowRight'); await verify(start + 13)
+  await page.keyboard.press('Control+Shift+ArrowLeft'); assertPlateau(await verify(start + 19))
+  await page.keyboard.press('Control+Shift+ArrowRight'); await verify(start + 20)
   await page.locator('.indicator-controls summary').nth(2).click()
   await page.getByLabel('Chart 3 Untaken Levels', { exact: true }).fill('1')
-  const narrow = await verify(start + 13, 1)
+  const narrow = await verify(start + 20, 1)
   assert.ok(narrow.reduce((sum: number, p: any) => sum + p.levels.length, 0) < advanced.reduce((sum: number, p: any) => sum + p.levels.length, 0))
-  await page.getByLabel('Chart 3 Untaken Levels', { exact: true }).fill('15'); await verify(start + 13, 15)
-  await page.getByLabel('Chart 3 Untaken Levels', { exact: true }).press('p'); await verify(start + 13, 15) // Input guard.
+  await page.getByLabel('Chart 3 Untaken Levels', { exact: true }).fill('15'); await verify(start + 20, 15)
+  await page.getByLabel('Chart 3 Untaken Levels', { exact: true }).press('p'); await verify(start + 20, 15) // Input guard.
   await page.keyboard.press('Escape')
   await page.locator('.chart-canvas').nth(2).click({ position: { x: 200, y: 100 } })
-  await page.mouse.wheel(0, -100); await verify(start + 13, 15)
-  await page.getByLabel('Chart 3 timeframe', { exact: true }).selectOption('M15'); await verify(start + 13, 15)
+  await page.mouse.wheel(0, -100); await verify(start + 20, 15)
+  await page.getByLabel('Chart 3 timeframe', { exact: true }).selectOption('M15'); await verify(start + 20, 15)
   await page.keyboard.press('p'); assert.ok((await snapshotRays()).every((p: any) => p.levels.length === 0))
-  await page.keyboard.press('p'); await verify(start + 13, 15)
+  await page.keyboard.press('p'); await verify(start + 20, 15)
   await page.reload(); await page.getByRole('button', { name: 'Resume backtest', exact: true }).click()
   await page.locator('.phase-trading .chart-pane').nth(3).waitFor()
   assert.ok((await snapshotRays()).some((p: any) => p.levels.length > 0))
@@ -156,7 +175,7 @@ try {
   assert.equal(await page.getByLabel('Chart 3 Pivot Strength', { exact: true }).count(), 0)
   assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('forextester:ui:v1:global')!).untakenLevels), { enabled: true, count: 15 })
   assert.deepEqual(errors, [])
-  const evidence = { viewport: '1440 × 1000', checks: ['red/green rays', 'painted before candles', 'coexists with regression', 'P and input focus guard', 'forward invalidation', 'backward reconstruction', 'independent H1/D1/M5/H4 calculations', 'latest forming local high and low rays', 'confirmed and provisional swing pivots', 'immediate per-side count updates', 'fixed three-candle detection', 'level-count persistence and removed strength control', 'zoom invariance', 'timeframe recalculation', 'reload persistence'], initialCounts: initialRays.map((p: any) => [p.timeframe, p.levels.length]), paint, errors }
+  const evidence = { viewport: '1440 × 1000', checks: ['red/green rays', 'painted before candles', 'coexists with regression', 'P and input focus guard', 'equal high/low plateaus retain first anchors', 'weaker close confirmation then exact-touch invalidation', 'backward reconstruction', 'independent H1/D1/M5/H4 calculations', 'latest forming local high and low rays', 'immediate per-side count updates', 'level-count persistence and removed strength control', 'zoom invariance', 'timeframe recalculation', 'reload persistence'], initialCounts: initialRays.map((p: any) => [p.timeframe, p.levels.length]), paint, errors }
   await writeFile(join(output, 'smoke.json'), JSON.stringify(evidence, null, 2)); console.log(JSON.stringify(evidence))
 } finally {
   globalThis.fetch = nativeFetch

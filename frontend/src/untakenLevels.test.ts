@@ -23,10 +23,10 @@ it('detects smaller three-candle swings despite a higher high and lower low two 
   expect(levels(tracker)).toEqual([{ time: candles[2].time, price: 102, side: 'high' }, { time: candles[2].time, price: 98, side: 'low' }])
 })
 
-it.each([0, 2])('rejects equal neighboring wick prices at index %s', neighbor => {
+it('rejects an initial equal sequence without a strictly weaker preceding wick', () => {
   const candles = pivot(), highTracker = new UntakenLevels(), lowTracker = new UntakenLevels()
-  highTracker.update(candles.map((c, i) => i === neighbor ? { ...c, high: 110 } : c), 3)
-  lowTracker.update(candles.map((c, i) => i === neighbor ? { ...c, low: 90 } : c), 3)
+  highTracker.update(candles.map((c, i) => i === 0 ? { ...c, high: 110 } : c), 3)
+  lowTracker.update(candles.map((c, i) => i === 0 ? { ...c, low: 90 } : c), 3)
   expect(levels(highTracker).map(l => l.side)).toEqual(['low'])
   expect(levels(lowTracker).map(l => l.side)).toEqual(['high'])
 })
@@ -55,11 +55,12 @@ it('updates a forming provisional extreme without taking itself and combines it 
   tracker.update(forming, 4); expect(levels(tracker)).toHaveLength(2)
 })
 
-it('discards a provisional on an equal next-candle wick and replaces it only when the new extreme qualifies', () => {
+it('extends a provisional on an equal next-candle wick and replaces it only on a breakout', () => {
   const tracker = new UntakenLevels(), candles = pivot()
   tracker.update(candles.slice(0, 2), 2); expect(levels(tracker)).toHaveLength(2)
   tracker.update([...candles.slice(0, 2), bar(2, 110, 90)], 2)
-  expect(levels(tracker)).toEqual([])
+  expect(levels(tracker).map(l => l.price)).toEqual([110, 90])
+  expect(levels(tracker).every(l => l.time === candles[1].time)).toBe(true)
   const crossing = [...candles.slice(0, 2), bar(2, 111, 89)]
   tracker.update(crossing, 2)
   expect(levels(tracker).map(l => l.price)).toEqual([111, 89])
@@ -113,9 +114,9 @@ it('reconstructs backward replay across provisional birth, confirmation and form
   tracker.update(candles.slice(0, 1), 0, true); expect(levels(tracker)).toEqual([])
 })
 
-it('matches the direct three-candle/provisional definition through incremental steps and batched jumps', () => {
+it.each(['smooth', 'plateaus'])('matches an independent plateau definition through incremental and batched replay on %s data', kind => {
   const candles = Array.from({ length: 300 }, (_, i) => {
-    const center = 100 + Math.sin(i * 1.3) * 4
+    const center = 100 + (kind === 'plateaus' ? Math.round(Math.sin(i / 4) * 3) : Math.sin(i * 1.3) * 4)
     return bar(i, center + 1, center - 1, center)
   }), tracker = new UntakenLevels()
   for (const count of [1, 2, 3, 4, 20, 50, 100, 101, 200, 300]) {
@@ -125,7 +126,9 @@ it('matches the direct three-candle/provisional definition through incremental s
       const expected = (['high', 'low'] as const).flatMap(side => revealed.flatMap((c, i) => {
         if (!i) return []
         const strict = side === 'high' ? c.high > revealed[i - 1].high : c.low < revealed[i - 1].low
-        const taken = revealed.slice(i + 1).some(n => side === 'high' ? n.high >= c.high : n.low <= c.low)
+        let end = i + 1
+        while (end < revealed.length && revealed[end][side] === c[side]) end++
+        const taken = revealed.slice(end).some(n => side === 'high' ? n.high >= c.high : n.low <= c.low)
         return strict && !taken && (side === 'high' ? c.high > price : c.low < price) ? [{ time: c.time, price: c[side], side }] : []
       }).sort((a, b) => Math.abs(a.price - price) - Math.abs(b.price - price)).slice(0, limit))
       expect(tracker.visible(price, limit)).toEqual(expected)
@@ -138,6 +141,79 @@ it('retains old untaken levels without a candle-age cutoff', () => {
   tracker.update(candles, candles.length)
   expect(levels(tracker).every(l => l.time === candles[1].time)).toBe(true)
   expect(levels(tracker).map(l => l.price)).toEqual([110, 90])
+})
+
+it.each([2, 3, 8])('keeps one ray anchored to the first candle of a %s-candle equal-high/low plateau through confirmation', length => {
+  const candles = [bar(0), ...Array.from({ length }, (_, i) => bar(i + 1, 110, 90)), bar(length + 1)], tracker = new UntakenLevels()
+  const expected = [{ time: candles[1].time, price: 110, side: 'high' }, { time: candles[1].time, price: 90, side: 'low' }]
+  for (let completed = 1; completed <= candles.length; completed++) {
+    tracker.update(candles.slice(0, Math.min(candles.length, completed + 1)), completed)
+    expect(levels(tracker)).toEqual(expected)
+  }
+})
+
+it('requires strict preceding wicks and ignores an unqualified equal-price plateau', () => {
+  const candles = [bar(0, 120, 80), bar(1, 110, 90), bar(2, 110, 90), bar(3)], tracker = new UntakenLevels()
+  tracker.update(candles, 4)
+  expect(levels(tracker)).toEqual([])
+})
+
+it('tracks high and low plateau boundaries independently', () => {
+  const candles = [bar(0, 106, 95), bar(1, 110, 90), bar(2, 110, 92), bar(3, 110, 91), bar(4, 107, 94)], tracker = new UntakenLevels()
+  tracker.update(candles, 5)
+  expect(levels(tracker)).toEqual([
+    { time: candles[1].time, price: 110, side: 'high' },
+    { time: candles[3].time, price: 91, side: 'low' },
+    { time: candles[1].time, price: 90, side: 'low' },
+  ])
+})
+
+it('uses exact equality without a tolerance for plateau prices', () => {
+  const candles = [bar(0), bar(1, 110, 90), bar(2, 110 + 1e-12, 90 - 1e-12), bar(3)], tracker = new UntakenLevels()
+  tracker.update(candles, 4)
+  expect(levels(tracker).map(l => l.price)).toEqual([candles[2].high, candles[2].low])
+  expect(levels(tracker).every(l => l.time === candles[2].time)).toBe(true)
+})
+
+it('distinguishes equal touches inside the plateau from later touches after a weaker candle closes', () => {
+  const candles = [bar(0), bar(1, 110, 90), bar(2, 110, 90), bar(3), bar(4, 110, 90)], tracker = new UntakenLevels()
+  tracker.update(candles.slice(0, 4), 3) // Weaker right candle is still forming.
+  expect(levels(tracker).every(l => l.time === candles[1].time)).toBe(true)
+  tracker.update(candles.slice(0, 4), 4) // Plateau now confirms.
+  expect(levels(tracker)).toHaveLength(2)
+  tracker.update(candles, 4)
+  expect(levels(tracker)).toHaveLength(2)
+  expect(levels(tracker).every(l => l.time === candles[4].time)).toBe(true)
+})
+
+it('extends forming plateaus, replaces breakouts, and restores the original first anchor on backward replay', () => {
+  const candles = [bar(0), bar(1, 110, 90), bar(2, 105, 95)], tracker = new UntakenLevels()
+  tracker.update(candles, 2)
+  const original = levels(tracker)
+  candles[2] = bar(2, 110, 90); tracker.update(candles, 2)
+  expect(levels(tracker)).toEqual(original)
+  tracker.update(candles, 3); expect(levels(tracker)).toEqual(original)
+  candles.push(bar(3, 110, 90)); tracker.update(candles, 3)
+  expect(levels(tracker)).toEqual(original)
+  candles[3] = bar(3, 111, 89); tracker.update(candles, 3)
+  expect(levels(tracker).map(l => l.price)).toEqual([111, 89])
+  expect(levels(tracker).every(l => l.time === candles[3].time)).toBe(true)
+  tracker.update(candles.slice(0, 3), 2, true); expect(levels(tracker)).toEqual(original)
+  tracker.update(candles.slice(0, 1), 0, true); expect(levels(tracker)).toEqual([])
+  tracker.update([...candles.slice(0, 3), bar(3)], 4)
+  expect(levels(tracker)).toEqual(original)
+})
+
+it('selects the nearest N plateau prices together with provisional levels and retains hidden older plateaus', () => {
+  const candles = Array.from({ length: 30 * 4 }, (_, i) => i % 4 === 1 || i % 4 === 2 ? bar(i, 140 - Math.floor(i / 4) * 0.5, 60 + Math.floor(i / 4) * 0.5) : bar(i))
+  const tracker = new UntakenLevels(); tracker.update(candles, candles.length)
+  expect(levels(tracker, 10)).toHaveLength(20)
+  expect(new Set(levels(tracker).map(l => l.price)).size).toBe(60)
+  expect(levels(tracker, 1).map(l => l.price)).toEqual([125.5, 74.5])
+  expect(levels(tracker, 1).every(l => l.time === candles[117].time)).toBe(true)
+  candles.push(bar(120, 139.5, 60.5)); tracker.update(candles, 120)
+  expect(levels(tracker, 2).map(l => l.price)).toEqual([139.5, 140, 60.5, 60])
+  expect(levels(tracker, 2).filter(l => l.time === candles[1].time)).toHaveLength(2)
 })
 
 it('accepts only positive safe integer level counts and the current preference shape', () => {

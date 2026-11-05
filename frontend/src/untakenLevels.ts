@@ -9,7 +9,7 @@ export function validUntakenSettings(value: unknown): value is UntakenSettings {
 }
 export interface UntakenLevel { time: ChartCandle['time']; price: number; side: 'high' | 'low' }
 
-// Three closed candles confirm a strict local pivot at the middle candle.
+// Strictly weaker closed candles bound a local extreme or equal-price plateau.
 // Surviving highs decrease in price, lows increase; hidden levels have no age
 // limit. Each level is pushed and popped at most once during forward replay.
 export class UntakenLevels {
@@ -31,19 +31,17 @@ export class UntakenLevels {
     for (; this.processed < completed; this.processed++) {
       const candle = candles[this.processed]
       this.invalidate(candle)
-      const previous = candles[this.processed - 1], left = candles[this.processed - 2]
-      if (left) {
-        if (previous.high > left.high && previous.high > candle.high) {
-          this.highs.push({ time: previous.time, price: previous.high, side: 'high' })
-        }
-        if (previous.low < left.low && previous.low < candle.low) {
-          this.lows.push({ time: previous.time, price: previous.low, side: 'low' })
-        }
+      if (this.pendingHigh && candle.high < this.pendingHigh.price) {
+        this.highs.push(this.pendingHigh); this.pendingHigh = null
       }
-      // Only the latest closed candle can still await a right-side close.
-      // Its predecessor has just confirmed above or was taken by this candle.
-      this.pendingHigh = previous && candle.high > previous.high ? { time: candle.time, price: candle.high, side: 'high' } : null
-      this.pendingLow = previous && candle.low < previous.low ? { time: candle.time, price: candle.low, side: 'low' } : null
+      if (this.pendingLow && candle.low > this.pendingLow.price) {
+        this.lows.push(this.pendingLow); this.pendingLow = null
+      }
+      const previous = candles[this.processed - 1]
+      // Exact equals extend the pending sequence and retain its first anchor.
+      // A stricter extreme starts a new sequence after taking the old one.
+      if (previous && candle.high > previous.high) this.pendingHigh = { time: candle.time, price: candle.high, side: 'high' }
+      if (previous && candle.low < previous.low) this.pendingLow = { time: candle.time, price: candle.low, side: 'low' }
     }
     const forming = candles[completed]
     if (forming) {
@@ -57,8 +55,9 @@ export class UntakenLevels {
   private invalidate(candle: ChartCandle): void {
     while (this.highs.length && this.highs.at(-1)!.price <= candle.high) this.highs.pop()
     while (this.lows.length && this.lows.at(-1)!.price >= candle.low) this.lows.pop()
-    if (this.pendingHigh && this.pendingHigh.price <= candle.high) this.pendingHigh = null
-    if (this.pendingLow && this.pendingLow.price >= candle.low) this.pendingLow = null
+    // Equal prices are still inside the originating, unconfirmed plateau.
+    if (this.pendingHigh && this.pendingHigh.price < candle.high) this.pendingHigh = null
+    if (this.pendingLow && this.pendingLow.price > candle.low) this.pendingLow = null
   }
 
   visible(price: number, count: number): UntakenLevel[] {
