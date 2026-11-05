@@ -1,10 +1,18 @@
 // @vitest-environment jsdom
 import { beforeEach, expect, it, vi } from 'vitest'
 import { PreferenceTabGuard, previewUiCleanup, removeUnusedUi } from './uiPreferenceCleanup'
-import { uiKey, UI_PREFIX } from './uiPreferences'
+import { GLOBAL_UI_ID, uiKey, UI_PREFIX } from './uiPreferences'
 
 beforeEach(() => window.localStorage.clear())
 const inventory = () => ({ disk: vi.fn(async () => [{ id: 'saved' }]), legacy: vi.fn(async () => [{ id: 'legacy' }]), active: () => 'active' })
+
+it('preserves global indicator settings during orphan cleanup, including stale candidates', async () => {
+  const key = uiKey(GLOBAL_UI_ID), value = JSON.stringify({ untakenLevels: { enabled: true, distanceAtr: 7.5 } })
+  localStorage.setItem(key, value)
+  expect(await previewUiCleanup(inventory())).toEqual([])
+  expect(await removeUnusedUi([{ key, value }], inventory())).toEqual({ removed: 0, error: null })
+  expect(localStorage.getItem(key)).toBe(value)
+})
 
 it('previews only exact-prefix orphans and preserves disk, legacy, active and unrelated entries', async () => {
   for (const id of ['saved', 'legacy', 'active', 'orphan']) localStorage.setItem(uiKey(id), id)

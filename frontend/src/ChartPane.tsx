@@ -20,8 +20,10 @@ import { IndicatorControls } from './IndicatorControls'
 import { IndicatorSeries, SERIES_BATCH_THRESHOLD } from './indicatorSeries'
 import type { IndicatorSettings } from './indicators'
 import { ReplayBars } from './replayBars'
+import { DEFAULT_UNTAKEN_SETTINGS, UntakenLevels, type UntakenSettings } from './untakenLevels'
+import { UntakenLevelsPrimitive } from './UntakenLevelsPrimitive'
 import { indicatorWarmupRequirement } from './indicatorSettings'
-import { VISIBLE_TIMEFRAMES, type Timeframe, type Candle } from './history'
+import { TIMEFRAME_MS, VISIBLE_TIMEFRAMES, type Timeframe, type Candle } from './history'
 import type { Position } from './trading'
 import type { StopDraft } from './TradingDock'
 
@@ -33,6 +35,8 @@ interface ChartPaneProps {
   regression?: RegressionChannel | null
   regressionEnabled?: boolean
   onRegressionAnchor?: (timestamp: number | null) => void
+  untaken?: UntakenSettings
+  onUntakenChange?: (settings: UntakenSettings) => void
   tradeRecords?: readonly TradeOverlayRecord[]
   showExecutions?: boolean
   showOriginalSl?: boolean
@@ -59,7 +63,7 @@ interface ChartPaneProps {
   onTimeframeChange: (id: number, timeframe: Timeframe) => void
 }
 
-export const ChartPane = memo(function ChartPane({ regression = null, regressionEnabled = false, onRegressionAnchor, tradeRecords = [], showExecutions = false, showOriginalSl = false, measurementLayout = 1, pipSize = 0.0001, instrument = 'EURUSD', priceLabel = 'Bid', id, active = false, reviewing = false, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, stops, placement, draftReference = null, onPick, stopInteraction, entries = [] }: ChartPaneProps) {
+export const ChartPane = memo(function ChartPane({ untaken = DEFAULT_UNTAKEN_SETTINGS, onUntakenChange, regression = null, regressionEnabled = false, onRegressionAnchor, tradeRecords = [], showExecutions = false, showOriginalSl = false, measurementLayout = 1, pipSize = 0.0001, instrument = 'EURUSD', priceLabel = 'Bid', id, active = false, reviewing = false, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, stops, placement, draftReference = null, onPick, stopInteraction, entries = [] }: ChartPaneProps) {
   const [readiness, setReadiness] = useState('')
   const container = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
@@ -67,6 +71,8 @@ export const ChartPane = memo(function ChartPane({ regression = null, regression
   const timeSlots = useRef<ChartTimeSlots | null>(null)
   const updateSettings = useCallback((next: IndicatorSettings) => onSettingsChange(id, next), [id, onSettingsChange])
   const indicatorsRef = useRef<IndicatorSeries | null>(null)
+  const untakenPrimitive = useRef<UntakenLevelsPrimitive | null>(null)
+  const untakenState = useRef<{ bars: ReplayBars; count: number; levels: UntakenLevels } | null>(null)
   const savePriceRef = useRef<(() => void) | null>(null)
   const tradeOverlays = useRef<TradeOverlays | null>(null)
   const regressionOverlay = useRef<RegressionChannelPrimitive | null>(null)
@@ -116,6 +122,8 @@ export const ChartPane = memo(function ChartPane({ regression = null, regression
     series.attachPrimitive(tradeOverlays.current)
     regressionOverlay.current = new RegressionChannelPrimitive()
     series.attachPrimitive(regressionOverlay.current)
+    untakenPrimitive.current = new UntakenLevelsPrimitive()
+    series.attachPrimitive(untakenPrimitive.current)
     stopLines.current = new StopLines(series)
     entryLines.current = new EntryLines(series)
     chartRef.current = chart
@@ -139,6 +147,9 @@ export const ChartPane = memo(function ChartPane({ regression = null, regression
       tradeOverlays.current = null
       if (regressionOverlay.current) series.detachPrimitive(regressionOverlay.current)
       regressionOverlay.current = null
+      if (untakenPrimitive.current) series.detachPrimitive(untakenPrimitive.current)
+      untakenPrimitive.current = null
+      untakenState.current = null
       chart.remove()
       chartRef.current = null
       seriesRef.current = null
@@ -271,6 +282,25 @@ export const ChartPane = memo(function ChartPane({ regression = null, regression
     previous.current = { source, count, bars, timeframe, synchronizer }
   }, [id, source, count, synchronizer, timeframe, settings, reviewing])
 
+  useLayoutEffect(() => {
+    const bars = previous.current!.bars, candles = bars.candles
+    if (!untaken.enabled || !candles.length) {
+      untakenPrimitive.current!.setData([]); untakenState.current = null
+      return
+    }
+    const last = untakenState.current
+    const replace = !last || last.bars !== bars || count < last.count
+    const levels = replace ? new UntakenLevels() : last.levels
+    const tail = candles.at(-1)!
+    // M1 observations reveal their full OHLC. The final higher-timeframe
+    // candle closes when its last constituent minute has been revealed.
+    const revealedThrough = source[count - 1].timestamp + 60_000
+    const completed = candles.length - (revealedThrough < (tail.time * 1000 + TIMEFRAME_MS[timeframe]) ? 1 : 0)
+    levels.update(candles, completed)
+    untakenPrimitive.current!.setData(levels.visible(tail.close, untaken.distanceAtr))
+    untakenState.current = { bars, count, levels }
+  }, [source, count, synchronizer, timeframe, untaken])
+
   // IndicatorSeries creates/removes the oscillator pane in the layout effect above.
   useStochasticPaneHeight(container, chartRef, sessionId, id, settings.stochastic.enabled)
 
@@ -314,7 +344,7 @@ export const ChartPane = memo(function ChartPane({ regression = null, regression
           {timeframe === 'M1' && <option value="M1">M1 (legacy)</option>}
           {VISIBLE_TIMEFRAMES.map((option) => <option key={option} value={option}>{option}</option>)}
         </select></label>
-        <IndicatorControls key={timeframe} id={id} settings={settings} readiness={readiness} onChange={updateSettings} />
+        <IndicatorControls key={timeframe} id={id} settings={settings} readiness={readiness} onChange={updateSettings} untaken={untaken} onUntakenChange={onUntakenChange} />
       </div>
       <div className="chart-plot">
         <div ref={container} className="chart-canvas" aria-hidden="true" />

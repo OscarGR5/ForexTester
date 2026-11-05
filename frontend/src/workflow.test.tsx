@@ -27,6 +27,11 @@ import { lifecycleOf } from './sessionTypes'
 import { combinedOpenPnl, markPosition } from './trading'
 import { TradeOverlays } from './tradeOverlays'
 import { RegressionChannelPrimitive } from './RegressionChannelPrimitive'
+import { UntakenLevelsPrimitive } from './UntakenLevelsPrimitive'
+import { ChartPane } from './ChartPane'
+import { ChartSynchronizer } from './chartSync'
+import { defaultIndicatorSettings } from './indicators'
+import { GLOBAL_UI_ID } from './uiPreferences'
 vi.mock('lightweight-charts', () => ({
   CrosshairMode: { Normal: 0 }, CandlestickSeries: {}, LineSeries: {}, LineStyle: { Solid: 0, Dashed: 2, Dotted: 1 }, ColorType: { Solid: 'solid' },
   createChart: vi.fn(() => {
@@ -192,6 +197,52 @@ it('shares one M1 regression through four charts, timeframe switches, review, re
  await ctrlClick(2)
  expect(update.mock.calls.at(-1)![0]).not.toBeNull()
 }, 20000)
+it('admits M5 levels only at candle close, takes them with forming wicks, and restores them on backward replay', async () => {
+ const source = Array.from({ length: 81 }, (_, i) => ({ timestamp: beginning + i * 60000,
+  open: 1.1, close: 1.1, high: i < 75 ? 1.11 : 1.12, low: i < 75 ? 1.09 : 1.08 }))
+ const rays = vi.spyOn(UntakenLevelsPrimitive.prototype, 'setData'), synchronizer = new ChartSynchronizer()
+ const settings = defaultIndicatorSettings(), untaken = { enabled: true, distanceAtr: 5 }
+ const render = (count: number) => act(async () => root.render(<ChartPane id={0} sessionId={null} timeframe="M5" source={source} count={count}
+  synchronizer={synchronizer} settings={settings} onSettingsChange={() => {}} onTimeframeChange={() => {}}
+  untaken={untaken} stops={[]} positions={[]} placement={null} onPick={() => {}} />))
+ const prices = () => rays.mock.lastCall![0].map(level => level.price)
+ await render(76); expect(prices()).toEqual([])
+ await render(79); expect(prices()).toEqual([])
+ await render(80); expect(prices()).toEqual([1.12, 1.08])
+ const closed = rays.mock.lastCall![0]
+ await render(81); expect(prices()).toEqual([])
+ await render(80); expect(rays.mock.lastCall![0]).toEqual(closed)
+ await render(79); expect(prices()).toEqual([])
+ await render(80); expect(rays.mock.lastCall![0]).toEqual(closed)
+})
+it('shares untaken settings across four independent panes, persists them after remount, and keeps legacy workspace preferences', async () => {
+ await start()
+ const rays = vi.spyOn(UntakenLevelsPrimitive.prototype, 'setData')
+ await act(async () => host.querySelector<HTMLInputElement>('input[name="chart-count"][value="4"]')!.click())
+ const toggles = () => [...host.querySelectorAll<HTMLInputElement>('input[aria-label$="Untaken Highs & Lows"]')]
+ expect(toggles().map(input => input.checked)).toEqual([false, false, false, false])
+ await act(async () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', cancelable: true })))
+ expect(toggles().map(input => input.checked)).toEqual([true, true, true, true])
+ expect(rays.mock.instances.slice(-4).length).toBe(4)
+ await input('Chart 3 Distance (ATR)', '2.5')
+ expect([...host.querySelectorAll<HTMLInputElement>('input[aria-label$="Distance (ATR)"]')].map(input => input.value)).toEqual(['2.5', '2.5', '2.5', '2.5'])
+ await input('Chart 3 Distance (ATR)', '0')
+ expect(JSON.parse(localStorage.getItem(uiKey(GLOBAL_UI_ID))!).untakenLevels).toEqual({ enabled: true, distanceAtr: 2.5 })
+ await input('Chart 3 Distance (ATR)', '7.5')
+ const before = [...host.querySelectorAll<HTMLSelectElement>('select[aria-label$="timeframe"]')].map(input => input.value)
+ expect(new Set(before).size).toBe(4)
+ await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
+ await act(async () => root.render(null))
+ await mount()
+ await until(() => host.querySelector('.saved-session'))
+ await click('Resume backtest')
+ await until(() => host.querySelector('.phase-trading'))
+ expect(toggles().map(input => input.checked)).toEqual([true, true, true, true])
+ expect([...host.querySelectorAll<HTMLInputElement>('input[aria-label$="Distance (ATR)"]')].map(input => input.value)).toEqual(['7.5', '7.5', '7.5', '7.5'])
+ await act(async () => toggles()[1].click())
+ expect(toggles().map(input => input.checked)).toEqual([false, false, false, false])
+ expect(rays.mock.calls.slice(-4).every(([levels]) => levels.length === 0)).toBe(true)
+})
 it.each([1, 2, 3, 4])('scales only the hovered price axis in a %s-chart layout and retains plot wheel zoom', async count => {
  await start()
  await act(async () => host.querySelector<HTMLInputElement>(`input[name="chart-count"][value="${count}"]`)!.click())

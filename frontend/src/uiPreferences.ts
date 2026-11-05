@@ -26,6 +26,7 @@ export function updateActiveChartMode(workspace: WorkspaceSettings, update: Pick
   return { ...workspace, ...update, chartModes: { ...workspace.chartModes, [current]: update } }
 }
 export const UI_PREFIX = 'forextester:ui:v1:'
+export const GLOBAL_UI_ID = 'global'
 export const uiKey = (id: string) => `${UI_PREFIX}${id}`
 export function validWorkspace(value: unknown): value is WorkspaceSettings {
   try {

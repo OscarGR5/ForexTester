@@ -1,0 +1,139 @@
+// One 1440px smoke check of the production App, using isolated synthetic storage.
+import assert from 'node:assert/strict'
+import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join, resolve } from 'node:path'
+import { spawn } from 'node:child_process'
+import { build, preview } from 'vite'
+import { benchmarkHistory } from './chart-replay-data'
+import { DiskSessionStore } from '../frontend/src/diskSessionStore'
+import { historyFingerprint } from '../frontend/src/sessionCodec'
+import { sessionSimulation } from '../frontend/src/sessionFixtures'
+import { defaultIndicatorSettings } from '../frontend/src/indicators'
+import { defaultWorkspace, selectChartMode } from '../frontend/src/uiPreferences'
+import { createTradingState, observeCandle } from '../frontend/src/trading'
+import { createEquityLedger, recordEquity } from '../frontend/src/equity'
+import { equitySummary } from '../frontend/src/sessionTypes'
+import { ReplayBars } from '../frontend/src/replayBars'
+import { UntakenLevels } from '../frontend/src/untakenLevels'
+import { TIMEFRAME_MS, type Timeframe } from '../frontend/src/history'
+
+const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ?? 'playwright-core')
+const directory = await mkdtemp(join(tmpdir(), 'untaken-smoke-'))
+const harness = await mkdtemp(join(resolve('frontend'), '.untaken-smoke-'))
+const output = '/tmp/forextester-untaken-levels', api = 'http://127.0.0.1:3019'
+await mkdir(output, { recursive: true })
+const nativeFetch = globalThis.fetch
+let child: ReturnType<typeof spawn> | undefined, server: Awaited<ReturnType<typeof preview>> | undefined, browser: any
+try {
+  child = spawn(process.execPath, ['--import', 'tsx', 'backend/src/server.ts'], { env: { ...process.env, FOREXTESTER_DATA_DIR: directory, PORT: '3019' }, stdio: ['ignore', 'pipe', 'pipe'] })
+  await new Promise<void>((resolve, reject) => { child!.stdout!.once('data', () => resolve()); child!.once('exit', code => reject(Error(`Backend exited ${code}`))); child!.stderr!.on('data', d => process.stderr.write(d)) })
+  globalThis.fetch = ((path: string, init?: RequestInit) => nativeFetch(api + path, { ...init, headers: { Origin: api, ...init?.headers } })) as typeof fetch
+  const history = benchmarkHistory(2), source = history.bid, start = source.findIndex(c => c.timestamp >= Date.parse(history.tradingFrom)) + 61
+  const simulation = sessionSimulation(history); simulation.observe(0)
+  const snapshot = simulation.snapshot(), initial = createTradingState(7, undefined, { roundTripUsdPerLot: 7 })
+  const state = observeCandle(initial, source[start], history.ask[start]), ledger = recordEquity(createEquityLedger(initial.account.referenceBalance), initial, state)
+  Object.assign(snapshot.checkpoint, { trading: state, equity: equitySummary(ledger), executionCursor: start + 1 })
+  Object.assign(snapshot.checkpoint.replay, { index: start, timestamp: source[start].timestamp, startIndex: start, startTimestamp: source[start].timestamp })
+  snapshot.ledger = ledger
+  snapshot.checkpoint.workspace = selectChartMode(defaultWorkspace(), 4)
+  snapshot.checkpoint.workspace.indicators = snapshot.checkpoint.workspace.timeframes.map(tf => ({ [tf]: defaultIndicatorSettings() }))
+  const store = new DiskSessionStore(), historyId = await historyFingerprint(history)
+  await store.cacheHistory(historyId, history)
+  await store.save({ id: crypto.randomUUID(), name: 'Untaken smoke', createdAt: new Date().toISOString(), range: { from: history.tradingFrom, to: history.to }, totalCandles: source.length, historyId }, snapshot, null)
+  globalThis.fetch = nativeFetch
+
+  // Test-only hooks observe the primitive's public lifecycle and canvas paint
+  // order. The App, charts, keyboard, replay and persistence code are unchanged.
+  await writeFile(join(harness, 'index.html'), '<!doctype html><html><head><meta charset="UTF-8"></head><body><div id="root"></div><script type="module" src="./entry.tsx"></script></body></html>')
+  await writeFile(join(harness, 'entry.tsx'), `
+    import React from 'react'; import { createRoot } from 'react-dom/client';
+    import { App } from '/src/App'; import { UntakenLevelsPrimitive } from '/src/UntakenLevelsPrimitive'; import '/src/style.css';
+    const records = new Map(), elements = new Map();
+    const proto = UntakenLevelsPrimitive.prototype, attach = proto.attached, detach = proto.detached, set = proto.setData;
+    proto.attached = function(p) { elements.set(this, p.chart.chartElement()); attach.call(this, p); };
+    proto.detached = function() { elements.delete(this); records.delete(this); detach.call(this); };
+    proto.setData = function(levels) { records.set(this, levels); set.call(this, levels); };
+    window.rays = () => [...records].map(([instance, levels]) => ({ timeframe: elements.get(instance).closest('.chart-pane').querySelector('select').value, levels }));
+    createRoot(document.getElementById('root')).render(React.createElement(App));
+  `)
+  await build({ configFile: false, root: 'frontend', logLevel: 'warn', build: { outDir: join(directory, 'dist'), emptyOutDir: true, rollupOptions: { input: join(harness, 'index.html') } } })
+  server = await preview({ configFile: false, root: 'frontend', build: { outDir: join(directory, 'dist') }, preview: { host: '127.0.0.1', port: 5199, strictPort: true, proxy: { '/api': { target: api } } } })
+  browser = await chromium.launch({ headless: true, executablePath: process.env.CHROMIUM_PATH ?? '/home/admin/.cache/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-linux64/chrome-headless-shell' })
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } }), errors: string[] = []
+  page.on('pageerror', error => errors.push(error.message))
+  await page.addInitScript(() => {
+    const w = window as any; w.paint = []
+    const proto = CanvasRenderingContext2D.prototype, stroke = proto.stroke, fill = proto.fillRect
+    proto.stroke = function(...args: any[]) {
+      if (['#ef5350', '#26a69a'].includes(String(this.strokeStyle))) w.paint.push({ kind: 'ray', color: this.strokeStyle, canvas: this.canvas })
+      return (stroke as any).apply(this, args)
+    }
+    proto.fillRect = function(...args: any[]) {
+      if (['#ffffff', '#2962ff'].includes(String(this.fillStyle))) w.paint.push({ kind: 'candle', canvas: this.canvas })
+      return (fill as any).apply(this, args)
+    }
+  })
+  await page.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort())
+  await page.goto(`http://127.0.0.1:5199/${harness.split('/').at(-1)}/index.html`)
+  await page.getByRole('button', { name: 'Resume backtest', exact: true }).click()
+  await page.locator('.phase-trading .chart-pane').nth(3).waitFor()
+  await page.getByRole('button', { name: 'Regression', exact: true }).click()
+  await page.locator('.chart-canvas').nth(2).click({ position: { x: 200, y: 100 }, modifiers: ['Control'] })
+  const snapshotRays = () => page.evaluate(() => (window as any).rays())
+  const expected = (count: number, timeframe: Timeframe, distance = 5) => {
+    const bars = new ReplayBars(timeframe); bars.advance(source, count)
+    const tail = bars.candles.at(-1)!, completed = bars.candles.length - (source[count - 1].timestamp + 60000 < tail.time * 1000 + TIMEFRAME_MS[timeframe] ? 1 : 0)
+    const levels = new UntakenLevels(); levels.update(bars.candles, completed)
+    return levels.visible(tail.close, distance)
+  }
+  const verify = async (count: number, distance = 5) => {
+    const values = await snapshotRays()
+    assert.equal(values.length, 4)
+    for (const pane of values) assert.deepEqual(pane.levels, expected(count, pane.timeframe, distance))
+    return values
+  }
+  assert.ok((await snapshotRays()).every((p: any) => p.levels.length === 0))
+  await page.evaluate(() => { (window as any).paint = [] })
+  await page.keyboard.press('p'); await page.waitForTimeout(150)
+  const initialRays = await verify(start + 1)
+  assert.ok(initialRays.some((p: any) => p.levels.some((l: any) => l.side === 'high')))
+  assert.ok(initialRays.some((p: any) => p.levels.some((l: any) => l.side === 'low')))
+  const paint = await page.evaluate(() => {
+    const events = (window as any).paint
+    return { colors: [...new Set(events.filter((p: any) => p.kind === 'ray').map((p: any) => p.color))],
+      behind: events.some((p: any, i: number) => p.kind === 'ray' && events.slice(i + 1).some((c: any) => c.kind === 'candle' && c.canvas === p.canvas)) }
+  })
+  assert.deepEqual(paint.colors.sort(), ['#26a69a', '#ef5350']); assert.equal(paint.behind, true)
+  await page.screenshot({ path: join(output, 'four-charts-1440.png'), fullPage: true })
+  for (let i = 0; i < 12; i++) await page.getByRole('button', { name: 'Next Min', exact: true }).click()
+  const advanced = await verify(start + 13)
+  assert.ok(initialRays.some((p: any, i: number) => p.levels.some((l: any) => !advanced[i].levels.some((next: any) => next.time === l.time && next.side === l.side))))
+  await page.locator('.chart-canvas').nth(2).click({ position: { x: 200, y: 100 } })
+  await page.keyboard.press('Control+Shift+ArrowLeft'); await verify(start + 12)
+  await page.keyboard.press('Control+Shift+ArrowRight'); await verify(start + 13)
+  await page.locator('.indicator-controls summary').nth(2).click()
+  await page.getByLabel('Chart 3 Distance (ATR)', { exact: true }).fill('0.1')
+  const narrow = await verify(start + 13, 0.1)
+  assert.ok(narrow.reduce((sum: number, p: any) => sum + p.levels.length, 0) < advanced.reduce((sum: number, p: any) => sum + p.levels.length, 0))
+  await page.getByLabel('Chart 3 Distance (ATR)', { exact: true }).fill('7.5'); await verify(start + 13, 7.5)
+  await page.getByLabel('Chart 3 Distance (ATR)', { exact: true }).press('p'); await verify(start + 13, 7.5) // Input guard.
+  await page.keyboard.press('Escape')
+  await page.locator('.chart-canvas').nth(2).click({ position: { x: 200, y: 100 } })
+  await page.mouse.wheel(0, -100); await verify(start + 13, 7.5)
+  await page.getByLabel('Chart 3 timeframe', { exact: true }).selectOption('M15'); await verify(start + 13, 7.5)
+  await page.keyboard.press('p'); assert.ok((await snapshotRays()).every((p: any) => p.levels.length === 0))
+  await page.keyboard.press('p'); await verify(start + 13, 7.5)
+  await page.reload(); await page.getByRole('button', { name: 'Resume backtest', exact: true }).click()
+  await page.locator('.phase-trading .chart-pane').nth(3).waitFor()
+  assert.ok((await snapshotRays()).some((p: any) => p.levels.length > 0))
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('forextester:ui:v1:global')!).untakenLevels.distanceAtr), 7.5)
+  assert.deepEqual(errors, [])
+  const evidence = { viewport: '1440 × 1000', checks: ['red/green rays', 'painted before candles', 'coexists with regression', 'P and input focus guard', 'forward invalidation', 'backward reconstruction', 'independent H1/D1/M5/H4 calculations', 'immediate distance updates', 'zoom invariance', 'timeframe recalculation', 'reload persistence'], initialCounts: initialRays.map((p: any) => [p.timeframe, p.levels.length]), paint, errors }
+  await writeFile(join(output, 'smoke.json'), JSON.stringify(evidence, null, 2)); console.log(JSON.stringify(evidence))
+} finally {
+  globalThis.fetch = nativeFetch
+  await browser?.close(); await server?.httpServer.close()
+  if (child && child.exitCode === null) { child.kill('SIGKILL'); await new Promise<void>(resolve => child!.once('exit', () => resolve())) }
+  await rm(harness, { recursive: true, force: true }); await rm(directory, { recursive: true, force: true })
+}

@@ -3,6 +3,8 @@ import { RegressionCalculator } from './regressionChannel'
 import { useDismissibleDetails } from './useOutsideInteraction'
 import { useReplayKeyboard } from './useReplayKeyboard'
 import { useIndicatorKeyboard } from './useIndicatorKeyboard'
+import { DEFAULT_UNTAKEN_SETTINGS, validUntakenSettings } from './untakenLevels'
+import { GLOBAL_UI_ID } from './uiPreferences'
 import { entryOverlays } from './entryOverlays'
 import { stopOverlays } from './stopOverlays'
 import { canRequestOrder, stopModificationError } from './trading'
@@ -140,6 +142,7 @@ export function App() {
   const [showExecutions, setShowExecutions] = useUiValue(sessions.activeId, 'executions', false, validBoolean)
   const [showOriginalSl, setShowOriginalSl] = useUiValue(sessions.activeId, 'slHistory', false, validBoolean)
   const [regressionEnabled, setRegressionEnabled] = useUiValue(sessions.activeId, 'regression', false, validBoolean)
+  const [untaken, setUntaken] = useUiValue(GLOBAL_UI_ID, 'untakenLevels', DEFAULT_UNTAKEN_SETTINGS, validUntakenSettings)
   const tradeRecords = useMemo(() => showExecutions || showOriginalSl ? tradeOverlayRecords(trading.state.positions, trading.state.closed) : [], [trading.state.positions, trading.state.closed, showExecutions, showOriginalSl])
   const uiWorkspaceRef = useRef(uiWorkspace)
   useLayoutEffect(() => { uiWorkspaceRef.current = uiWorkspace }, [uiWorkspace])
@@ -304,6 +307,7 @@ export function App() {
   const workspaceDisabled = !sessions.initialized || sessions.busy || sessions.conflict || sessions.awaitingChoice || finishing
   useIndicatorKeyboard({
     blocked: lifecycle !== 'trading' || workspaceDisabled || manage || !!draft || !!stopPreview,
+    toggleUntaken: () => setUntaken(value => ({ ...value, enabled: !value.enabled })),
     toggleIchimoku: () => {
       const settings = indicatorSettings[activeChart][timeframes[activeChart]]!
       changeSettings(activeChart, { ...settings, ichimoku: { ...settings.ichimoku, enabled: !settings.ichimoku.enabled } })
@@ -379,7 +383,7 @@ export function App() {
         {keyboardNotice && <p className="keyboard-notice" role="status">{keyboardNotice}</p>}
         {replay.blocked && <p className="coverage-warning" role="alert">Replay blocked at contract rollover. No positions, stops or pending orders were executed across the boundary. Finish this backtest or select a replay start after the rollover. A carry/roll policy requires project-lead approval.</p>}
         <div className="chart-workspace" aria-label={`${history?.symbol === '6E' ? 'EURUSD 6E' : history?.symbol ?? 'EURUSD'} chart workspace`}><div className={`chart-stack charts-${chartCount}`}>
-          {timeframes.slice(0,chartCount).map((timeframe,id)=><ChartPane regression={regression} regressionEnabled={regressionEnabled && !workspaceDisabled} onRegressionAnchor={setRegressionAnchor} tradeRecords={tradeRecords} showExecutions={showExecutions} showOriginalSl={showOriginalSl} key={id} measurementLayout={chartCount} pipSize={history && isLocalForex(history) ? history.instrument.pipSize : 0.0001} instrument={history?.symbol ?? 'EURUSD'} priceLabel={history && isLocalForex(history) ? 'Mid' : undefined} id={id} active={id === activeChart} reviewing={replay.reviewing} timeframe={timeframe} sessionId={sessions.activeId} positions={replay.reviewing ? [] : trading.state.positions} entries={replay.reviewing ? [] : entries} stops={replay.reviewing ? [] : stops} stopInteraction={{ enabled: canRequestOrder(trading.permission) && !draft,
+          {timeframes.slice(0,chartCount).map((timeframe,id)=><ChartPane untaken={untaken} onUntakenChange={setUntaken} regression={regression} regressionEnabled={regressionEnabled && !workspaceDisabled} onRegressionAnchor={setRegressionAnchor} tradeRecords={tradeRecords} showExecutions={showExecutions} showOriginalSl={showOriginalSl} key={id} measurementLayout={chartCount} pipSize={history && isLocalForex(history) ? history.instrument.pipSize : 0.0001} instrument={history?.symbol ?? 'EURUSD'} priceLabel={history && isLocalForex(history) ? 'Mid' : undefined} id={id} active={id === activeChart} reviewing={replay.reviewing} timeframe={timeframe} sessionId={sessions.activeId} positions={replay.reviewing ? [] : trading.state.positions} entries={replay.reviewing ? [] : entries} stops={replay.reviewing ? [] : stops} stopInteraction={{ enabled: canRequestOrder(trading.permission) && !draft,
             preview: stopPreview, onPreview: setStopPreview, onCommit: (positionId, price) => {
               const position = trading.state.positions.find(p => p.id === positionId)
               const error = position ? stopModificationError(trading.state, position, price, trading.permission) : 'Position is no longer open.'
