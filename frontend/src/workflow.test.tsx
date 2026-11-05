@@ -112,6 +112,7 @@ function canvasWheel(canvas: Element, x: number, deltaY: number, deltaMode = 0, 
 }
 it('shares one M1 regression through four charts, timeframe switches, review, replacement, toggle changes and disk restore', async () => {
  const update = vi.spyOn(RegressionChannelPrimitive.prototype, 'update')
+ const hit = vi.spyOn(RegressionChannelPrimitive.prototype, 'containsPoint').mockReturnValue(false)
  await start(); await select('Chart 1 timeframe', 'M5')
  expect(button('Regression').getAttribute('aria-pressed')).toBe('false')
  let selectedTime = beginning / 1000
@@ -177,7 +178,20 @@ it('shares one M1 regression through four charts, timeframe switches, review, re
  await mount(); await click('Resume backtest'); await until(() => host.querySelector('.phase-trading'))
  expect(button('Regression').getAttribute('aria-pressed')).toBe('true')
  expect(update.mock.calls.at(-1)![0]).toEqual(replacement)
-}, 15000)
+ hit.mockReturnValue(true)
+ await ctrlClick(2)
+ expect(update.mock.calls.slice(-4).map(([fit]) => fit)).toEqual([null, null, null, null])
+ expect(button('Regression').getAttribute('aria-pressed')).toBe('true')
+ await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
+ expect((await new DiskSessionStore().list())[0].checkpoint.regressionAnchor).toBeNull()
+ await act(async () => root.unmount()); root = createRoot(host)
+ await mount(); await click('Resume backtest'); await until(() => host.querySelector('.phase-trading'))
+ expect(update.mock.calls.slice(-4).map(([fit]) => fit)).toEqual([null, null, null, null])
+ expect(button('Regression').getAttribute('aria-pressed')).toBe('true')
+ hit.mockReturnValue(false)
+ await ctrlClick(2)
+ expect(update.mock.calls.at(-1)![0]).not.toBeNull()
+}, 20000)
 it.each([1, 2, 3, 4])('scales only the hovered price axis in a %s-chart layout and retains plot wheel zoom', async count => {
  await start()
  await act(async () => host.querySelector<HTMLInputElement>(`input[name="chart-count"][value="${count}"]`)!.click())

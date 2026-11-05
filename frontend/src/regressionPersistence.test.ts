@@ -39,6 +39,15 @@ it('preserves an anchor beyond a restarted replay cutoff while hiding its channe
   expect(restored.checkpoint.regressionAnchor).toBe(anchor)
   expect(new RegressionCalculator(historyCandles(restored.history)).update(anchor, 3)).toBeNull()
 })
+it('persists deletion without restoring the old anchor or changing another session', async () => {
+  const anchor = sessionHistory().bid[4].timestamp, { client, record, sim } = await fixture(anchor), other = await fixture(anchor)
+  const snapshot = sim.snapshot(); snapshot.checkpoint.regressionAnchor = null
+  await client.save(record, snapshot, record)
+  const restored = await new DiskSessionStore().recover(record.id)
+  expect(restored.checkpoint.regressionAnchor).toBeNull()
+  expect(new RegressionCalculator(historyCandles(restored.history)).update(restored.checkpoint.regressionAnchor!, 11)).toBeNull()
+  expect((await client.recover(other.record.id)).checkpoint.regressionAnchor).toBe(anchor)
+})
 it.each([-1, 1.5, NaN, Infinity, 'wrong', Date.UTC(2024, 0, 1) + 1])('rejects an invalid saved anchor %s', async anchor => {
   const { record } = await fixture()
   const altered = structuredClone(record)

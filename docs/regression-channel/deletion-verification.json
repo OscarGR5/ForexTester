@@ -1,0 +1,70 @@
+[
+  {
+    "width": 1440,
+    "chromium": "156.0.8078.4",
+    "deletions": [
+      "upper",
+      "middle",
+      "lower"
+    ],
+    "deletionRestoredEmpty": true,
+    "fourChartShared": true,
+    "paintOrder": {
+      "candlePixel": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "channelPixel": [
+        242,
+        191,
+        98,
+        255
+      ],
+      "restoredBottomPixel": [
+        255,
+        255,
+        255,
+        255
+      ]
+    },
+    "pageErrors": [],
+    "externalRequests": [],
+    "historyRequests": 0
+  },
+  {
+    "width": 1100,
+    "chromium": "156.0.8078.4",
+    "deletions": [
+      "upper",
+      "middle",
+      "lower"
+    ],
+    "deletionRestoredEmpty": true,
+    "fourChartShared": true,
+    "paintOrder": {
+      "candlePixel": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "channelPixel": [
+        242,
+        191,
+        98,
+        255
+      ],
+      "restoredBottomPixel": [
+        255,
+        255,
+        255,
+        255
+      ]
+    },
+    "pageErrors": [],
+    "externalRequests": [],
+    "historyRequests": 0
+  }
+]

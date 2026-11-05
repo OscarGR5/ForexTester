@@ -2,6 +2,18 @@
 
 November 5, 2026. Base: `fc44dfe07f50f73fb9a1957ccc26c07048735ea4` on `main`, including adaptive chart batching and the Stochastic optimization.
 
+## PR #45 follow-up: deletion and rendering order
+
+With Regression enabled, Ctrl + Click within 5 CSS pixels of any rendered segment deletes the entire channel before resolving a replacement candle. The hit test measures perpendicular distance to the same projected screen segments used for drawing, including their endpoints. It runs only on an enabled Ctrl gesture. Clearing the existing shared anchor to `null` removes all panes immediately and uses the existing autosave mechanism; the toggle remains enabled. Disabled gestures cannot delete or reposition the channel.
+
+The primitive now uses `bottom` z-order. Its colors, widths, M1 calculations, timestamp projection and replay behavior are unchanged.
+
+All **999 tests across 71 files pass** with `npm test -- --maxWorkers=2 --testTimeout=15000`. The first run passed 998 tests; an existing session-restore test exceeded its default five-second timeout while Chromium was running. The isolated rerun used a 15-second timeout without changing that test or application behavior. Targeted math, primitive, interaction and persistence tests and the extended four-chart App integration test also pass. Typecheck, production build and diff checks pass; the existing nonfatal bundle-size warning remains.
+
+Production Chromium 156.0.8078.4 passes at 1440 × 1000 and 1100 × 800: deletion through each of the upper/middle/lower lines, disabled-toggle protection, four-pane removal, durable empty-anchor recovery, enabled-toggle preservation and immediate drawing of a new channel. An open trading position remains unchanged. No page errors or new history requests occurred.
+
+Rendering order was checked at a real candle-body/channel intersection. The rendered pixel is candle white `[255,255,255,255]` at `bottom` order, becomes the amber channel color when the same primitive is temporarily raised to `normal` in the disposable browser, then returns to white when `bottom` is restored. [Pixel and deletion results](deletion-verification.json); [current M5 screenshot](behind-candles-1440.png). The existing browser harness reproduces these checks. The original performance evidence below predates this follow-up; regression math and replay code were not changed.
+
 ## Implementation
 
 `App` owns one anchor and one `RegressionCalculator` for its loaded instrument/session. The calculator reads authoritative M1 OHLC4 prices with consecutive observation indices. It returns one shared result for all panes, independent of displayed timeframe or layout. SER uses residual SSE divided by `n - 2`; boundaries use exactly ±2 SER. It emits no channel before three observations are revealed.
@@ -20,7 +32,7 @@ Native capture handlers reserve the complete enabled Ctrl gesture before trading
 
 New tests cover OHLC4, known OLS coefficients, independent two-pass OLS/SER comparisons, fixed boundaries, flat/linear data, future OHLC access guards, incremental reads, backward review, anchor replacement, missing minutes/weekends, bounded projection and exact projected prices on all six timeframes. Gesture tests cover M1/M5 placement, toggle behavior, full gesture consumption, whitespace, cleanup and draft overlays. Persistence tests cover disk recovery, independent sessions, legacy records, invalid anchors and anchors beyond a restarted cutoff. The production App integration test checks four panes sharing the identical result object, timeframe/layout changes, review, replacement, unchanged candle data and both enabled/disabled preference restoration.
 
-All **991 tests across 71 files pass** (`npm test -- --maxWorkers=2`, 291.78 seconds). `npm run typecheck`, `npm run build` and `git diff --check` pass. The production build retains the existing nonfatal warning about a chunk larger than 500 kB; the frontend bundle is 621.55 kB / 193.95 kB gzip.
+The original feature version passed **991 tests across 71 files** (`npm test -- --maxWorkers=2`, 291.78 seconds). `npm run typecheck`, `npm run build` and `git diff --check` pass. The production build retains the existing nonfatal warning about a chunk larger than 500 kB; the frontend bundle is 621.55 kB / 193.95 kB gzip.
 
 ## Chromium verification
 

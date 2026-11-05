@@ -10,12 +10,13 @@ interface AnchorOptions {
   candles: () => readonly { time: UTCTimestamp }[]
   source: () => readonly Candle[]
   count: () => number
-  onAnchor: (timestamp: number) => void
+  hitChannel?: (x: number, y: number) => boolean
+  onAnchor: (timestamp: number | null) => void
 }
 
 // Own the full Ctrl gesture before the chart, trade placement, SL dragging,
 // and ruler handlers. A disabled shortcut never owns ordinary chart events.
-export function bindRegressionAnchor({ element, chart, enabled, candles, source, count, onAnchor }: AnchorOptions) {
+export function bindRegressionAnchor({ element, chart, enabled, candles, source, count, onAnchor, hitChannel = () => false }: AnchorOptions) {
   const plot = element.closest('.chart-plot') ?? element
   let pointer: number | null = null, swallowMouse = false
   const consume = (event: Event) => { event.preventDefault(); event.stopImmediatePropagation() }
@@ -25,6 +26,8 @@ export function bindRegressionAnchor({ element, chart, enabled, candles, source,
     const box = element.getBoundingClientRect(), x = event.clientX - box.left, y = event.clientY - box.top
     if (x < 0 || x >= chart.timeScale().width() || y < 0 || y >= chart.panes()[0].getHeight()) return
     consume(event); pointer = event.pointerId; swallowMouse = true
+    // Delete before resolving a candle: a projected M1 line can cross whitespace.
+    if (hitChannel(x, y)) { onAnchor(null); return }
     const time = chart.timeScale().coordinateToTime(x)
     if (typeof time !== 'number') return
     const bars = candles()
@@ -57,14 +60,14 @@ export function bindRegressionAnchor({ element, chart, enabled, candles, source,
 }
 
 export function useRegressionAnchor(container: RefObject<HTMLDivElement | null>, chartRef: RefObject<IChartApi | null>,
-  enabled: boolean, candles: () => readonly { time: UTCTimestamp }[], source: readonly Candle[], count: number, onAnchor: (timestamp: number) => void) {
-  const latest = useRef({ enabled, candles, source, count, onAnchor })
-  useLayoutEffect(() => { latest.current = { enabled, candles, source, count, onAnchor } })
+  enabled: boolean, candles: () => readonly { time: UTCTimestamp }[], source: readonly Candle[], count: number, onAnchor: (timestamp: number | null) => void, hitChannel: (x: number, y: number) => boolean) {
+  const latest = useRef({ enabled, candles, source, count, onAnchor, hitChannel })
+  useLayoutEffect(() => { latest.current = { enabled, candles, source, count, onAnchor, hitChannel } })
   useEffect(() => {
     const element = container.current, chart = chartRef.current
     if (!element || !chart) return
     return bindRegressionAnchor({ element, chart, enabled: () => latest.current.enabled,
       candles: () => latest.current.candles(), source: () => latest.current.source, count: () => latest.current.count,
-      onAnchor: timestamp => latest.current.onAnchor(timestamp) })
+      hitChannel: (x, y) => latest.current.hitChannel(x, y), onAnchor: timestamp => latest.current.onAnchor(timestamp) })
   }, [container, chartRef])
 }

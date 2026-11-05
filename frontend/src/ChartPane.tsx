@@ -32,7 +32,7 @@ interface ChartPaneProps {
   id: number
   regression?: RegressionChannel | null
   regressionEnabled?: boolean
-  onRegressionAnchor?: (timestamp: number) => void
+  onRegressionAnchor?: (timestamp: number | null) => void
   tradeRecords?: readonly TradeOverlayRecord[]
   showExecutions?: boolean
   showOriginalSl?: boolean
@@ -275,7 +275,8 @@ export const ChartPane = memo(function ChartPane({ regression = null, regression
   useStochasticPaneHeight(container, chartRef, sessionId, id, settings.stochastic.enabled)
 
   useRegressionAnchor(container, chartRef, regressionEnabled, () => previous.current?.bars.candles ?? [], source, count,
-    timestamp => { synchronizer.activate(id); onRegressionAnchor?.(timestamp) })
+    timestamp => { synchronizer.activate(id); onRegressionAnchor?.(timestamp) },
+    (x, y) => regressionOverlay.current?.containsPoint(x, y) ?? false)
 
   useLayoutEffect(() => { regressionOverlay.current!.update(regression, source, timeframe) }, [regression, source, timeframe])
 

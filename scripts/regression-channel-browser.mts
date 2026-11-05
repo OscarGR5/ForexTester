@@ -77,6 +77,14 @@ try {
       for (const fit of current.paneFits) assert.deepEqual(fit, expected)
       return current
     }
+    const ctrlClickPoint = async (pane: number, point: { x: number; y: number }) => {
+      const box = await page.locator('.chart-canvas').nth(pane).boundingBox()
+      assert(box)
+      await page.keyboard.down('Control')
+      await page.mouse.click(box.x + point.x, box.y + point.y)
+      await page.keyboard.up('Control')
+      await settle()
+    }
     const clickCandle = async (pane: number, barsBack: number) => {
       const point = await page.evaluate(({ pane, barsBack }) => {
         const { chart, series } = globalThis.__charts[pane], candles = series.data(), bar = candles[Math.max(0, candles.length - barsBack)]
@@ -84,14 +92,18 @@ try {
         return { x, y, time: bar.time, visible: chart.timeScale().getVisibleLogicalRange() }
       }, { pane, barsBack })
       assert(point.x !== null && point.x > 0)
-      const box = await page.locator('.chart-canvas').nth(pane).boundingBox()
-      assert(box)
-      await page.keyboard.down('Control')
-      await page.mouse.click(box.x + point.x, box.y + point.y)
-      await page.keyboard.up('Control')
-      await settle()
+      await ctrlClickPoint(pane, point)
       return point
     }
+    const linePoint = (pane: number, boundary: 'upper' | 'middle' | 'lower') => page.evaluate(({ pane, boundary }) => {
+      const { chart, series, primitive } = globalThis.__charts[pane], channel = primitive.channel
+      const offset = boundary === 'upper' ? channel.offset : boundary === 'lower' ? -channel.offset : 0
+      const points = primitive.projectedVertices(chart.timeScale().width()).map((point: any) => ({ x: point.x,
+        y: series.priceToCoordinate(channel.intercept + channel.slope * point.observation + offset) }))
+        .filter((p: any) => p.x > 30 && p.x < chart.timeScale().width() - 30 && p.y > 20 && p.y < chart.panes()[0].getHeight() - 20)
+      if (!points.length) throw new Error('No visible channel segment')
+      return points[Math.floor(points.length / 2)]
+    }, { pane, boundary })
     const save = async () => {
       await page.getByRole('button', { name: 'Sessions / settings', exact: true }).click()
       await page.getByRole('button', { name: 'Save now', exact: true }).click()
@@ -111,6 +123,40 @@ try {
       assert.deepEqual(anchored.seriesCounts, before.seriesCounts)
       assert.equal(anchored.trading, before.trading)
       const original = anchored.fit, values = regressionPrices(original, original.count - 1)
+      const overlap = await page.evaluate(() => {
+        const { chart, series, primitive } = globalThis.__charts[0], app = globalThis.__app, channel = app.regression
+        const scale = chart.timeScale(), source = app.chartSource, width = scale.width()
+        if (primitive.paneViews()[0].zOrder() !== 'bottom') throw new Error('Regression must render at bottom')
+        for (const candle of series.data()) {
+          if (candle.time * 1000 < source[channel.startIndex].timestamp) continue
+          let low = channel.startIndex, high = channel.endIndex + 1
+          while (low < high) { const mid = (low + high) >>> 1; if (source[mid].timestamp < candle.time * 1000) low = mid + 1; else high = mid }
+          if (low > channel.endIndex || source[low].timestamp !== candle.time * 1000) continue
+          const x = scale.timeToCoordinate(candle.time), y = series.priceToCoordinate(channel.intercept + channel.slope * (low - channel.startIndex))
+          const a = series.priceToCoordinate(candle.open), b = series.priceToCoordinate(candle.close)
+          if (x > 30 && x < width - 30 && y > Math.min(a, b) + 2 && y < Math.max(a, b) - 2) return { x, y }
+        }
+        throw new Error('No regression/candle-body intersection for paint-order verification')
+      })
+      const pixel = () => page.evaluate(({ x, y }) => {
+        const element = document.querySelector('.chart-canvas')!, plot = element.getBoundingClientRect()
+        const { chart } = globalThis.__charts[0]
+        const canvas = [...element.querySelectorAll('canvas')].find(c => {
+          const rect = c.getBoundingClientRect()
+          return rect.width >= chart.timeScale().width() - 1 && Math.abs(rect.height - chart.panes()[0].getHeight()) < 2
+        })!
+        const box = canvas.getBoundingClientRect()
+        return [...canvas.getContext('2d')!.getImageData(Math.floor((plot.left + x - box.left) * canvas.width / box.width), Math.floor((plot.top + y - box.top) * canvas.height / box.height), 1, 1).data]
+      }, overlap)
+      const candlePixel = await pixel()
+      assert([[255, 255, 255, 255], [41, 98, 255, 255]].some(color => JSON.stringify(color) === JSON.stringify(candlePixel)), `Candle must cover regression: ${candlePixel}`)
+      // Control: raise only the primitive in this disposable chart, compare the
+      // same pixel, then restore bottom order before continuing interaction tests.
+      await page.evaluate(() => { const primitive = globalThis.__charts[0].primitive; primitive.paneViews()[0].zOrder = () => 'normal'; primitive.requestUpdate() })
+      await settle(); const channelPixel = await pixel()
+      assert(channelPixel[0] > 200 && channelPixel[1] > 100 && channelPixel[2] < 180, `Normal-order control must cover candle: ${channelPixel}`)
+      await page.evaluate(() => { const primitive = globalThis.__charts[0].primitive; primitive.paneViews()[0].zOrder = () => 'bottom'; primitive.requestUpdate() })
+      await settle(); assert.deepEqual(await pixel(), candlePixel)
       await page.screenshot({ path: `${output}/m5-${width}.png`, fullPage: true })
       for (const timeframe of ['H1', 'D1']) {
         await page.getByLabel('Chart 1 timeframe', { exact: true }).selectOption(timeframe)
@@ -168,10 +214,32 @@ try {
       assert.deepEqual(restored.fit, draftAnchored.fit)
       assert.equal(restored.trading, withPosition.trading)
       assert.equal(await page.getByRole('button', { name: 'Regression', exact: true }).getAttribute('aria-pressed'), 'true')
+      const point = await linePoint(2, 'middle')
+      await page.getByRole('button', { name: 'Regression', exact: true }).click()
+      await ctrlClickPoint(2, point); assert.deepEqual((await verify()).fit, restored.fit)
+      await page.getByRole('button', { name: 'Regression', exact: true }).click()
+      const deletions: string[] = []
+      for (const boundary of ['upper', 'middle', 'lower'] as const) {
+        await ctrlClickPoint(2, await linePoint(2, boundary))
+        const deleted = await verify()
+        assert.equal(deleted.anchor, null); assert.deepEqual(deleted.paneFits, [null, null, null, null])
+        assert.equal(deleted.trading, restored.trading)
+        assert.equal(await page.getByRole('button', { name: 'Regression', exact: true }).getAttribute('aria-pressed'), 'true')
+        deletions.push(boundary)
+        if (boundary !== 'lower') { await clickCandle(2, 20); assert((await verify()).fit) }
+      }
+      await save()
+      assert.equal((await storage.list()).sessions.find(r => r.id === id)!.checkpoint.regressionAnchor, null)
+      await page.reload(); await row.getByRole('button', { name: 'Resume backtest', exact: true }).click()
+      await page.locator('.phase-trading').waitFor()
+      assert.deepEqual((await verify()).paneFits, [null, null, null, null])
+      assert.equal(await page.getByRole('button', { name: 'Regression', exact: true }).getAttribute('aria-pressed'), 'true')
+      await clickCandle(2, 20); assert((await verify()).fit)
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
       assert.deepEqual(errors, []); assert.deepEqual(external, [])
       reports.push({ width, chromium: browser.version(), observations: source.length, anchor, original, endpointPrices: values, forwardCount: higher.fit!.count, reviewCount: review.fit!.count,
         replacementAnchor: replaced.anchor, restoredAnchor: restored.anchor, fourChartShared: restored.shared, pageErrors: errors, externalRequests: external,
+        deletions, deletionRestoredEmpty: true, paintOrder: { candlePixel, channelPixel, restoredBottomPixel: candlePixel },
         historyRequests: requests.filter(url => url.includes('/api/history?')).length, metrics: await page.evaluate(() => globalThis.__forexReplayPerformance) })
     } catch (error) { await page.screenshot({ path: `${output}/failure-${width}.png`, fullPage: true }); console.error(await page.locator('body').innerText()); throw error }
     finally { await context.close() }

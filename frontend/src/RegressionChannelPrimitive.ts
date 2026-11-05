@@ -3,6 +3,8 @@ import { TIMEFRAME_MS, type Candle, type Timeframe } from './history'
 import { regressionVertices, type RegressionChannel } from './regressionChannel'
 import { performanceEnd, performanceStart } from './replayPerformance'
 
+const CHANNEL_HIT_TOLERANCE_PX = 5
+
 export class RegressionChannelPrimitive implements ISeriesPrimitive {
   private chart: IChartApi | null = null
   private series: ISeriesApi<'Candlestick'> | null = null
@@ -17,21 +19,43 @@ export class RegressionChannelPrimitive implements ISeriesPrimitive {
   update(channel: RegressionChannel | null, source: readonly Candle[], timeframe: Timeframe) {
     this.channel = channel; this.source = source; this.timeframe = timeframe; this.requestUpdate?.()
   }
+  private projectedVertices(width: number) {
+    if (!this.channel || !this.chart) return []
+    const scale = this.chart.timeScale(), period = TIMEFRAME_MS[this.timeframe]
+    const spacing = scale.options().barSpacing
+    const coordinates = new Map<number, number | null>()
+    const xAt = (index: number) => {
+      const timestamp = this.source[index].timestamp, bucket = Math.floor(timestamp / period) * period
+      // Anchor to the real bucket's library coordinate, including existing
+      // indicator whitespace. Fractional positions retain the original M1 time.
+      let x = coordinates.get(bucket)
+      if (x === undefined) { x = scale.timeToCoordinate(bucket / 1000 as UTCTimestamp); coordinates.set(bucket, x) }
+      return x === null ? NaN : x + (timestamp - bucket) / period * spacing
+    }
+    return regressionVertices(this.channel, xAt, width)
+  }
+  containsPoint(x: number, y: number): boolean {
+    if (!this.channel || !this.chart || !this.series) return false
+    const points = this.projectedVertices(this.chart.timeScale().width())
+    for (const offset of [this.channel.offset, 0, -this.channel.offset]) {
+      let previous: { x: number; y: number } | null = null
+      for (const point of points) {
+        const at = this.series.priceToCoordinate(this.channel.intercept + this.channel.slope * point.observation + offset)
+        if (at === null || !Number.isFinite(point.x) || !Number.isFinite(at)) { previous = null; continue }
+        const a = previous ?? { x: point.x, y: at }
+        const dx = point.x - a.x, dy = at - a.y, lengthSquared = dx * dx + dy * dy
+        const fraction = lengthSquared ? Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / lengthSquared)) : 0
+        if ((x - a.x - fraction * dx) ** 2 + (y - a.y - fraction * dy) ** 2 <= CHANNEL_HIT_TOLERANCE_PX ** 2) return true
+        previous = { x: point.x, y: at }
+      }
+    }
+    return false
+  }
   private readonly renderer: IPrimitivePaneRenderer = {
     draw: target => target.useMediaCoordinateSpace(({ context: ctx, mediaSize }) => {
       if (!this.channel || !this.chart || !this.series) return
-      const started = performanceStart(), scale = this.chart.timeScale(), period = TIMEFRAME_MS[this.timeframe]
-      const spacing = scale.options().barSpacing
-      const coordinates = new Map<number, number | null>()
-      const xAt = (index: number) => {
-        const timestamp = this.source[index].timestamp, bucket = Math.floor(timestamp / period) * period
-        // Anchor to the real bucket's library coordinate, including existing
-        // indicator whitespace. Fractional positions retain the original M1 time.
-        let x = coordinates.get(bucket)
-        if (x === undefined) { x = scale.timeToCoordinate(bucket / 1000 as UTCTimestamp); coordinates.set(bucket, x) }
-        return x === null ? NaN : x + (timestamp - bucket) / period * spacing
-      }
-      const points = regressionVertices(this.channel, xAt, mediaSize.width)
+      const started = performanceStart()
+      const points = this.projectedVertices(mediaSize.width)
       ctx.save()
       ctx.beginPath(); ctx.rect(0, 0, mediaSize.width, mediaSize.height); ctx.clip()
       ctx.setLineDash([])
@@ -53,6 +77,6 @@ export class RegressionChannelPrimitive implements ISeriesPrimitive {
       performanceEnd('regression.draw', started)
     }),
   }
-  private readonly views: IPrimitivePaneView[] = [{ zOrder: () => 'normal', renderer: () => this.renderer }]
+  private readonly views: IPrimitivePaneView[] = [{ zOrder: () => 'bottom', renderer: () => this.renderer }]
   paneViews() { return this.views }
 }
