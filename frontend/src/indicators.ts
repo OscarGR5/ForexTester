@@ -47,8 +47,11 @@ export function calculateIndicators(candles: readonly ChartCandle[], settings: I
       const raw = st.nextValue(candle)
       // The package substitutes 0 for an undefined 0/0 raw %K. Omit it and
       // restart smoothing instead of inventing an oscillator observation.
-      const window = candles.slice(Math.max(0, index - settings.stochastic.length + 1), index + 1)
-      const flat = raw && Math.max(...window.map((bar) => bar.high)) === Math.min(...window.map((bar) => bar.low))
+      let flat = false
+      if (raw?.k === 0) {
+        const window = candles.slice(Math.max(0, index - settings.stochastic.length + 1), index + 1)
+        flat = Math.max(...window.map((bar) => bar.high)) === Math.min(...window.map((bar) => bar.low))
+      }
       if (flat) {
         smoothK = new SMA({ period: settings.stochastic.smoothK, values: [] })
         smoothD = new SMA({ period: settings.stochastic.smoothD, values: [] })

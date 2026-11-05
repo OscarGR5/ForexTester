@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { SMA, Stochastic } from 'technicalindicators'
 import { calculateIndicators, defaultIndicatorSettings, validateIndicatorSettings, type ChartCandle } from './indicators'
 import { TIMEFRAMES, TIMEFRAME_MS, toBidChartCandles, type Candle } from './history'
 import { cloudPolygons } from './ichimokuCloud'
@@ -12,6 +13,88 @@ function settings() {
   s.ichimoku = { enabled: true, tenkan: 2, kijun: 3, spanB: 4, displacement: 2 }
   return s
 }
+
+// Frozen pre-optimization oscillator path: check every historical window.
+function legacyStochastic(candles: readonly ChartCandle[], config: ReturnType<typeof settings>['stochastic']) {
+  const raw = new Stochastic({ period: config.length, signalPeriod: 1, high: [], low: [], close: [] }) as unknown as {
+    nextValue(candle: ChartCandle): { k: number } | undefined
+  }
+  let smoothK = new SMA({ period: config.smoothK, values: [] })
+  let smoothD = new SMA({ period: config.smoothD, values: [] })
+  const k: { time: ChartCandle['time']; value: number }[] = [], d: typeof k = []
+  candles.forEach((candle, index) => {
+    const result = raw.nextValue(candle)
+    const window = candles.slice(Math.max(0, index - config.length + 1), index + 1)
+    const flat = result && Math.max(...window.map(bar => bar.high)) === Math.min(...window.map(bar => bar.low))
+    if (flat) {
+      smoothK = new SMA({ period: config.smoothK, values: [] })
+      smoothD = new SMA({ period: config.smoothD, values: [] })
+    } else if (result) {
+      const value = smoothK.nextValue(result.k)
+      if (value !== undefined) {
+        k.push({ time: candle.time, value })
+        const signal = smoothD.nextValue(value)
+        if (signal !== undefined) d.push({ time: candle.time, value: signal })
+      }
+    }
+  })
+  return { k, d }
+}
+
+describe('Stochastic flat-window guard', () => {
+  it('keeps legitimate zero K observations and their smoothing in non-flat windows', () => {
+    const source = bars([2, 2, 0, 4, 0, 0, 4]).map(bar => ({ ...bar, high: 4, low: 0 }))
+    const data = calculateIndicators(source, settings(), 'M1')
+    expect(data.k).toEqual([50, 50, 0, 50].map((value, index) => ({ time: source[index + 3].time, value })))
+    expect(data.d).toEqual([50, 25, 25].map((value, index) => ({ time: source[index + 4].time, value })))
+  })
+
+  it('omits consecutive flat windows and restarts both smoothing warm-ups', () => {
+    const source = bars([...Array(5).fill(4), ...Array(5).fill(2), ...Array(5).fill(0)])
+      .map((bar, index) => ({ ...bar, high: index >= 5 && index < 10 ? 2 : 4, low: index >= 5 && index < 10 ? 2 : 0 }))
+    const data = calculateIndicators(source, settings(), 'M1')
+    expect(data.k).toEqual([[3, 100], [4, 100], [5, 75], [6, 50], [11, 0], [12, 0], [13, 0], [14, 0]]
+      .map(([index, value]) => ({ time: source[index].time, value })))
+    expect(data.d).toEqual([[4, 100], [5, 87.5], [6, 62.5], [12, 0], [13, 0], [14, 0]]
+      .map(([index, value]) => ({ time: source[index].time, value })))
+  })
+
+  for (const [length, smoothK, smoothD] of [[1, 1, 1], [3, 2, 2], [5, 1, 4], [7, 4, 1], [30, 10, 10], [64, 7, 11]]) {
+    it(`preserves exact warm-up boundaries for ${length}/${smoothK}/${smoothD}`, () => {
+      const s = defaultIndicatorSettings(); s.stochastic = { enabled: true, length, smoothK, smoothD }
+      const firstK = length + smoothK - 2, firstD = firstK + smoothD - 1
+      const source = bars(Array(firstD + 3).fill(2)).map(bar => ({ ...bar, high: 4, low: 0 }))
+      expect(calculateIndicators(source.slice(0, firstK), s, 'M1').k).toEqual([])
+      expect(calculateIndicators(source.slice(0, firstK + 1), s, 'M1').k).toEqual([{ time: source[firstK].time, value: 50 }])
+      expect(calculateIndicators(source.slice(0, firstD), s, 'M1').d).toEqual([])
+      expect(calculateIndicators(source.slice(0, firstD + 1), s, 'M1').d).toEqual([{ time: source[firstD].time, value: 50 }])
+      const flat = source.map(bar => ({ ...bar, open: 2, high: 2, low: 2, close: 2 }))
+      const result = calculateIndicators(flat, s, 'M1')
+      expect(result.k).toEqual([]); expect(result.d).toEqual([])
+    })
+
+    it(`exactly matches the old path at every prefix with gaps and resets for ${length}/${smoothK}/${smoothD}`, () => {
+      const s = settings(); s.stochastic = { enabled: true, length, smoothK, smoothD }
+      const source: ChartCandle[] = Array.from({ length: 300 }, (_, index) => {
+        const price = 1.1 + (index % 11) / 10000, low = price - 0.0002, high = price + 0.0003
+        const flat = index >= 80 && index < 150 || index >= 220 && index < 250
+        return { time: (Date.UTC(2024, 0, 5, 23) / 1000 + index * 300 + (index >= 12 ? 172800 : 0) + (index >= 180 ? 900 : 0)) as ChartCandle['time'],
+          open: flat ? 1.1 : price, high: flat ? 1.1 : high, low: flat ? 1.1 : low,
+          close: flat ? 1.1 : index % 9 === 0 ? low : price }
+      })
+      for (let count = 0; count <= source.length; count++) {
+        const prefix = source.slice(0, count), expected = legacyStochastic(prefix, s.stochastic)
+        const actual = calculateIndicators(prefix, s, 'M5')
+        expect(actual.k).toEqual(expected.k)
+        expect(actual.d).toEqual(expected.d)
+      }
+      const continuous = source.map((bar, index) => ({ ...bar, time: (source[0].time + index * 300) as ChartCandle['time'] }))
+      const gapped = calculateIndicators(source, s, 'M5'), uninterrupted = calculateIndicators(continuous, s, 'M5')
+      expect(gapped.k.map(point => point.value)).toEqual(uninterrupted.k.map(point => point.value))
+      expect(gapped.d.map(point => point.value)).toEqual(uninterrupted.d.map(point => point.value))
+    })
+  }
+})
 
 describe('indicator calculations', () => {
   it('uses close SMA and population standard deviation for Bollinger Bands', () => {
