@@ -8,7 +8,10 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createChart, type CandlestickData, type ISeriesApi, type UTCTimestamp } from 'lightweight-charts'
 import { RegressionWorkspace as App } from './RegressionWorkspace.test-support'
-import { TIMEFRAMES, TIMEFRAME_MS, type Candle } from './history'
+import { TIMEFRAMES, TIMEFRAME_MS, toBidChartCandles, type Candle } from './history'
+import { ChartPane } from './ChartPane'
+import { ChartSynchronizer } from './chartSync'
+import { defaultIndicatorSettings } from './indicators'
 
 vi.mock('lightweight-charts', () => ({
   CrosshairMode: { Normal: 0 }, CandlestickSeries: {}, LineSeries: {}, LineStyle: { Dashed: 2, Dotted: 1 }, ColorType: { Solid: 'solid' },
@@ -244,6 +247,33 @@ async function changeDates() {
 }
 
 describe('shared market replay', () => {
+  it('installs the exact full candle prefix once for a large advance, then resumes incremental updates', async () => {
+    const source = Array.from({ length: 3000 }, (_, index) => ({ timestamp: Date.UTC(2024, 0, 9) + index * 60_000,
+      open: 1.1, high: 1.11 + index / 1e6, low: 1.09, close: 1.1 + index / 1e6 }))
+    source.at(-1)!.close = 99999
+    const synchronizer = new ChartSynchronizer(), settings = defaultIndicatorSettings()
+    const render = (count: number) => act(async () => root.render(<ChartPane id={0} sessionId={null} timeframe="M5"
+      source={source} count={count} synchronizer={synchronizer} settings={settings} positions={[]} stops={[]}
+      placement={null} onPick={() => {}} onSettingsChange={() => {}} onTimeframeChange={() => {}} />))
+    await render(1000)
+    const series = chartSeries(0)
+    expect(series.setData).toHaveBeenCalledTimes(1)
+    await render(2000)
+    expect(series.setData).toHaveBeenCalledTimes(2)
+    expect(series.update).not.toHaveBeenCalled()
+    expect(series.data()).toEqual(toBidChartCandles({ bid: source.slice(0, 2000) }, 'M5'))
+    await render(2001)
+    expect(series.setData).toHaveBeenCalledTimes(2)
+    expect(series.update).toHaveBeenCalledTimes(1)
+    expect(series.data()).toEqual(toBidChartCandles({ bid: source.slice(0, 2001) }, 'M5'))
+    await render(2002)
+    expect(series.setData).toHaveBeenCalledTimes(2)
+    expect(series.data()).toEqual(toBidChartCandles({ bid: source.slice(0, 2002) }, 'M5'))
+    await render(1000)
+    expect(series.setData).toHaveBeenCalledTimes(3)
+    expect(series.data()).toEqual(toBidChartCandles({ bid: source.slice(0, 1000) }, 'M5'))
+  })
+
   it('preserves full history until Start Replay, then reveals exactly one candle per manual step across gaps', async () => {
     await act(async () => root.render(<App />))
     await waitForStartup()

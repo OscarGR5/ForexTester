@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { IChartApi } from 'lightweight-charts'
 import { ReplayBars } from './replayBars'
-import { INDICATOR_COLORS, IndicatorSeries } from './indicatorSeries'
+import { INDICATOR_COLORS, IndicatorSeries, SERIES_BATCH_THRESHOLD } from './indicatorSeries'
 import { calculateIndicators, defaultIndicatorSettings, type ChartCandle } from './indicators'
 import { TIMEFRAMES, toBidChartCandles } from './history'
 
@@ -57,6 +57,59 @@ describe('incremental chart data and bounded indicator tails',()=>{
   const expected=calculateIndicators(candles,settings,'M1')
   for(const line of series)expect(line.values).toEqual(expected[line.title as 'k'|'d'])
  })
+})
+
+it('batches only changed lines at the threshold, preserving exact historical and whitespace points', () => {
+ const { chart, series } = fakeChart(), manager = new IndicatorSeries(chart)
+ const settings = defaultIndicatorSettings(); settings.ichimoku.enabled = true
+ const candles = toBidChartCandles({ bid: source.slice(0, 200) })
+ manager.update(candles, settings, 'M1', true)
+ const snapshots = new Map(series.map(line => [line.title, line.values.map(point => ({ ...point }))]))
+ const updates = new Map(series.map(line => [line.title, vi.spyOn(line as any, 'update')]))
+ // Change closes at historical positions without changing the high/low windows.
+ // Only Chikou is affected, and its affected positions precede the live tail.
+ const line = series.find(line => line.title === 'chikou')!
+ const sync = manager as unknown as { syncLine(entry: { series: unknown; data: typeof line.values }, tail: typeof line.values, replace: boolean, cutoff: number): void }
+ const data = line.values.map(point => ({ ...point }))
+ const managed = { series: line, data }
+ const tail = data.slice(-SERIES_BATCH_THRESHOLD).map(point => ({ ...point, value: point.value! + 0.00001 }))
+ sync.syncLine(managed, tail, false, tail[0].time)
+ expect(line.setData).toHaveBeenCalledTimes(2)
+ expect(updates.get('chikou')).not.toHaveBeenCalled()
+ expect(managed.data).toBe(data)
+ expect(line.setData).toHaveBeenLastCalledWith(data)
+ expect(line.values).toEqual([...snapshots.get('chikou')!.slice(0, -tail.length), ...tail])
+ for (const other of series.filter(item => item !== line)) {
+  expect(other.setData).toHaveBeenCalledTimes(1)
+  expect(other.values).toEqual(snapshots.get(other.title))
+ }
+ // Whitespace is part of a complete replacement, including when its value changes.
+ const span = series.find(line => line.title === 'spanA')!
+ const projected = span.values.map(point => ({ ...point })), spanLine = { series: span, data: projected }
+ const projectedTail = projected.slice(-SERIES_BATCH_THRESHOLD).map(({ time }) => ({ time }))
+ sync.syncLine(spanLine, projectedTail, false, projectedTail[0].time)
+ expect(span.values).toEqual(projected)
+ expect(span.values.slice(-projectedTail.length)).toEqual(projectedTail)
+})
+
+it('counts changed points rather than dirty-tail length and skips unchanged series', () => {
+ const { chart, series } = fakeChart(), manager = new IndicatorSeries(chart)
+ const settings = defaultIndicatorSettings(); settings.bollinger.enabled = true
+ const candles = toBidChartCandles({ bid: source.slice(0, 200) })
+ manager.update(candles, settings, 'M1', true)
+ const line = series.find(line => line.title === 'middle')!
+ const update = vi.spyOn(line as any, 'update')
+ const data = line.values.map(point => ({ ...point })), managed = { series: line, data }
+ const sync = manager as unknown as { syncLine(line: typeof managed, tail: typeof data, replace: boolean, cutoff: number): void }
+ sync.syncLine(managed, data.slice(), false, data[0].time)
+ expect(update).not.toHaveBeenCalled(); expect(line.setData).toHaveBeenCalledTimes(1)
+ const tail = data.map(point => ({ ...point }))
+ for (let index = 0; index < SERIES_BATCH_THRESHOLD - 1; index++) tail[index].value! += 0.00001
+ sync.syncLine(managed, tail, false, tail[0].time)
+ expect(update).toHaveBeenCalledTimes(SERIES_BATCH_THRESHOLD - 1)
+ expect(update.mock.calls.every(call => call[1] === true)).toBe(true)
+ expect(line.setData).toHaveBeenCalledTimes(1)
+ expect(line.values).toEqual(tail)
 })
 
 it('reports no dirty candles when higher-timeframe OHLC is unchanged', () => {

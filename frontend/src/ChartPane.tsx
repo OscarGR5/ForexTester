@@ -14,7 +14,7 @@ import { performanceStart, performanceEnd, performanceCount, performanceValue } 
 import { readUi, validPriceView, writeUi, type PriceView } from './uiPreferences'
 import { ChartSynchronizer } from './chartSync'
 import { IndicatorControls } from './IndicatorControls'
-import { IndicatorSeries } from './indicatorSeries'
+import { IndicatorSeries, SERIES_BATCH_THRESHOLD } from './indicatorSeries'
 import type { IndicatorSettings } from './indicators'
 import { ReplayBars } from './replayBars'
 import { indicatorWarmupRequirement } from './indicatorSettings'
@@ -247,7 +247,7 @@ export const ChartPane = memo(function ChartPane({ tradeRecords = [], showExecut
     synchronizer.update(id, candles, timeframe, () => {
       timeSlots.current!.prepare(candles, replace)
       const prices = performanceStart()
-      if (replace) { performanceCount('candles.setData'); series.setData(candles) }
+      if (replace || candles.length - dirty >= SERIES_BATCH_THRESHOLD) { performanceCount('candles.setData'); series.setData(candles) }
       else {
         // Revisit the old tail: it may be a newly completed higher-timeframe bucket.
         for (let index = dirty; index < candles.length; index++) { performanceCount('candles.update'); series.update(candles[index]) }

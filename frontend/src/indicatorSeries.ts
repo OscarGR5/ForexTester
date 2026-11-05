@@ -14,6 +14,10 @@ type LineKey = keyof typeof INDICATOR_COLORS
 type RenderLine = (IndicatorLine[number] | WhitespaceData<UTCTimestamp>)[]
 interface ManagedLine { series: ISeriesApi<'Line'>; data: RenderLine }
 
+// Chromium threshold sweep: avoid full replacements for ticks and H4 advances,
+// but batch the hundreds of changed M5 points in a D1 advance.
+export const SERIES_BATCH_THRESHOLD = 128
+
 export class IndicatorSeries {
   private lines = new Map<LineKey, ManagedLine>()
   private cloud: IchimokuCloudPrimitive | null = null
@@ -114,6 +118,21 @@ export class IndicatorSeries {
       performanceCount(replace ? 'indicators.replace' : 'indicators.realign')
       performanceCount('indicators.setData')
       line.series.setData(line.data)
+      return
+    }
+    let changed = 0
+    for (let index = 0; index < tail.length && changed < SERIES_BATCH_THRESHOLD; index++) {
+      const point = tail[index], old = previous[start + index]
+      if (!old || ('value' in old ? old.value : undefined) !== ('value' in point ? point.value : undefined)) changed++
+    }
+    if (!changed) return
+    if (changed >= SERIES_BATCH_THRESHOLD) {
+      // Reuse the existing authoritative render data, including displaced values
+      // and projection whitespace. No second full-history array is retained.
+      previous.splice(start, previous.length - start, ...tail)
+      performanceCount('indicators.batch')
+      performanceCount('indicators.setData')
+      line.series.setData(previous)
       return
     }
     for (let index = 0; index < tail.length; index++) {
