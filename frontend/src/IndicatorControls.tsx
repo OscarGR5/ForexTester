@@ -1,6 +1,7 @@
 import { useDismissibleDetails } from './useOutsideInteraction'
 import { memo, useEffect, useId, useState } from 'react'
 import { validateIndicatorSettings, type IndicatorSettings } from './indicators'
+import { DEFAULT_UNTAKEN_SETTINGS, type UntakenSettings } from './untakenLevels'
 
 const FIELDS = {
   bollinger: [['length', 'Length'], ['stdDev', 'Std. deviation']],
@@ -9,26 +10,33 @@ const FIELDS = {
   ichimoku: [['tenkan', 'Tenkan'], ['kijun', 'Kijun'], ['spanB', 'Span B'], ['displacement', 'Displacement']],
 } as const
 const NAMES = { bollinger: 'BB #1', bollinger2: 'BB #2', stochastic: 'Stochastic', ichimoku: 'Ichimoku' }
-function Parameter({ label, ariaLabel, value, fractional, onChange }: { label: string; ariaLabel: string; value: number; fractional: boolean; onChange: (value: number) => void }) {
+function Parameter({ label, ariaLabel, value, fractional, unbounded = false, onChange }: { label: string; ariaLabel: string; value: number; fractional: boolean; unbounded?: boolean; onChange: (value: number) => void }) {
   const errorId = useId()
   const [draft, setDraft] = useState(String(value))
   const [invalid, setInvalid] = useState(false)
   useEffect(() => { setDraft(String(value)); setInvalid(false) }, [value])
   return <label className="indicator-parameter">{label}<input type="number" aria-label={ariaLabel} value={draft}
-    min={fractional ? 0 : 1} max={fractional ? 100 : 10000} step={fractional ? 'any' : 1} aria-invalid={invalid} aria-describedby={invalid ? errorId : undefined}
+    min={fractional ? 0 : 1} max={unbounded ? undefined : fractional ? 100 : 10000} step={fractional ? 'any' : 1} aria-invalid={invalid} aria-describedby={invalid ? errorId : undefined}
     onChange={(event) => {
       const raw = event.target.value, next = Number(raw)
-      const valid = raw !== '' && Number.isFinite(next) && next > 0 && next <= (fractional ? 100 : 10000) && (fractional || Number.isInteger(next))
+      const valid = raw !== '' && Number.isFinite(next) && next > 0 && (unbounded || next <= (fractional ? 100 : 10000)) && (fractional || Number.isSafeInteger(next))
       setDraft(raw); setInvalid(!valid)
       if (valid) onChange(next)
-    }} />{invalid && <span id={errorId} className="parameter-error">{fractional ? 'Use > 0 to 100.' : 'Use 1–10000, whole numbers.'} Last valid value is applied.</span>}</label>
+    }} />{invalid && <span id={errorId} className="parameter-error">{unbounded ? 'Use a positive whole number.' : fractional ? 'Use > 0 to 100.' : 'Use 1–10000, whole numbers.'} Last valid value is applied.</span>}</label>
 }
-export const IndicatorControls = memo(function IndicatorControls({ id, settings, readiness = '', onChange }: { id: number; readiness?: string; settings: IndicatorSettings; onChange: (settings: IndicatorSettings) => void }) {
+export const IndicatorControls = memo(function IndicatorControls({ id, settings, readiness = '', onChange, untaken = DEFAULT_UNTAKEN_SETTINGS, onUntakenChange }: { id: number; readiness?: string; settings: IndicatorSettings; onChange: (settings: IndicatorSettings) => void; untaken?: UntakenSettings; onUntakenChange?: (settings: UntakenSettings) => void }) {
   const disclosure = useDismissibleDetails()
   const update = (next: IndicatorSettings) => { if (!validateIndicatorSettings(next)) onChange(next) }
   return <details ref={disclosure} name="chart-indicators" className="indicator-controls"><summary>Indicators</summary>
     <div className="indicator-options" aria-label={`Chart ${id + 1} indicators`}>
       {readiness && <p className="indicator-readiness" role="status">{readiness}</p>}
+      {onUntakenChange && <fieldset>
+        <legend><label><input type="checkbox" checked={untaken.enabled} aria-label={`Chart ${id + 1} Untaken Highs & Lows`}
+          onChange={event => onUntakenChange({ ...untaken, enabled: event.target.checked })} />Untaken Highs &amp; Lows (P)</label></legend>
+        <Parameter label="Untaken Levels" ariaLabel={`Chart ${id + 1} Untaken Levels`} value={untaken.count} fractional={false} unbounded
+          onChange={count => onUntakenChange({ ...untaken, count })} />
+        <p className="indicator-source">All charts · maximum per side</p>
+      </fieldset>}
       {(Object.keys(FIELDS) as (keyof typeof FIELDS)[]).map((group) => <fieldset key={group}>
         <legend><label><input type="checkbox" checked={settings[group].enabled} aria-label={`Chart ${id + 1} ${NAMES[group]}`}
           onChange={(event) => update({ ...settings, [group]: { ...settings[group], enabled: event.target.checked } })} />{NAMES[group]}</label></legend>

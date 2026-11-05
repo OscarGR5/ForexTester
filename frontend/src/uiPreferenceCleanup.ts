@@ -1,4 +1,4 @@
-import { uiKey, UI_PREFIX } from './uiPreferences'
+import { GLOBAL_UI_ID, uiKey, UI_PREFIX } from './uiPreferences'
 
 const LOCK = 'forextester-ui-preference-maintenance'
 const unsafeTabs = 'UI preference cleanup could not verify other tabs. Close other ForexTester tabs and retry in a browser with Web Locks support.'
@@ -43,7 +43,7 @@ interface Inventory { disk: () => Promise<{ id: string }[]>; legacy: () => Promi
 async function protectedIds(inventory: Inventory) {
   const [disk, legacy] = await Promise.all([inventory.disk(), inventory.legacy()])
   if (![...disk, ...legacy].every(row => typeof row.id === 'string' && row.id.length)) throw new Error('Session inventory is unreadable. UI preferences were kept.')
-  return new Set([...disk.map(row => row.id), ...legacy.map(row => row.id), inventory.active()])
+  return new Set([GLOBAL_UI_ID, ...disk.map(row => row.id), ...legacy.map(row => row.id), inventory.active()])
 }
 export async function previewUiCleanup(inventory: Inventory, storage: Storage = window.localStorage): Promise<PreferenceCandidate[]> {
   const ids = await protectedIds(inventory), candidates: PreferenceCandidate[] = []

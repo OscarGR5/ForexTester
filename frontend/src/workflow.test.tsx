@@ -27,6 +27,11 @@ import { lifecycleOf } from './sessionTypes'
 import { combinedOpenPnl, markPosition } from './trading'
 import { TradeOverlays } from './tradeOverlays'
 import { RegressionChannelPrimitive } from './RegressionChannelPrimitive'
+import { UntakenLevelsPrimitive } from './UntakenLevelsPrimitive'
+import { ChartPane } from './ChartPane'
+import { ChartSynchronizer } from './chartSync'
+import { defaultIndicatorSettings } from './indicators'
+import { GLOBAL_UI_ID } from './uiPreferences'
 vi.mock('lightweight-charts', () => ({
   CrosshairMode: { Normal: 0 }, CandlestickSeries: {}, LineSeries: {}, LineStyle: { Solid: 0, Dashed: 2, Dotted: 1 }, ColorType: { Solid: 'solid' },
   createChart: vi.fn(() => {
@@ -192,6 +197,82 @@ it('shares one M1 regression through four charts, timeframe switches, review, re
  await ctrlClick(2)
  expect(update.mock.calls.at(-1)![0]).not.toBeNull()
 }, 20000)
+it('shows provisional M5 pivots during formation, retains them through confirmation, and reconstructs backward review', async () => {
+ const source = Array.from({ length: 26 }, (_, i) => ({ timestamp: beginning + i * 60000,
+  open: 1.1, close: 1.1, high: i === 10 ? 1.12 : i > 10 && i < 15 || i === 25 ? 1.13 : 1.11,
+  low: i === 10 ? 1.08 : i > 10 && i < 15 || i === 25 ? 1.07 : 1.09 }))
+ const rays = vi.spyOn(UntakenLevelsPrimitive.prototype, 'setData'), synchronizer = new ChartSynchronizer()
+ const settings = defaultIndicatorSettings()
+ const untaken = { enabled: true, count: 10 }
+ const render = (count: number) => act(async () => root.render(<ChartPane id={0} sessionId={null} timeframe="M5" source={source} count={count}
+  synchronizer={synchronizer} settings={settings} onSettingsChange={() => {}} onTimeframeChange={() => {}}
+  untaken={untaken} stops={[]} positions={[]} placement={null} onPick={() => {}} />))
+ const prices = () => rays.mock.lastCall![0].map(level => level.price)
+ await render(10); expect(prices()).toEqual([])
+ await render(11); expect(prices()).toEqual([1.12, 1.08])
+ await render(12); expect(prices()).toEqual([1.13, 1.07])
+ const provisional = rays.mock.lastCall![0]
+ for (const count of [15, 19, 20, 24, 25]) {
+  await render(count); expect(rays.mock.lastCall![0]).toEqual(provisional)
+ }
+ expect(provisional.every(level => level.time === (beginning + 10 * 60000) / 1000)).toBe(true)
+ await render(26)
+ expect(prices()).toEqual([1.13, 1.07])
+ expect(rays.mock.lastCall![0].every(level => level.time === (beginning + 25 * 60000) / 1000)).toBe(true)
+ for (const count of [25, 24]) {
+  await render(count); expect(rays.mock.lastCall![0]).toEqual(provisional)
+ }
+ await render(11); expect(prices()).toEqual([1.12, 1.08])
+ await render(10); expect(prices()).toEqual([])
+})
+it('preserves untaken visibility and replaces former saved settings with the default count', async () => {
+ localStorage.setItem(uiKey(GLOBAL_UI_ID), JSON.stringify({ untakenLevels: { enabled: true, distanceAtr: 5 } }))
+ await start()
+ expect(host.querySelector<HTMLInputElement>('[aria-label="Chart 1 Untaken Highs & Lows"]')!.checked).toBe(true)
+ expect(host.querySelector<HTMLInputElement>('[aria-label="Chart 1 Untaken Levels"]')!.value).toBe('10')
+ expect(JSON.parse(localStorage.getItem(uiKey(GLOBAL_UI_ID))!).untakenLevels).toEqual({ enabled: true, count: 10 })
+})
+it('discards obsolete pivot strength while preserving saved visibility and level count', async () => {
+ localStorage.setItem(uiKey(GLOBAL_UI_ID), JSON.stringify({ untakenLevels: { enabled: true, count: 15, pivotStrength: 20 } }))
+ await start()
+ expect(JSON.parse(localStorage.getItem(uiKey(GLOBAL_UI_ID))!).untakenLevels).toEqual({ enabled: true, count: 15 })
+ expect(host.querySelector<HTMLInputElement>('[aria-label="Chart 1 Untaken Highs & Lows"]')!.checked).toBe(true)
+ expect(host.querySelector<HTMLInputElement>('[aria-label="Chart 1 Untaken Levels"]')!.value).toBe('15')
+ expect(host.querySelector('[aria-label$="Pivot Strength"]')).toBeNull()
+})
+it('shares untaken settings across four independent panes, persists them after remount, and keeps legacy workspace preferences', async () => {
+ await start()
+ const rays = vi.spyOn(UntakenLevelsPrimitive.prototype, 'setData')
+ await act(async () => host.querySelector<HTMLInputElement>('input[name="chart-count"][value="4"]')!.click())
+ const toggles = () => [...host.querySelectorAll<HTMLInputElement>('input[aria-label$="Untaken Highs & Lows"]')]
+ expect(toggles().map(input => input.checked)).toEqual([false, false, false, false])
+ expect([...host.querySelectorAll<HTMLInputElement>('input[aria-label$="Untaken Levels"]')].map(input => input.value)).toEqual(['10', '10', '10', '10'])
+ await act(async () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', cancelable: true })))
+ expect(toggles().map(input => input.checked)).toEqual([true, true, true, true])
+ expect(rays.mock.instances.slice(-4).length).toBe(4)
+ await input('Chart 3 Untaken Levels', '3')
+ expect([...host.querySelectorAll<HTMLInputElement>('input[aria-label$="Untaken Levels"]')].map(input => input.value)).toEqual(['3', '3', '3', '3'])
+ await input('Chart 3 Untaken Levels', '2.5')
+ expect(host.querySelector('[aria-label="Chart 3 Untaken Levels"]')!.getAttribute('aria-invalid')).toBe('true')
+ await input('Chart 3 Untaken Levels', '0')
+ expect(JSON.parse(localStorage.getItem(uiKey(GLOBAL_UI_ID))!).untakenLevels).toEqual({ enabled: true, count: 3 })
+ await input('Chart 3 Untaken Levels', '15')
+ expect(host.querySelector('[aria-label$="Pivot Strength"]')).toBeNull()
+ const before = [...host.querySelectorAll<HTMLSelectElement>('select[aria-label$="timeframe"]')].map(input => input.value)
+ expect(new Set(before).size).toBe(4)
+ await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
+ await act(async () => root.render(null))
+ await mount()
+ await until(() => host.querySelector('.saved-session'))
+ await click('Resume backtest')
+ await until(() => host.querySelector('.phase-trading'))
+ expect(toggles().map(input => input.checked)).toEqual([true, true, true, true])
+ expect([...host.querySelectorAll<HTMLInputElement>('input[aria-label$="Untaken Levels"]')].map(input => input.value)).toEqual(['15', '15', '15', '15'])
+ expect(host.querySelector('[aria-label$="Pivot Strength"]')).toBeNull()
+ await act(async () => toggles()[1].click())
+ expect(toggles().map(input => input.checked)).toEqual([false, false, false, false])
+ expect(rays.mock.calls.slice(-4).every(([levels]) => levels.length === 0)).toBe(true)
+})
 it.each([1, 2, 3, 4])('scales only the hovered price axis in a %s-chart layout and retains plot wheel zoom', async count => {
  await start()
  await act(async () => host.querySelector<HTMLInputElement>(`input[name="chart-count"][value="${count}"]`)!.click())

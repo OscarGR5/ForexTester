@@ -3,6 +3,7 @@ import { validViewportState } from './chartSync'
 import { TIMEFRAMES } from './history'
 import { defaultIndicatorSettings, indicatorPreset, validateIndicatorSettings } from './indicators'
 import type { ChartModeSettings, WorkspaceSettings } from './sessionTypes'
+import { DEFAULT_UNTAKEN_SETTINGS, type UntakenSettings } from './untakenLevels'
 
 export function defaultChartMode(count: 1 | 2 | 3 | 4): ChartModeSettings {
   const timeframes = count === 4 ? ['H1', 'D1', 'M5', 'H4'] as const : count === 1 ? ['D1', 'H4', 'H1'] as const : count === 2 ? ['H4', 'D1', 'H1'] as const : ['M5', 'H4', 'H1'] as const
@@ -26,6 +27,7 @@ export function updateActiveChartMode(workspace: WorkspaceSettings, update: Pick
   return { ...workspace, ...update, chartModes: { ...workspace.chartModes, [current]: update } }
 }
 export const UI_PREFIX = 'forextester:ui:v1:'
+export const GLOBAL_UI_ID = 'global'
 export const uiKey = (id: string) => `${UI_PREFIX}${id}`
 export function validWorkspace(value: unknown): value is WorkspaceSettings {
   try {
@@ -61,6 +63,13 @@ function readEnvelope(id: string): Record<string, unknown> {
 export function readUi<T>(id: string | null, field: string, fallback: T, validate: (v: unknown) => v is T): T {
   const value = id ? readEnvelope(id)[field] : null
   return validate(value) ? value : fallback
+}
+export function readUntakenSettings(): UntakenSettings {
+  const saved = readUi<unknown>(GLOBAL_UI_ID, 'untakenLevels', null, (value): value is unknown => true) as Partial<UntakenSettings> | null
+  // Retain visibility and count while discarding obsolete or unknown settings.
+  const enabled = saved?.enabled
+  return { enabled: typeof enabled === 'boolean' ? enabled : DEFAULT_UNTAKEN_SETTINGS.enabled,
+    count: typeof saved?.count === 'number' && Number.isSafeInteger(saved.count) && saved.count > 0 ? saved.count : DEFAULT_UNTAKEN_SETTINGS.count }
 }
 export function writeUi(id: string | null, field: string, value: unknown) {
   if (!id) return
