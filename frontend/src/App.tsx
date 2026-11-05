@@ -1,6 +1,7 @@
 import { tradeOverlayRecords } from './tradeOverlays'
 import { useDismissibleDetails } from './useOutsideInteraction'
 import { useReplayKeyboard } from './useReplayKeyboard'
+import { useIndicatorKeyboard } from './useIndicatorKeyboard'
 import { entryOverlays } from './entryOverlays'
 import { stopOverlays } from './stopOverlays'
 import { canRequestOrder, stopModificationError } from './trading'
@@ -293,6 +294,13 @@ export function App() {
   const chartLayout = <fieldset className="layout-controls"><legend>Charts</legend>{([1,2,3,4] as const).map(count=><label key={count}><input type="radio" name="chart-count" value={count} checked={chartCount === count} onChange={()=>{ synchronizer.deactivate(); setChartCount(count) }}/>{count}</label>)}</fieldset>
   const pnlDisplay = <div className={`account-pnl ${pnl && Math.abs(pnl.usd) >= 0.005 ? pnl.usd > 0 ? 'positive' : 'negative' : ''}`} aria-label="Account PnL"><span>Account PnL</span><strong>{pnl ? `$${pnl.usd.toFixed(2)} · ${pnl.percent.toFixed(2)}%` : 'PnL unavailable'}</strong></div>
   const workspaceDisabled = !sessions.initialized || sessions.busy || sessions.conflict || sessions.awaitingChoice || finishing
+  useIndicatorKeyboard({
+    blocked: lifecycle !== 'trading' || workspaceDisabled || manage || !!draft || !!stopPreview,
+    toggleIchimoku: () => {
+      const settings = indicatorSettings[activeChart][timeframes[activeChart]]!
+      changeSettings(activeChart, { ...settings, ichimoku: { ...settings.ichimoku, enabled: !settings.ichimoku.enabled } })
+    },
+  })
   return <main className={`app-shell phase-${lifecycle}`}>
     <header className="app-header"><h1>ForexTester</h1><span className="header-session"><span className="session-name">{sessions.name}</span> <span className="save-state">{history ? sessions.saveStatus : 'Not started'}</span></span>
       {lifecycle === 'trading' && <details ref={executionDetails} className="execution-details"><summary aria-label="Execution details" title="Execution details"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v2"/></svg></summary><div className="execution-popover">

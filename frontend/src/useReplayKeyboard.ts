@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
 
 export function keyboardContextBlocked(event: KeyboardEvent): boolean {
-  const editing = (element: EventTarget | null) => element instanceof Element && !!element.closest('input, select, textarea, [contenteditable]:not([contenteditable="false"])')
+  const editing = (element: EventTarget | null) => element instanceof Element && !!element.closest('input, select, textarea, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="searchbox"], [role="combobox"], [role="spinbutton"]')
   return editing(event.target) || editing(document.activeElement) ||
     !!document.querySelector('dialog[open], [role="dialog"], .indicator-controls[open], .execution-details[open], .stop-selector, .placing-stop')
 }

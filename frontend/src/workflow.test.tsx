@@ -15,6 +15,7 @@ import * as replayHook from './useReplay'
 import { selectedRange, shiftDate, accountPnl } from './workflow'
 import { PreferenceTabGuard } from './uiPreferenceCleanup'
 import { uiKey } from './uiPreferences'
+import type { WorkspaceSettings } from './sessionTypes'
 import { isLocalForex, VISIBLE_TIMEFRAMES } from './history'
 import * as preferences from './uiPreferences'
 import { SessionStore } from './sessionStore'
@@ -1605,4 +1606,170 @@ it('applies overlay toggles to every pane and restores them with the session whi
  expect(button('Original SL').getAttribute('aria-pressed')).toBe('false')
  checkToggles(4, false, false)
  expect(JSON.parse(window.localStorage.getItem(uiKey(before.id))!).slHistory).toBe(false)
+})
+
+function ichimokuEnabled(chart = 1) {
+ return host.querySelector<HTMLInputElement>(`[aria-label="Chart ${chart} Ichimoku"]`)!.checked
+}
+function storedWorkspace(id: string): WorkspaceSettings {
+ return JSON.parse(window.localStorage.getItem(uiKey(id))!).workspace
+}
+async function ichimokuKey(target: EventTarget = window, init: KeyboardEventInit = {}) {
+ return tradeKey('i', target, init)
+}
+it.each([1, 2, 3, 4])('toggles Ichimoku independently on each focused chart in a %i-chart layout', async count => {
+ await mount()
+ await act(async () => host.querySelector<HTMLInputElement>(`input[name="chart-count"][value="${count}"]`)!.click())
+ await load()
+ // Matching timeframes must still have independent indicator settings.
+ for (let i = 1; i <= count; i++) await select(`Chart ${i} timeframe`, 'H1')
+ await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
+ let id = ''
+ await act(async () => { id = (await disk.storage.list()).sessions[0].id })
+ const before = storedWorkspace(id)
+ const panes = [...host.querySelectorAll('.chart-pane')]
+ for (let i = 0; i < count; i++) {
+  await outside(panes[i])
+  expect(panes[i].getAttribute('data-active')).toBe('true')
+  expect((await ichimokuKey()).defaultPrevented).toBe(true)
+  const expected = structuredClone(before)
+  expected.indicators[i].H1!.ichimoku.enabled = false
+  expected.chartModes![String(count) as '1' | '2' | '3' | '4']!.indicators[i].H1!.ichimoku.enabled = false
+  expect(storedWorkspace(id)).toMatchObject({ indicators: expected.indicators, chartModes: expected.chartModes, timeframes: expected.timeframes })
+  for (let j = 0; j < count; j++) expect(ichimokuEnabled(j + 1)).toBe(j !== i)
+  expect((await ichimokuKey(window, { key: 'I' })).defaultPrevented).toBe(true)
+  expect(storedWorkspace(id)).toMatchObject({ indicators: before.indicators, chartModes: before.chartModes, timeframes: before.timeframes })
+ }
+}, 15_000)
+it('uses persistent chart selection after clicking, scrolling, dragging, changing timeframe and removing the focused chart', async () => {
+ await start()
+ await act(async () => host.querySelector<HTMLInputElement>('input[name="chart-count"][value="4"]')!.click())
+ const panes = [...host.querySelectorAll('.chart-pane')]
+ const toggleSelected = async (index: number) => {
+  const before = panes.map((_, i) => ichimokuEnabled(i + 1))
+  expect(panes[index].getAttribute('data-active')).toBe('true')
+  expect((await ichimokuKey()).defaultPrevented).toBe(true)
+  expect(panes.map((_, i) => ichimokuEnabled(i + 1))).toEqual(before.map((value, i) => i === index ? !value : value))
+ }
+ await outside(panes[3])
+ vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 2000)
+ await toggleSelected(3)
+ const canvas = panes[1].querySelector('.chart-canvas')!
+ vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, width: 900, height: 650 } as DOMRect)
+ await act(async () => { canvasWheel(canvas, 850, 80) })
+ await toggleSelected(1)
+ await act(async () => panes[2].dispatchEvent(new MouseEvent('pointermove', { bubbles: true, buttons: 1 })))
+ await toggleSelected(2)
+ await select('Chart 1 timeframe', 'M15')
+ await toggleSelected(0)
+ await outside(panes[3])
+ await act(async () => host.querySelector<HTMLInputElement>('input[name="chart-count"][value="2"]')!.click())
+ const before = [ichimokuEnabled(1), ichimokuEnabled(2)]
+ expect(host.querySelector('.chart-pane')!.getAttribute('data-active')).toBe('true')
+ await ichimokuKey()
+ expect([ichimokuEnabled(1), ichimokuEnabled(2)]).toEqual([!before[0], before[1]])
+})
+it('preserves custom Ichimoku settings, other indicators, timeframe preferences and visibility after a session remount', async () => {
+ await start()
+ for (const [label, value] of [['Tenkan', '7'], ['Kijun', '17'], ['Span B', '31'], ['Displacement', '11']]) await input(`Chart 1 ${label}`, value)
+ await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
+ let id = ''
+ await act(async () => { id = (await disk.storage.list()).sessions[0].id })
+ const original = storedWorkspace(id).indicators[0].D1!
+ await ichimokuKey()
+ expect(storedWorkspace(id).indicators[0].D1).toEqual({ ...original, ichimoku: { ...original.ichimoku, enabled: false } })
+ // The checkbox and shortcut operate on the same persisted visibility flag.
+ await act(async () => host.querySelector<HTMLInputElement>('[aria-label="Chart 1 Ichimoku"]')!.click())
+ expect(ichimokuEnabled()).toBe(true)
+ await ichimokuKey(); expect(ichimokuEnabled()).toBe(false)
+ await select('Chart 1 timeframe', 'M5')
+ expect(ichimokuEnabled()).toBe(false)
+ await ichimokuKey(); expect(ichimokuEnabled()).toBe(true)
+ await select('Chart 1 timeframe', 'D1'); expect(ichimokuEnabled()).toBe(false)
+ await select('Chart 1 timeframe', 'M5')
+ await act(async () => host.querySelector<HTMLInputElement>('input[name="chart-count"][value="3"]')!.click())
+ await act(async () => host.querySelector<HTMLInputElement>('input[name="chart-count"][value="1"]')!.click())
+ expect(ichimokuEnabled()).toBe(true)
+ const saved = storedWorkspace(id)
+ await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
+ await act(async () => root.unmount()); root = createRoot(host)
+ await mount(); await click('Resume backtest'); await until(() => host.querySelector('.phase-trading'))
+ expect(ichimokuEnabled()).toBe(true)
+ expect(storedWorkspace(id).indicators).toEqual(saved.indicators)
+ await select('Chart 1 timeframe', 'D1')
+ expect(ichimokuEnabled()).toBe(false)
+ expect(storedWorkspace(id).indicators[0].D1).toEqual({ ...original, ichimoku: { ...original.ichimoku, enabled: false } })
+ await ichimokuKey()
+ expect(storedWorkspace(id).indicators[0].D1).toEqual(original)
+}, 15_000)
+it('leaves Ichimoku unchanged in text-entry controls, settings, dialogs, drafts and disabled workspaces', async () => {
+ await mount()
+ expect((await ichimokuKey()).defaultPrevented).toBe(false)
+ await act(async () => host.querySelector<HTMLInputElement>('input[name="chart-count"][value="1"]')!.click())
+ await load()
+ const before = ichimokuEnabled()
+ const blocked = async (target: EventTarget = window) => {
+  expect((await ichimokuKey(target)).defaultPrevented).toBe(false)
+  expect(ichimokuEnabled()).toBe(before)
+ }
+ for (const html of ['<input>', '<input type="number">', '<select><option>Item</option></select>', '<textarea></textarea>',
+  '<div contenteditable="true"><span>Text</span></div>', '<div contenteditable="plaintext-only"><span>Text</span></div>',
+  '<div role="textbox"><span>Text</span></div>', '<div role="searchbox"><span>Text</span></div>',
+  '<div role="combobox"><span>Text</span></div>', '<div role="spinbutton"><span>Text</span></div>']) {
+  const wrapper = document.createElement('div'); wrapper.innerHTML = html; host.append(wrapper)
+  const control = wrapper.firstElementChild as HTMLElement
+  control.tabIndex = 0
+  await blocked(control.firstElementChild ?? control)
+  control.focus()
+  await blocked(window)
+  control.blur(); wrapper.remove()
+ }
+ for (const selector of ['.indicator-controls', '.execution-details']) {
+  const panel = host.querySelector<HTMLDetailsElement>(selector)!
+  await act(async () => { panel.open = true })
+  await blocked()
+  await act(async () => { panel.open = false })
+ }
+ for (const html of ['<dialog open></dialog>', '<div role="dialog"></div>', '<div class="stop-selector"></div>']) {
+  const overlay = document.createElement('div'); overlay.innerHTML = html; host.append(overlay)
+  await blocked(); overlay.remove()
+ }
+ await click('Sessions / settings'); await blocked(); await click('Close management')
+ await click('Buy'); await blocked(); await click('Cancel placement')
+ const original = persistence.useSessionPersistence
+ let guards: Partial<ReturnType<typeof original>> = {}
+ vi.spyOn(persistence, 'useSessionPersistence').mockImplementation(options => ({ ...original(options), ...guards }))
+ for (const guard of [{ initialized: false }, { busy: true }, { conflict: true }, { awaitingChoice: true }]) {
+  guards = guard; await act(async () => root.render(<StrictMode><App/></StrictMode>))
+  await blocked()
+ }
+ guards = {}; await act(async () => root.render(<StrictMode><App/></StrictMode>))
+ expect((await ichimokuKey()).defaultPrevented).toBe(true)
+ expect(ichimokuEnabled()).toBe(!before)
+})
+it('toggles Ichimoku once per key press, ignores modified and consumed events and preserves other shortcuts', async () => {
+ await start()
+ const initial = ichimokuEnabled()
+ for (const init of [{ ctrlKey: true }, { altKey: true }, { metaKey: true }, { shiftKey: true }, { isComposing: true }]) {
+  expect((await ichimokuKey(window, init)).defaultPrevented).toBe(false)
+  expect(ichimokuEnabled()).toBe(initial)
+ }
+ const prevented = new KeyboardEvent('keydown', { key: 'i', cancelable: true })
+ prevented.preventDefault(); await act(async () => window.dispatchEvent(prevented))
+ expect(ichimokuEnabled()).toBe(initial)
+ expect((await ichimokuKey()).defaultPrevented).toBe(true)
+ for (let i = 0; i < 5; i++) expect((await ichimokuKey(window, { repeat: true })).defaultPrevented).toBe(false)
+ expect(ichimokuEnabled()).toBe(!initial)
+ expect((await ichimokuKey()).defaultPrevented).toBe(true)
+ expect(ichimokuEnabled()).toBe(initial)
+ for (const key of ['x', 'Enter', 'ArrowRight', ' ']) expect((await tradeKey(key)).defaultPrevented).toBe(false)
+ expect((await shortcut('ArrowRight', window, true)).defaultPrevented).toBe(true)
+ expect(host.querySelector('time')?.textContent).toContain('00:01')
+ expect((await tradeKey('b')).defaultPrevented).toBe(true)
+ expect(host.querySelector('.stop-placement')?.textContent).toContain('Buy')
+ await tradeKey('Escape'); expect(host.querySelector('.stop-placement')).toBeNull()
+ expect((await tradeKey('s')).defaultPrevented).toBe(true)
+ expect(host.querySelector('.stop-placement')?.textContent).toContain('Sell')
+ await tradeKey('Escape')
+ expect(ichimokuEnabled()).toBe(initial)
 })
