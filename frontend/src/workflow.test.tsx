@@ -225,6 +225,32 @@ it('shows provisional M5 pivots during formation, retains them through confirmat
  await render(11); expect(prices()).toEqual([1.12, 1.08])
  await render(10); expect(prices()).toEqual([])
 })
+it('retains the first M5 plateau anchor through forming equals, confirmation, later touches and backward review', async () => {
+ const source = Array.from({ length: 26 }, (_, i) => ({ timestamp: beginning + i * 60000,
+  open: 1.1, close: 1.1, high: i >= 5 && i < 20 || i === 25 ? 1.12 : 1.11,
+  low: i >= 5 && i < 20 || i === 25 ? 1.08 : 1.09 }))
+ const rays = vi.spyOn(UntakenLevelsPrimitive.prototype, 'setData'), synchronizer = new ChartSynchronizer()
+ const settings = defaultIndicatorSettings(), untaken = { enabled: true, count: 10 }
+ const render = (count: number) => act(async () => root.render(<ChartPane id={0} sessionId={null} timeframe="M5" source={source} count={count}
+  synchronizer={synchronizer} settings={settings} onSettingsChange={() => {}} onTimeframeChange={() => {}}
+  untaken={untaken} stops={[]} positions={[]} placement={null} onPick={() => {}} />))
+ await render(5); expect(rays.mock.lastCall![0]).toEqual([])
+ await render(6)
+ const expected = rays.mock.lastCall![0]
+ expect(expected.map(level => level.price)).toEqual([1.12, 1.08])
+ expect(expected.every(level => level.time === (beginning + 5 * 60000) / 1000)).toBe(true)
+ for (const count of [10, 11, 15, 16, 20, 21, 24, 25]) {
+  await render(count); expect(rays.mock.lastCall![0]).toEqual(expected)
+ }
+ await render(26)
+ expect(rays.mock.lastCall![0].map(level => level.price)).toEqual([1.12, 1.08])
+ expect(rays.mock.lastCall![0].every(level => level.time === (beginning + 25 * 60000) / 1000)).toBe(true)
+ for (const count of [25, 24, 15]) {
+  await render(count); expect(rays.mock.lastCall![0]).toEqual(expected)
+ }
+ await act(async () => root.render(null)); await render(25)
+ expect(rays.mock.lastCall![0]).toEqual(expected)
+})
 it('preserves untaken visibility and replaces former saved settings with the default count', async () => {
  localStorage.setItem(uiKey(GLOBAL_UI_ID), JSON.stringify({ untakenLevels: { enabled: true, distanceAtr: 5 } }))
  await start()
