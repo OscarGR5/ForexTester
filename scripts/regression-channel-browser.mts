@@ -96,13 +96,15 @@ try {
       return point
     }
     const linePoint = (pane: number, boundary: 'upper' | 'middle' | 'lower') => page.evaluate(({ pane, boundary }) => {
-      const { chart, series, primitive } = globalThis.__charts[pane], channel = primitive.channel
-      const offset = boundary === 'upper' ? channel.offset : boundary === 'lower' ? -channel.offset : 0
-      const points = primitive.projectedVertices(chart.timeScale().width()).map((point: any) => ({ x: point.x,
-        y: series.priceToCoordinate(channel.intercept + channel.slope * point.observation + offset) }))
-        .filter((p: any) => p.x > 30 && p.x < chart.timeScale().width() - 30 && p.y > 20 && p.y < chart.panes()[0].getHeight() - 20)
-      if (!points.length) throw new Error('No visible channel segment')
-      return points[Math.floor(points.length / 2)]
+      const { chart, primitive } = globalThis.__charts[pane]
+      const segment = primitive.projectedSegments().find((segment: any) => segment.boundary === boundary)
+      if (!segment) throw new Error('No projected channel segment')
+      const { start, end } = segment
+      for (let i = 1; i < 100; i++) {
+        const fraction = i / 100, x = start.x + fraction * (end.x - start.x), y = start.y + fraction * (end.y - start.y)
+        if (x > 30 && x < chart.timeScale().width() - 30 && y > 20 && y < chart.panes()[0].getHeight() - 20) return { x, y }
+      }
+      throw new Error('No visible channel segment')
     }, { pane, boundary })
     const save = async () => {
       await page.getByRole('button', { name: 'Sessions / settings', exact: true }).click()
@@ -124,15 +126,14 @@ try {
       assert.equal(anchored.trading, before.trading)
       const original = anchored.fit, values = regressionPrices(original, original.count - 1)
       const overlap = await page.evaluate(() => {
-        const { chart, series, primitive } = globalThis.__charts[0], app = globalThis.__app, channel = app.regression
-        const scale = chart.timeScale(), source = app.chartSource, width = scale.width()
+        const { chart, series, primitive } = globalThis.__charts[0]
+        const scale = chart.timeScale(), width = scale.width()
         if (primitive.paneViews()[0].zOrder() !== 'bottom') throw new Error('Regression must render at bottom')
+        const { start, end } = primitive.projectedSegments().find((segment: any) => segment.boundary === 'middle')
         for (const candle of series.data()) {
-          if (candle.time * 1000 < source[channel.startIndex].timestamp) continue
-          let low = channel.startIndex, high = channel.endIndex + 1
-          while (low < high) { const mid = (low + high) >>> 1; if (source[mid].timestamp < candle.time * 1000) low = mid + 1; else high = mid }
-          if (low > channel.endIndex || source[low].timestamp !== candle.time * 1000) continue
-          const x = scale.timeToCoordinate(candle.time), y = series.priceToCoordinate(channel.intercept + channel.slope * (low - channel.startIndex))
+          const x = scale.timeToCoordinate(candle.time)
+          if (x < start.x || x > end.x) continue
+          const y = start.y + (end.y - start.y) * (x - start.x) / (end.x - start.x)
           const a = series.priceToCoordinate(candle.open), b = series.priceToCoordinate(candle.close)
           if (x > 30 && x < width - 30 && y > Math.min(a, b) + 2 && y < Math.max(a, b) - 2) return { x, y }
         }
@@ -235,11 +236,58 @@ try {
       assert.deepEqual((await verify()).paneFits, [null, null, null, null])
       assert.equal(await page.getByRole('button', { name: 'Regression', exact: true }).getAttribute('aria-pressed'), 'true')
       await clickCandle(2, 20); assert((await verify()).fit)
+      // A long native anchor spans weekends, missing minutes and partial
+      // sessions. Inspect the same unchanged M1 fit on H4 and D1 at normal zoom.
+      await page.locator('input[name="chart-count"][value="1"]').check(); await settle()
+      await page.getByLabel('Chart 1 timeframe', { exact: true }).selectOption('H4'); await settle()
+      await page.evaluate(() => {
+        const { chart, series } = globalThis.__charts[0], last = chart.timeScale().timeToIndex(series.data().at(-1).time)
+        chart.timeScale().setVisibleLogicalRange({ from: last - 80, to: last + 5 })
+      }); await settle()
+      await clickCandle(0, 60)
+      const longFit = (await verify()).fit!
+      assert(longFit.count > 5000)
+      const geometry: any[] = []
+      for (const timeframe of ['H4', 'D1']) {
+        await page.getByLabel('Chart 1 timeframe', { exact: true }).selectOption(timeframe); await settle()
+        assert.deepEqual((await verify()).fit, longFit)
+        await page.evaluate(() => {
+          const { chart, series, primitive } = globalThis.__charts[0], app = globalThis.__app, fit = app.regression
+          const scale = chart.timeScale(), period = primitive.timeframe === 'H4' ? 14400000 : 86400000
+          const firstTime = Math.floor(app.chartSource[fit.startIndex].timestamp / period) * period / 1000
+          const first = scale.timeToIndex(firstTime), last = scale.timeToIndex(series.data().at(-1).time)
+          scale.setVisibleLogicalRange({ from: first - 2, to: last + 3 })
+        })
+        await settle()
+        const segments = await page.evaluate(() => {
+          const { chart, series, primitive } = globalThis.__charts[0], fit = globalThis.__app.regression
+          const paths: number[][][] = []
+          const context = { save() {}, restore() {}, beginPath() { paths.push([]) }, rect() {}, clip() {}, setLineDash() {},
+            moveTo(x: number, y: number) { paths.at(-1).push([x, y]) }, lineTo(x: number, y: number) { paths.at(-1).push([x, y]) }, stroke() {} }
+          primitive.paneViews()[0].renderer().draw({ useMediaCoordinateSpace(callback: any) {
+            callback({ context, mediaSize: { width: chart.timeScale().width(), height: chart.panes()[0].getHeight() } })
+          } })
+          return { paths: paths.slice(1), endpoints: primitive.projectedSegments().map((s: any) => ({ boundary: s.boundary,
+            prices: [series.coordinateToPrice(s.start.y), series.coordinateToPrice(s.end.y)] })) }
+        })
+        assert.equal(segments.paths.length, 3)
+        for (const path of segments.paths) assert.equal(path.length, 2)
+        const middle = segments.paths[2], dx = middle[1][0] - middle[0][0], dy = middle[1][1] - middle[0][1]
+        for (const path of segments.paths) {
+          assert(Math.abs(path[1][0] - path[0][0] - dx) < 1e-8)
+          assert(Math.abs(path[1][1] - path[0][1] - dy) < 1e-8)
+        }
+        for (const endpoint of segments.endpoints) for (const [i, observation] of [0, longFit.count - 1].entries()) {
+          assert(Math.abs(endpoint.prices[i] - regressionPrices(longFit, observation)[endpoint.boundary]) < 1e-12)
+        }
+        geometry.push({ timeframe, ...segments })
+        await page.screenshot({ path: `${output}/straight-${timeframe.toLowerCase()}-${width}.png`, fullPage: true })
+      }
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
       assert.deepEqual(errors, []); assert.deepEqual(external, [])
       reports.push({ width, chromium: browser.version(), observations: source.length, anchor, original, endpointPrices: values, forwardCount: higher.fit!.count, reviewCount: review.fit!.count,
         replacementAnchor: replaced.anchor, restoredAnchor: restored.anchor, fourChartShared: restored.shared, pageErrors: errors, externalRequests: external,
-        deletions, deletionRestoredEmpty: true, paintOrder: { candlePixel, channelPixel, restoredBottomPixel: candlePixel },
+        longFit, geometry, deletions, deletionRestoredEmpty: true, paintOrder: { candlePixel, channelPixel, restoredBottomPixel: candlePixel },
         historyRequests: requests.filter(url => url.includes('/api/history?')).length, metrics: await page.evaluate(() => globalThis.__forexReplayPerformance) })
     } catch (error) { await page.screenshot({ path: `${output}/failure-${width}.png`, fullPage: true }); console.error(await page.locator('body').innerText()); throw error }
     finally { await context.close() }
