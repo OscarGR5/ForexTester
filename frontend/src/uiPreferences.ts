@@ -3,7 +3,7 @@ import { validViewportState } from './chartSync'
 import { TIMEFRAMES } from './history'
 import { defaultIndicatorSettings, indicatorPreset, validateIndicatorSettings } from './indicators'
 import type { ChartModeSettings, WorkspaceSettings } from './sessionTypes'
-import { DEFAULT_UNTAKEN_SETTINGS, validUntakenSettings, type UntakenSettings } from './untakenLevels'
+import { DEFAULT_UNTAKEN_SETTINGS, type UntakenSettings } from './untakenLevels'
 
 export function defaultChartMode(count: 1 | 2 | 3 | 4): ChartModeSettings {
   const timeframes = count === 4 ? ['H1', 'D1', 'M5', 'H4'] as const : count === 1 ? ['D1', 'H4', 'H1'] as const : count === 2 ? ['H4', 'D1', 'H1'] as const : ['M5', 'H4', 'H1'] as const
@@ -65,11 +65,12 @@ export function readUi<T>(id: string | null, field: string, fallback: T, validat
   return validate(value) ? value : fallback
 }
 export function readUntakenSettings(): UntakenSettings {
-  const saved = readUi<unknown>(GLOBAL_UI_ID, 'untakenLevels', null, (value): value is unknown => true)
+  const saved = readUi<unknown>(GLOBAL_UI_ID, 'untakenLevels', null, (value): value is unknown => true) as Partial<UntakenSettings> | null
   // Retain the existing visibility when replacing the former settings shape.
-  const enabled = (saved as Partial<UntakenSettings> | null)?.enabled
+  const enabled = saved?.enabled
   return { enabled: typeof enabled === 'boolean' ? enabled : DEFAULT_UNTAKEN_SETTINGS.enabled,
-    count: validUntakenSettings(saved) ? saved.count : DEFAULT_UNTAKEN_SETTINGS.count }
+    count: typeof saved?.count === 'number' && Number.isSafeInteger(saved.count) && saved.count > 0 ? saved.count : DEFAULT_UNTAKEN_SETTINGS.count,
+    pivotStrength: typeof saved?.pivotStrength === 'number' && Number.isSafeInteger(saved.pivotStrength) && saved.pivotStrength > 0 ? saved.pivotStrength : DEFAULT_UNTAKEN_SETTINGS.pivotStrength }
 }
 export function writeUi(id: string | null, field: string, value: unknown) {
   if (!id) return

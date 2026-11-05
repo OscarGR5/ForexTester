@@ -197,30 +197,39 @@ it('shares one M1 regression through four charts, timeframe switches, review, re
  await ctrlClick(2)
  expect(update.mock.calls.at(-1)![0]).not.toBeNull()
 }, 20000)
-it('admits M5 levels only at candle close, takes them with forming wicks, and restores them on backward replay', async () => {
- const source = Array.from({ length: 81 }, (_, i) => ({ timestamp: beginning + i * 60000,
-  open: 1.1, close: 1.1, high: i < 75 ? 1.11 : 1.12, low: i < 75 ? 1.09 : 1.08 }))
+it('admits M5 pivots only after right-side candle closes, takes them with forming wicks, and rebuilds on strength changes and review', async () => {
+ const source = Array.from({ length: 26 }, (_, i) => ({ timestamp: beginning + i * 60000,
+  open: 1.1, close: 1.1, high: i >= 10 && i < 15 || i === 25 ? 1.12 : 1.11, low: i >= 10 && i < 15 || i === 25 ? 1.08 : 1.09 }))
  const rays = vi.spyOn(UntakenLevelsPrimitive.prototype, 'setData'), synchronizer = new ChartSynchronizer()
- const settings = defaultIndicatorSettings(), untaken = { enabled: true, count: 10 }
+ const settings = defaultIndicatorSettings()
+ let untaken = { enabled: true, count: 10, pivotStrength: 2 }
  const render = (count: number) => act(async () => root.render(<ChartPane id={0} sessionId={null} timeframe="M5" source={source} count={count}
   synchronizer={synchronizer} settings={settings} onSettingsChange={() => {}} onTimeframeChange={() => {}}
   untaken={untaken} stops={[]} positions={[]} placement={null} onPick={() => {}} />))
  const prices = () => rays.mock.lastCall![0].map(level => level.price)
- await render(76); expect(prices()).toEqual([])
- await render(79); expect(prices()).toEqual([])
- await render(80); expect(prices()).toEqual([1.12, 1.08])
- const closed = rays.mock.lastCall![0]
- await render(81); expect(prices()).toEqual([])
- await render(80); expect(rays.mock.lastCall![0]).toEqual(closed)
- await render(79); expect(prices()).toEqual([])
- await render(80); expect(rays.mock.lastCall![0]).toEqual(closed)
+ await render(20); expect(prices()).toEqual([])
+ await render(24); expect(prices()).toEqual([])
+ await render(25); expect(prices()).toEqual([1.12, 1.08])
+ const confirmed = rays.mock.lastCall![0]
+ expect(confirmed.every(level => level.time === (beginning + 10 * 60000) / 1000)).toBe(true)
+ untaken = { ...untaken, pivotStrength: 3 }; await render(25); expect(prices()).toEqual([])
+ untaken = { ...untaken, pivotStrength: 2 }; await render(25); expect(rays.mock.lastCall![0]).toEqual(confirmed)
+ await render(26); expect(prices()).toEqual([])
+ await render(25); expect(rays.mock.lastCall![0]).toEqual(confirmed)
+ await render(24); expect(prices()).toEqual([])
+ await render(25); expect(rays.mock.lastCall![0]).toEqual(confirmed)
 })
 it('preserves untaken visibility and replaces former saved settings with the default count', async () => {
  localStorage.setItem(uiKey(GLOBAL_UI_ID), JSON.stringify({ untakenLevels: { enabled: true, distanceAtr: 5 } }))
  await start()
  expect(host.querySelector<HTMLInputElement>('[aria-label="Chart 1 Untaken Highs & Lows"]')!.checked).toBe(true)
  expect(host.querySelector<HTMLInputElement>('[aria-label="Chart 1 Untaken Levels"]')!.value).toBe('10')
- expect(JSON.parse(localStorage.getItem(uiKey(GLOBAL_UI_ID))!).untakenLevels).toEqual({ enabled: true, count: 10 })
+ expect(JSON.parse(localStorage.getItem(uiKey(GLOBAL_UI_ID))!).untakenLevels).toEqual({ enabled: true, count: 10, pivotStrength: 2 })
+})
+it('adds default pivot strength without resetting a saved level count or visibility', async () => {
+ localStorage.setItem(uiKey(GLOBAL_UI_ID), JSON.stringify({ untakenLevels: { enabled: true, count: 15 } }))
+ await start()
+ expect(JSON.parse(localStorage.getItem(uiKey(GLOBAL_UI_ID))!).untakenLevels).toEqual({ enabled: true, count: 15, pivotStrength: 2 })
 })
 it('shares untaken settings across four independent panes, persists them after remount, and keeps legacy workspace preferences', async () => {
  await start()
@@ -237,8 +246,16 @@ it('shares untaken settings across four independent panes, persists them after r
  await input('Chart 3 Untaken Levels', '2.5')
  expect(host.querySelector('[aria-label="Chart 3 Untaken Levels"]')!.getAttribute('aria-invalid')).toBe('true')
  await input('Chart 3 Untaken Levels', '0')
- expect(JSON.parse(localStorage.getItem(uiKey(GLOBAL_UI_ID))!).untakenLevels).toEqual({ enabled: true, count: 3 })
+ expect(JSON.parse(localStorage.getItem(uiKey(GLOBAL_UI_ID))!).untakenLevels).toEqual({ enabled: true, count: 3, pivotStrength: 2 })
  await input('Chart 3 Untaken Levels', '15')
+ expect([...host.querySelectorAll<HTMLInputElement>('input[aria-label$="Pivot Strength"]')].map(input => input.value)).toEqual(['2', '2', '2', '2'])
+ await input('Chart 2 Pivot Strength', '3')
+ expect([...host.querySelectorAll<HTMLInputElement>('input[aria-label$="Pivot Strength"]')].map(input => input.value)).toEqual(['3', '3', '3', '3'])
+ for (const invalid of ['0', '1.5']) {
+  await input('Chart 2 Pivot Strength', invalid)
+  expect(host.querySelector('[aria-label="Chart 2 Pivot Strength"]')!.getAttribute('aria-invalid')).toBe('true')
+  expect(JSON.parse(localStorage.getItem(uiKey(GLOBAL_UI_ID))!).untakenLevels.pivotStrength).toBe(3)
+ }
  const before = [...host.querySelectorAll<HTMLSelectElement>('select[aria-label$="timeframe"]')].map(input => input.value)
  expect(new Set(before).size).toBe(4)
  await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
@@ -249,6 +266,7 @@ it('shares untaken settings across four independent panes, persists them after r
  await until(() => host.querySelector('.phase-trading'))
  expect(toggles().map(input => input.checked)).toEqual([true, true, true, true])
  expect([...host.querySelectorAll<HTMLInputElement>('input[aria-label$="Untaken Levels"]')].map(input => input.value)).toEqual(['15', '15', '15', '15'])
+ expect([...host.querySelectorAll<HTMLInputElement>('input[aria-label$="Pivot Strength"]')].map(input => input.value)).toEqual(['3', '3', '3', '3'])
  await act(async () => toggles()[1].click())
  expect(toggles().map(input => input.checked)).toEqual([false, false, false, false])
  expect(rays.mock.calls.slice(-4).every(([levels]) => levels.length === 0)).toBe(true)

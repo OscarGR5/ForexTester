@@ -144,7 +144,7 @@ export function App() {
   const [regressionEnabled, setRegressionEnabled] = useUiValue(sessions.activeId, 'regression', false, validBoolean)
   const untakenDefaults = useMemo(readUntakenSettings, [])
   const [untaken, setUntaken] = useUiValue(GLOBAL_UI_ID, 'untakenLevels', untakenDefaults, validUntakenSettings)
-  useEffect(() => { writeUi(GLOBAL_UI_ID, 'untakenLevels', { enabled: untaken.enabled, count: untaken.count }) }, [untaken])
+  useEffect(() => { writeUi(GLOBAL_UI_ID, 'untakenLevels', { enabled: untaken.enabled, count: untaken.count, pivotStrength: untaken.pivotStrength }) }, [untaken])
   const tradeRecords = useMemo(() => showExecutions || showOriginalSl ? tradeOverlayRecords(trading.state.positions, trading.state.closed) : [], [trading.state.positions, trading.state.closed, showExecutions, showOriginalSl])
   const uiWorkspaceRef = useRef(uiWorkspace)
   useLayoutEffect(() => { uiWorkspaceRef.current = uiWorkspace }, [uiWorkspace])

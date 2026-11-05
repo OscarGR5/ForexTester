@@ -2,103 +2,131 @@ import { expect, it } from 'vitest'
 import type { ChartCandle } from './indicators'
 import { DEFAULT_UNTAKEN_SETTINGS, UntakenLevels, validUntakenSettings } from './untakenLevels'
 
-const bar = (i: number, high: number, low: number, close = (high + low) / 2): ChartCandle => ({ time: (1704067200 + i * 60) as ChartCandle['time'], open: close, high, low, close })
-const prefix = () => Array.from({ length: 15 }, (_, i) => bar(i, 101, 99))
+const bar = (i: number, high = 101, low = 99, close = 100): ChartCandle => ({ time: (1704067200 + i * 60) as ChartCandle['time'], open: close, high, low, close })
 const levels = (tracker: UntakenLevels, count = 1000) => tracker.visible(100, count)
+const pivot = () => [bar(0), bar(1), bar(2, 110, 90), bar(3), bar(4)]
+const nested = (count: number) => Array.from({ length: count * 5 }, (_, i) => i % 5 === 2 ? bar(i, 140 - Math.floor(i / 5) * 0.5, 60 + Math.floor(i / 5) * 0.5) : bar(i))
 
-it('keeps individual candle levels, removes equal wick touches, and never self-invalidates', () => {
-  const tracker = new UntakenLevels(), candles = [...prefix(), bar(15, 103, 97), bar(16, 102, 98), bar(17, 101.5, 98.5)]
-  tracker.update(candles, candles.length)
-  expect(levels(tracker).map(l => [l.side, l.price])).toEqual([['high', 101.5], ['high', 102], ['high', 103], ['low', 98.5], ['low', 98], ['low', 97]])
-  candles.push(bar(18, 102, 98))
-  tracker.update(candles, 18) // Forming candle takes equals through wicks.
-  expect(levels(tracker).map(l => [l.side, l.price])).toEqual([['high', 103], ['low', 97]])
-  tracker.update(candles, 19)
-  expect(levels(tracker).filter(l => l.time === candles[18].time).map(l => l.price)).toEqual([102, 98])
-})
-
-it('selects the nearest N distinct prices per side, with a default maximum of twenty lines', () => {
-  const candles = Array.from({ length: 30 }, (_, i) => bar(i, 140 - i, 60 + i))
-  const tracker = new UntakenLevels(); tracker.update(candles, candles.length)
-  expect(DEFAULT_UNTAKEN_SETTINGS).toEqual({ enabled: false, count: 10 })
-  expect(levels(tracker, 10).map(l => l.price)).toEqual([
-    ...Array.from({ length: 10 }, (_, i) => 111 + i),
-    ...Array.from({ length: 10 }, (_, i) => 89 - i),
+it('confirms strict local highs/lows only after both right-side candles close and anchors to the pivot', () => {
+  const candles = pivot(), tracker = new UntakenLevels()
+  // Even if the caller has later data, only completed candles can confirm.
+  for (const completed of [1, 2, 3, 4]) {
+    tracker.update(candles.slice(0, completed + 1), completed)
+    expect(levels(tracker)).toEqual([])
+  }
+  tracker.update(candles, 5)
+  expect(levels(tracker)).toEqual([
+    { side: 'high', price: 110, time: candles[2].time },
+    { side: 'low', price: 90, time: candles[2].time },
   ])
-  expect(levels(tracker, 1).map(l => l.price)).toEqual([111, 89])
-  expect(levels(tracker, 50)).toHaveLength(60)
-  expect(levels(tracker, 10)).toHaveLength(20)
 })
 
-it('excludes current-price levels and selects the next nearest level without consuming a slot', () => {
-  const tracker = new UntakenLevels(), candles = [bar(0, 200, 0), bar(1, 150, 50), bar(2, 125, 75)]
-  tracker.update(candles, candles.length)
-  expect(tracker.visible(125, 1).map(l => l.price)).toEqual([150, 75])
-  expect(tracker.visible(75, 1).map(l => l.price)).toEqual([125, 50])
+it.each([1, 2, 3, 4])('rejects equal highs and lows at neighboring index %s', index => {
+  const candles = pivot(), highTracker = new UntakenLevels(), lowTracker = new UntakenLevels()
+  const neighbor = index <= 2 ? index - 1 : index
+  highTracker.update(candles.map((c, i) => i === neighbor ? { ...c, high: 110 } : c), 5)
+  lowTracker.update(candles.map((c, i) => i === neighbor ? { ...c, low: 90 } : c), 5)
+  expect(levels(highTracker).map(l => l.side)).toEqual(['low'])
+  expect(levels(lowTracker).map(l => l.side)).toEqual(['high'])
 })
 
-it('shows one line per identical price and retains the latest untouched origin', () => {
-  const candles = [bar(0, 110, 90), bar(1, 110, 90), bar(2, 105, 95)]
-  const tracker = new UntakenLevels(); tracker.update(candles, candles.length)
-  expect(levels(tracker).map(l => l.price)).toEqual([105, 110, 95, 90])
-  expect(levels(tracker).filter(l => l.price === 110 || l.price === 90).map(l => l.time)).toEqual([candles[1].time, candles[1].time])
+it('rejects ordinary and edge candles and honors different pivot strengths', () => {
+  const monotonic = Array.from({ length: 30 }, (_, i) => bar(i, 110 + i, 90 + i, 100 + i))
+  const tracker = new UntakenLevels(); tracker.update(monotonic, monotonic.length)
+  expect(tracker.visible(100, 10)).toEqual([])
+  const candles = [bar(0, 120, 80), bar(1), bar(2, 110, 90), bar(3), bar(4)]
+  const weak = new UntakenLevels(1), strong = new UntakenLevels(2)
+  weak.update(candles, 5); strong.update(candles, 5)
+  expect(levels(weak).map(l => l.price)).toEqual([110, 90])
+  expect(levels(strong)).toEqual([])
 })
 
-it('retains all old hidden levels and reveals them when N grows or nearer levels are taken', () => {
-  const candles = [bar(0, 150, 50), ...Array.from({ length: 2000 }, (_, i) => bar(i + 1, 130 - i * 0.01, 70 + i * 0.01))]
-  const tracker = new UntakenLevels(); tracker.update(candles, candles.length)
-  expect(levels(tracker, 10)).toHaveLength(20)
-  expect(levels(tracker, 10).some(l => l.time === candles[0].time)).toBe(false)
-  expect(levels(tracker, 2001).filter(l => l.time === candles[0].time)).toHaveLength(2)
-  candles.push(bar(2001, 140, 60)); tracker.update(candles, 2001)
-  expect(levels(tracker, 1).map(l => l.price)).toEqual([150, 50])
-})
-
-it('has no future leakage and reconstructs backward review, including a shrinking forming wick', () => {
-  const candles = [...prefix(), bar(15, 105, 95), bar(16, 104, 96), bar(17, 106, 94)]
-  const tracker = new UntakenLevels()
-  tracker.update(candles.slice(0, 17), 16)
-  const before = levels(tracker)
-  expect(before.map(l => l.price)).toEqual([105, 95])
-  tracker.update(candles, 17)
+it('removes confirmed pivots immediately on equal forming-wick touches, including at confirmation', () => {
+  const candles = [...pivot(), bar(5, 110, 90)], tracker = new UntakenLevels()
+  tracker.update(candles.slice(0, 5), 5)
+  expect(levels(tracker)).toHaveLength(2)
+  tracker.update(candles, 5)
   expect(levels(tracker)).toEqual([])
-  tracker.update(candles.slice(0, 17), 16, true)
-  expect(levels(tracker)).toEqual(before)
-  const smallerWick = [...candles.slice(0, 17), bar(17, 103, 97)]
-  tracker.update(smallerWick, 17)
-  const reconstructed = new UntakenLevels(); reconstructed.update(smallerWick, 17)
-  expect(levels(tracker)).toEqual(levels(reconstructed))
+  const fresh = new UntakenLevels(); fresh.update(candles, 5)
+  expect(levels(fresh)).toEqual([])
 })
 
-it('matches a direct historical definition through incremental steps and batched jumps', () => {
-  const candles = [...prefix(), ...Array.from({ length: 300 }, (_, i) => {
+it('selects N nearest distinct confirmed pivots per side and retains hidden older pivots', () => {
+  const candles = nested(30), tracker = new UntakenLevels()
+  tracker.update(candles, candles.length)
+  expect(DEFAULT_UNTAKEN_SETTINGS).toEqual({ enabled: false, count: 10, pivotStrength: 2 })
+  expect(levels(tracker, 10).map(l => l.price)).toEqual([
+    ...Array.from({ length: 10 }, (_, i) => 125.5 + i * 0.5),
+    ...Array.from({ length: 10 }, (_, i) => 74.5 - i * 0.5),
+  ])
+  expect(levels(tracker, 10)).toHaveLength(20)
+  expect(levels(tracker, 50)).toHaveLength(60)
+  expect(levels(tracker, 10).some(l => l.time === candles[2].time)).toBe(false)
+  candles.push(bar(150, 139.5, 60.5)); tracker.update(candles, 150)
+  expect(levels(tracker, 1).map(l => l.price)).toEqual([140, 60])
+  expect(levels(tracker, 1).every(l => l.time === candles[2].time)).toBe(true)
+})
+
+it('shows one line for repeated pivot prices, with the later confirmed pivot replacing the taken one', () => {
+  const candles = [...pivot(), ...pivot().map((c, i) => ({ ...c, time: bar(i + 5).time }))], tracker = new UntakenLevels()
+  tracker.update(candles, 10)
+  expect(levels(tracker).map(l => l.price)).toEqual([110, 90])
+  expect(levels(tracker).every(l => l.time === candles[7].time)).toBe(true)
+})
+
+it('filters strictly above/below current price without consuming slots on equal prices', () => {
+  const candles = nested(3), tracker = new UntakenLevels(); tracker.update(candles, 15)
+  expect(tracker.visible(139, 1).map(l => l.price)).toEqual([139.5, 61])
+  expect(tracker.visible(61, 1).map(l => l.price)).toEqual([139, 60.5])
+})
+
+it('reconstructs backward review across confirmation and shrinking forming wicks without future leakage', () => {
+  const candles = [...pivot(), bar(5, 110, 90)], tracker = new UntakenLevels()
+  tracker.update(candles.slice(0, 5), 4); expect(levels(tracker)).toEqual([])
+  tracker.update(candles.slice(0, 5), 5); const confirmed = levels(tracker)
+  expect(confirmed).toHaveLength(2)
+  tracker.update(candles, 5); expect(levels(tracker)).toEqual([])
+  tracker.update(candles.slice(0, 5), 5, true); expect(levels(tracker)).toEqual(confirmed)
+  tracker.update(candles.slice(0, 5), 4, true); expect(levels(tracker)).toEqual([])
+  const smallerWick = [...candles.slice(0, 5), bar(5)]
+  tracker.update(smallerWick, 5); expect(levels(tracker)).toEqual(confirmed)
+})
+
+// Independent direct definition: strict neighbors, confirmed right candles,
+// subsequent touches, then nearest prices. Kept small, not a benchmark.
+it.each([1, 2, 5, 20])('matches a direct historical oracle through incremental and batched updates with strength %s', strength => {
+  const candles = Array.from({ length: 300 }, (_, i) => {
     const center = 100 + Math.sin(i * 1.3) * 4
-    return bar(i + 15, center + 1, center - 1)
-  })]
-  const tracker = new UntakenLevels()
-  for (const count of [15, 16, 20, 100, 101, 200, 315]) {
-    const revealed = candles.slice(0, count), completed = count - 1
+    return bar(i, center + 1, center - 1, center)
+  })
+  const tracker = new UntakenLevels(strength)
+  for (const count of [1, 4, 5, 20, 50, 100, 101, 200, 300]) {
+    const revealed = candles.slice(0, count), completed = count - 1, price = revealed.at(-1)!.close
     tracker.update(revealed, completed)
-    const expected = revealed.slice(0, completed).flatMap((c, i) => [
-      ...(!revealed.slice(i + 1).some(next => next.high >= c.high) ? [`high:${c.time}:${c.high}`] : []),
-      ...(!revealed.slice(i + 1).some(next => next.low <= c.low) ? [`low:${c.time}:${c.low}`] : []),
-    ]).sort()
-    expect(tracker.visible(revealed.at(-1)!.close, 1000).map(l => `${l.side}:${l.time}:${l.price}`).sort()).toEqual(expected)
-    for (const count of [1, 2, 10]) {
-      const price = revealed.at(-1)!.close
-      const nearest = ['high', 'low'].flatMap(side => expected.map(key => {
-        const [kind, time, value] = key.split(':'); return { side: kind, time: Number(time), price: Number(value) }
-      }).filter(level => level.side === side && (side === 'high' ? level.price > price : level.price < price))
-        .sort((a, b) => Math.abs(a.price - price) - Math.abs(b.price - price)).slice(0, count)
-        .map(level => `${level.side}:${level.time}:${level.price}`)).sort()
-      expect(tracker.visible(price, count).map(l => `${l.side}:${l.time}:${l.price}`).sort()).toEqual(nearest)
+    for (const limit of [1, 2, 10]) {
+      const expected = (['high', 'low'] as const).flatMap(side => revealed.slice(0, completed).flatMap((c, i) => {
+        if (i < strength || i + strength >= completed) return []
+        const neighbors = revealed.slice(i - strength, i + strength + 1).filter((_, offset) => offset !== strength)
+        const strict = neighbors.every(n => side === 'high' ? n.high < c.high : n.low > c.low)
+        const taken = revealed.slice(i + 1).some(n => side === 'high' ? n.high >= c.high : n.low <= c.low)
+        return strict && !taken && (side === 'high' ? c.high > price : c.low < price) ? [{ time: c.time, price: c[side], side }] : []
+      }).sort((a, b) => Math.abs(a.price - price) - Math.abs(b.price - price)).slice(0, limit))
+      expect(tracker.visible(price, limit)).toEqual(expected)
     }
   }
 })
 
-it('has no warm-up requirement and accepts only positive safe integer limits', () => {
-  const tracker = new UntakenLevels(); tracker.update([bar(0, 101, 99)], 1)
-  expect(levels(tracker, 10).map(l => l.price)).toEqual([101, 99])
-  for (const count of [1, 10, 25, 10001]) expect(validUntakenSettings({ enabled: false, count })).toBe(true)
-  for (const count of [0, -1, 2.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, '10', null]) expect(validUntakenSettings({ enabled: true, count })).toBe(false)
+it('compacts expired rolling-window entries without losing an old confirmed level', () => {
+  const candles = Array.from({ length: 6000 }, (_, i) => i === 3000 ? bar(i, 110, 90) : bar(i))
+  const tracker = new UntakenLevels(); tracker.update(candles, candles.length)
+  expect(levels(tracker).map(l => l.price)).toEqual([110, 90])
+  expect(levels(tracker).every(l => l.time === candles[3000].time)).toBe(true)
+})
+
+it('accepts only positive safe integer counts and strengths', () => {
+  for (const value of [1, 2, 10, 10001]) expect(validUntakenSettings({ enabled: false, count: value, pivotStrength: value })).toBe(true)
+  for (const invalid of [0, -1, 2.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, '2', null, undefined]) {
+    expect(validUntakenSettings({ enabled: true, count: 10, pivotStrength: invalid })).toBe(false)
+    expect(validUntakenSettings({ enabled: true, count: invalid, pivotStrength: 2 })).toBe(false)
+  }
 })

@@ -35,6 +35,8 @@ export const IndicatorControls = memo(function IndicatorControls({ id, settings,
           onChange={event => onUntakenChange({ ...untaken, enabled: event.target.checked })} />Untaken Highs &amp; Lows (P)</label></legend>
         <Parameter label="Untaken Levels" ariaLabel={`Chart ${id + 1} Untaken Levels`} value={untaken.count} fractional={false} unbounded
           onChange={count => onUntakenChange({ ...untaken, count })} />
+        <Parameter label="Pivot Strength" ariaLabel={`Chart ${id + 1} Pivot Strength`} value={untaken.pivotStrength} fractional={false} unbounded
+          onChange={pivotStrength => onUntakenChange({ ...untaken, pivotStrength })} />
         <p className="indicator-source">All charts · maximum per side</p>
       </fieldset>}
       {(Object.keys(FIELDS) as (keyof typeof FIELDS)[]).map((group) => <fieldset key={group}>

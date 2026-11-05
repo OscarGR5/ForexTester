@@ -289,8 +289,8 @@ export const ChartPane = memo(function ChartPane({ untaken = DEFAULT_UNTAKEN_SET
       return
     }
     const last = untakenState.current
-    const replace = !last || last.bars !== bars || count < last.count
-    const levels = replace ? new UntakenLevels() : last.levels
+    const replace = !last || last.bars !== bars || count < last.count || last.levels.pivotStrength !== untaken.pivotStrength
+    const levels = replace ? new UntakenLevels(untaken.pivotStrength) : last.levels
     const tail = candles.at(-1)!
     // M1 observations reveal their full OHLC. The final higher-timeframe
     // candle closes when its last constituent minute has been revealed.
