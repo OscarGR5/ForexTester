@@ -7,7 +7,7 @@ beforeEach(() => window.localStorage.clear())
 const inventory = () => ({ disk: vi.fn(async () => [{ id: 'saved' }]), legacy: vi.fn(async () => [{ id: 'legacy' }]), active: () => 'active' })
 
 it('preserves global indicator settings during orphan cleanup, including stale candidates', async () => {
-  const key = uiKey(GLOBAL_UI_ID), value = JSON.stringify({ untakenLevels: { enabled: true, count: 15, pivotStrength: 2 } })
+  const key = uiKey(GLOBAL_UI_ID), value = JSON.stringify({ untakenLevels: { enabled: true, count: 15 } })
   localStorage.setItem(key, value)
   expect(await previewUiCleanup(inventory())).toEqual([])
   expect(await removeUnusedUi([{ key, value }], inventory())).toEqual({ removed: 0, error: null })

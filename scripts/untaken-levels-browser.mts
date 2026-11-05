@@ -32,7 +32,7 @@ try {
   const history = benchmarkHistory(2), source = history.bid, start = source.findIndex(c => c.timestamp >= Date.parse(history.tradingFrom)) + 61
   // Seed a left-qualified high and low on the current forming M5 candle.
   const beforeSeed = new ReplayBars('M5'); beforeSeed.advance(source, start + 1)
-  const left = beforeSeed.candles.slice(-3, -1)
+  const left = beforeSeed.candles.slice(-2, -1)
   source[start].high = Math.max(source[start].high, ...left.map(c => c.high + 0.00001))
   source[start].low = Math.min(source[start].low, ...left.map(c => c.low - 0.00001))
   history.ask[start].high = source[start].high + 0.0002
@@ -93,17 +93,17 @@ try {
   await page.getByRole('button', { name: 'Regression', exact: true }).click()
   await page.locator('.chart-canvas').nth(2).click({ position: { x: 200, y: 100 }, modifiers: ['Control'] })
   const snapshotRays = () => page.evaluate(() => (window as any).rays())
-  const expected = (count: number, timeframe: Timeframe, limit = 10, strength = 2) => {
+  const expected = (count: number, timeframe: Timeframe, limit = 10) => {
     const bars = new ReplayBars(timeframe); bars.advance(source, count)
     const tail = bars.candles.at(-1)!, completed = bars.candles.length - (source[count - 1].timestamp + 60000 < tail.time * 1000 + TIMEFRAME_MS[timeframe] ? 1 : 0)
-    const levels = new UntakenLevels(strength); levels.update(bars.candles, completed)
+    const levels = new UntakenLevels(); levels.update(bars.candles, completed)
     return levels.visible(tail.close, limit)
   }
-  const verify = async (count: number, limit = 10, strength = 2) => {
+  const verify = async (count: number, limit = 10) => {
     const values = await snapshotRays()
     assert.equal(values.length, 4)
     for (const pane of values) {
-      assert.deepEqual(pane.levels, expected(count, pane.timeframe, limit, strength))
+      assert.deepEqual(pane.levels, expected(count, pane.timeframe, limit))
       for (const side of ['high', 'low']) {
         const levels = pane.levels.filter((level: any) => level.side === side)
         assert.ok(levels.length <= limit)
@@ -115,7 +115,7 @@ try {
   }
   assert.ok((await snapshotRays()).every((p: any) => p.levels.length === 0))
   assert.equal(await page.getByLabel('Chart 3 Untaken Levels', { exact: true }).inputValue(), '10')
-  assert.equal(await page.getByLabel('Chart 3 Pivot Strength', { exact: true }).inputValue(), '2')
+  assert.equal(await page.getByLabel('Chart 3 Pivot Strength', { exact: true }).count(), 0)
   await page.evaluate(() => { (window as any).paint = [] })
   await page.keyboard.press('p'); await page.waitForTimeout(150)
   const initialRays = await verify(start + 1)
@@ -143,21 +143,20 @@ try {
   assert.ok(narrow.reduce((sum: number, p: any) => sum + p.levels.length, 0) < advanced.reduce((sum: number, p: any) => sum + p.levels.length, 0))
   await page.getByLabel('Chart 3 Untaken Levels', { exact: true }).fill('15'); await verify(start + 13, 15)
   await page.getByLabel('Chart 3 Untaken Levels', { exact: true }).press('p'); await verify(start + 13, 15) // Input guard.
-  await page.getByLabel('Chart 3 Pivot Strength', { exact: true }).fill('3'); await verify(start + 13, 15, 3)
-  assert.deepEqual(await page.locator('input[aria-label$="Pivot Strength"]').evaluateAll(inputs => inputs.map(input => (input as HTMLInputElement).value)), ['3', '3', '3', '3'])
   await page.keyboard.press('Escape')
   await page.locator('.chart-canvas').nth(2).click({ position: { x: 200, y: 100 } })
-  await page.mouse.wheel(0, -100); await verify(start + 13, 15, 3)
-  await page.getByLabel('Chart 3 timeframe', { exact: true }).selectOption('M15'); await verify(start + 13, 15, 3)
+  await page.mouse.wheel(0, -100); await verify(start + 13, 15)
+  await page.getByLabel('Chart 3 timeframe', { exact: true }).selectOption('M15'); await verify(start + 13, 15)
   await page.keyboard.press('p'); assert.ok((await snapshotRays()).every((p: any) => p.levels.length === 0))
-  await page.keyboard.press('p'); await verify(start + 13, 15, 3)
+  await page.keyboard.press('p'); await verify(start + 13, 15)
   await page.reload(); await page.getByRole('button', { name: 'Resume backtest', exact: true }).click()
   await page.locator('.phase-trading .chart-pane').nth(3).waitFor()
   assert.ok((await snapshotRays()).some((p: any) => p.levels.length > 0))
   assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('forextester:ui:v1:global')!).untakenLevels.count), 15)
-  assert.equal(await page.getByLabel('Chart 3 Pivot Strength', { exact: true }).inputValue(), '3')
+  assert.equal(await page.getByLabel('Chart 3 Pivot Strength', { exact: true }).count(), 0)
+  assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('forextester:ui:v1:global')!).untakenLevels), { enabled: true, count: 15 })
   assert.deepEqual(errors, [])
-  const evidence = { viewport: '1440 × 1000', checks: ['red/green rays', 'painted before candles', 'coexists with regression', 'P and input focus guard', 'forward invalidation', 'backward reconstruction', 'independent H1/D1/M5/H4 calculations', 'latest forming local high and low rays', 'confirmed and provisional swing pivots', 'immediate per-side count updates', 'shared pivot strength updates and persistence', 'zoom invariance', 'timeframe recalculation', 'reload persistence'], initialCounts: initialRays.map((p: any) => [p.timeframe, p.levels.length]), paint, errors }
+  const evidence = { viewport: '1440 × 1000', checks: ['red/green rays', 'painted before candles', 'coexists with regression', 'P and input focus guard', 'forward invalidation', 'backward reconstruction', 'independent H1/D1/M5/H4 calculations', 'latest forming local high and low rays', 'confirmed and provisional swing pivots', 'immediate per-side count updates', 'fixed three-candle detection', 'level-count persistence and removed strength control', 'zoom invariance', 'timeframe recalculation', 'reload persistence'], initialCounts: initialRays.map((p: any) => [p.timeframe, p.levels.length]), paint, errors }
   await writeFile(join(output, 'smoke.json'), JSON.stringify(evidence, null, 2)); console.log(JSON.stringify(evidence))
 } finally {
   globalThis.fetch = nativeFetch

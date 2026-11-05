@@ -66,11 +66,10 @@ export function readUi<T>(id: string | null, field: string, fallback: T, validat
 }
 export function readUntakenSettings(): UntakenSettings {
   const saved = readUi<unknown>(GLOBAL_UI_ID, 'untakenLevels', null, (value): value is unknown => true) as Partial<UntakenSettings> | null
-  // Retain the existing visibility when replacing the former settings shape.
+  // Retain visibility and count while discarding obsolete or unknown settings.
   const enabled = saved?.enabled
   return { enabled: typeof enabled === 'boolean' ? enabled : DEFAULT_UNTAKEN_SETTINGS.enabled,
-    count: typeof saved?.count === 'number' && Number.isSafeInteger(saved.count) && saved.count > 0 ? saved.count : DEFAULT_UNTAKEN_SETTINGS.count,
-    pivotStrength: typeof saved?.pivotStrength === 'number' && Number.isSafeInteger(saved.pivotStrength) && saved.pivotStrength > 0 ? saved.pivotStrength : DEFAULT_UNTAKEN_SETTINGS.pivotStrength }
+    count: typeof saved?.count === 'number' && Number.isSafeInteger(saved.count) && saved.count > 0 ? saved.count : DEFAULT_UNTAKEN_SETTINGS.count }
 }
 export function writeUi(id: string | null, field: string, value: unknown) {
   if (!id) return

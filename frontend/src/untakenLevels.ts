@@ -1,99 +1,57 @@
 import type { ChartCandle } from './indicators'
 
-export interface UntakenSettings { enabled: boolean; count: number; pivotStrength: number }
-export const DEFAULT_UNTAKEN_SETTINGS: UntakenSettings = { enabled: false, count: 10, pivotStrength: 2 }
+export interface UntakenSettings { enabled: boolean; count: number }
+export const DEFAULT_UNTAKEN_SETTINGS: UntakenSettings = { enabled: false, count: 10 }
 export function validUntakenSettings(value: unknown): value is UntakenSettings {
   const settings = value as UntakenSettings
   return !!settings && typeof settings.enabled === 'boolean' && Number.isSafeInteger(settings.count) && settings.count > 0 &&
-    Number.isSafeInteger(settings.pivotStrength) && settings.pivotStrength > 0
+    Object.keys(settings).every(key => key === 'enabled' || key === 'count')
 }
 export interface UntakenLevel { time: ChartCandle['time']; price: number; side: 'high' | 'low' }
 
-// Surviving pivot highs decrease in price, lows increase. Rolling extrema
-// confirm strict pivots in amortized O(1) per closed candle, independent of S.
-// Hidden confirmed levels stay in the stacks without an age limit.
+// Three closed candles confirm a strict local pivot at the middle candle.
+// Surviving highs decrease in price, lows increase; hidden levels have no age
+// limit. Each level is pushed and popped at most once during forward replay.
 export class UntakenLevels {
   private highs: UntakenLevel[] = []
   private lows: UntakenLevel[] = []
   private processed = 0
-  private highWindow: number[] = []
-  private lowWindow: number[] = []
-  private highHead = 0
-  private lowHead = 0
   private pendingHigh: UntakenLevel | null = null
   private pendingLow: UntakenLevel | null = null
   private formingHigh: UntakenLevel | null = null
   private formingLow: UntakenLevel | null = null
-
-  constructor(readonly pivotStrength = 2) {}
 
   update(candles: readonly ChartCandle[], completed: number, replace = false): void {
     // Recompute the mutable tail rather than letting a candle take its own ray.
     this.formingHigh = null; this.formingLow = null
     if (replace || completed < this.processed) {
       this.highs = []; this.lows = []; this.processed = 0
-      this.highWindow = []; this.lowWindow = []; this.highHead = 0; this.lowHead = 0
       this.pendingHigh = null; this.pendingLow = null
     }
     for (; this.processed < completed; this.processed++) {
       const candle = candles[this.processed]
       this.invalidate(candle)
-      const left = this.processed - 2 * this.pivotStrength
-      while (this.highHead < this.highWindow.length && this.highWindow[this.highHead] < left) this.highHead++
-      while (this.lowHead < this.lowWindow.length && this.lowWindow[this.lowHead] < left) this.lowHead++
-      // Keep equal extrema in the windows so ties on either side reject a pivot.
-      while (this.highWindow.length > this.highHead && candles[this.highWindow.at(-1)!].high < candle.high) this.highWindow.pop()
-      while (this.lowWindow.length > this.lowHead && candles[this.lowWindow.at(-1)!].low > candle.low) this.lowWindow.pop()
-      // After popping smaller extrema, the tail is the nearest left candle
-      // that would disqualify this candidate. At most one pending pivot per
-      // side can survive: another within S candles must take its predecessor.
-      if (this.processed >= this.pivotStrength) {
-        const firstLeft = this.processed - this.pivotStrength
-        if (this.highWindow.length === this.highHead || this.highWindow.at(-1)! < firstLeft) {
-          this.pendingHigh = { time: candle.time, price: candle.high, side: 'high' }
+      const previous = candles[this.processed - 1], left = candles[this.processed - 2]
+      if (left) {
+        if (previous.high > left.high && previous.high > candle.high) {
+          this.highs.push({ time: previous.time, price: previous.high, side: 'high' })
         }
-        if (this.lowWindow.length === this.lowHead || this.lowWindow.at(-1)! < firstLeft) {
-          this.pendingLow = { time: candle.time, price: candle.low, side: 'low' }
+        if (previous.low < left.low && previous.low < candle.low) {
+          this.lows.push({ time: previous.time, price: previous.low, side: 'low' })
         }
       }
-      this.highWindow.push(this.processed); this.lowWindow.push(this.processed)
-      if (left >= 0) {
-        const index = this.processed - this.pivotStrength, pivot = candles[index]
-        const nextHigh = this.highWindow[this.highHead + 1], nextLow = this.lowWindow[this.lowHead + 1]
-        if (this.highWindow[this.highHead] === index && (nextHigh === undefined || candles[nextHigh].high < pivot.high)) {
-          this.highs.push({ time: pivot.time, price: pivot.high, side: 'high' })
-          if (this.pendingHigh?.time === pivot.time) this.pendingHigh = null
-        }
-        if (this.lowWindow[this.lowHead] === index && (nextLow === undefined || candles[nextLow].low > pivot.low)) {
-          this.lows.push({ time: pivot.time, price: pivot.low, side: 'low' })
-          if (this.pendingLow?.time === pivot.time) this.pendingLow = null
-        }
-      }
-      // Compact expired queue entries only; no historical level is discarded.
-      if (this.highHead > 1024 && this.highHead * 2 >= this.highWindow.length) { this.highWindow = this.highWindow.slice(this.highHead); this.highHead = 0 }
-      if (this.lowHead > 1024 && this.lowHead * 2 >= this.lowWindow.length) { this.lowWindow = this.lowWindow.slice(this.lowHead); this.lowHead = 0 }
+      // Only the latest closed candle can still await a right-side close.
+      // Its predecessor has just confirmed above or was taken by this candle.
+      this.pendingHigh = previous && candle.high > previous.high ? { time: candle.time, price: candle.high, side: 'high' } : null
+      this.pendingLow = previous && candle.low < previous.low ? { time: candle.time, price: candle.low, side: 'low' } : null
     }
     const forming = candles[completed]
     if (forming) {
       this.invalidate(forming)
-      if (completed >= this.pivotStrength) {
-        const firstLeft = completed - this.pivotStrength
-        const high = this.leftExtreme(this.highWindow, this.highHead, firstLeft)
-        const low = this.leftExtreme(this.lowWindow, this.lowHead, firstLeft)
-        if (high !== undefined && forming.high > candles[high].high) this.formingHigh = { time: forming.time, price: forming.high, side: 'high' }
-        if (low !== undefined && forming.low < candles[low].low) this.formingLow = { time: forming.time, price: forming.low, side: 'low' }
-      }
+      const previous = candles[completed - 1]
+      if (previous && forming.high > previous.high) this.formingHigh = { time: forming.time, price: forming.high, side: 'high' }
+      if (previous && forming.low < previous.low) this.formingLow = { time: forming.time, price: forming.low, side: 'low' }
     }
-  }
-
-  private leftExtreme(window: readonly number[], head: number, first: number): number | undefined {
-    let end = window.length
-    while (head < end) {
-      const middle = (head + end) >>> 1
-      if (window[middle] < first) head = middle + 1
-      else end = middle
-    }
-    return window[head]
   }
 
   private invalidate(candle: ChartCandle): void {
