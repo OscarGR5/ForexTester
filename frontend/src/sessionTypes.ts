@@ -37,6 +37,7 @@ export interface ChartModeSettings {
 }
 export type EquitySummary = Omit<EquityLedger, 'tail'>
 export interface SessionCheckpoint {
+  regressionAnchor?: number | null // UTC M1 timestamp; absent in earlier sessions.
   lifecycle?: Lifecycle // Absent only in v1; derived after its digest is verified.
   replay: ReplayCheckpoint
   executionCursor: number

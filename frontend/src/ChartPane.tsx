@@ -1,5 +1,8 @@
 import { TradeOverlays, type TradeOverlayRecord } from './tradeOverlays'
 import { useMeasurement } from './useMeasurement'
+import { RegressionChannelPrimitive } from './RegressionChannelPrimitive'
+import { useRegressionAnchor } from './useRegressionAnchor'
+import type { RegressionChannel } from './regressionChannel'
 import { useStochasticPaneHeight } from './useStochasticPaneHeight'
 import { FOLLOW_RIGHT_OFFSET } from './chartSync'
 import { EntryLines, type EntryOverlay } from './entryOverlays'
@@ -27,6 +30,9 @@ const CHART_PRICE_DECIMALS = 5
 
 interface ChartPaneProps {
   id: number
+  regression?: RegressionChannel | null
+  regressionEnabled?: boolean
+  onRegressionAnchor?: (timestamp: number) => void
   tradeRecords?: readonly TradeOverlayRecord[]
   showExecutions?: boolean
   showOriginalSl?: boolean
@@ -53,7 +59,7 @@ interface ChartPaneProps {
   onTimeframeChange: (id: number, timeframe: Timeframe) => void
 }
 
-export const ChartPane = memo(function ChartPane({ tradeRecords = [], showExecutions = false, showOriginalSl = false, measurementLayout = 1, pipSize = 0.0001, instrument = 'EURUSD', priceLabel = 'Bid', id, active = false, reviewing = false, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, stops, placement, draftReference = null, onPick, stopInteraction, entries = [] }: ChartPaneProps) {
+export const ChartPane = memo(function ChartPane({ regression = null, regressionEnabled = false, onRegressionAnchor, tradeRecords = [], showExecutions = false, showOriginalSl = false, measurementLayout = 1, pipSize = 0.0001, instrument = 'EURUSD', priceLabel = 'Bid', id, active = false, reviewing = false, sessionId, timeframe, source, count, synchronizer, onTimeframeChange, settings, onSettingsChange, positions, stops, placement, draftReference = null, onPick, stopInteraction, entries = [] }: ChartPaneProps) {
   const [readiness, setReadiness] = useState('')
   const container = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
@@ -63,6 +69,7 @@ export const ChartPane = memo(function ChartPane({ tradeRecords = [], showExecut
   const indicatorsRef = useRef<IndicatorSeries | null>(null)
   const savePriceRef = useRef<(() => void) | null>(null)
   const tradeOverlays = useRef<TradeOverlays | null>(null)
+  const regressionOverlay = useRef<RegressionChannelPrimitive | null>(null)
   const stopLines = useRef<StopLines | null>(null)
   const draftAnnotation = useRef<HTMLDivElement>(null)
   const entryLines = useRef<EntryLines | null>(null)
@@ -107,6 +114,8 @@ export const ChartPane = memo(function ChartPane({ tradeRecords = [], showExecut
     })
     tradeOverlays.current = new TradeOverlays()
     series.attachPrimitive(tradeOverlays.current)
+    regressionOverlay.current = new RegressionChannelPrimitive()
+    series.attachPrimitive(regressionOverlay.current)
     stopLines.current = new StopLines(series)
     entryLines.current = new EntryLines(series)
     chartRef.current = chart
@@ -128,6 +137,8 @@ export const ChartPane = memo(function ChartPane({ tradeRecords = [], showExecut
       stopLines.current = null
       if (tradeOverlays.current) series.detachPrimitive(tradeOverlays.current)
       tradeOverlays.current = null
+      if (regressionOverlay.current) series.detachPrimitive(regressionOverlay.current)
+      regressionOverlay.current = null
       chart.remove()
       chartRef.current = null
       seriesRef.current = null
@@ -262,6 +273,11 @@ export const ChartPane = memo(function ChartPane({ tradeRecords = [], showExecut
 
   // IndicatorSeries creates/removes the oscillator pane in the layout effect above.
   useStochasticPaneHeight(container, chartRef, sessionId, id, settings.stochastic.enabled)
+
+  useRegressionAnchor(container, chartRef, regressionEnabled, () => previous.current?.bars.candles ?? [], source, count,
+    timestamp => { synchronizer.activate(id); onRegressionAnchor?.(timestamp) })
+
+  useLayoutEffect(() => { regressionOverlay.current!.update(regression, source, timeframe) }, [regression, source, timeframe])
 
   const measurementCleanup = useMeasurement(container, chartRef, seriesRef, () => previous.current?.bars.candles ?? [],
     !!placement || !!stopInteraction?.preview, `${sessionId}:${timeframe}:${measurementLayout}`, pipSize,

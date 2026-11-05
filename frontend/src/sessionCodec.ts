@@ -133,6 +133,8 @@ export async function validateRecord(record: SessionRecord): Promise<void> {
       executionCursor === replay.index + 1 && equity.count === executionCursor - replay.startIndex && replay.timestamp === trading.observedTimestamp && replay.complete === (executionCursor === record.totalCandles)
       : replay.index === null && replay.timestamp === null && !replay.complete && !replay.playing && executionCursor === 0 && equity.count === 0 && trading.observedTimestamp === null)
     requireValid(record.status === (replay.complete ? 'complete' : replay.playing ? 'in-progress' : 'paused'))
+    const anchor = record.checkpoint.regressionAnchor
+    requireValid(anchor === undefined || anchor === null || timestamp(anchor) && replay.started && anchor < Date.parse(record.range.to))
     requireValid(record.completedSetups === trading.setups.filter((setup) => trading.closed.some((p) => p.setupId === setup.id) && ![...trading.pending, ...trading.positions].some((p) => p.setupId === setup.id)).length)
     requireValid([equity.cashUsd, equity.highWaterMarkUsd, equity.maxDrawdownUsd].every(finite) && equity.maxDrawdownUsd >= 0 && equity.highWaterMarkUsd >= trading.account.referenceBalance &&
       (equity.maxDrawdownPercent === null || finite(equity.maxDrawdownPercent) && equity.maxDrawdownPercent >= 0) && typeof equity.nonpositiveEquity === 'boolean' && integer(equity.missingCount))
@@ -171,6 +173,12 @@ export async function validateRecord(record: SessionRecord): Promise<void> {
 
 export function validateHistoryCheckpoint(record: SessionRecord, history: LoadedHistory) {
   const { replay, trading } = record.checkpoint
+  const anchor = record.checkpoint.regressionAnchor
+  if (anchor !== undefined && anchor !== null) {
+    const candles = historyCandles(history), index = replayStartIndex(candles, anchor)
+    requireValid(candles[index]?.timestamp === anchor)
+    if (isFuturesHistory(history)) requireValid(history.candles[index].instrumentId === history.candles[replay.startIndex].instrumentId)
+  }
   requireValid(history.tradingFrom === record.range.from && history.to === record.range.to && historyCandles(history).length === record.totalCandles && history.symbol === record.symbol)
   requireValid(isLocalForex(history) ? trading.executionModel === history.executionModel : trading.executionModel === undefined)
   requireValid(replay.startIndex === replayStartIndex(historyCandles(history), replay.startTimestamp))

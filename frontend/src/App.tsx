@@ -1,4 +1,5 @@
 import { tradeOverlayRecords } from './tradeOverlays'
+import { RegressionCalculator } from './regressionChannel'
 import { useDismissibleDetails } from './useOutsideInteraction'
 import { useReplayKeyboard } from './useReplayKeyboard'
 import { useIndicatorKeyboard } from './useIndicatorKeyboard'
@@ -72,6 +73,7 @@ export function App() {
   const [loader] = useState(() => new HistoryLoader())
   const [loadProgress, setLoadProgress] = useState<LoadProgress>({ completed: 0, total: 0 })
   const [hydration, setHydration] = useState<Hydration | null>(null)
+  const [regressionAnchor, setRegressionAnchor] = useState<number | null>(null)
   const [loadedRequirements, setLoadedRequirements] = useState<WarmupRequirement[]>(() => workspaceWarmupRequirements(defaultWorkspace()))
 
   const source = history ? historyCandles(history) : EMPTY_CANDLES
@@ -99,6 +101,9 @@ export function App() {
     return index
   }, [history, startIndex])
   const chartSource = useMemo(() => source.slice(chartOffset), [source, chartOffset])
+  const regressionCalculator = useMemo(() => new RegressionCalculator(chartSource), [chartSource])
+  const regression = useMemo(() => regressionCalculator.update(regressionAnchor, Math.max(0, replay.displayCount - chartOffset)),
+    [regressionCalculator, regressionAnchor, replay.displayCount, chartOffset])
   const bounds = useMemo(() => source.length && replay.count ? {
     from: source[chartOffset].timestamp / 1000,
     to: source[replay.count - 1].timestamp / 1000,
@@ -107,8 +112,8 @@ export function App() {
   const snapshot = useMemo<SessionSnapshot | null>(() => history ? ({ ledger: trading.equity, checkpoint: {
     lifecycle, replay: { started: replay.active, index: replay.active ? replay.count - 1 : null, timestamp: replay.timestamp,
       startIndex: replay.active ? replay.startIndex : startIndex, startTimestamp: startMs, speed: replay.speed, complete: replay.complete, playing: replay.playing },
-    trading: trading.state, executionCursor: trading.executionCursor, equity: equitySummary(trading.equity), workspace,
-  } }) : null, [lifecycle, history, trading.state, trading.equity, trading.executionCursor, replay.active, replay.count, replay.timestamp, replay.startIndex, replay.speed, replay.complete, replay.playing, startIndex, startMs, workspace])
+    trading: trading.state, executionCursor: trading.executionCursor, equity: equitySummary(trading.equity), workspace, regressionAnchor,
+  } }) : null, [lifecycle, history, trading.state, trading.equity, trading.executionCursor, replay.active, replay.count, replay.timestamp, replay.startIndex, replay.speed, replay.complete, replay.playing, startIndex, startMs, workspace, regressionAnchor])
   const sessions = useSessionPersistence({ history, snapshot, actionVersion: trading.actionVersion, pause: replay.pause,
     captureViewport: () => synchronizer.snapshot(),
     download: (range, progress) => new HistoryLoader().load(range, new AbortController().signal, progress ?? setLoadProgress),
@@ -116,6 +121,7 @@ export function App() {
       selectionTouched.current = true
       loadGeneration.current++; loadAbort.current?.abort(); setDraft(null); setManage(false); setLifecycle(lifecycleOf(saved.checkpoint))
       setHydration(saved); setHistory(source); setRequestedRange(saved.record.range)
+      setRegressionAnchor(saved.checkpoint.regressionAnchor ?? null)
       setLoadedRequirements(workspaceWarmupRequirements(saved.checkpoint.workspace))
       setFrom(saved.record.range.from); setTo(saved.record.range.to)
       setPendingStart(false); starting.current = false
@@ -126,12 +132,14 @@ export function App() {
       setPendingStart(false); starting.current = false
       loadGeneration.current++; loadAbort.current?.abort(); setDraft(null); setLifecycle('setup'); setStatus('idle'); setManage(false)
       setHydration(null); setHistory(null); setRequestedRange({ ...range }); setFrom(range.from); setTo(range.to)
+      setRegressionAnchor(null)
     },
   })
 
   const [uiWorkspace, setUiWorkspace] = useUiValue(sessions.activeId, 'workspace', hydration?.checkpoint.workspace ?? workspace, validWorkspace)
   const [showExecutions, setShowExecutions] = useUiValue(sessions.activeId, 'executions', false, validBoolean)
   const [showOriginalSl, setShowOriginalSl] = useUiValue(sessions.activeId, 'slHistory', false, validBoolean)
+  const [regressionEnabled, setRegressionEnabled] = useUiValue(sessions.activeId, 'regression', false, validBoolean)
   const tradeRecords = useMemo(() => showExecutions || showOriginalSl ? tradeOverlayRecords(trading.state.positions, trading.state.closed) : [], [trading.state.positions, trading.state.closed, showExecutions, showOriginalSl])
   const uiWorkspaceRef = useRef(uiWorkspace)
   useLayoutEffect(() => { uiWorkspaceRef.current = uiWorkspace }, [uiWorkspace])
@@ -230,7 +238,7 @@ export function App() {
       if (history && !await sessions.fresh(selected.range)) throw new Error('The previous backtest could not be saved. Local history is ready; retry storage before switching.')
       starting.current = true
       // Name updates flush persistence immediately, so install the new history first.
-      flushSync(() => { setLoadedRequirements(requirements); setHydration(null); setHistory(result); setStatus('ready'); setPendingStart(true) })
+      flushSync(() => { setLoadedRequirements(requirements); setHydration(null); setRegressionAnchor(null); setHistory(result); setStatus('ready'); setPendingStart(true) })
       sessions.editName(chosenName); void refreshCoverage()
     } catch (reason) {
       if (generation !== loadGeneration.current || controller.signal.aborted) return
@@ -314,7 +322,7 @@ export function App() {
         <fieldset className="header-replay" aria-label="Market replay" disabled={workspaceDisabled || status === 'loading' || pendingStart || manage || !!stopPreview} hidden={!sessions.initialized || sessions.awaitingChoice}>
           <button disabled={!replay.canPlay || !!stopPreview} onClick={()=>{setDraft(null);replay.play()}}>Play</button><button disabled={!replay.canPause} onClick={replay.pause}>Pause</button><button disabled={!replay.canNext || !!stopPreview} onClick={()=>{setDraft(null);replay.next()}}>Next Min</button>
           <label>Speed<select aria-label="Replay speed" value={replay.speed} onChange={e=>replay.setSpeed(Number(e.target.value) as 1|10|100)}>{[1,10,100].map(s=><option key={s} value={s}>{s}×</option>)}</select></label>
-          {chartLayout}<div className="overlay-toggles"><button aria-pressed={showExecutions} onClick={()=>setShowExecutions(value=>!value)}>Executions</button><button aria-pressed={showOriginalSl} onClick={()=>setShowOriginalSl(value=>!value)}>Original SL</button></div><div className="replay-state"><span aria-label="Replay status" className="replay-status">{replay.status}</span><span className="replay-progress" aria-label="Replay progress">{replay.revealed-replay.startIndex} / {replay.total-replay.startIndex} candles</span></div><button disabled={replay.reviewing} onClick={()=>void finish()}>{replay.complete || replay.blocked ? 'Review Results' : 'Finish backtest'}</button>
+          {chartLayout}<div className="overlay-toggles"><button aria-pressed={showExecutions} onClick={()=>setShowExecutions(value=>!value)}>Executions</button><button aria-pressed={showOriginalSl} onClick={()=>setShowOriginalSl(value=>!value)}>Original SL</button><button aria-pressed={regressionEnabled} title="Ctrl + Click a candle to anchor the M1 regression channel" onClick={()=>setRegressionEnabled(value=>!value)}>Regression</button></div><div className="replay-state"><span aria-label="Replay status" className="replay-status">{replay.status}</span><span className="replay-progress" aria-label="Replay progress">{replay.revealed-replay.startIndex} / {replay.total-replay.startIndex} candles</span></div><button disabled={replay.reviewing} onClick={()=>void finish()}>{replay.complete || replay.blocked ? 'Review Results' : 'Finish backtest'}</button>
         </fieldset>
       )}
       {lifecycle !== 'setup' && <div className="header-account"><time className="replay-clock">{replay.timestamp === null ? 'Awaiting replay' : new Date(replay.timestamp).toISOString().slice(0,16).replace('T',' ') + ' UTC'}</time>{pnlDisplay}</div>}<button onClick={()=>{ replay.pause(); setDraft(null); setManage(true) }}>Sessions / settings</button>
@@ -371,7 +379,7 @@ export function App() {
         {keyboardNotice && <p className="keyboard-notice" role="status">{keyboardNotice}</p>}
         {replay.blocked && <p className="coverage-warning" role="alert">Replay blocked at contract rollover. No positions, stops or pending orders were executed across the boundary. Finish this backtest or select a replay start after the rollover. A carry/roll policy requires project-lead approval.</p>}
         <div className="chart-workspace" aria-label={`${history?.symbol === '6E' ? 'EURUSD 6E' : history?.symbol ?? 'EURUSD'} chart workspace`}><div className={`chart-stack charts-${chartCount}`}>
-          {timeframes.slice(0,chartCount).map((timeframe,id)=><ChartPane tradeRecords={tradeRecords} showExecutions={showExecutions} showOriginalSl={showOriginalSl} key={id} measurementLayout={chartCount} pipSize={history && isLocalForex(history) ? history.instrument.pipSize : 0.0001} instrument={history?.symbol ?? 'EURUSD'} priceLabel={history && isLocalForex(history) ? 'Mid' : undefined} id={id} active={id === activeChart} reviewing={replay.reviewing} timeframe={timeframe} sessionId={sessions.activeId} positions={replay.reviewing ? [] : trading.state.positions} entries={replay.reviewing ? [] : entries} stops={replay.reviewing ? [] : stops} stopInteraction={{ enabled: canRequestOrder(trading.permission) && !draft,
+          {timeframes.slice(0,chartCount).map((timeframe,id)=><ChartPane regression={regression} regressionEnabled={regressionEnabled && !workspaceDisabled} onRegressionAnchor={setRegressionAnchor} tradeRecords={tradeRecords} showExecutions={showExecutions} showOriginalSl={showOriginalSl} key={id} measurementLayout={chartCount} pipSize={history && isLocalForex(history) ? history.instrument.pipSize : 0.0001} instrument={history?.symbol ?? 'EURUSD'} priceLabel={history && isLocalForex(history) ? 'Mid' : undefined} id={id} active={id === activeChart} reviewing={replay.reviewing} timeframe={timeframe} sessionId={sessions.activeId} positions={replay.reviewing ? [] : trading.state.positions} entries={replay.reviewing ? [] : entries} stops={replay.reviewing ? [] : stops} stopInteraction={{ enabled: canRequestOrder(trading.permission) && !draft,
             preview: stopPreview, onPreview: setStopPreview, onCommit: (positionId, price) => {
               const position = trading.state.positions.find(p => p.id === positionId)
               const error = position ? stopModificationError(trading.state, position, price, trading.permission) : 'Position is no longer open.'
