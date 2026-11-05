@@ -3,6 +3,7 @@ import { validViewportState } from './chartSync'
 import { TIMEFRAMES } from './history'
 import { defaultIndicatorSettings, indicatorPreset, validateIndicatorSettings } from './indicators'
 import type { ChartModeSettings, WorkspaceSettings } from './sessionTypes'
+import { DEFAULT_UNTAKEN_SETTINGS, validUntakenSettings, type UntakenSettings } from './untakenLevels'
 
 export function defaultChartMode(count: 1 | 2 | 3 | 4): ChartModeSettings {
   const timeframes = count === 4 ? ['H1', 'D1', 'M5', 'H4'] as const : count === 1 ? ['D1', 'H4', 'H1'] as const : count === 2 ? ['H4', 'D1', 'H1'] as const : ['M5', 'H4', 'H1'] as const
@@ -62,6 +63,13 @@ function readEnvelope(id: string): Record<string, unknown> {
 export function readUi<T>(id: string | null, field: string, fallback: T, validate: (v: unknown) => v is T): T {
   const value = id ? readEnvelope(id)[field] : null
   return validate(value) ? value : fallback
+}
+export function readUntakenSettings(): UntakenSettings {
+  const saved = readUi<unknown>(GLOBAL_UI_ID, 'untakenLevels', null, (value): value is unknown => true)
+  // Retain the existing visibility when replacing the former settings shape.
+  const enabled = (saved as Partial<UntakenSettings> | null)?.enabled
+  return { enabled: typeof enabled === 'boolean' ? enabled : DEFAULT_UNTAKEN_SETTINGS.enabled,
+    count: validUntakenSettings(saved) ? saved.count : DEFAULT_UNTAKEN_SETTINGS.count }
 }
 export function writeUi(id: string | null, field: string, value: unknown) {
   if (!id) return

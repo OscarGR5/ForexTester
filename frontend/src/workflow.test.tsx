@@ -201,7 +201,7 @@ it('admits M5 levels only at candle close, takes them with forming wicks, and re
  const source = Array.from({ length: 81 }, (_, i) => ({ timestamp: beginning + i * 60000,
   open: 1.1, close: 1.1, high: i < 75 ? 1.11 : 1.12, low: i < 75 ? 1.09 : 1.08 }))
  const rays = vi.spyOn(UntakenLevelsPrimitive.prototype, 'setData'), synchronizer = new ChartSynchronizer()
- const settings = defaultIndicatorSettings(), untaken = { enabled: true, distanceAtr: 5 }
+ const settings = defaultIndicatorSettings(), untaken = { enabled: true, count: 10 }
  const render = (count: number) => act(async () => root.render(<ChartPane id={0} sessionId={null} timeframe="M5" source={source} count={count}
   synchronizer={synchronizer} settings={settings} onSettingsChange={() => {}} onTimeframeChange={() => {}}
   untaken={untaken} stops={[]} positions={[]} placement={null} onPick={() => {}} />))
@@ -215,20 +215,30 @@ it('admits M5 levels only at candle close, takes them with forming wicks, and re
  await render(79); expect(prices()).toEqual([])
  await render(80); expect(rays.mock.lastCall![0]).toEqual(closed)
 })
+it('preserves untaken visibility and replaces former saved settings with the default count', async () => {
+ localStorage.setItem(uiKey(GLOBAL_UI_ID), JSON.stringify({ untakenLevels: { enabled: true, distanceAtr: 5 } }))
+ await start()
+ expect(host.querySelector<HTMLInputElement>('[aria-label="Chart 1 Untaken Highs & Lows"]')!.checked).toBe(true)
+ expect(host.querySelector<HTMLInputElement>('[aria-label="Chart 1 Untaken Levels"]')!.value).toBe('10')
+ expect(JSON.parse(localStorage.getItem(uiKey(GLOBAL_UI_ID))!).untakenLevels).toEqual({ enabled: true, count: 10 })
+})
 it('shares untaken settings across four independent panes, persists them after remount, and keeps legacy workspace preferences', async () => {
  await start()
  const rays = vi.spyOn(UntakenLevelsPrimitive.prototype, 'setData')
  await act(async () => host.querySelector<HTMLInputElement>('input[name="chart-count"][value="4"]')!.click())
  const toggles = () => [...host.querySelectorAll<HTMLInputElement>('input[aria-label$="Untaken Highs & Lows"]')]
  expect(toggles().map(input => input.checked)).toEqual([false, false, false, false])
+ expect([...host.querySelectorAll<HTMLInputElement>('input[aria-label$="Untaken Levels"]')].map(input => input.value)).toEqual(['10', '10', '10', '10'])
  await act(async () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', cancelable: true })))
  expect(toggles().map(input => input.checked)).toEqual([true, true, true, true])
  expect(rays.mock.instances.slice(-4).length).toBe(4)
- await input('Chart 3 Distance (ATR)', '2.5')
- expect([...host.querySelectorAll<HTMLInputElement>('input[aria-label$="Distance (ATR)"]')].map(input => input.value)).toEqual(['2.5', '2.5', '2.5', '2.5'])
- await input('Chart 3 Distance (ATR)', '0')
- expect(JSON.parse(localStorage.getItem(uiKey(GLOBAL_UI_ID))!).untakenLevels).toEqual({ enabled: true, distanceAtr: 2.5 })
- await input('Chart 3 Distance (ATR)', '7.5')
+ await input('Chart 3 Untaken Levels', '3')
+ expect([...host.querySelectorAll<HTMLInputElement>('input[aria-label$="Untaken Levels"]')].map(input => input.value)).toEqual(['3', '3', '3', '3'])
+ await input('Chart 3 Untaken Levels', '2.5')
+ expect(host.querySelector('[aria-label="Chart 3 Untaken Levels"]')!.getAttribute('aria-invalid')).toBe('true')
+ await input('Chart 3 Untaken Levels', '0')
+ expect(JSON.parse(localStorage.getItem(uiKey(GLOBAL_UI_ID))!).untakenLevels).toEqual({ enabled: true, count: 3 })
+ await input('Chart 3 Untaken Levels', '15')
  const before = [...host.querySelectorAll<HTMLSelectElement>('select[aria-label$="timeframe"]')].map(input => input.value)
  expect(new Set(before).size).toBe(4)
  await until(() => host.querySelector('.save-state')?.textContent === 'Saved')
@@ -238,7 +248,7 @@ it('shares untaken settings across four independent panes, persists them after r
  await click('Resume backtest')
  await until(() => host.querySelector('.phase-trading'))
  expect(toggles().map(input => input.checked)).toEqual([true, true, true, true])
- expect([...host.querySelectorAll<HTMLInputElement>('input[aria-label$="Distance (ATR)"]')].map(input => input.value)).toEqual(['7.5', '7.5', '7.5', '7.5'])
+ expect([...host.querySelectorAll<HTMLInputElement>('input[aria-label$="Untaken Levels"]')].map(input => input.value)).toEqual(['15', '15', '15', '15'])
  await act(async () => toggles()[1].click())
  expect(toggles().map(input => input.checked)).toEqual([false, false, false, false])
  expect(rays.mock.calls.slice(-4).every(([levels]) => levels.length === 0)).toBe(true)

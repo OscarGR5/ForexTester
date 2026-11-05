@@ -297,7 +297,7 @@ export const ChartPane = memo(function ChartPane({ untaken = DEFAULT_UNTAKEN_SET
     const revealedThrough = source[count - 1].timestamp + 60_000
     const completed = candles.length - (revealedThrough < (tail.time * 1000 + TIMEFRAME_MS[timeframe]) ? 1 : 0)
     levels.update(candles, completed)
-    untakenPrimitive.current!.setData(levels.visible(tail.close, untaken.distanceAtr))
+    untakenPrimitive.current!.setData(levels.visible(tail.close, untaken.count))
     untakenState.current = { bars, count, levels }
   }, [source, count, synchronizer, timeframe, untaken])
 

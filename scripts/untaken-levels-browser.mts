@@ -81,19 +81,28 @@ try {
   await page.getByRole('button', { name: 'Regression', exact: true }).click()
   await page.locator('.chart-canvas').nth(2).click({ position: { x: 200, y: 100 }, modifiers: ['Control'] })
   const snapshotRays = () => page.evaluate(() => (window as any).rays())
-  const expected = (count: number, timeframe: Timeframe, distance = 5) => {
+  const expected = (count: number, timeframe: Timeframe, limit = 10) => {
     const bars = new ReplayBars(timeframe); bars.advance(source, count)
     const tail = bars.candles.at(-1)!, completed = bars.candles.length - (source[count - 1].timestamp + 60000 < tail.time * 1000 + TIMEFRAME_MS[timeframe] ? 1 : 0)
     const levels = new UntakenLevels(); levels.update(bars.candles, completed)
-    return levels.visible(tail.close, distance)
+    return levels.visible(tail.close, limit)
   }
-  const verify = async (count: number, distance = 5) => {
+  const verify = async (count: number, limit = 10) => {
     const values = await snapshotRays()
     assert.equal(values.length, 4)
-    for (const pane of values) assert.deepEqual(pane.levels, expected(count, pane.timeframe, distance))
+    for (const pane of values) {
+      assert.deepEqual(pane.levels, expected(count, pane.timeframe, limit))
+      for (const side of ['high', 'low']) {
+        const levels = pane.levels.filter((level: any) => level.side === side)
+        assert.ok(levels.length <= limit)
+        assert.equal(new Set(levels.map((level: any) => level.price)).size, levels.length)
+        assert.ok(levels.every((level: any) => side === 'high' ? level.price > source[count - 1].close : level.price < source[count - 1].close))
+      }
+    }
     return values
   }
   assert.ok((await snapshotRays()).every((p: any) => p.levels.length === 0))
+  assert.equal(await page.getByLabel('Chart 3 Untaken Levels', { exact: true }).inputValue(), '10')
   await page.evaluate(() => { (window as any).paint = [] })
   await page.keyboard.press('p'); await page.waitForTimeout(150)
   const initialRays = await verify(start + 1)
@@ -113,23 +122,23 @@ try {
   await page.keyboard.press('Control+Shift+ArrowLeft'); await verify(start + 12)
   await page.keyboard.press('Control+Shift+ArrowRight'); await verify(start + 13)
   await page.locator('.indicator-controls summary').nth(2).click()
-  await page.getByLabel('Chart 3 Distance (ATR)', { exact: true }).fill('0.1')
-  const narrow = await verify(start + 13, 0.1)
+  await page.getByLabel('Chart 3 Untaken Levels', { exact: true }).fill('1')
+  const narrow = await verify(start + 13, 1)
   assert.ok(narrow.reduce((sum: number, p: any) => sum + p.levels.length, 0) < advanced.reduce((sum: number, p: any) => sum + p.levels.length, 0))
-  await page.getByLabel('Chart 3 Distance (ATR)', { exact: true }).fill('7.5'); await verify(start + 13, 7.5)
-  await page.getByLabel('Chart 3 Distance (ATR)', { exact: true }).press('p'); await verify(start + 13, 7.5) // Input guard.
+  await page.getByLabel('Chart 3 Untaken Levels', { exact: true }).fill('15'); await verify(start + 13, 15)
+  await page.getByLabel('Chart 3 Untaken Levels', { exact: true }).press('p'); await verify(start + 13, 15) // Input guard.
   await page.keyboard.press('Escape')
   await page.locator('.chart-canvas').nth(2).click({ position: { x: 200, y: 100 } })
-  await page.mouse.wheel(0, -100); await verify(start + 13, 7.5)
-  await page.getByLabel('Chart 3 timeframe', { exact: true }).selectOption('M15'); await verify(start + 13, 7.5)
+  await page.mouse.wheel(0, -100); await verify(start + 13, 15)
+  await page.getByLabel('Chart 3 timeframe', { exact: true }).selectOption('M15'); await verify(start + 13, 15)
   await page.keyboard.press('p'); assert.ok((await snapshotRays()).every((p: any) => p.levels.length === 0))
-  await page.keyboard.press('p'); await verify(start + 13, 7.5)
+  await page.keyboard.press('p'); await verify(start + 13, 15)
   await page.reload(); await page.getByRole('button', { name: 'Resume backtest', exact: true }).click()
   await page.locator('.phase-trading .chart-pane').nth(3).waitFor()
   assert.ok((await snapshotRays()).some((p: any) => p.levels.length > 0))
-  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('forextester:ui:v1:global')!).untakenLevels.distanceAtr), 7.5)
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('forextester:ui:v1:global')!).untakenLevels.count), 15)
   assert.deepEqual(errors, [])
-  const evidence = { viewport: '1440 × 1000', checks: ['red/green rays', 'painted before candles', 'coexists with regression', 'P and input focus guard', 'forward invalidation', 'backward reconstruction', 'independent H1/D1/M5/H4 calculations', 'immediate distance updates', 'zoom invariance', 'timeframe recalculation', 'reload persistence'], initialCounts: initialRays.map((p: any) => [p.timeframe, p.levels.length]), paint, errors }
+  const evidence = { viewport: '1440 × 1000', checks: ['red/green rays', 'painted before candles', 'coexists with regression', 'P and input focus guard', 'forward invalidation', 'backward reconstruction', 'independent H1/D1/M5/H4 calculations', 'immediate per-side count updates', 'zoom invariance', 'timeframe recalculation', 'reload persistence'], initialCounts: initialRays.map((p: any) => [p.timeframe, p.levels.length]), paint, errors }
   await writeFile(join(output, 'smoke.json'), JSON.stringify(evidence, null, 2)); console.log(JSON.stringify(evidence))
 } finally {
   globalThis.fetch = nativeFetch

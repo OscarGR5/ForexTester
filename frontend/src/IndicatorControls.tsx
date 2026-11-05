@@ -19,10 +19,10 @@ function Parameter({ label, ariaLabel, value, fractional, unbounded = false, onC
     min={fractional ? 0 : 1} max={unbounded ? undefined : fractional ? 100 : 10000} step={fractional ? 'any' : 1} aria-invalid={invalid} aria-describedby={invalid ? errorId : undefined}
     onChange={(event) => {
       const raw = event.target.value, next = Number(raw)
-      const valid = raw !== '' && Number.isFinite(next) && next > 0 && (unbounded || next <= (fractional ? 100 : 10000)) && (fractional || Number.isInteger(next))
+      const valid = raw !== '' && Number.isFinite(next) && next > 0 && (unbounded || next <= (fractional ? 100 : 10000)) && (fractional || Number.isSafeInteger(next))
       setDraft(raw); setInvalid(!valid)
       if (valid) onChange(next)
-    }} />{invalid && <span id={errorId} className="parameter-error">{unbounded ? 'Use a positive number.' : fractional ? 'Use > 0 to 100.' : 'Use 1–10000, whole numbers.'} Last valid value is applied.</span>}</label>
+    }} />{invalid && <span id={errorId} className="parameter-error">{unbounded ? 'Use a positive whole number.' : fractional ? 'Use > 0 to 100.' : 'Use 1–10000, whole numbers.'} Last valid value is applied.</span>}</label>
 }
 export const IndicatorControls = memo(function IndicatorControls({ id, settings, readiness = '', onChange, untaken = DEFAULT_UNTAKEN_SETTINGS, onUntakenChange }: { id: number; readiness?: string; settings: IndicatorSettings; onChange: (settings: IndicatorSettings) => void; untaken?: UntakenSettings; onUntakenChange?: (settings: UntakenSettings) => void }) {
   const disclosure = useDismissibleDetails()
@@ -33,9 +33,9 @@ export const IndicatorControls = memo(function IndicatorControls({ id, settings,
       {onUntakenChange && <fieldset>
         <legend><label><input type="checkbox" checked={untaken.enabled} aria-label={`Chart ${id + 1} Untaken Highs & Lows`}
           onChange={event => onUntakenChange({ ...untaken, enabled: event.target.checked })} />Untaken Highs &amp; Lows (P)</label></legend>
-        <Parameter label="Distance (ATR)" ariaLabel={`Chart ${id + 1} Distance (ATR)`} value={untaken.distanceAtr} fractional unbounded
-          onChange={distanceAtr => onUntakenChange({ ...untaken, distanceAtr })} />
-        <p className="indicator-source">All charts · ATR(14)</p>
+        <Parameter label="Untaken Levels" ariaLabel={`Chart ${id + 1} Untaken Levels`} value={untaken.count} fractional={false} unbounded
+          onChange={count => onUntakenChange({ ...untaken, count })} />
+        <p className="indicator-source">All charts · maximum per side</p>
       </fieldset>}
       {(Object.keys(FIELDS) as (keyof typeof FIELDS)[]).map((group) => <fieldset key={group}>
         <legend><label><input type="checkbox" checked={settings[group].enabled} aria-label={`Chart ${id + 1} ${NAMES[group]}`}

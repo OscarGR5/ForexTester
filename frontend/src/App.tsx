@@ -3,8 +3,8 @@ import { RegressionCalculator } from './regressionChannel'
 import { useDismissibleDetails } from './useOutsideInteraction'
 import { useReplayKeyboard } from './useReplayKeyboard'
 import { useIndicatorKeyboard } from './useIndicatorKeyboard'
-import { DEFAULT_UNTAKEN_SETTINGS, validUntakenSettings } from './untakenLevels'
-import { GLOBAL_UI_ID } from './uiPreferences'
+import { validUntakenSettings } from './untakenLevels'
+import { GLOBAL_UI_ID, readUntakenSettings } from './uiPreferences'
 import { entryOverlays } from './entryOverlays'
 import { stopOverlays } from './stopOverlays'
 import { canRequestOrder, stopModificationError } from './trading'
@@ -142,7 +142,9 @@ export function App() {
   const [showExecutions, setShowExecutions] = useUiValue(sessions.activeId, 'executions', false, validBoolean)
   const [showOriginalSl, setShowOriginalSl] = useUiValue(sessions.activeId, 'slHistory', false, validBoolean)
   const [regressionEnabled, setRegressionEnabled] = useUiValue(sessions.activeId, 'regression', false, validBoolean)
-  const [untaken, setUntaken] = useUiValue(GLOBAL_UI_ID, 'untakenLevels', DEFAULT_UNTAKEN_SETTINGS, validUntakenSettings)
+  const untakenDefaults = useMemo(readUntakenSettings, [])
+  const [untaken, setUntaken] = useUiValue(GLOBAL_UI_ID, 'untakenLevels', untakenDefaults, validUntakenSettings)
+  useEffect(() => { writeUi(GLOBAL_UI_ID, 'untakenLevels', { enabled: untaken.enabled, count: untaken.count }) }, [untaken])
   const tradeRecords = useMemo(() => showExecutions || showOriginalSl ? tradeOverlayRecords(trading.state.positions, trading.state.closed) : [], [trading.state.positions, trading.state.closed, showExecutions, showOriginalSl])
   const uiWorkspaceRef = useRef(uiWorkspace)
   useLayoutEffect(() => { uiWorkspaceRef.current = uiWorkspace }, [uiWorkspace])
