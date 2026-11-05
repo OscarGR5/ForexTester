@@ -4,8 +4,8 @@ import { RegressionChannelPrimitive } from './RegressionChannelPrimitive'
 import { RegressionCalculator, regressionPrices, type RegressionChannel } from './regressionChannel'
 import { TIMEFRAMES, TIMEFRAME_MS } from './history'
 
-it.each(TIMEFRAMES)('draws the same three channel prices on %s, using M1 fractions and existing time-slot coordinates', timeframe => {
-  const times = ['2024-01-12T21:56Z', '2024-01-12T21:58Z', '2024-01-14T22:02Z', '2024-01-14T22:07Z']
+it.each(TIMEFRAMES)('draws exactly three straight, parallel endpoint segments on %s across missing minutes and partial weekend sessions', timeframe => {
+  const times = ['2024-01-12T21:56Z', '2024-01-12T21:58Z', '2024-01-14T22:02Z', '2024-01-14T22:07Z', '2024-01-15T08:13Z', '2024-01-15T10:41Z']
   const source = times.map((time, i) => ({ timestamp: Date.parse(time), open: 1 + i * .001, high: 1.003 + i * .002, low: .999, close: 1.001 }))
   const fit = new RegressionCalculator(source).update(source[0].timestamp, source.length)!
   const period = TIMEFRAME_MS[timeframe], bucket = (timestamp: number) => Math.floor(timestamp / period) * period / 1000
@@ -27,13 +27,25 @@ it.each(TIMEFRAMES)('draws the same three channel prices on %s, using M1 fractio
   expect(context.stroke).toHaveBeenCalledTimes(3)
   for (const [line, key] of ['upper', 'lower', 'middle'].entries()) {
     const path = paths[line + 1]
-    expect(path).toHaveLength(source.length)
-    for (let i = 0; i < source.length; i++) {
+    expect(path).toHaveLength(2)
+    for (const [point, i] of [0, source.length - 1].entries()) {
       const expectedX = xAtBucket(bucket(source[i].timestamp)) + (source[i].timestamp % period) / period * spacing
-      expect(path[i][0]).toBeCloseTo(expectedX, 12)
-      expect(path[i][1]).toBeCloseTo(priceToCoordinate(regressionPrices(fit, i)[key as 'middle']), 12)
-      expect(primitive.containsPoint(path[i][0], path[i][1])).toBe(true)
+      expect(path[point][0]).toBeCloseTo(expectedX, 12)
+      expect(path[point][1]).toBeCloseTo(priceToCoordinate(regressionPrices(fit, i)[key as 'middle']), 12)
+      expect(primitive.containsPoint(path[point][0], path[point][1])).toBe(true)
     }
+  }
+  expect(context.moveTo).toHaveBeenCalledTimes(3)
+  expect(context.lineTo).toHaveBeenCalledTimes(3)
+  const [upper, lower, middle] = paths.slice(1)
+  for (const path of [upper, lower]) {
+    expect(path[1][0] - path[0][0]).toBe(middle[1][0] - middle[0][0])
+    expect(path[1][1] - path[0][1]).toBeCloseTo(middle[1][1] - middle[0][1], 12)
+  }
+  // Hit every rendered segment between its endpoints, including where there
+  // are no M1 observations. These points follow the screen line, not M1 time.
+  for (const path of [upper, lower, middle]) for (const fraction of [.1, .5, .9]) {
+    expect(primitive.containsPoint(path[0][0] + fraction * (path[1][0] - path[0][0]), path[0][1] + fraction * (path[1][1] - path[0][1]))).toBe(true)
   }
   context.stroke.mockClear(); primitive.update(null, source, timeframe); draw()
   expect(context.stroke).not.toHaveBeenCalled()
@@ -75,4 +87,18 @@ it('cannot hit a cleared or detached channel', () => {
   expect(primitive.containsPoint(100, 200)).toBe(false)
   primitive.update(fit, source, 'M1'); primitive.detached()
   expect(primitive.containsPoint(100, 200)).toBe(false)
+})
+
+it('hit-tests the direct segment instead of the old bend at a missing-observation gap', () => {
+  const { primitive, fit, source } = hitFixture(.5)
+  source[2] = { ...source[2], timestamp: source[0].timestamp + 60 * 60000 }
+  primitive.update(fit, source, 'M1')
+  // Endpoints are (50, 200) and (3050, 300). The old intermediate
+  // observation was (100, 250), well away from all three straight lines.
+  expect(primitive.containsPoint(1550, 250)).toBe(true)
+  expect(primitive.containsPoint(100, 250)).toBe(false)
+  const dx = 3000, dy = 100, length = Math.hypot(dx, dy)
+  for (const distance of [4.99, 5.01]) {
+    expect(primitive.containsPoint(1550 - dy / length * distance, 250 + dx / length * distance)).toBe(distance < 5)
+  }
 })

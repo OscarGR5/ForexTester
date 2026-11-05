@@ -1,6 +1,6 @@
 import type { IChartApi, IPrimitivePaneRenderer, IPrimitivePaneView, ISeriesApi, ISeriesPrimitive, SeriesAttachedParameter, UTCTimestamp } from 'lightweight-charts'
 import { TIMEFRAME_MS, type Candle, type Timeframe } from './history'
-import { regressionVertices, type RegressionChannel } from './regressionChannel'
+import type { RegressionChannel } from './regressionChannel'
 import { performanceEnd, performanceStart } from './replayPerformance'
 
 const CHANNEL_HIT_TOLERANCE_PX = 5
@@ -19,35 +19,36 @@ export class RegressionChannelPrimitive implements ISeriesPrimitive {
   update(channel: RegressionChannel | null, source: readonly Candle[], timeframe: Timeframe) {
     this.channel = channel; this.source = source; this.timeframe = timeframe; this.requestUpdate?.()
   }
-  private projectedVertices(width: number) {
-    if (!this.channel || !this.chart) return []
+  private projectedSegments() {
+    if (!this.channel || !this.chart || !this.series) return []
     const scale = this.chart.timeScale(), period = TIMEFRAME_MS[this.timeframe]
     const spacing = scale.options().barSpacing
-    const coordinates = new Map<number, number | null>()
     const xAt = (index: number) => {
       const timestamp = this.source[index].timestamp, bucket = Math.floor(timestamp / period) * period
-      // Anchor to the real bucket's library coordinate, including existing
-      // indicator whitespace. Fractional positions retain the original M1 time.
-      let x = coordinates.get(bucket)
-      if (x === undefined) { x = scale.timeToCoordinate(bucket / 1000 as UTCTimestamp); coordinates.set(bucket, x) }
+      // Use the real chart slot, including indicator whitespace, then retain
+      // the endpoint's fractional M1 position within that timeframe bucket.
+      const x = scale.timeToCoordinate(bucket / 1000 as UTCTimestamp)
       return x === null ? NaN : x + (timestamp - bucket) / period * spacing
     }
-    return regressionVertices(this.channel, xAt, width)
+    const startX = xAt(this.channel.startIndex), endX = xAt(this.channel.endIndex)
+    if (!Number.isFinite(startX) || !Number.isFinite(endX)) return []
+    const segments = []
+    for (const boundary of ['upper', 'lower', 'middle'] as const) {
+      const offset = boundary === 'upper' ? this.channel.offset : boundary === 'lower' ? -this.channel.offset : 0
+      const startY = this.series.priceToCoordinate(this.channel.intercept + offset)
+      const endY = this.series.priceToCoordinate(this.channel.intercept + this.channel.slope * (this.channel.count - 1) + offset)
+      if (startY === null || endY === null || !Number.isFinite(startY) || !Number.isFinite(endY)) continue
+      // Intermediate M1 observations need not be evenly spaced on this axis.
+      // Connect only the original fit endpoints, in both drawing and hit-testing.
+      segments.push({ boundary, start: { x: startX, y: startY }, end: { x: endX, y: endY } })
+    }
+    return segments
   }
   containsPoint(x: number, y: number): boolean {
-    if (!this.channel || !this.chart || !this.series) return false
-    const points = this.projectedVertices(this.chart.timeScale().width())
-    for (const offset of [this.channel.offset, 0, -this.channel.offset]) {
-      let previous: { x: number; y: number } | null = null
-      for (const point of points) {
-        const at = this.series.priceToCoordinate(this.channel.intercept + this.channel.slope * point.observation + offset)
-        if (at === null || !Number.isFinite(point.x) || !Number.isFinite(at)) { previous = null; continue }
-        const a = previous ?? { x: point.x, y: at }
-        const dx = point.x - a.x, dy = at - a.y, lengthSquared = dx * dx + dy * dy
-        const fraction = lengthSquared ? Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / lengthSquared)) : 0
-        if ((x - a.x - fraction * dx) ** 2 + (y - a.y - fraction * dy) ** 2 <= CHANNEL_HIT_TOLERANCE_PX ** 2) return true
-        previous = { x: point.x, y: at }
-      }
+    for (const { start: a, end: b } of this.projectedSegments()) {
+      const dx = b.x - a.x, dy = b.y - a.y, lengthSquared = dx * dx + dy * dy
+      const fraction = lengthSquared ? Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / lengthSquared)) : 0
+      if ((x - a.x - fraction * dx) ** 2 + (y - a.y - fraction * dy) ** 2 <= CHANNEL_HIT_TOLERANCE_PX ** 2) return true
     }
     return false
   }
@@ -55,22 +56,16 @@ export class RegressionChannelPrimitive implements ISeriesPrimitive {
     draw: target => target.useMediaCoordinateSpace(({ context: ctx, mediaSize }) => {
       if (!this.channel || !this.chart || !this.series) return
       const started = performanceStart()
-      const points = this.projectedVertices(mediaSize.width)
+      const segments = this.projectedSegments()
       ctx.save()
       ctx.beginPath(); ctx.rect(0, 0, mediaSize.width, mediaSize.height); ctx.clip()
       ctx.setLineDash([])
-      for (const boundary of ['upper', 'lower', 'middle'] as const) {
+      for (const { boundary, start, end } of segments) {
         ctx.strokeStyle = boundary === 'middle' ? '#f2bf62' : '#c99a4d'
         ctx.lineWidth = boundary === 'middle' ? 2 : 1
         ctx.beginPath()
-        let first = true
-        const offset = boundary === 'upper' ? this.channel.offset : boundary === 'lower' ? -this.channel.offset : 0
-        for (const point of points) {
-          const y = this.series.priceToCoordinate(this.channel.intercept + this.channel.slope * point.observation + offset)
-          if (y === null || !Number.isFinite(point.x)) continue
-          if (first) { ctx.moveTo(point.x, y); first = false }
-          else ctx.lineTo(point.x, y)
-        }
+        ctx.moveTo(start.x, start.y)
+        ctx.lineTo(end.x, end.y)
         ctx.stroke()
       }
       ctx.restore()
