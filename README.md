@@ -6,15 +6,78 @@ independent positions, the journal, Balance & Equity, and durable sessions retai
 the existing workflow. No API key, online data download, paid confirmation, or
 broker connection is required.
 
-## Run and import local history
+## First-time setup (for someone cloning the project)
 
-Use Node.js 24 and npm 11 or newer.
+You need **the repository** and **a compatible EURUSD M1 Parquet file** supplied separately. The historical market data is **not** in Git, and you do not need any broker account, API key, database service, or Python installation.
+
+### 1. Install prerequisites
+
+- [Git](https://git-scm.com/downloads) to clone the project.
+- **Node.js 24** with **npm 11 or newer**. Check in a terminal with `node --version` and `npm --version`. If missing, install the correct versions before continuing.
+- Enough free disk space for **the original Parquet file plus a second managed copy** and generated caches.
+
+The application is developed on Linux. If setting it up on Windows or macOS, verify that the native DuckDB dependency installs and the backend starts on that machine; these platforms are not promised to be tested.
+
+### 2. Clone the repository and install dependencies
+
+Open a terminal (or the terminal in VS Code) and run:
 
 ```sh
+git clone https://github.com/OscarGR5/ForexTester.git
+cd ForexTester
 npm ci
-node --import tsx scripts/import-local-forex.mts /home/admin/Downloads/eurusd_1min.parquet
+```
+
+Run all subsequent commands **from the `ForexTester` repository root** (the folder containing `package.json`). `npm ci` installs the exact locked frontend, backend, and tooling dependencies; do not run separate installs in the workspace folders.
+
+### 3. Import your Parquet history (one time)
+
+Keep the provided `.parquet` file **outside the repository**, e.g. in your Downloads folder. Import it by passing its **actual absolute path**:
+
+```sh
+# Linux example; replace this with your own path
+node --import tsx scripts/import-local-forex.mts "/home/your-user/Downloads/eurusd_1min.parquet"
+```
+
+```powershell
+# Windows PowerShell example; replace this with your own path
+node --import tsx scripts/import-local-forex.mts "C:\Users\YourName\Downloads\eurusd_1min.parquet"
+```
+
+On macOS, use an absolute path such as `/Users/your-user/Downloads/eurusd_1min.parquet`. **Quotation marks matter** if the filename or folder names contain spaces.
+
+The import validates the file, copies it into the app's persistent data directory, and prints a JSON summary including `symbol`, `rows`, and the available date range. A successful import reports `EURUSD` with a positive row count; errors need to be resolved before starting a backtest. The Parquet must match the supported EURUSD mid-price M1 OHLC schema. Importing the same file again is safe; importing a different EURUSD dataset over an existing one is intentionally blocked.
+
+### 4. Run ForexTester
+
+```sh
 npm run dev
 ```
+
+This starts the backend and frontend together. Open the **Local** URL printed by Vite in your terminal (normally `http://127.0.0.1:5173`). In the app's Setup screen, confirm that **EURUSD history is available**, choose an eligible date range, and load the backtest.
+
+Leave the terminal running while using ForexTester. Press **Ctrl+C** there to stop both servers.
+
+**For later use:** open a terminal in the cloned `ForexTester` directory and run only `npm run dev`. You do **not** need to reinstall dependencies or re-import the Parquet file each time, unless you have moved to another computer or deleted the installed data.
+
+### Optional: give the setup to Codex
+
+Open the cloned repository in VS Code with Codex and give it this prompt (also tell it the location of your Parquet file):
+
+> Read README.md and package.json. Set up this ForexTester project on my computer so I can run it locally. I already have the EURUSD M1 Parquet file at `<PUT MY ABSOLUTE FILE PATH HERE>`. Check/install Git, Node.js 24, and npm 11 or newer as needed; run `npm ci`; use the existing importer to install my Parquet file outside Git; and start the app with `npm run dev`. Verify that the backend and frontend start and EURUSD history appears in Setup. Diagnose any errors instead of assuming success. Do not modify market data, saved sessions, trading behavior, or Git history. Do not commit the Parquet file, credentials, or other private local data. Report the exact URL to open and the command to use next time.
+
+### Common setup problems
+
+- **`node`, `npm`, or `git` not found:** install the relevant prerequisite and reopen the terminal.
+- **File not found during import:** use an existing absolute file path, with quotes around it; avoid the example username/path verbatim.
+- **`npm ci` fails:** check the Node/npm versions, installation logs, OS compatibility and network access. Do not immediately delete the lockfile or rewrite dependencies.
+- **No EURUSD history in Setup:** check the import's JSON output and any backend errors. The app does not automatically download market data.
+- **Wrong data or import conflict:** the app prevents silently replacing an installed dataset. Do not delete the persistent data directory to force an import, especially if saved sessions exist.
+- **Frontend opens but requests fail:** keep `npm run dev` running, check that the backend starts on `127.0.0.1:3001`, and use the URL printed by Vite.
+
+**Local data and privacy:** the managed market data, sessions, and settings live on the receiving computer. Cloning GitHub does not copy your existing backtests or private data. The local data location can be changed with `FOREXTESTER_DATA_DIR` in a project-root `.env` file; see `.env.example`. Keep it **outside the repository** and back it up separately.
+
+## Data import and storage details
 
 The importer loads project-root `.env` configuration, with process environment
 variables taking precedence. `FOREXTESTER_DATA_DIR` selects a durable root outside
