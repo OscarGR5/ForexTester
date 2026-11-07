@@ -1,0 +1,110 @@
+//@version=6
+indicator("Untaken Highs/Lows (ForexTester experiment)", overlay = true, max_lines_count = 500, behind_chart = true)
+
+bool showHighs = input.bool(true, "Show untaken highs")
+bool showLows = input.bool(true, "Show untaken lows")
+int maxHighs = input.int(10, "Maximum displayed highs", minval = 1, maxval = 250)
+int maxLows = input.int(10, "Maximum displayed lows", minval = 1, maxval = 250)
+color highColor = input.color(#ef5350, "High line color")
+color lowColor = input.color(#26a69a, "Low line color")
+int lineWidth = input.int(1, "Line width", minval = 1, maxval = 4)
+
+// Compare the sign of the difference, avoiding Pine's nine-decimal rounding
+// of float comparison operands. No tick rounding or equality tolerance.
+compare(float a, float b) => int(math.sign(a - b))
+
+// Confirmed stacks: oldest/farthest first, newest/nearest last. Keep hidden
+// levels as data, never as hidden line IDs. There is no age or display cutoff.
+var array<float> highPrices = array.new<float>()
+var array<int> highTimes = array.new<int>()
+var array<float> lowPrices = array.new<float>()
+var array<int> lowTimes = array.new<int>()
+var float pendingHigh = na
+var int pendingHighTime = na
+var float pendingLow = na
+var int pendingLowTime = na
+var array<line> rays = array.new<line>()
+
+// Invalidate before confirmation or detection. Equality takes a confirmed
+// level, but extends an unconfirmed plateau. v6's lazy `and` guards empty arrays.
+while array.size(highPrices) > 0 and compare(array.last(highPrices), high) <= 0
+    array.pop(highPrices)
+    array.pop(highTimes)
+while array.size(lowPrices) > 0 and compare(array.last(lowPrices), low) >= 0
+    array.pop(lowPrices)
+    array.pop(lowTimes)
+if not na(pendingHigh) and compare(pendingHigh, high) < 0
+    pendingHigh := na
+    pendingHighTime := na
+if not na(pendingLow) and compare(pendingLow, low) > 0
+    pendingLow := na
+    pendingLowTime := na
+
+// `var`, deliberately not `varip`: each realtime execution rolls back to the
+// preceding close. Only a CLOSED weaker right candle can confirm a plateau.
+if barstate.isconfirmed
+    if not na(pendingHigh) and compare(high, pendingHigh) < 0
+        array.push(highPrices, pendingHigh)
+        array.push(highTimes, pendingHighTime)
+        pendingHigh := na
+        pendingHighTime := na
+    if not na(pendingLow) and compare(low, pendingLow) > 0
+        array.push(lowPrices, pendingLow)
+        array.push(lowTimes, pendingLowTime)
+        pendingLow := na
+        pendingLowTime := na
+    if bar_index > 0 and compare(high, high[1]) > 0
+        pendingHigh := high
+        pendingHighTime := time
+    if bar_index > 0 and compare(low, low[1]) < 0
+        pendingLow := low
+        pendingLowTime := time
+
+// Recompute the mutable tail without letting its own growing wick take itself.
+// An equal forming wick inherits the first plateau anchor from pending state.
+float latestHigh = pendingHigh
+int latestHighTime = pendingHighTime
+float latestLow = pendingLow
+int latestLowTime = pendingLowTime
+if not barstate.isconfirmed
+    if bar_index > 0 and compare(high, high[1]) > 0
+        latestHigh := high
+        latestHighTime := time
+    if bar_index > 0 and compare(low, low[1]) < 0
+        latestLow := low
+        latestLowTime := time
+
+// All loaded bars build the stacks; only the last execution needs drawings.
+// time_close supplies a distinct second timestamp on standard time-based bars.
+// xloc.bar_time keeps old anchors beyond the bar-index coordinate limit.
+// Delete before creating so even two full 250-ray sides stay within 500 IDs.
+// Rollback also restores drawings, so this is safe on every realtime tick.
+if barstate.islast
+    while array.size(rays) > 0
+        line.delete(array.pop(rays))
+    int displayedHighs = 0
+    if showHighs
+        if not na(latestHigh) and compare(latestHigh, close) > 0
+            array.push(rays, line.new(latestHighTime, latestHigh, time_close, latestHigh, xloc.bar_time, extend.right, highColor, line.style_solid, lineWidth))
+            displayedHighs += 1
+        int highIndex = array.size(highPrices) - 1
+        while highIndex >= 0 and displayedHighs < maxHighs
+            float levelPrice = array.get(highPrices, highIndex)
+            int anchor = array.get(highTimes, highIndex)
+            if compare(levelPrice, close) > 0
+                array.push(rays, line.new(anchor, levelPrice, time_close, levelPrice, xloc.bar_time, extend.right, highColor, line.style_solid, lineWidth))
+                displayedHighs += 1
+            highIndex -= 1
+    int displayedLows = 0
+    if showLows
+        if not na(latestLow) and compare(latestLow, close) < 0
+            array.push(rays, line.new(latestLowTime, latestLow, time_close, latestLow, xloc.bar_time, extend.right, lowColor, line.style_solid, lineWidth))
+            displayedLows += 1
+        int lowIndex = array.size(lowPrices) - 1
+        while lowIndex >= 0 and displayedLows < maxLows
+            float levelPrice = array.get(lowPrices, lowIndex)
+            int anchor = array.get(lowTimes, lowIndex)
+            if compare(levelPrice, close) < 0
+                array.push(rays, line.new(anchor, levelPrice, time_close, levelPrice, xloc.bar_time, extend.right, lowColor, line.style_solid, lineWidth))
+                displayedLows += 1
+            lowIndex -= 1
