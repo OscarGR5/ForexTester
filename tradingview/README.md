@@ -1,138 +1,96 @@
 # Untaken Highs/Lows for TradingView (experimental)
 
-Copyable Pine Script v6 port of ForexTester's Untaken Highs/Lows. It draws red high rays and green low rays on the chart's own timeframe, including provisional extremes. Only surviving levels are drawn, from their original candle timestamps to the right.
+Standalone Pine Script v6 port of ForexTester's **confirmed-only** Untaken Highs/Lows indicator. Red rays represent unbroken local highs, green rays unbroken local lows. A last candle's extreme is never plotted merely because it exceeds the preceding candle.
 
-The production ForexTester implementation is unchanged. This experiment is based on `main` at `6df8faf`, including [PR #46](https://github.com/OscarGR5/ForexTester/pull/46) and [PR #48](https://github.com/OscarGR5/ForexTester/pull/48). No Pine compiler or TradingView runtime verification has been performed.
+This branch also updates the ForexTester tracker to the same rules. Neither implementation has been verified inside TradingView yet.
 
 ## Install
 
-1. Open [untaken-highs-lows.pine](./untaken-highs-lows.pine) and copy the **entire file**, beginning with `//@version=6`.
-2. Open a TradingView chart with standard, time-based candlesticks and choose your symbol and timeframe.
-3. Open **Pine Editor**, create a new indicator, select all template text, and replace it with the copied script.
-4. Save it as **Untaken Highs/Lows (ForexTester experiment)** and select **Add to chart**.
-5. Open the indicator's settings to adjust the inputs below. Compilation errors or runtime errors still need to be reported and resolved during this experimental review.
+1. Open [untaken-highs-lows.pine](./untaken-highs-lows.pine) and copy the whole file, including `//@version=6`.
+2. In TradingView, open a standard time-based candlestick chart and select **Pine Editor**.
+3. Create a new indicator, replace the template, save, and select **Add to chart**.
+4. Adjust the high/low visibility, level limits, line colors and width in the indicator settings.
+5. Report any Pine compilation/runtime error with the exact message and line number.
 
-Only the `.pine` file is needed. No imports, libraries, data connection, or other repository files are required in TradingView.
+No external libraries, data sources, or imports are required.
+
+## Detection and display rules
+
+- **Single-candle high:** `previous high < candidate high > following high`. The following candle **must close** before the candidate becomes a ray. Low: `previous low > candidate low < following low`.
+- **Equal-price plateau:** Consecutive exact equal high/low wicks form one candidate. Its first candle is the anchor. A weaker candle must occur immediately before and immediately after the plateau, with the right-side candle closed. Each side is tracked independently.
+- **Latest candle:** Never marked as a pivot without a confirmed right neighbor, even when already closed. Candidates and forming plateaus are internal state only, not visible rays. A weaker *forming* right candle does not confirm anything.
+- **Invalidation:** A confirmed high is taken immediately when a subsequent wick reaches or exceeds its price; a low is taken on a wick at or below its price. This also applies to the realtime forming candle. A newly forming candidate at the same price does not replace the ray until independently confirmed later.
+- **Selection:** Display nearest untaken confirmed highs strictly above the latest close, and nearest confirmed lows strictly below it. Hidden old levels remain tracked. Selection budgets are per side and do not change detection.
+- **History/replay:** Only loaded historical candles participate. Pine evaluates closed historical bars and uses `barstate.isconfirmed` to confirm realtime right neighbors. ForexTester processes revealed candles and its timeframe aggregation separately. No future candles may influence historical snapshots.
 
 ## Settings
 
-| Input | Default | Behavior |
+| Setting | Default | Details |
 | --- | --- | --- |
-| Show untaken highs | On | Draw high rays; high history still gets processed when hidden. |
-| Show untaken lows | On | Draw low rays; low history still gets processed when hidden. |
-| Maximum displayed highs | 10 | Nearest distinct highs strictly above the latest close, including provisional levels. Range 1–250. |
-| Maximum displayed lows | 10 | Nearest distinct lows strictly below the latest close, including provisional levels. Range 1–250. |
-| High line color | Red `#ef5350` | Matches ForexTester's default red. |
-| Low line color | Green `#26a69a` | Matches ForexTester's default green. |
-| Line width | 1 | Width in TradingView units, from 1 to 4. |
+| Show untaken highs | On | Independent visibility toggle |
+| Show untaken lows | On | Independent visibility toggle |
+| Maximum displayed highs | 10 | 1–250, closest eligible confirmed levels |
+| Maximum displayed lows | 10 | 1–250, closest eligible confirmed levels |
+| High line color | Red `#ef5350` | Pine line color |
+| Low line color | Green `#26a69a` | Pine line color |
+| Line width | 1 | Range 1–4 |
 
-Highs and lows have separate display budgets. A level equal to the latest close is hidden without consuming a slot. The limit does not delete older levels from the calculation. When nearer levels are taken, older surviving levels become visible again. Provisional and confirmed rays use the same style, as in ForexTester.
+The Pine drawing limit is 500 line IDs. The indicator explicitly deletes previous lines before redrawing the last-bar snapshot and stores offscreen historical levels as arrays, not line objects.
 
-## Source-of-truth rules
+## Manual verification
 
-Reviewed sources: [`UntakenLevels`](../frontend/src/untakenLevels.ts), [its tests](../frontend/src/untakenLevels.test.ts), [`ChartPane`](../frontend/src/ChartPane.tsx), [`ReplayBars`](../frontend/src/replayBars.ts), the [drawing primitive](../frontend/src/UntakenLevelsPrimitive.ts), [workflow tests](../frontend/src/workflow.test.tsx), and the [browser fixture](../scripts/untaken-levels-browser.mts). PR #46 introduced three-candle extrema and provisional levels. PR #48 superseded its rejection of neighboring equal prices with the plateau behavior below.
+### Small three-candle case
 
-**Local detection.** A single-candle high is a wick high strictly greater than the immediately preceding and following candle highs. A low reverses those comparisons. Confirmation requires the right candle to close. There is no configurable strength, lookback window, ATR threshold, or requirement to exceed a more distant swing. The first loaded candle has no left neighbor and cannot qualify on its own. Open and close do not determine detection.
+For a sequence with highs `101, 110, 101` and lows `99, 90, 99`, with candle closes near `100`:
 
-**Provisional levels.** A candle with a high strictly above the previous candle's high creates a provisional high immediately, including while forming. A low strictly below the previous low creates a provisional low. The mutable candle's growing extreme updates its own price without taking itself. After that candle closes, the level remains pending until a strictly weaker right candle closes, or a stricter extreme replaces it. A weaker forming right candle alone does not confirm it.
+1. After candle 1 closes, there must be no rays.
+2. While candle 2 is forming with the weaker high/low, there must still be no rays.
+3. When candle 2 closes, rays at high `110` and low `90` appear, anchored to candle 1.
+4. A subsequent forming candle touching `110` or `90` immediately invalidates the respective confirmed ray.
 
-**Equal-price plateaus.** Consecutive exact equal highs extend one pending high; equal lows extend one pending low. The anchor is always the first qualifying candle of that contiguous sequence, regardless of plateau length. Each side is tracked independently. An initial equal sequence without a strictly weaker preceding wick does not qualify. Equality during the forming right candle still extends the plateau. A breakout takes the pending level and starts a new provisional extreme at the breakout candle.
+### Exact equal-high/low plateau fixture
 
-**Confirmation and takes.** On each closed candle, first invalidate existing levels, then confirm surviving pending extremes if this candle's wick is strictly weaker, then detect new pending extremes against the preceding candle. Confirmed highs are removed on any subsequent `high >= level`; confirmed lows on `low <= level`, including unfinished candles. Pending highs are removed only on `high > level`, pending lows only on `low < level`. Equality after a weaker candle has **closed** therefore takes the confirmed level. That same touching candle can create a new provisional level at the same price with a new origin. Confirmation keeps the origin and price unchanged and creates no second visible ray.
+The fixture in [fixtures/plateau-events.json](./fixtures/plateau-events.json) records expected **forming** and **closed** snapshots for this sequence:
 
-**History and replay.** ForexTester processes every loaded, revealed candle in each chart's own timeframe. It aggregates revealed M1 observations, considers the final higher-timeframe candle completed when its last minute is revealed, and uses the latest close for display filtering. Forward processing is incremental. Backward review, source replacement, or a chart/timeframe rebuild resets the tracker and replays only revealed history. Nothing is inferred from unrevealed candles. The Pine script reconstructs from every bar TradingView supplies and uses `barstate.isconfirmed` for completion, including the final historical bar.
+| Step | High / low | Rays after step closes | Reason |
+| --- | --- | --- | --- |
+| 0 | 101 / 99 | None | No left neighbor |
+| 1 | 110 / 90 | None | Candidate has no right neighbor |
+| 2–3 | 110 / 90 | None | Unconfirmed equal-price plateau |
+| 4 | 101 / 99 | 110 and 90 anchored at step 1 | Weaker right candle closes |
+| 5 | 105 / 95 | Same two confirmed rays | New latest-bar extremes are not drawn |
+| 6 | 110 / 90 | None | Equal wick touch takes both old rays |
+| 7 | 111 / 89 | None | No right candle has confirmed a new pivot |
 
-**Ordering and hidden levels.** Surviving confirmed highs form a strictly decreasing price stack; lows form a strictly increasing stack. The newest end is nearest to current price. Display selection visits the latest provisional first, then confirmed levels from nearest to farthest, highs followed by lows. Equal confirmed prices cannot coexist because a later touch takes the old price first. No age cutoff or display-count pruning is applied to the stored stacks.
+At step 4, the rays remain absent **during** formation and appear only when that step closes. Test both sides with independent settings. Reset and replay from before step 1 to check that the old origin does not appear early. A longer plateau works the same way, anchored to the first equal candle.
 
-Existing tests also cover smaller swings under older extremes, independent plateau boundaries, tiny strict price differences, current-price exclusions, later repeated-price origins, forming breakouts, backward review across formation/confirmation, and hidden historical levels returning under the nearest-N cap. The experimental tests exercise these same behaviors against the unchanged tracker.
+To substitute the synthetic fixture into a separate test copy of the script, follow the input substitution method described in the original experiment, or use TradingView Bar Replay on a market sequence matching the pattern. Never overwrite the original copy merely to create test candles.
 
-## Execution and resource handling
+### Live and long-history tests
 
-Persistent arrays contain prices and original timestamps. They retain all surviving historical levels; only visible levels use line objects. On the last bar, old line objects are explicitly deleted before the selected rays are drawn. Thus there are no accumulated historical drawings or duplicate confirmation rays, and creation never temporarily exceeds the 500-line budget. Historical bars build state without drawing intermediate snapshots.
+On a live short-timeframe chart, verify that a forming candle may **take** confirmed rays but cannot create new ones. Check a three-candle pivot, several equal-price plateau candles, right-candle confirmation, and immediate equality invalidation. Reload and use Bar Replay to verify the same origins appear without look-ahead. Use varied settings to check nearest-level selection and stable, nonduplicated drawings.
 
-The script uses `var` state and Pine's normal rollback. Each tick starts from the previous close, invalidates against the current full wick, and recomputes the forming candidates. Pending levels enter the confirmed stacks only on a closed right candle. It does not use `varip`, future bars, or external-timeframe data. Provisional prices and visibility intentionally change while a candle forms. A provisional ray can appear at an earlier anchor after confirmation, but it was not confirmed at that anchor's time. No promise of immutable provisional signals is made.
+## Test commands
 
-Rays use `xloc.bar_time` and stored opening timestamps, avoiding the historical `bar_index` drawing restriction. The second point uses the current bar's `time_close`, so even a new provisional ray has distinct endpoints on a standard time-based candle. The rays extend right and are requested behind candles.
-
-Price comparisons use the integer sign of `a - b`, with no tick rounding or tolerance. This avoids direct float comparisons' documented nine-fractional-digit rounding. The adapter tests include ForexTester's `1e-12` difference case, but this workaround's native numeric behavior remains unverified.
-
-Relevant TradingView documentation: [execution and rollback](https://www.tradingview.com/pine-script-docs/language/execution-model/), [lines and drawing limits](https://www.tradingview.com/pine-script-docs/visuals/lines-and-boxes/), [array limits](https://www.tradingview.com/pine-script-docs/language/arrays/), and [numeric types](https://www.tradingview.com/pine-script-docs/language/type-system/).
-
-## Automated verification
-
-Run from the repository root with the existing dependencies installed:
+From the ForexTester repository root, with existing dependencies:
 
 ```sh
-npm test -- tradingview/untaken-highs-lows.test.ts frontend/src/untakenLevels.test.ts frontend/src/UntakenLevelsPrimitive.test.ts
-npm test -- frontend/src/workflow.test.tsx -t 'shows provisional M5 pivots|retains the first M5 plateau anchor'
+npm test -- frontend/src/untakenLevels.test.ts frontend/src/UntakenLevelsPrimitive.test.ts tradingview/untaken-highs-lows.test.ts
+npm test -- frontend/src/workflow.test.tsx -t 'closed M5 right neighbor|equal-price M5 plateau'
 npx tsc --noEmit --target ES2022 --module ESNext --moduleResolution Bundler --strict --skipLibCheck --types node tradingview/pine-harness.ts tradingview/untaken-highs-lows.test.ts
 npm run typecheck
+npm run build
 ```
 
-Verified locally: 48 focused tests across the experimental, existing tracker, and drawing-primitive suites passed; both selected M5 workflow tests passed. Workspace typechecking, the experimental harness/test typecheck, and the staged whitespace check passed. The full repository suite and production build were not run for this standalone addition.
+The Pine parity harness executes adapted Pine statements using JavaScript and compares rays against the TypeScript tracker on identical candles, including rollback modeling. **It is not a Pine compiler**. These updated tests require a fresh run; previous experimental passing results apply only to the earlier provisional indicator.
 
-[`pine-harness.ts`](./pine-harness.ts) reads the actual `.pine` file and adapts its limited statement syntax into JavaScript. It mocks arrays and lines, enforces object limits and array bounds, and explicitly restores state and drawings before unfinished-bar executions. Unsupported statements fail rather than being skipped. It compares resulting rays with the actual ForexTester `UntakenLevels` tracker on identical OHLC input at each observation. [`plateau-events.json`](./fixtures/plateau-events.json) also records explicit expected origin/price events for the manual sequence below.
+## Known limitations
 
-This is a deterministic source-level parity check, **not Pine compilation or TradingView execution**. It uses JavaScript numeric semantics and modeled rollback. It cannot prove Pine type inference, floating-point details, resource timing, chart rendering, or native replay behavior.
+- TradingView and ForexTester may differ in provider OHLC, sessions, price precision, available history, and right-candle completion timing. Compare identical sequences before concluding a port is incorrect.
+- The Pine script imposes independent 250-line caps per side; ForexTester uses one global saved count. Lines are anchored with `xloc.bar_time`, which avoids the 10,000-bar `bar_index` drawing restriction.
+- The script keeps arrays of all surviving confirmed levels; exceptionally long histories may hit Pine runtime/array limits.
+- Price comparisons use the sign of the numeric difference to avoid Pine's direct-float comparison rounding. Native TradingView confirmation of edge-case precision is outstanding.
+- Standard time-based candlesticks are the supported target. Nonstandard synthetic chart types, realtime rollback, first/old anchor rendering, and maximum-object performance still require manual TradingView verification.
+- ForexTester's rays do not participate in autoscaling, while Pine's native lines may render/scalewise behave differently.
 
-Coverage includes single-candle pivots, 2/3/8-candle plateaus, first anchors, pending/confirmed transitions, equality and crossing takes, immediate next-bar takes, multiple levels, unequal side limits, hidden-level recovery, visibility, current-price filtering, 500-ray deletion/recreation, more than 10,000 bars of history, reload and backward reconstruction, and deterministic smooth/plateau/negative-price sequences with several ticks per bar.
-
-## Reproducible manual cases
-
-### Deterministic plateau and cap fixture
-
-Use a **separate copy** of the indicator in Pine Editor on a paused replay chart or when the market is closed, with at least eight loaded bars. The fixture deliberately substitutes synthetic prices, so its rays will be near 89–111 regardless of the symbol. Use a symbol priced near 100 or adjust the chart's price scale manually.
-
-1. In this test copy only, replace whole-word occurrences of `high`, `low`, and `close` with `fixtureHigh`, `fixtureLow`, and `fixtureClose`. Do not replace substrings such as `highPrices`, `time_close`, or `xloc.bar_time`. With regex replacement, use `\bhigh\b`, `\blow\b`, and `\bclose\b`.
-2. Replace the four occurrences of `bar_index > 0` with `fixtureIndex > 0`.
-3. After those replacements, insert this block immediately after the `lineWidth` input. Leave `time` and `time_close` unchanged so rays anchor to real chart candles:
-
-```pine
-int fixtureStep = input.int(7, "Fixture step", minval = 0, maxval = 7)
-var array<float> fixtureHighs = array.from(101.0, 110.0, 110.0, 110.0, 101.0, 105.0, 110.0, 111.0)
-var array<float> fixtureLows = array.from(99.0, 90.0, 90.0, 90.0, 99.0, 95.0, 90.0, 89.0)
-int fixtureIndex = bar_index - last_bar_index + fixtureStep
-float fixtureHigh = fixtureIndex >= 0 ? array.get(fixtureHighs, fixtureIndex) : 101.0
-float fixtureLow = fixtureIndex >= 0 ? array.get(fixtureLows, fixtureIndex) : 99.0
-float fixtureClose = 100.0
-```
-
-4. Save and add this test copy. Reload if a new market bar has appeared. Change **Fixture step** to each value in the table. Each setting rebuild places sequence candle `step` at the rightmost bar, so origin 1 is `step - 1` bars before the rightmost bar. Prior candles outside the fixture are flat and produce no levels.
-
-| Step | High / low | Expected rays with caps 10 | Reason |
-| --- | --- | --- | --- |
-| 0 | 101 / 99 | None | No qualifying left neighbor. |
-| 1 | 110 / 90 | 110 and 90 at origin 1 | Provisional extremes. |
-| 2–3 | 110 / 90 | Same two rays at origin 1 | Equal plateau extends without moving the anchor. |
-| 4 | 101 / 99 | Same two rays at origin 1 | Weaker close confirms the plateau. |
-| 5 | 105 / 95 | Highs 105 at origin 5, 110 at origin 1; lows 95 at origin 5, 90 at origin 1 | New provisional and old confirmed levels coexist. |
-| 6 | 110 / 90 | 110 and 90 at origin 6 | Equal touches remove the confirmed origins and create new provisional ones. |
-| 7 | 111 / 89 | 111 and 89 at origin 7 | Breakout replaces pending extremes. |
-
-At step 5, set both caps to 1. Only 105 and 95 should remain visible. Restore caps to 2; 110 and 90 must return at origin 1. Toggle each side and change colors/width; verify the chosen side and line appearance. Remove this fixture copy afterward and install the original script again.
-
-### Realtime unfinished candles
-
-On the original script during an open market, use a liquid symbol and a short standard timeframe. Find a forming candle exceeding the immediately previous high or low. Record its opening time, provisional price, and previous candle's wick before proceeding.
-
-- As its wick extends, the ray should move in price but keep that candle's time. If the latest close equals the wick extreme, the strict current-price filter hides that side until price moves back inside the candle.
-- A weaker following candle must leave that ray at the recorded origin during formation and through its close. An equal following wick before confirmation must preserve the first anchor. A crossing wick must replace it at the crossing candle.
-- After a weaker following candle has closed, a later equal touch must remove the old origin immediately. A new provisional at the same price is possible; inspect the anchor to distinguish replacement from survival.
-- Repeated ticks must not duplicate rays. After the active bar closes, remove and re-add the script and compare surviving prices and anchors.
-
-Historical OHLC and normal closed-bar replay cannot reproduce the original tick path. This case requires native live updates to verify rollback.
-
-### History, replay, and limits
-
-Use TradingView Bar Replay on standard candles. Advance through a visible local extreme, its weaker right candle, and a later taking wick. Compare prices and anchors against the same OHLC in ForexTester, then restart replay before the extreme and repeat. Check that levels appear only after their qualifying left comparison, retain their anchors through confirmation, and disappear on takes. Reload and change timeframes; each timeframe must independently rebuild its own levels. Use a long chart history to check rays anchored more than 10,000 bars back where such untaken levels exist. Try the maximum caps and monitor for object-limit or execution-time errors.
-
-## Known differences and remaining verification
-
-- TradingView supplies its own symbol feed, session boundaries, price precision, and loaded history. ForexTester uses its loaded/revealed data and M1 aggregation. Exact parity requires identical OHLC and completion boundaries. The script cannot recover levels preceding TradingView's first available bar.
-- ForexTester permits any positive safe-integer count and has one shared cap and visibility toggle. This port defaults both sides on, offers independent caps/toggles as requested, and caps each side at 250 to fit Pine's 500 lines. Selection within each cap follows the existing nearest-price behavior.
-- ForexTester retains levels without a platform array cap. Pine limits an array to 100,000 elements and imposes execution/memory limits. This script does not silently discard surviving old levels; exceeding platform resources will raise a TradingView runtime error.
-- Pine numeric precision differs from JavaScript. The sign-based comparison aims to preserve strict equality semantics, but full numerical equivalence is unproven, particularly at subprecision differences.
-- ForexTester's M1 replay reveals complete minute OHLC. TradingView indicators update on native ticks; historical bars contain final OHLC only. Provisional intrabar paths cannot be reconstructed from historical OHLC. Backward reconstruction relies on TradingView replay/recalculation rather than ForexTester's explicit reset API.
-- Standard time-based candlesticks are the supported target. Synthetic/nonstandard charts and tick/range charts are not verified; `time_close` may be unavailable on some unfinished non-time-based bars.
-- ForexTester's custom primitive explicitly excludes rays from autoscaling. Pine native lines may affect chart scaling or layering differently. Verify the visual result and adjust TradingView chart scaling if needed.
-- Still requiring TradingView verification: v6 compilation, native rollback and drawing deletion, the strict-difference numeric workaround, first-anchor rendering (including current and very old candles), replay restart behavior, maximum-cap performance, and display appearance behind candles.
+Official references: [Pine execution model](https://www.tradingview.com/pine-script-docs/language/execution-model/) and [lines and drawing limits](https://www.tradingview.com/pine-script-docs/visuals/lines-and-boxes/).
