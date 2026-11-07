@@ -64,7 +64,7 @@ The fixture in [fixtures/plateau-events.json](./fixtures/plateau-events.json) re
 
 At step 4, the rays remain absent **during** formation and appear only when that step closes. Test both sides with independent settings. Reset and replay from before step 1 to check that the old origin does not appear early. A longer plateau works the same way, anchored to the first equal candle.
 
-To substitute the synthetic fixture into a separate test copy of the script, follow the input substitution method described in the original experiment, or use TradingView Bar Replay on a market sequence matching the pattern. Never overwrite the original copy merely to create test candles.
+The JSON fixture is used by the automated parity test. For manual TradingView testing, use Bar Replay on a market sequence with the same high/low pattern and compare the timing and anchor behavior. Do not expect the exact example prices on a different market.
 
 ### Live and long-history tests
 
