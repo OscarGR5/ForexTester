@@ -1,10 +1,91 @@
 [
-  { "high": 101, "low": 99, "close": 100, "expected": [] },
-  { "high": 110, "low": 90, "close": 100, "expected": [[1, 110, "high"], [1, 90, "low"]] },
-  { "high": 110, "low": 90, "close": 100, "expected": [[1, 110, "high"], [1, 90, "low"]] },
-  { "high": 110, "low": 90, "close": 100, "expected": [[1, 110, "high"], [1, 90, "low"]] },
-  { "high": 101, "low": 99, "close": 100, "expected": [[1, 110, "high"], [1, 90, "low"]] },
-  { "high": 105, "low": 95, "close": 100, "expected": [[5, 105, "high"], [1, 110, "high"], [5, 95, "low"], [1, 90, "low"]] },
-  { "high": 110, "low": 90, "close": 100, "expected": [[6, 110, "high"], [6, 90, "low"]] },
-  { "high": 111, "low": 89, "close": 100, "expected": [[7, 111, "high"], [7, 89, "low"]] }
+  {
+    "high": 101,
+    "low": 99,
+    "close": 100,
+    "forming": [],
+    "expected": []
+  },
+  {
+    "high": 110,
+    "low": 90,
+    "close": 100,
+    "forming": [],
+    "expected": []
+  },
+  {
+    "high": 110,
+    "low": 90,
+    "close": 100,
+    "forming": [],
+    "expected": []
+  },
+  {
+    "high": 110,
+    "low": 90,
+    "close": 100,
+    "forming": [],
+    "expected": []
+  },
+  {
+    "high": 101,
+    "low": 99,
+    "close": 100,
+    "forming": [],
+    "expected": [
+      [
+        1,
+        110,
+        "high"
+      ],
+      [
+        1,
+        90,
+        "low"
+      ]
+    ]
+  },
+  {
+    "high": 105,
+    "low": 95,
+    "close": 100,
+    "forming": [
+      [
+        1,
+        110,
+        "high"
+      ],
+      [
+        1,
+        90,
+        "low"
+      ]
+    ],
+    "expected": [
+      [
+        1,
+        110,
+        "high"
+      ],
+      [
+        1,
+        90,
+        "low"
+      ]
+    ]
+  },
+  {
+    "high": 110,
+    "low": 90,
+    "close": 100,
+    "forming": [],
+    "expected": []
+  },
+  {
+    "high": 111,
+    "low": 89,
+    "close": 100,
+    "forming": [],
+    "expected": []
+  }
 ]
