@@ -3,8 +3,10 @@ indicator("Untaken Highs/Lows (ForexTester experiment)", overlay = true, max_lin
 
 bool showHighs = input.bool(true, "Show untaken highs")
 bool showLows = input.bool(true, "Show untaken lows")
-int maxHighs = input.int(10, "Maximum displayed highs", minval = 1, maxval = 250)
-int maxLows = input.int(10, "Maximum displayed lows", minval = 1, maxval = 250)
+bool showDaily = input.bool(true, "Show Daily untaken levels")
+bool showWeekly = input.bool(true, "Show Weekly untaken levels")
+int maxHighs = input.int(10, "Maximum displayed highs", minval = 1, maxval = 248)
+int maxLows = input.int(10, "Maximum displayed lows", minval = 1, maxval = 248)
 color highColor = input.color(#ef5350, "High line color")
 color lowColor = input.color(#26a69a, "Low line color")
 int lineWidth = input.int(1, "Line width", minval = 1, maxval = 4)
@@ -12,6 +14,52 @@ int lineWidth = input.int(1, "Line width", minval = 1, maxval = 4)
 // Compare the sign of the difference, avoiding Pine's nine-decimal rounding
 // of float comparison operands. No tick rounding or equality tolerance.
 compare(float a, float b) => int(math.sign(a - b))
+samePrice(float a, float b) => not na(a) and not na(b) and compare(a, b) == 0
+
+// Runs independently in each requested context. EVERY price/anchor input is
+// offset: only the preceding, closed D/W candle is processed. lookahead_on
+// therefore exposes its result at the next period's open, never in advance.
+// Do not use barstate.isconfirmed inside request.security(). Return full stacks
+// so taking the newest pivot can immediately reveal any older survivor.
+confirmedReferences() =>
+    var array<float> refHighs = array.new<float>()
+    var array<int> refHighTimes = array.new<int>()
+    var array<float> refLows = array.new<float>()
+    var array<int> refLowTimes = array.new<int>()
+    var float candidateHigh = na
+    var int candidateHighTime = na
+    var float candidateLow = na
+    var int candidateLowTime = na
+    if not na(time[1])
+        while array.size(refHighs) > 0 and compare(array.last(refHighs), high[1]) <= 0
+            array.pop(refHighs)
+            array.pop(refHighTimes)
+        while array.size(refLows) > 0 and compare(array.last(refLows), low[1]) >= 0
+            array.pop(refLows)
+            array.pop(refLowTimes)
+        if not na(candidateHigh) and compare(candidateHigh, high[1]) < 0
+            candidateHigh := na
+            candidateHighTime := na
+        if not na(candidateLow) and compare(candidateLow, low[1]) > 0
+            candidateLow := na
+            candidateLowTime := na
+        if not na(candidateHigh) and compare(high[1], candidateHigh) < 0
+            array.push(refHighs, candidateHigh)
+            array.push(refHighTimes, candidateHighTime)
+            candidateHigh := na
+            candidateHighTime := na
+        if not na(candidateLow) and compare(low[1], candidateLow) > 0
+            array.push(refLows, candidateLow)
+            array.push(refLowTimes, candidateLowTime)
+            candidateLow := na
+            candidateLowTime := na
+        if not na(high[2]) and compare(high[1], high[2]) > 0
+            candidateHigh := high[1]
+            candidateHighTime := time[1]
+        if not na(low[2]) and compare(low[1], low[2]) < 0
+            candidateLow := low[1]
+            candidateLowTime := time[1]
+    [array.copy(refHighs), array.copy(refHighTimes), array.copy(refLows), array.copy(refLowTimes), time]
 
 // Confirmed stacks: oldest/farthest first, newest/nearest last. Keep hidden
 // levels as data, never as hidden line IDs. There is no age or display cutoff.
@@ -65,16 +113,130 @@ if barstate.isconfirmed
 // In Replay, a printed right candle may still be unconfirmed. Waiting for
 // its closing update is intentional, even if the next candle then appears.
 
+// Request collections only on period boundaries, not on every intraday bar.
+// This limits collection copies while retaining native D/W history before
+// the first loaded chart bar. Ordinary var rollback also covers these arrays.
+var array<float> dailyHighs = array.new<float>()
+var array<int> dailyHighTimes = array.new<int>()
+var array<float> dailyLows = array.new<float>()
+var array<int> dailyLowTimes = array.new<int>()
+var array<float> weeklyHighs = array.new<float>()
+var array<int> weeklyHighTimes = array.new<int>()
+var array<float> weeklyLows = array.new<float>()
+var array<int> weeklyLowTimes = array.new<int>()
+var bool dailyReady = false
+var bool weeklyReady = false
+float chartSeconds = timeframe.in_seconds()
+float dailySeconds = timeframe.in_seconds("1D")
+float weeklySeconds = timeframe.in_seconds("1W")
+int dailyPeriod = time("1D")
+int weeklyPeriod = time("1W")
+bool newDay = timeframe.change("1D")
+bool newWeek = timeframe.change("1W")
+if showDaily and chartSeconds < dailySeconds
+    if barstate.isfirst or newDay
+        [dHighs, dHighTimes, dLows, dLowTimes, dPeriod] = request.security(syminfo.tickerid, "1D", confirmedReferences(), lookahead = barmerge.lookahead_on)
+        // An initially partial period lacks earlier chart wicks. Wait for a
+        // loaded boundary rather than display levels it may already have taken.
+        if not na(dPeriod) and dPeriod == dailyPeriod and (not barstate.isfirst or time == dPeriod)
+            dailyHighs := array.copy(dHighs)
+            dailyHighTimes := array.copy(dHighTimes)
+            dailyLows := array.copy(dLows)
+            dailyLowTimes := array.copy(dLowTimes)
+            dailyReady := true
+if showWeekly and chartSeconds < weeklySeconds
+    if barstate.isfirst or newWeek
+        [wHighs, wHighTimes, wLows, wLowTimes, wPeriod] = request.security(syminfo.tickerid, "1W", confirmedReferences(), lookahead = barmerge.lookahead_on)
+        if not na(wPeriod) and wPeriod == weeklyPeriod and (not barstate.isfirst or time == wPeriod)
+            weeklyHighs := array.copy(wHighs)
+            weeklyHighTimes := array.copy(wHighTimes)
+            weeklyLows := array.copy(wLows)
+            weeklyLowTimes := array.copy(wLowTimes)
+            weeklyReady := true
+
+// Only invalidation uses the developing chart wick. Surviving stacks remain
+// ordered by pivot time; their LAST entries are the most recent untaken ones.
+while array.size(dailyHighs) > 0 and compare(array.last(dailyHighs), high) <= 0
+    array.pop(dailyHighs)
+    array.pop(dailyHighTimes)
+while array.size(dailyLows) > 0 and compare(array.last(dailyLows), low) >= 0
+    array.pop(dailyLows)
+    array.pop(dailyLowTimes)
+while array.size(weeklyHighs) > 0 and compare(array.last(weeklyHighs), high) <= 0
+    array.pop(weeklyHighs)
+    array.pop(weeklyHighTimes)
+while array.size(weeklyLows) > 0 and compare(array.last(weeklyLows), low) >= 0
+    array.pop(weeklyLows)
+    array.pop(weeklyLowTimes)
+
+// Equal chart/reference timeframes use the already confirmed normal tracker,
+// so the closing right candle is visible immediately, without a one-bar offset.
+float dailyHigh = na
+int dailyHighTime = na
+float dailyLow = na
+int dailyLowTime = na
+float weeklyHigh = na
+int weeklyHighTime = na
+float weeklyLow = na
+int weeklyLowTime = na
+if showDaily and chartSeconds <= dailySeconds
+    array<float> dHighData = chartSeconds == dailySeconds ? highPrices : dailyHighs
+    array<int> dHighOrigins = chartSeconds == dailySeconds ? highTimes : dailyHighTimes
+    array<float> dLowData = chartSeconds == dailySeconds ? lowPrices : dailyLows
+    array<int> dLowOrigins = chartSeconds == dailySeconds ? lowTimes : dailyLowTimes
+    if array.size(dHighData) > 0
+        dailyHigh := array.last(dHighData)
+        dailyHighTime := array.last(dHighOrigins)
+    if array.size(dLowData) > 0
+        dailyLow := array.last(dLowData)
+        dailyLowTime := array.last(dLowOrigins)
+if showWeekly and chartSeconds <= weeklySeconds
+    array<float> wHighData = chartSeconds == weeklySeconds ? highPrices : weeklyHighs
+    array<int> wHighOrigins = chartSeconds == weeklySeconds ? highTimes : weeklyHighTimes
+    array<float> wLowData = chartSeconds == weeklySeconds ? lowPrices : weeklyLows
+    array<int> wLowOrigins = chartSeconds == weeklySeconds ? lowTimes : weeklyLowTimes
+    if array.size(wHighData) > 0
+        weeklyHigh := array.last(wHighData)
+        weeklyHighTime := array.last(wHighOrigins)
+    if array.size(wLowData) > 0
+        weeklyLow := array.last(wLowData)
+        weeklyLowTime := array.last(wLowOrigins)
+
+// A lower-timeframe security() sample would silently omit intrabars. Disable
+// unsupported references explicitly; the normal chart tracker keeps working.
+var table referenceStatus = table.new(position.top_right, 1, 1)
+string referenceMessage = ""
+if showDaily and chartSeconds > dailySeconds
+    referenceMessage := referenceMessage + "Daily references unavailable above D1.\n"
+if showWeekly and chartSeconds > weeklySeconds
+    referenceMessage := referenceMessage + "Weekly references unavailable above W1.\n"
+if showDaily and chartSeconds < dailySeconds and not dailyReady
+    referenceMessage := referenceMessage + "Daily: awaiting a loaded period boundary.\n"
+if showWeekly and chartSeconds < weeklySeconds and not weeklyReady
+    referenceMessage := referenceMessage + "Weekly: awaiting a loaded period boundary.\n"
+
 // Draw the final closed historical snapshot as well as live/Replay updates.
 // The last confirmed historical bar can have islast = false. Gating solely
 // on islast leaves its newly confirmed levels undrawn until a later update.
 // time_close supplies a distinct second timestamp on standard time-based bars.
 // xloc.bar_time keeps old anchors beyond the bar-index coordinate limit.
-// Delete before creating so even two full 250-ray sides stay within 500 IDs.
+// Delete before creating: 248 normal rays per side plus four references <= 500.
 // Rollback also restores drawings, so this is safe on every realtime tick.
 if barstate.islast or barstate.islastconfirmedhistory
     while array.size(rays) > 0
         line.delete(array.pop(rays))
+    table.cell(referenceStatus, 0, 0, referenceMessage)
+    table.cell_set_text_color(referenceStatus, 0, 0, chart.fg_color)
+    // At an overlapping price keep the highest-priority original anchor:
+    // Weekly (3 px), then Daily (2 px), then normal (user width).
+    if not na(weeklyHigh)
+        array.push(rays, line.new(weeklyHighTime, weeklyHigh, time_close, weeklyHigh, xloc.bar_time, extend.right, highColor, line.style_solid, 3))
+    if not na(weeklyLow)
+        array.push(rays, line.new(weeklyLowTime, weeklyLow, time_close, weeklyLow, xloc.bar_time, extend.right, lowColor, line.style_solid, 3))
+    if not na(dailyHigh) and not samePrice(dailyHigh, weeklyHigh)
+        array.push(rays, line.new(dailyHighTime, dailyHigh, time_close, dailyHigh, xloc.bar_time, extend.right, highColor, line.style_solid, 2))
+    if not na(dailyLow) and not samePrice(dailyLow, weeklyLow)
+        array.push(rays, line.new(dailyLowTime, dailyLow, time_close, dailyLow, xloc.bar_time, extend.right, lowColor, line.style_solid, 2))
     int displayedHighs = 0
     if showHighs
         int highIndex = array.size(highPrices) - 1
@@ -82,7 +244,8 @@ if barstate.islast or barstate.islastconfirmedhistory
             float levelPrice = array.get(highPrices, highIndex)
             int anchor = array.get(highTimes, highIndex)
             if compare(levelPrice, close) > 0
-                array.push(rays, line.new(anchor, levelPrice, time_close, levelPrice, xloc.bar_time, extend.right, highColor, line.style_solid, lineWidth))
+                if not samePrice(levelPrice, weeklyHigh) and not samePrice(levelPrice, dailyHigh)
+                    array.push(rays, line.new(anchor, levelPrice, time_close, levelPrice, xloc.bar_time, extend.right, highColor, line.style_solid, lineWidth))
                 displayedHighs += 1
             highIndex -= 1
     int displayedLows = 0
@@ -92,6 +255,7 @@ if barstate.islast or barstate.islastconfirmedhistory
             float levelPrice = array.get(lowPrices, lowIndex)
             int anchor = array.get(lowTimes, lowIndex)
             if compare(levelPrice, close) < 0
-                array.push(rays, line.new(anchor, levelPrice, time_close, levelPrice, xloc.bar_time, extend.right, lowColor, line.style_solid, lineWidth))
+                if not samePrice(levelPrice, weeklyLow) and not samePrice(levelPrice, dailyLow)
+                    array.push(rays, line.new(anchor, levelPrice, time_close, levelPrice, xloc.bar_time, extend.right, lowColor, line.style_solid, lineWidth))
                 displayedLows += 1
             lowIndex -= 1
