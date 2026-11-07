@@ -60,19 +60,8 @@ if barstate.isconfirmed
         pendingLow := low
         pendingLowTime := time
 
-// Recompute the mutable tail without letting its own growing wick take itself.
-// An equal forming wick inherits the first plateau anchor from pending state.
-float latestHigh = pendingHigh
-int latestHighTime = pendingHighTime
-float latestLow = pendingLow
-int latestLowTime = pendingLowTime
-if not barstate.isconfirmed
-    if bar_index > 0 and compare(high, high[1]) > 0
-        latestHigh := high
-        latestHighTime := time
-    if bar_index > 0 and compare(low, low[1]) < 0
-        latestLow := low
-        latestLowTime := time
+// Pending extremes have no rays. A weaker right candle must CLOSE first.
+// Current realtime wicks can still invalidate previously confirmed rays.
 
 // All loaded bars build the stacks; only the last execution needs drawings.
 // time_close supplies a distinct second timestamp on standard time-based bars.
@@ -84,9 +73,6 @@ if barstate.islast
         line.delete(array.pop(rays))
     int displayedHighs = 0
     if showHighs
-        if not na(latestHigh) and compare(latestHigh, close) > 0
-            array.push(rays, line.new(latestHighTime, latestHigh, time_close, latestHigh, xloc.bar_time, extend.right, highColor, line.style_solid, lineWidth))
-            displayedHighs += 1
         int highIndex = array.size(highPrices) - 1
         while highIndex >= 0 and displayedHighs < maxHighs
             float levelPrice = array.get(highPrices, highIndex)
@@ -97,9 +83,6 @@ if barstate.islast
             highIndex -= 1
     int displayedLows = 0
     if showLows
-        if not na(latestLow) and compare(latestLow, close) < 0
-            array.push(rays, line.new(latestLowTime, latestLow, time_close, latestLow, xloc.bar_time, extend.right, lowColor, line.style_solid, lineWidth))
-            displayedLows += 1
         int lowIndex = array.size(lowPrices) - 1
         while lowIndex >= 0 and displayedLows < maxLows
             float levelPrice = array.get(lowPrices, lowIndex)
