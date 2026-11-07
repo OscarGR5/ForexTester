@@ -18,12 +18,10 @@ export class UntakenLevels {
   private processed = 0
   private pendingHigh: UntakenLevel | null = null
   private pendingLow: UntakenLevel | null = null
-  private formingHigh: UntakenLevel | null = null
-  private formingLow: UntakenLevel | null = null
 
   update(candles: readonly ChartCandle[], completed: number, replace = false): void {
-    // Recompute the mutable tail rather than letting a candle take its own ray.
-    this.formingHigh = null; this.formingLow = null
+    // Only confirmed local extrema are displayed. The mutable right candle
+    // may take an existing ray, but cannot confirm a new pivot until closed.
     if (replace || completed < this.processed) {
       this.highs = []; this.lows = []; this.processed = 0
       this.pendingHigh = null; this.pendingLow = null
@@ -45,10 +43,10 @@ export class UntakenLevels {
     }
     const forming = candles[completed]
     if (forming) {
-      this.invalidate(forming)
-      const previous = candles[completed - 1]
-      if (previous && forming.high > previous.high) this.formingHigh = { time: forming.time, price: forming.high, side: 'high' }
-      if (previous && forming.low < previous.low) this.formingLow = { time: forming.time, price: forming.low, side: 'low' }
+      // Invalidate confirmed rays immediately on a live wick touch. Keep the
+      // closed-bar candidate intact until this right candle really closes.
+      while (this.highs.length && this.highs.at(-1)!.price <= forming.high) this.highs.pop()
+      while (this.lows.length && this.lows.at(-1)!.price >= forming.low) this.lows.pop()
     }
   }
 
@@ -62,16 +60,13 @@ export class UntakenLevels {
 
   visible(price: number, count: number): UntakenLevel[] {
     const levels: UntakenLevel[] = []
-    const latestHigh = this.formingHigh ?? this.pendingHigh, latestLow = this.formingLow ?? this.pendingLow
-    // An untaken provisional extreme is newer and nearer than confirmed ones.
-    if (latestHigh && latestHigh.price > price) levels.push(latestHigh)
+    // Pending extremes are intentionally hidden: no right closed candle yet.
     // The stacks have distinct prices: equal touches pop the earlier level.
     // Walk nearest first, excluding current-price levels without consuming N.
     for (let i = this.highs.length - 1; i >= 0 && levels.length < count; i--) {
       if (this.highs[i].price > price) levels.push(this.highs[i])
     }
     const highCount = levels.length
-    if (latestLow && latestLow.price < price) levels.push(latestLow)
     for (let i = this.lows.length - 1; i >= 0 && levels.length - highCount < count; i--) {
       if (this.lows[i].price < price) levels.push(this.lows[i])
     }
