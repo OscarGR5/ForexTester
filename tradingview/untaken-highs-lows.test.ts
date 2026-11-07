@@ -39,14 +39,14 @@ class Scenario {
   load(candles: ChartCandle[]) { for (const candle of candles) this.tick(candle, true); return this }
 }
 
-it('declares standalone v6 chart settings and bounded drawings without generic pivots', () => {
+it('declares standalone v6 chart settings and bounded drawings without external data or generic pivots', () => {
   expect(pineSource.startsWith('//@version=6\n')).toBe(true)
   expect(pineSource).toContain('overlay = true, max_lines_count = 500, behind_chart = true')
-  expect(pineSource.match(/maxval = 248/g)).toHaveLength(2)
-  expect(pineSource).not.toMatch(/\b(?:ta\.pivot|varip\s)/)
+  expect(pineSource.match(/maxval = 250/g)).toHaveLength(2)
+  expect(pineSource).not.toMatch(/\b(?:request\.|ta\.pivot|varip\s)/)
   expect(pineSource).not.toMatch(/line\.new\(latest|latestHigh|latestLow/)
   expect(pineSource).toContain('if barstate.isconfirmed')
-  expect(new PineHarness().settings).toEqual({ showHighs: true, showLows: true, showDaily: true, showWeekly: true, maxHighs: 10, maxLows: 10, highColor: '#ef5350', lowColor: '#26a69a', lineWidth: 1 })
+  expect(new PineHarness().settings).toEqual({ showHighs: true, showLows: true, maxHighs: 10, maxLows: 10, highColor: '#ef5350', lowColor: '#26a69a', lineWidth: 1 })
 })
 
 it('matches the documented OHLC fixture and explicit expected origin/price events from ForexTester', () => {
@@ -208,15 +208,15 @@ it.each([{ showHighs: false }, { showLows: false }, { showHighs: false, showLows
   expect(s.pine.state.highPrices).toEqual([110]); expect(s.pine.state.lowPrices).toEqual([90])
 })
 
-it('deletes previous drawings before creating 496 normal rays, including repeated unfinished ticks', () => {
-  const pine = new PineHarness({ maxHighs: 248, maxLows: 248, lineWidth: 4 }), candles = nested(260, true)
+it('deletes previous drawings before creating 500 rays, including repeated unfinished ticks', () => {
+  const pine = new PineHarness({ maxHighs: 250, maxLows: 250, lineWidth: 4 }), candles = nested(260, true)
   for (let i = 0; i < candles.length; i++) pine.execute(candles[i], i, candles[i - 1], true, false, i === candles.length - 1)
   const tracker = new UntakenLevels(); tracker.update(candles, candles.length)
   const rays = pine.execute(bar(candles.length), candles.length, candles.at(-1), false)
-  expect(actual(rays, pine.settings)).toEqual(tracker.visible(100, 248))
-  expect(rays).toHaveLength(496)
-  for (let i = 0; i < 3; i++) expect(pine.execute(bar(candles.length), candles.length, candles.at(-1), false)).toHaveLength(496)
-  expect(pine.peakLineCount).toBe(496)
+  expect(actual(rays, pine.settings)).toEqual(tracker.visible(100, 250))
+  expect(rays).toHaveLength(500)
+  for (let i = 0; i < 3; i++) expect(pine.execute(bar(candles.length), candles.length, candles.at(-1), false)).toHaveLength(500)
+  expect(pine.peakLineCount).toBe(500)
 })
 
 it('reconstructs historical state, preserves anchors older than 10,000 bars, and redraws on reload', () => {
@@ -229,7 +229,7 @@ it('reconstructs historical state, preserves anchors older than 10,000 bars, and
   const rays = load(new PineHarness())
   expect(rays.map(r => r.x1)).toEqual([Number(bar(1).time) * 1000, Number(bar(1).time) * 1000])
   expect(load(new PineHarness())).toEqual(rays)
-}, 15000)
+})
 
 it('rebuilds backward replay snapshots without observing future bars', () => {
   const candles = [bar(0), bar(1, 110, 90), bar(2, 110, 90), bar(3), bar(4, 111, 89)]
