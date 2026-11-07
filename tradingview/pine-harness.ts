@@ -20,7 +20,7 @@ function expression(source: string): string {
     .replace(/array\.new<\w+>\(\)/g, 'array.new()')
     .replace(/\bna\(/g, 'isNa(').replace(/\bna\b/g, 'null')
     .replace(/\bint\(/g, 'Math.trunc(')
-    .replace(/\band\b/g, '&&').replace(/\bnot\b/g, '!')
+    .replace(/\band\b/g, '&&').replace(/\bor\b/g, '||').replace(/\bnot\b/g, '!')
 }
 
 function adapt(source: string) {
@@ -109,12 +109,12 @@ export class PineHarness {
     return structuredClone({ state: Object.fromEntries(program.stateNames.map(name => [name, this.context[name]])), drawings: this.drawings, nextId: this.nextId })
   }
 
-  execute(candle: ChartCandle, index: number, previous: ChartCandle | undefined, confirmed: boolean, last = true): Ray[] {
+  execute(candle: ChartCandle, index: number, previous: ChartCandle | undefined, confirmed: boolean, last = true, lastConfirmedHistory = false): Ray[] {
     const rollback = structuredClone(this.committed)
     Object.assign(this.context, rollback.state, {
       high: candle.high, low: candle.low, close: candle.close, time: Number(candle.time) * 1000, time_close: Number(candle.time) * 1000 + 60_000,
       previous_high: previous?.high ?? null, previous_low: previous?.low ?? null,
-      bar_index: index, barstate: { isconfirmed: confirmed, islast: last },
+      bar_index: index, barstate: { isconfirmed: confirmed, islast: last, islastconfirmedhistory: lastConfirmedHistory },
     })
     this.drawings = rollback.drawings; this.nextId = rollback.nextId
     program.execute.runInContext(this.context, { timeout: 1000 })

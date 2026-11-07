@@ -25,9 +25,9 @@ class Scenario {
   closed: ChartCandle[] = []
   rays: Ray[] = []
   constructor(settings: Partial<Settings> = {}) { this.pine = new PineHarness(settings) }
-  tick(candle: ChartCandle, confirmed = false) {
+  tick(candle: ChartCandle, confirmed = false, last = true, lastConfirmedHistory = false) {
     this.tracker.update([...this.closed, candle], this.closed.length + (confirmed ? 1 : 0))
-    this.rays = this.pine.execute(candle, this.closed.length, this.closed.at(-1), confirmed)
+    this.rays = this.pine.execute(candle, this.closed.length, this.closed.at(-1), confirmed, last, lastConfirmedHistory)
     expect(actual(this.rays, this.pine.settings)).toEqual(expected(this.tracker, candle.close, this.pine.settings))
     expect(new Set(this.rays.map(ray => `${ray.color}:${ray.y1}`)).size).toBe(this.rays.length)
     for (const ray of this.rays) {
@@ -72,6 +72,72 @@ it('does not draw growing or pending extremes before right-candle confirmation',
   s.tick(bar(2), true)
   expect(s.pine.state.highPrices).toEqual([110]); expect(s.pine.state.lowPrices).toEqual([90])
   expect(s.rays.map(r => r.x1)).toEqual([Number(bar(1).time) * 1000, Number(bar(1).time) * 1000])
+})
+
+// Native bar flags are independent. The last closed historical candle can
+// confirm a pivot while islast is false, before the live-bar execution.
+it.each([
+  { mode: 'last closed history before a live bar', last: false, lastConfirmedHistory: true },
+  { mode: 'closed-market last bar', last: true, lastConfirmedHistory: true },
+  { mode: 'live/replay closing update', last: true, lastConfirmedHistory: false },
+])('draws a penultimate-candle pivot on its first weaker right close: $mode', ({ last, lastConfirmedHistory }) => {
+  const candles = pivot(), s = new Scenario()
+  for (let i = 0; i < 2; i++) expect(s.tick(candles[i], true, false)).toEqual([])
+  expect(s.tick(candles[2], true, last, lastConfirmedHistory)).toEqual([
+    { time: candles[1].time, price: 110, side: 'high' },
+    { time: candles[1].time, price: 90, side: 'low' },
+  ])
+  expect(s.pine.state.highPrices).toEqual([110])
+  expect(s.pine.state.lowPrices).toEqual([90])
+})
+
+it('waits through an unfinished replay right neighbor, then draws on its close without needing another candle', () => {
+  const s = new Scenario().load(pivot().slice(0, 2))
+  for (let tick = 0; tick < 3; tick++) {
+    expect(s.tick(bar(2))).toEqual([])
+    expect(s.pine.state.highPrices).toEqual([])
+    expect(s.pine.state.lowPrices).toEqual([])
+  }
+  const confirmed = s.tick(bar(2), true)
+  expect(confirmed.map(level => level.price)).toEqual([110, 90])
+  expect(s.tick(bar(3, 100.5, 99.5))).toEqual(confirmed)
+})
+
+it.each([2, 3, 8])('renders a %i-candle plateau at the last closed historical boundary with its first anchor', length => {
+  const s = new Scenario()
+  s.tick(bar(0), true, false)
+  for (let i = 1; i <= length; i++) expect(s.tick(bar(i, 110, 90), true, false)).toEqual([])
+  expect(s.tick(bar(length + 1))).toEqual([])
+  const confirmed = s.tick(bar(length + 1), true, false, true)
+  expect(confirmed).toEqual([
+    { time: bar(1).time, price: 110, side: 'high' },
+    { time: bar(1).time, price: 90, side: 'low' },
+  ])
+  expect(s.tick(bar(length + 2, 100.5, 99.5))).toEqual(confirmed)
+})
+
+it('keeps boundary drawings through subsequent candles and rollback, takes them immediately, and matches a historical reload', () => {
+  const s = new Scenario()
+  s.tick(bar(0), true, false); s.tick(bar(1, 110, 90), true, false)
+  const confirmed = s.tick(bar(2), true, false, true)
+  expect(confirmed).toHaveLength(2)
+  for (const candle of [bar(3, 100.5, 99.5), bar(4, 100.25, 99.75)]) {
+    expect(s.tick(candle)).toEqual(confirmed)
+    expect(s.tick(candle)).toEqual(confirmed)
+    expect(s.tick(candle, true)).toEqual(confirmed)
+  }
+  const reload = new PineHarness()
+  let reconstructed: Ray[] = []
+  s.closed.forEach((candle, i) => {
+    reconstructed = reload.execute(candle, i, s.closed[i - 1], true, false, i === s.closed.length - 1)
+  })
+  expect(actual(reconstructed, reload.settings)).toEqual(confirmed)
+  for (const candle of [bar(5, 110, 90), bar(5, 111, 89)]) {
+    expect(s.tick(candle)).toEqual([])
+    expect(reload.execute(candle, 5, s.closed.at(-1), false)).toEqual([])
+  }
+  expect(s.tick(bar(5, 111, 89), true)).toEqual([])
+  expect(s.pine.peakLineCount).toBe(2)
 })
 
 it.each([2, 3, 8])('anchors %i equal candles to their first candle through forming equals and weaker-close confirmation', length => {
@@ -144,7 +210,7 @@ it.each([{ showHighs: false }, { showLows: false }, { showHighs: false, showLows
 
 it('deletes previous drawings before creating 500 rays, including repeated unfinished ticks', () => {
   const pine = new PineHarness({ maxHighs: 250, maxLows: 250, lineWidth: 4 }), candles = nested(260, true)
-  for (let i = 0; i < candles.length; i++) pine.execute(candles[i], i, candles[i - 1], true, i === candles.length - 1)
+  for (let i = 0; i < candles.length; i++) pine.execute(candles[i], i, candles[i - 1], true, false, i === candles.length - 1)
   const tracker = new UntakenLevels(); tracker.update(candles, candles.length)
   const rays = pine.execute(bar(candles.length), candles.length, candles.at(-1), false)
   expect(actual(rays, pine.settings)).toEqual(tracker.visible(100, 250))

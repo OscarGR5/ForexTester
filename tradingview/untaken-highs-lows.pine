@@ -62,13 +62,17 @@ if barstate.isconfirmed
 
 // Pending extremes have no rays. A weaker right candle must CLOSE first.
 // Current realtime wicks can still invalidate previously confirmed rays.
+// In Replay, a printed right candle may still be unconfirmed. Waiting for
+// its closing update is intentional, even if the next candle then appears.
 
-// All loaded bars build the stacks; only the last execution needs drawings.
+// Draw the final closed historical snapshot as well as live/Replay updates.
+// The last confirmed historical bar can have islast = false. Gating solely
+// on islast leaves its newly confirmed levels undrawn until a later update.
 // time_close supplies a distinct second timestamp on standard time-based bars.
 // xloc.bar_time keeps old anchors beyond the bar-index coordinate limit.
 // Delete before creating so even two full 250-ray sides stay within 500 IDs.
 // Rollback also restores drawings, so this is safe on every realtime tick.
-if barstate.islast
+if barstate.islast or barstate.islastconfirmedhistory
     while array.size(rays) > 0
         line.delete(array.pop(rays))
     int displayedHighs = 0
