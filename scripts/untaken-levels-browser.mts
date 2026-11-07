@@ -30,7 +30,7 @@ try {
   await new Promise<void>((resolve, reject) => { child!.stdout!.once('data', () => resolve()); child!.once('exit', code => reject(Error(`Backend exited ${code}`))); child!.stderr!.on('data', d => process.stderr.write(d)) })
   globalThis.fetch = ((path: string, init?: RequestInit) => nativeFetch(api + path, { ...init, headers: { Origin: api, ...init?.headers } })) as typeof fetch
   const history = benchmarkHistory(2), source = history.bid, start = source.findIndex(c => c.timestamp >= Date.parse(history.tradingFrom)) + 61
-  // Seed a left-qualified high and low on the current forming M5 candle.
+  // Seed a candidate high and low that must stay hidden until the right M5 candle closes.
   const beforeSeed = new ReplayBars('M5'); beforeSeed.advance(source, start + 1)
   const left = beforeSeed.candles.slice(-2, -1)
   source[start].high = Math.max(source[start].high, ...left.map(c => c.high + 0.00001))
@@ -39,8 +39,8 @@ try {
   history.ask[start].low = source[start].low + 0.0002
   const initialBars = new ReplayBars('M5'); initialBars.advance(source, start + 1)
   const latest = initialBars.candles.at(-1)!
-  // Two equal M5 candles extend the plateau, a weaker close confirms it,
-  // and a later forming candle takes both confirmed levels on exact touches.
+  // Equal M5 candles extend a hidden plateau. A weaker closed right M5
+  // confirms it, then an equal forming touch invalidates both confirmed rays.
   for (let i = start + 1; i <= start + 19; i++) {
     const elapsed = source[i].timestamp - latest.time * 1000
     const weaker = elapsed >= 15 * 60000 && elapsed < 20 * 60000
@@ -50,6 +50,10 @@ try {
     Object.assign(history.ask[i], { open: latest.close + 0.0002, close: latest.close + 0.0002,
       high: source[i].high + 0.0002, low: source[i].low + 0.0002 })
   }
+  // The first observation of the next M5 candle takes both confirmed levels.
+  Object.assign(source[start + 20], { open: latest.close, close: latest.close, high: latest.high, low: latest.low })
+  Object.assign(history.ask[start + 20], { open: latest.close + 0.0002, close: latest.close + 0.0002,
+    high: latest.high + 0.0002, low: latest.low + 0.0002 })
   const simulation = sessionSimulation(history); simulation.observe(0)
   const snapshot = simulation.snapshot(), initial = createTradingState(7, undefined, { roundTripUsdPerLot: 7 })
   const state = observeCandle(initial, source[start], history.ask[start]), ledger = recordEquity(createEquityLedger(initial.account.referenceBalance), initial, state)
@@ -127,35 +131,35 @@ try {
   await page.evaluate(() => { (window as any).paint = [] })
   await page.keyboard.press('p'); await page.waitForTimeout(150)
   const initialRays = await verify(start + 1)
-  assert.ok(initialRays.some((p: any) => p.levels.some((l: any) => l.side === 'high')))
-  assert.ok(initialRays.some((p: any) => p.levels.some((l: any) => l.side === 'low')))
+  // No ray may originate at the last M5 candle before a closed right neighbor.
   const latestM5 = initialRays.find((p: any) => p.timeframe === 'M5')
-  assert.ok(latestM5.levels.some((l: any) => l.side === 'high' && l.time === latest.time && l.price === latest.high))
-  assert.ok(latestM5.levels.some((l: any) => l.side === 'low' && l.time === latest.time && l.price === latest.low))
+  assert.ok(latestM5)
+  assert.ok(latestM5.levels.every((l: any) => l.time !== latest.time))
+  const hasSeed = (panes: any[]) => {
+    const levels = panes.find(p => p.timeframe === 'M5').levels
+    return ['high', 'low'].every(side => levels.some((l: any) => l.side === side && l.price === latest[side] && l.time === latest.time))
+  }
+  for (let i = 0; i < 12; i++) await page.getByRole('button', { name: 'Next Min', exact: true }).click()
+  assert.equal(hasSeed(await verify(start + 13)), false)
+  // The weaker M5 right candle spans :15–:19; its close at :19 confirms
+  // the seeded pivot. The next M5 starts at :20 and touches it immediately.
+  await page.evaluate(() => { (window as any).paint = [] })
+  for (let i = 0; i < 6; i++) await page.getByRole('button', { name: 'Next Min', exact: true }).click()
+  const confirmed = await verify(start + 19)
+  assert.equal(hasSeed(confirmed), true)
   const paint = await page.evaluate(() => {
     const events = (window as any).paint
     return { colors: [...new Set(events.filter((p: any) => p.kind === 'ray').map((p: any) => p.color))],
       behind: events.some((p: any, i: number) => p.kind === 'ray' && events.slice(i + 1).some((c: any) => c.kind === 'candle' && c.canvas === p.canvas)) }
   })
   assert.deepEqual(paint.colors.sort(), ['#26a69a', '#ef5350']); assert.equal(paint.behind, true)
-  for (let i = 0; i < 12; i++) await page.getByRole('button', { name: 'Next Min', exact: true }).click()
-  const assertPlateau = (panes: any[]) => {
-    const levels = panes.find(p => p.timeframe === 'M5').levels
-    for (const side of ['high', 'low'] as const) {
-      const matches = levels.filter((l: any) => l.side === side && l.price === latest[side])
-      assert.equal(matches.length, 1); assert.equal(matches[0].time, latest.time)
-    }
-  }
-  assertPlateau(await verify(start + 13))
   await page.screenshot({ path: join(output, 'four-charts-1440.png'), fullPage: true })
-  for (let i = 0; i < 6; i++) await page.getByRole('button', { name: 'Next Min', exact: true }).click()
-  assertPlateau(await verify(start + 19))
   await page.getByRole('button', { name: 'Next Min', exact: true }).click()
   const advanced = await verify(start + 20)
-  assert.ok(advanced.find((p: any) => p.timeframe === 'M5').levels.every((l: any) => l.time !== latest.time))
+  assert.equal(hasSeed(advanced), false)
   await page.locator('.chart-canvas').nth(2).click({ position: { x: 200, y: 100 } })
-  await page.keyboard.press('Control+Shift+ArrowLeft'); assertPlateau(await verify(start + 19))
-  await page.keyboard.press('Control+Shift+ArrowRight'); await verify(start + 20)
+  await page.keyboard.press('Control+Shift+ArrowLeft'); assert.equal(hasSeed(await verify(start + 19)), true)
+  await page.keyboard.press('Control+Shift+ArrowRight'); assert.equal(hasSeed(await verify(start + 20)), false)
   await page.locator('.indicator-controls summary').nth(2).click()
   await page.getByLabel('Chart 3 Untaken Levels', { exact: true }).fill('1')
   const narrow = await verify(start + 20, 1)
@@ -175,7 +179,7 @@ try {
   assert.equal(await page.getByLabel('Chart 3 Pivot Strength', { exact: true }).count(), 0)
   assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('forextester:ui:v1:global')!).untakenLevels), { enabled: true, count: 15 })
   assert.deepEqual(errors, [])
-  const evidence = { viewport: '1440 × 1000', checks: ['red/green rays', 'painted before candles', 'coexists with regression', 'P and input focus guard', 'equal high/low plateaus retain first anchors', 'weaker close confirmation then exact-touch invalidation', 'backward reconstruction', 'independent H1/D1/M5/H4 calculations', 'latest forming local high and low rays', 'immediate per-side count updates', 'level-count persistence and removed strength control', 'zoom invariance', 'timeframe recalculation', 'reload persistence'], initialCounts: initialRays.map((p: any) => [p.timeframe, p.levels.length]), paint, errors }
+  const evidence = { viewport: '1440 × 1000', checks: ['red/green rays', 'painted before candles', 'coexists with regression', 'P and input focus guard', 'equal high/low plateaus retain first anchors', 'weaker close confirmation then exact-touch invalidation', 'backward reconstruction', 'independent H1/D1/M5/H4 calculations', 'no rays from a last-candle extreme', 'immediate per-side count updates', 'level-count persistence and removed strength control', 'zoom invariance', 'timeframe recalculation', 'reload persistence'], initialCounts: initialRays.map((p: any) => [p.timeframe, p.levels.length]), paint, errors }
   await writeFile(join(output, 'smoke.json'), JSON.stringify(evidence, null, 2)); console.log(JSON.stringify(evidence))
 } finally {
   globalThis.fetch = nativeFetch
