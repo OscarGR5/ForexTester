@@ -141,11 +141,11 @@ try {
   }
   for (let i = 0; i < 12; i++) await page.getByRole('button', { name: 'Next Min', exact: true }).click()
   assert.equal(hasSeed(await verify(start + 13)), false)
-  for (let i = 0; i < 6; i++) await page.getByRole('button', { name: 'Next Min', exact: true }).click()
-  assert.equal(hasSeed(await verify(start + 19)), false)
+  // The weaker M5 right candle spans :15–:19; its close at :19 confirms
+  // the seeded pivot. The next M5 starts at :20 and touches it immediately.
   await page.evaluate(() => { (window as any).paint = [] })
-  await page.getByRole('button', { name: 'Next Min', exact: true }).click()
-  const confirmed = await verify(start + 20)
+  for (let i = 0; i < 6; i++) await page.getByRole('button', { name: 'Next Min', exact: true }).click()
+  const confirmed = await verify(start + 19)
   assert.equal(hasSeed(confirmed), true)
   const paint = await page.evaluate(() => {
     const events = (window as any).paint
@@ -155,23 +155,23 @@ try {
   assert.deepEqual(paint.colors.sort(), ['#26a69a', '#ef5350']); assert.equal(paint.behind, true)
   await page.screenshot({ path: join(output, 'four-charts-1440.png'), fullPage: true })
   await page.getByRole('button', { name: 'Next Min', exact: true }).click()
-  const advanced = await verify(start + 21)
+  const advanced = await verify(start + 20)
   assert.equal(hasSeed(advanced), false)
   await page.locator('.chart-canvas').nth(2).click({ position: { x: 200, y: 100 } })
-  await page.keyboard.press('Control+Shift+ArrowLeft'); assert.equal(hasSeed(await verify(start + 20)), true)
-  await page.keyboard.press('Control+Shift+ArrowRight'); assert.equal(hasSeed(await verify(start + 21)), false)
+  await page.keyboard.press('Control+Shift+ArrowLeft'); assert.equal(hasSeed(await verify(start + 19)), true)
+  await page.keyboard.press('Control+Shift+ArrowRight'); assert.equal(hasSeed(await verify(start + 20)), false)
   await page.locator('.indicator-controls summary').nth(2).click()
   await page.getByLabel('Chart 3 Untaken Levels', { exact: true }).fill('1')
-  const narrow = await verify(start + 21, 1)
+  const narrow = await verify(start + 20, 1)
   assert.ok(narrow.reduce((sum: number, p: any) => sum + p.levels.length, 0) < advanced.reduce((sum: number, p: any) => sum + p.levels.length, 0))
-  await page.getByLabel('Chart 3 Untaken Levels', { exact: true }).fill('15'); await verify(start + 21, 15)
-  await page.getByLabel('Chart 3 Untaken Levels', { exact: true }).press('p'); await verify(start + 21, 15) // Input guard.
+  await page.getByLabel('Chart 3 Untaken Levels', { exact: true }).fill('15'); await verify(start + 20, 15)
+  await page.getByLabel('Chart 3 Untaken Levels', { exact: true }).press('p'); await verify(start + 20, 15) // Input guard.
   await page.keyboard.press('Escape')
   await page.locator('.chart-canvas').nth(2).click({ position: { x: 200, y: 100 } })
-  await page.mouse.wheel(0, -100); await verify(start + 21, 15)
-  await page.getByLabel('Chart 3 timeframe', { exact: true }).selectOption('M15'); await verify(start + 21, 15)
+  await page.mouse.wheel(0, -100); await verify(start + 20, 15)
+  await page.getByLabel('Chart 3 timeframe', { exact: true }).selectOption('M15'); await verify(start + 20, 15)
   await page.keyboard.press('p'); assert.ok((await snapshotRays()).every((p: any) => p.levels.length === 0))
-  await page.keyboard.press('p'); await verify(start + 21, 15)
+  await page.keyboard.press('p'); await verify(start + 20, 15)
   await page.reload(); await page.getByRole('button', { name: 'Resume backtest', exact: true }).click()
   await page.locator('.phase-trading .chart-pane').nth(3).waitFor()
   assert.ok((await snapshotRays()).some((p: any) => p.levels.length > 0))
